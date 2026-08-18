@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="nl"><head><meta charset="UTF-8"><title>Datamodel · FC Harlingen JO19-2</title>
+<style>
+ body{font-family:-apple-system,'Helvetica Neue',Arial,sans-serif;background:#f4f6f9;color:#1a1a2e;
+      margin:0;padding:34px 24px;line-height:1.6}
+ .vel{max-width:1080px;margin:0 auto}
+ h1{font-size:26px;margin:0 0 4px} h2{font-size:17px;margin:32px 0 12px}
+ p.sub{color:#6c757d;margin:0 0 24px}
+ .kaart{background:#fff;border:1px solid #e2e6ea;border-radius:14px;padding:20px;margin-bottom:16px}
+ table{width:100%;border-collapse:collapse}
+ th{text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.7px;color:#6c757d;
+     padding:0 10px 8px;border-bottom:1px solid #e2e6ea}
+ td{padding:10px;border-bottom:1px solid #eef1f4;font-size:13px;vertical-align:top}
+ td.m{font-family:ui-monospace,Menlo,monospace;font-size:11.5px;white-space:nowrap;color:#004aad}
+ td.j{color:#0f6e56;font-weight:700} td.n{color:#993c1d;font-weight:700}
+ .k{color:#6c757d;font-size:12px}
+ .let{background:#fff8e1;border-left:4px solid #ffc107;padding:13px 16px;font-size:13px;margin-bottom:22px}
+ .voet{margin-top:32px;padding-top:14px;border-top:1px solid #e2e6ea;display:flex;
+        justify-content:space-between;font-size:12px;color:#6c757d;flex-wrap:wrap;gap:8px}
+ .studio{font-weight:800;letter-spacing:2px;color:#004aad}
+ @media print{body{background:#fff} .kaart{break-inside:avoid}}
+</style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mermaid/10.9.1/mermaid.min.js"></script></head>
+<body><div class="vel">
+<h1>Datamodel · FC Harlingen JO19-2</h1>
+<p class="sub">Teammanager · uit de code gelezen op 18-08-2026</p>
+
+<div class="let"><strong>Geen database.</strong> Alles staat in localStorage; elke sleutel bevat één JSON-lijst
+of -object. Er zijn dus geen echte foreign keys: relaties zijn id-verwijzingen die de app zelf oplost, of
+objecten die binnen een record zijn ingebed.</div>
+
+<h2>Kern: spelers, wedstrijden en trainingen</h2>
+<div class="kaart"><pre class="mermaid">erDiagram
+    SPELER ||--o{ DOEL : "heeft ontwikkeldoelen"
+    SPELER ||--o{ REVIEW : "krijgt reviews"
+    SPELER ||--o{ RAPPORT : "3 per seizoen"
+    WEDSTRIJD ||--o{ REVIEW : "review bij wedstrijd"
+    WEDSTRIJD ||--o{ OPSTELLINGRIJ : bevat
+    WEDSTRIJD ||--o{ DOELPUNT : bevat
+    WEDSTRIJD ||--o{ KAART : bevat
+    WEDSTRIJD ||--o{ WISSEL : bevat
+    WEDSTRIJD ||--o{ OPGAVE : bevat
+    WEDSTRIJD ||--o{ RIT : rijschema
+    WEDSTRIJD ||--o{ ROLTOEWIJZING : bevat
+    WEDSTRIJD ||--o| TACTIEKPLAN : bevat
+    WEDSTRIJD ||--o{ SPELEROPDRACHT : bevat
+    WEDSTRIJD ||--o{ LIVEEVENT : "live analyse"
+    OPSTELLINGRIJ }o--|| SPELER : "is speler"
+    DOELPUNT }o--|| SPELER : "scorer en assist"
+    KAART }o--|| SPELER : "voor speler"
+    ROLTOEWIJZING }o--|| SPELER : "aan speler"
+    SPELEROPDRACHT }o--|| SPELER : "voor speler"
+    TRAINING ||--o{ ONDERDEEL : bevat
+    TRAINING ||--o{ AANWEZIGHEID : bevat
+    AANWEZIGHEID }o--|| SPELER : "van speler"
+    ONDERDEEL ||--o| TEKENING : heeft
+    OEFENING ||--o| TEKENING : heeft
+    ONDERDEEL }o--o| OEFENING : "gekopieerd uit"
+    TEKENING ||--|{ FRAME : "stappen"
+    FRAME ||--o{ ELEMENT : bevat
+    FRAME ||--o{ LIJN : bevat
+
+    SPELER {
+        number id PK
+        string naam
+        string rugnummer
+        string positie
+        string positie2
+        string favorietBeen
+        string beschikbaar
+        object skills
+        object sterren
+        array rapporten
+        object stats
+    }
+    WEDSTRIJD {
+        number id PK
+        string tegenstander
+        string datum
+        boolean thuis
+        string status
+        object score
+        number motm FK
+        string formatie
+        number speelduur
+    }
+    TRAINING {
+        number id PK
+        string datum
+        string tijd
+        string locatie
+        number duur
+        string doelstellingen
+    }
+    OPSTELLINGRIJ {
+        number spelerId FK
+        string positieId
+        string positieLabel
+        string spelStatus
+        number minuten
+    }
+    RAPPORT {
+        number id PK
+        string seizoen
+        string soort
+        string tekst
+        object skills
+        number ovr
+    }
+    TEKENING {
+        string veldType
+        array stappen
+    }
+    FRAME {
+        number id PK
+        array elems
+        array lijnen
+    }
+    LIJN {
+        string type
+        number nr
+        boolean nrDonker
+    }</pre></div>
+
+<h2>Losse stores</h2>
+<div class="kaart"><pre class="mermaid">erDiagram
+    TOERNOOI ||--o{ TOERNOOITEAM : bevat
+    TOERNOOI ||--o{ TOERNOOIWEDSTRIJD : bevat
+    TOERNOOIWEDSTRIJD }o--|| TOERNOOITEAM : "thuis en uit"
+    SEIZOENBLOK ||--o{ TRAINING : "periode omvat"
+    TAAK ||--o{ TAAKTOEWIJZING : "per wedstrijd"
+
+    OEFENING {
+        number id PK
+        string naam
+        string type
+        string categorie
+        string doel
+        boolean favoriet
+    }
+    ACTIVITEIT {
+        number id PK
+        string titel
+        string soort
+        string datum
+        boolean heleDag
+        string herhaal
+        string herhaalTot
+    }
+    SEIZOENBLOK {
+        number id PK
+        string naam
+        string thema
+        string vanaf
+        string tot
+    }
+    STANDRIJ {
+        string naam
+        number gespeeld
+        number winst
+        number gelijk
+        number verlies
+    }
+    INSTELLINGEN {
+        string clubNaam
+        string teamNaam
+        string seizoen
+        string thema
+        string accent
+    }</pre></div>
+
+<h2>Opslagsleutels</h2>
+<div class="kaart"><table>
+<thead><tr><th>Sleutel</th><th>Inhoud</th><th>Back-up</th></tr></thead>
+<tbody><tr><td class="m">fch_activiteiten_v1</td><td><strong>Activiteit</strong><br><span class="k">agenda-item met soort en herhaling</span></td><td class="j">ja</td></tr><tr><td class="m">fch_doelen_v1</td><td><strong>Ontwikkeldoel</strong><br><span class="k">per speler, met voortgang</span></td><td class="j">ja</td></tr><tr><td class="m">fch_events_v1</td><td><strong>Live-gebeurtenis</strong><br><span class="k">actie tijdens een wedstrijd, met wedstrijdId</span></td><td class="j">ja</td></tr><tr><td class="m">fch_formaties_v1</td><td><strong>Formatie</strong><br><span class="k">opgeslagen opstelling met toewijzing</span></td><td class="j">ja</td></tr><tr><td class="m">fch_instellingen_v1</td><td><strong>Instellingen</strong><br><span class="k">clubnaam, seizoen, thema, accent, logo</span></td><td class="j">ja</td></tr><tr><td class="m">fch_oefeningen_v1</td><td><strong>Oefening</strong><br><span class="k">bibliotheek, met tekening en aandachtspunten</span></td><td class="j">ja</td></tr><tr><td class="m">fch_reviews_v1</td><td><strong>Review</strong><br><span class="k">per speler, eventueel bij een wedstrijd</span></td><td class="j">ja</td></tr><tr><td class="m">fch_seizoen_v1</td><td><strong>Seizoensblok</strong><br><span class="k">periode met thema en focus</span></td><td class="j">ja</td></tr><tr><td class="m">fch_spelers_v1</td><td><strong>Speler</strong><br><span class="k">skills (29 waarden 1-99), sterren, rapporten, beginstand, foto</span></td><td class="j">ja</td></tr><tr><td class="m">fch_stand_v1</td><td><strong>Standrij</strong><br><span class="k">handmatige competitiestand</span></td><td class="j">ja</td></tr><tr><td class="m">fch_tactieken_v1</td><td><strong>Tactiek</strong><br><span class="k">opgeslagen tactiektekening</span></td><td class="j">ja</td></tr><tr><td class="m">fch_taken_v1</td><td><strong>Taak</strong><br><span class="k">definities van de teamtaken</span></td><td class="j">ja</td></tr><tr><td class="m">fch_tenue_v1</td><td><strong>Tenue</strong><br><span class="k">kleuren en patroon</span></td><td class="j">ja</td></tr><tr><td class="m">fch_toernooien_v1</td><td><strong>Toernooi</strong><br><span class="k">teams en poulewedstrijden</span></td><td class="j">ja</td></tr><tr><td class="m">fch_trainingen_v1</td><td><strong>Training</strong><br><span class="k">onderdelen met tekening, aanwezigheid, doelstellingen</span></td><td class="j">ja</td></tr><tr><td class="m">fch_wedstrijden_v1</td><td><strong>Wedstrijd</strong><br><span class="k">opstelling, doelpunten, kaarten, wissels, opgave, rollen, taken, rijschema, tactiek, opdrachten</span></td><td class="j">ja</td></tr></tbody></table></div>
+
+<div class="voet">
+ <span>FC Harlingen JO19-2 · Teammanager</span>
+ <span><span class="studio">EVS DESIGN</span> &nbsp;|&nbsp; Evan van Sertima</span>
+</div></div>
+<script>mermaid.initialize({startOnLoad:true,theme:"default",er:{useMaxWidth:true,fontSize:12}});</script>
+</body></html>
