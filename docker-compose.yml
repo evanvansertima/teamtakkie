@@ -5,6 +5,12 @@ services:
     restart: unless-stopped
     env_file:
       - ./backend/.env
+    environment:
+      # .env has HOST=localhost for `npm run dev`; inside the container
+      # that binds to loopback only, which Caddy can't reach. Must be
+      # 0.0.0.0 for other containers to see it on the compose network.
+      HOST: 0.0.0.0
+      APP_URL: http://app:3333
     volumes:
       - backend_data:/app/tmp
 
