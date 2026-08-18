@@ -5,6 +5,8 @@ import Speler from '#models/speler'
 import Wedstrijd from '#models/wedstrijd'
 
 export default class Roltoewijzing extends RoltoewijzingenSchema {
+  static table = 'roltoewijzingen'
+
   @belongsTo(() => Wedstrijd)
   declare wedstrijd: BelongsTo<typeof Wedstrijd>
 

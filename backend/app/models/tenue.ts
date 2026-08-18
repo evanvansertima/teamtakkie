@@ -1,3 +1,5 @@
 import { TenueSchema } from '#database/schema'
 
-export default class Tenue extends TenueSchema {}
+export default class Tenue extends TenueSchema {
+  static table = 'tenues'
+}

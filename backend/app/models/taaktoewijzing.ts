@@ -6,6 +6,8 @@ import Wedstrijd from '#models/wedstrijd'
 import Speler from '#models/speler'
 
 export default class Taaktoewijzing extends TaaktoewijzingenSchema {
+  static table = 'taaktoewijzingen'
+
   @belongsTo(() => Taak)
   declare taak: BelongsTo<typeof Taak>
 

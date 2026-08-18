@@ -5,6 +5,8 @@ import Speler from '#models/speler'
 import Wedstrijd from '#models/wedstrijd'
 
 export default class Review extends ReviewSchema {
+  static table = 'reviews'
+
   @belongsTo(() => Speler)
   declare speler: BelongsTo<typeof Speler>
 

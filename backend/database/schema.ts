@@ -275,7 +275,7 @@ export class OpstellingrijenSchema extends BaseModel {
 }
 
 export class RapportenSchema extends BaseModel {
-  static $columns = ['createdAt', 'id', 'ovr', 'seizoen', 'skills', 'soort', 'spelerId', 'tekst', 'updatedAt'] as const
+  static $columns = ['createdAt', 'id', 'ovr', 'positie', 'seizoen', 'skills', 'soort', 'spelerId', 'sterren', 'tekst', 'updatedAt'] as const
   $columns = RapportenSchema.$columns
   @column.dateTime({ autoCreate: true })
   declare createdAt: DateTime
@@ -284,6 +284,8 @@ export class RapportenSchema extends BaseModel {
   @column()
   declare ovr: number | null
   @column()
+  declare positie: string | null
+  @column()
   declare seizoen: string
   @column()
   declare skills: any | null
@@ -291,6 +293,8 @@ export class RapportenSchema extends BaseModel {
   declare soort: string
   @column()
   declare spelerId: number
+  @column()
+  declare sterren: any | null
   @column()
   declare tekst: string | null
   @column.dateTime({ autoCreate: true, autoUpdate: true })
@@ -387,22 +391,32 @@ export class SpeleropdrachtenSchema extends BaseModel {
 }
 
 export class SpelerSchema extends BaseModel {
-  static $columns = ['beschikbaar', 'createdAt', 'favorietBeen', 'fotoPath', 'id', 'naam', 'positie', 'positie2', 'rugnummer', 'skills', 'stats', 'sterren', 'updatedAt'] as const
+  static $columns = ['adres', 'beschikbaar', 'beschikbaarNotitie', 'createdAt', 'email', 'favorietBeen', 'fotoPath', 'geboortedatum', 'id', 'land', 'naam', 'positie', 'positie2', 'rugnummer', 'skills', 'stats', 'sterren', 'telefoon', 'updatedAt'] as const
   $columns = SpelerSchema.$columns
   @column()
+  declare adres: string | null
+  @column()
   declare beschikbaar: string
+  @column()
+  declare beschikbaarNotitie: string | null
   @column.dateTime({ autoCreate: true })
   declare createdAt: DateTime
+  @column()
+  declare email: string | null
   @column()
   declare favorietBeen: string | null
   @column()
   declare fotoPath: string | null
+  @column.date()
+  declare geboortedatum: DateTime | null
   @column({ isPrimary: true })
   declare id: number
   @column()
+  declare land: string | null
+  @column()
   declare naam: string
   @column()
-  declare positie: string
+  declare positie: string | null
   @column()
   declare positie2: string | null
   @column()
@@ -413,6 +427,8 @@ export class SpelerSchema extends BaseModel {
   declare stats: any | null
   @column()
   declare sterren: any | null
+  @column()
+  declare telefoon: string | null
   @column.dateTime({ autoCreate: true, autoUpdate: true })
   declare updatedAt: DateTime | null
 }

@@ -1,5 +1,5 @@
 import { SpelerSchema } from '#database/schema'
-import { hasMany } from '@adonisjs/lucid/orm'
+import { hasMany, beforeSave, afterSave, afterFind, afterFetch } from '@adonisjs/lucid/orm'
 import type { HasMany } from '@adonisjs/lucid/types/relations'
 import Rapport from '#models/rapport'
 import Doel from '#models/doel'
@@ -7,8 +7,33 @@ import Review from '#models/review'
 import Opstellingrij from '#models/opstellingrij'
 import Kaart from '#models/kaart'
 import Aanwezigheid from '#models/aanwezigheid'
+import { serializeJsonColumns, parseJsonColumns } from '#models/json_columns'
+
+const JSON_COLUMNS = ['skills', 'sterren', 'stats']
 
 export default class Speler extends SpelerSchema {
+  static table = 'spelers'
+
+  @beforeSave()
+  static serializeJson(speler: Speler) {
+    serializeJsonColumns(speler, JSON_COLUMNS)
+  }
+
+  @afterSave()
+  static restoreJson(speler: Speler) {
+    parseJsonColumns(speler, JSON_COLUMNS)
+  }
+
+  @afterFind()
+  static parseJson(speler: Speler) {
+    parseJsonColumns(speler, JSON_COLUMNS)
+  }
+
+  @afterFetch()
+  static parseJsonMany(spelers: Speler[]) {
+    spelers.forEach((s) => parseJsonColumns(s, JSON_COLUMNS))
+  }
+
   @hasMany(() => Rapport)
   declare rapporten: HasMany<typeof Rapport>
 

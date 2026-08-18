@@ -4,6 +4,8 @@ import type { HasMany } from '@adonisjs/lucid/types/relations'
 import Taaktoewijzing from '#models/taaktoewijzing'
 
 export default class Taak extends TakenSchema {
+  static table = 'taken'
+
   @hasMany(() => Taaktoewijzing)
   declare toewijzingen: HasMany<typeof Taaktoewijzing>
 }

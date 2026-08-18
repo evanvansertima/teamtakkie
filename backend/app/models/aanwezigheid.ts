@@ -5,6 +5,8 @@ import Training from '#models/training'
 import Speler from '#models/speler'
 
 export default class Aanwezigheid extends AanwezighedenSchema {
+  static table = 'aanwezigheden'
+
   @belongsTo(() => Training)
   declare training: BelongsTo<typeof Training>
 

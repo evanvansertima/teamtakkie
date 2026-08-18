@@ -4,6 +4,8 @@ import type { HasMany } from '@adonisjs/lucid/types/relations'
 import Training from '#models/training'
 
 export default class Seizoenblok extends SeizoenblokkenSchema {
+  static table = 'seizoenblokken'
+
   @hasMany(() => Training)
   declare trainingen: HasMany<typeof Training>
 }

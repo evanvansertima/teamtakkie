@@ -1,3 +1,5 @@
 import { InstellingenSchema } from '#database/schema'
 
-export default class Instelling extends InstellingenSchema {}
+export default class Instelling extends InstellingenSchema {
+  static table = 'instellingen'
+}

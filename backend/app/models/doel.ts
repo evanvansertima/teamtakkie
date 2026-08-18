@@ -4,6 +4,8 @@ import type { BelongsTo } from '@adonisjs/lucid/types/relations'
 import Speler from '#models/speler'
 
 export default class Doel extends DoelenSchema {
+  static table = 'doelen'
+
   @belongsTo(() => Speler)
   declare speler: BelongsTo<typeof Speler>
 }

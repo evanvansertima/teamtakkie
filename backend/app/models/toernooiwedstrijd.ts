@@ -5,6 +5,8 @@ import Toernooi from '#models/toernooi'
 import Toernooiteam from '#models/toernooiteam'
 
 export default class Toernooiwedstrijd extends ToernooiwedstrijdenSchema {
+  static table = 'toernooiwedstrijden'
+
   @belongsTo(() => Toernooi)
   declare toernooi: BelongsTo<typeof Toernooi>
 

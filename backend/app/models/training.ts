@@ -6,6 +6,8 @@ import Onderdeel from '#models/onderdeel'
 import Aanwezigheid from '#models/aanwezigheid'
 
 export default class Training extends TrainingenSchema {
+  static table = 'trainingen'
+
   @belongsTo(() => Seizoenblok)
   declare seizoenblok: BelongsTo<typeof Seizoenblok>
 

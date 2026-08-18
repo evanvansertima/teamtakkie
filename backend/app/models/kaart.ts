@@ -5,6 +5,8 @@ import Speler from '#models/speler'
 import Wedstrijd from '#models/wedstrijd'
 
 export default class Kaart extends KaartenSchema {
+  static table = 'kaarten'
+
   @belongsTo(() => Wedstrijd)
   declare wedstrijd: BelongsTo<typeof Wedstrijd>
 

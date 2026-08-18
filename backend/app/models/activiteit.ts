@@ -1,3 +1,5 @@
 import { ActiviteitenSchema } from '#database/schema'
 
-export default class Activiteit extends ActiviteitenSchema {}
+export default class Activiteit extends ActiviteitenSchema {
+  static table = 'activiteiten'
+}

@@ -5,6 +5,8 @@ import Speler from '#models/speler'
 import Wedstrijd from '#models/wedstrijd'
 
 export default class Opstellingrij extends OpstellingrijenSchema {
+  static table = 'opstellingrijen'
+
   @belongsTo(() => Speler)
   declare speler: BelongsTo<typeof Speler>
 
