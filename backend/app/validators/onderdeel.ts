@@ -12,4 +12,5 @@ export const onderdeelValidator = vine.create({
   materialen: vine.string().trim().optional(),
   beschrijving: vine.string().trim().optional(),
   aandachtspunten: vine.string().trim().optional(),
+  tekening: vine.any().optional(),
 })

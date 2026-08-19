@@ -23,6 +23,7 @@ import ActiviteitenController from '#controllers/activiteiten_controller'
 import StandrijenController from '#controllers/standrijen_controller'
 import FormatiesController from '#controllers/formaties_controller'
 import OpstellingrijenController from '#controllers/opstellingrijen_controller'
+import TactiekenController from '#controllers/tactieken_controller'
 
 router.get('/api/health', () => {
   return { status: 'ok' }
@@ -76,6 +77,7 @@ router
         router.resource('activiteiten', ActiviteitenController).apiOnly().except(['show'])
         router.resource('standrijen', StandrijenController).apiOnly().except(['show'])
         router.resource('formaties', FormatiesController).apiOnly().except(['show'])
+        router.resource('tactieken', TactiekenController).apiOnly()
       })
       .use(middleware.auth())
   })
