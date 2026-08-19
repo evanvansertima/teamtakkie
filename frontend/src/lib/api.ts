@@ -1,3 +1,5 @@
+import type { Tekening } from './tekenbord/types'
+
 const BASE_URL = '/api/v1'
 
 export class ApiError extends Error {
@@ -244,9 +246,19 @@ export type Onderdeel = {
   materialen: string | null
   beschrijving: string | null
   aandachtspunten: string | null
+  tekening: Tekening | null
 }
 
 export type OnderdeelInput = Partial<Omit<Onderdeel, 'id' | 'trainingId'>>
+
+export type Tactiek = {
+  id: number
+  naam: string
+  veldType: string
+  tekening: Tekening | null
+}
+
+export type TactiekInput = Partial<Omit<Tactiek, 'id'>>
 
 export type Aanwezigheid = {
   id: number
@@ -380,6 +392,14 @@ export const api = {
     update: (id: number, data: FormatieInput) =>
       request<Formatie>(`/formaties/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
     remove: (id: number) => request<void>(`/formaties/${id}`, { method: 'DELETE' }),
+  },
+
+  tactieken: {
+    list: () => request<Tactiek[]>('/tactieken'),
+    get: (id: number) => request<Tactiek>(`/tactieken/${id}`),
+    create: (data: TactiekInput) => request<Tactiek>('/tactieken', { method: 'POST', body: JSON.stringify(data) }),
+    update: (id: number, data: TactiekInput) => request<Tactiek>(`/tactieken/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+    remove: (id: number) => request<void>(`/tactieken/${id}`, { method: 'DELETE' }),
   },
 
   trainingen: {

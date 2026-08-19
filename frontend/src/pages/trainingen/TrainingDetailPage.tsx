@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { api, ApiError, type Training, type Aanwezigheid } from '../../lib/api'
+import { api, ApiError, type Training, type Aanwezigheid, type Onderdeel } from '../../lib/api'
 import { TrainingForm } from './TrainingForm'
+import { OnderdeelDetailModal } from './OnderdeelDetailModal'
 
 const AANWEZIG_OPTIES = [
   { id: 'aanwezig', label: 'Aanwezig', kleur: '#28a745' },
@@ -144,6 +145,7 @@ function OnderdelenSectie({ training, onChanged }: { training: Training; onChang
   const [type, setType] = useState<(typeof TYPES)[number]>('Oefening')
   const [duur, setDuur] = useState('15')
   const [error, setError] = useState<string | null>(null)
+  const [bewerken, setBewerken] = useState<Onderdeel | null>(null)
 
   async function voegToe() {
     if (!naam.trim()) {
@@ -173,17 +175,34 @@ function OnderdelenSectie({ training, onChanged }: { training: Training; onChang
       <div className="kaart-titel">Onderdelen ({training.onderdelen?.length ?? 0})</div>
       {(training.onderdelen ?? []).length === 0 && !nieuw && <p className="form-hint">Nog geen onderdelen.</p>}
       {(training.onderdelen ?? []).map((o, i) => (
-        <div key={o.id} className="sp-rij">
+        <div key={o.id} className="sp-rij" onClick={() => setBewerken(o)} style={{ cursor: 'pointer' }}>
           <span className="sp-naam">
             {i + 1}. {o.naam}
             {o.type ? ` — ${o.type}` : ''}
             {o.duur ? ` (${o.duur}')` : ''}
+            {(o.tekening?.elems?.length || o.tekening?.lijnen?.length) ? ' · ✎' : ''}
           </span>
-          <button className="knop lijn klein" onClick={() => verwijder(o.id)}>
+          <button
+            className="knop lijn klein"
+            onClick={(e) => {
+              e.stopPropagation()
+              verwijder(o.id)
+            }}
+          >
             ×
           </button>
         </div>
       ))}
+      {bewerken && (
+        <OnderdeelDetailModal
+          onderdeel={bewerken}
+          onClose={() => setBewerken(null)}
+          onSaved={() => {
+            setBewerken(null)
+            onChanged()
+          }}
+        />
+      )}
       {nieuw ? (
         <div>
           <div className="form-rij">
