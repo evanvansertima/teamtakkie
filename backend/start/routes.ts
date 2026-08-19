@@ -21,6 +21,7 @@ import AanwezighedenController from '#controllers/aanwezigheden_controller'
 import LiveeventsController from '#controllers/liveevents_controller'
 import ActiviteitenController from '#controllers/activiteiten_controller'
 import StandrijenController from '#controllers/standrijen_controller'
+import FormatiesController from '#controllers/formaties_controller'
 
 router.get('/api/health', () => {
   return { status: 'ok' }
@@ -70,6 +71,7 @@ router
 
         router.resource('activiteiten', ActiviteitenController).apiOnly().except(['show'])
         router.resource('standrijen', StandrijenController).apiOnly().except(['show'])
+        router.resource('formaties', FormatiesController).apiOnly().except(['show'])
       })
       .use(middleware.auth())
   })
