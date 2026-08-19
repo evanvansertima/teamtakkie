@@ -152,8 +152,13 @@ function IndividuTab({ spelers, wedstrijden, trainingen }: { spelers: Speler[]; 
       <div className="kaart">
         <div className="kaart-titel">{sp.naam}</div>
         <div className="chip-rij">
+          <StatMini label="Wedstrijden" waarde={st.wedstrijden} />
+          <StatMini label="Basisplaatsen" waarde={st.basisplaatsen} />
+          <StatMini label="Minuten" waarde={st.minuten} />
           <StatMini label="Goals" waarde={st.goals} />
           <StatMini label="Assists" waarde={st.assists} />
+        </div>
+        <div className="chip-rij" style={{ marginTop: 10 }}>
           <StatMini label="Training" waarde={`${st.trainingPct}%`} />
           <StatMini label="Geel" waarde={st.geel} kleur="#eab308" />
           <StatMini label="Rood" waarde={st.rood} kleur="#dc3545" />

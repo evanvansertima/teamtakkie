@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import type { Wedstrijd, WedstrijdInput } from '../../lib/api'
 import { api, ApiError } from '../../lib/api'
+import { FORMATIE_NAMEN } from '../../lib/formaties'
 
 const LEEG: WedstrijdInput = {
   tegenstander: '',
@@ -8,7 +9,7 @@ const LEEG: WedstrijdInput = {
   tijd: '',
   locatie: '',
   thuis: true,
-  formatie: '4-3-3',
+  formatie: '4-3-3A',
   speelduur: 90,
   notities: '',
 }
@@ -94,7 +95,13 @@ export function WedstrijdForm({
         <div className="form-rij">
           <div className="form-groep">
             <label>Formatie</label>
-            <input value={form.formatie ?? ''} onChange={(e) => set('formatie', e.target.value)} placeholder="4-3-3" />
+            <select value={form.formatie ?? ''} onChange={(e) => set('formatie', e.target.value)}>
+              {FORMATIE_NAMEN.map((n) => (
+                <option key={n} value={n}>
+                  {n}
+                </option>
+              ))}
+            </select>
           </div>
           <div className="form-groep">
             <label>Speelduur (min)</label>

@@ -52,11 +52,16 @@ export function spelerStats(spelerId: number, wedstrijden: Wedstrijd[], training
   const rood = gespeeld.reduce((s, w) => s + (w.kaarten ?? []).filter((k) => k.spelerId === spelerId && k.type === 'rood').length, 0)
   const motm = gespeeld.filter((w) => w.motmSpelerId === spelerId).length
 
+  const opstellingRijen = gespeeld.flatMap((w) => (w.opstellingrijen ?? []).filter((r) => r.spelerId === spelerId))
+  const wedstrijden_gespeeld = opstellingRijen.filter((r) => r.spelStatus !== 'afwezig').length
+  const basisplaatsen = opstellingRijen.filter((r) => r.spelStatus === 'basis').length
+  const minuten = opstellingRijen.reduce((s, r) => s + (r.minuten ?? 0), 0)
+
   const metTraining = trainingen.filter((t) => (t.aanwezigheden ?? []).some((a) => a.spelerId === spelerId))
   const aanwezig = metTraining.filter((t) => (t.aanwezigheden ?? []).some((a) => a.spelerId === spelerId && a.status === 'aanwezig')).length
   const trainingPct = metTraining.length > 0 ? Math.round((aanwezig / metTraining.length) * 100) : 0
 
-  return { goals, assists, geel, rood, motm, trainingPct }
+  return { goals, assists, geel, rood, motm, trainingPct, wedstrijden: wedstrijden_gespeeld, basisplaatsen, minuten }
 }
 
 export function eigenStandRij(wedstrijden: Wedstrijd[], teamNaam: string): Standrij {

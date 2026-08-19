@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { api, type Wedstrijd, type WedstrijdInput, type Speler } from '../../lib/api'
+import { api, type Wedstrijd, type WedstrijdInput, type Speler, type Opstellingrij } from '../../lib/api'
 import { WedstrijdForm } from './WedstrijdForm'
+import { FORMATIES } from '../../lib/formaties'
 
 export function WedstrijdDetailPage() {
   const { id } = useParams()
@@ -90,6 +91,10 @@ export function WedstrijdDetailPage() {
             {wedstrijd.score.fch ?? 0}–{wedstrijd.score.teg ?? 0}
           </span>
         )}
+      </div>
+
+      <div className="kaart" style={{ marginBottom: 16 }}>
+        <OpstellingSectie wedstrijd={wedstrijd} spelers={spelers} onChanged={laad} />
       </div>
 
       {wedstrijd.status === 'gepland' ? (
@@ -313,6 +318,122 @@ function KaartenSectie({ wedstrijd, spelers, onChanged }: { wedstrijd: Wedstrijd
           <button className="knop lijn klein" onClick={() => setKiezer('rood')} disabled={spelers.length === 0}>
             🟥 Rode kaart
           </button>
+        </div>
+      )}
+    </>
+  )
+}
+
+const SPEL_STATUSSEN = [
+  { id: 'basis', label: 'Basis' },
+  { id: 'wissel', label: 'Wissel' },
+  { id: 'afwezig', label: 'Afwezig' },
+] as const
+
+function OpstellingSectie({ wedstrijd, spelers, onChanged }: { wedstrijd: Wedstrijd; spelers: Speler[]; onChanged: () => void }) {
+  const [actievePositie, setActievePositie] = useState<string | null>(null)
+  const shape = wedstrijd.formatie && FORMATIES[wedstrijd.formatie] ? wedstrijd.formatie : Object.keys(FORMATIES)[0]
+  const posities = FORMATIES[shape] ?? []
+  const rijen = wedstrijd.opstellingrijen ?? []
+
+  function rijVoor(positieId: string): Opstellingrij | undefined {
+    return rijen.find((r) => r.positieId === positieId)
+  }
+
+  async function wijsToe(positieId: string, positieLabel: string, spelerId: string) {
+    const bestaand = rijVoor(positieId)
+    if (!spelerId) {
+      if (bestaand) await api.opstellingrijen.remove(bestaand.id)
+    } else {
+      await api.opstellingrijen.create(wedstrijd.id, {
+        spelerId: Number(spelerId),
+        positieId,
+        positieLabel,
+        spelStatus: 'basis',
+      })
+    }
+    setActievePositie(null)
+    onChanged()
+  }
+
+  async function zetStatus(rij: Opstellingrij, spelStatus: Opstellingrij['spelStatus']) {
+    await api.opstellingrijen.update(rij.id, { spelStatus })
+    onChanged()
+  }
+
+  async function zetMinuten(rij: Opstellingrij, minuten: string) {
+    await api.opstellingrijen.update(rij.id, { minuten: Number(minuten) || 0 })
+    onChanged()
+  }
+
+  const actieveRij = actievePositie ? rijVoor(actievePositie) : undefined
+  const actievePos = posities.find((p) => p.id === actievePositie)
+
+  return (
+    <>
+      <div className="kaart-titel">
+        Opstelling <span className="rap-datum">({shape})</span>
+      </div>
+      <div className="veld">
+        {posities.map((p) => {
+          const rij = rijVoor(p.id)
+          return (
+            <button
+              key={p.id}
+              type="button"
+              className={'veld-positie' + (rij ? ' bezet' : '') + (actievePositie === p.id ? ' actief' : '')}
+              style={{ left: `${p.x}%`, top: `${p.y}%` }}
+              onClick={() => setActievePositie(actievePositie === p.id ? null : p.id)}
+            >
+              {rij ? (rij.speler?.rugnummer ? `#${rij.speler.rugnummer}` : rij.speler?.naam.charAt(0)) : p.label}
+            </button>
+          )
+        })}
+      </div>
+
+      {actievePositie && actievePos && (
+        <div style={{ marginTop: 16 }}>
+          <div className="form-groep">
+            <label>Wie speelt op {actievePos.label}?</label>
+            <select
+              value={actieveRij?.spelerId ?? ''}
+              onChange={(e) => wijsToe(actievePositie, actievePos.label, e.target.value)}
+            >
+              <option value="">Niemand</option>
+              {spelers.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {(s.rugnummer ? `#${s.rugnummer} ` : '') + s.naam}
+                </option>
+              ))}
+            </select>
+          </div>
+          {actieveRij && (
+            <div className="form-rij">
+              <div className="form-groep">
+                <label>Status</label>
+                <div className="chip-rij">
+                  {SPEL_STATUSSEN.map((s) => (
+                    <button
+                      key={s.id}
+                      type="button"
+                      className={'chip' + (actieveRij.spelStatus === s.id ? ' actief' : '')}
+                      onClick={() => zetStatus(actieveRij, s.id)}
+                    >
+                      {s.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="form-groep">
+                <label>Minuten</label>
+                <input
+                  type="number"
+                  value={actieveRij.minuten}
+                  onChange={(e) => zetMinuten(actieveRij, e.target.value)}
+                />
+              </div>
+            </div>
+          )}
         </div>
       )}
     </>

@@ -147,9 +147,36 @@ export type Wedstrijd = {
   notities: string | null
   doelpunten?: Doelpunt[]
   kaarten?: Kaart[]
+  opstellingrijen?: Opstellingrij[]
 }
 
-export type WedstrijdInput = Partial<Omit<Wedstrijd, 'id' | 'motmSpeler' | 'doelpunten' | 'kaarten'>>
+export type WedstrijdInput = Partial<
+  Omit<Wedstrijd, 'id' | 'motmSpeler' | 'doelpunten' | 'kaarten' | 'opstellingrijen'>
+>
+
+export type Opstellingrij = {
+  id: number
+  wedstrijdId: number
+  spelerId: number
+  positieId: string
+  positieLabel: string
+  spelStatus: 'basis' | 'wissel' | 'afwezig'
+  minuten: number
+  speler?: Speler
+}
+
+export type OpstellingrijInput = {
+  spelerId: number
+  positieId: string
+  positieLabel: string
+  spelStatus?: 'basis' | 'wissel' | 'afwezig'
+  minuten?: number
+}
+
+export type OpstellingrijUpdateInput = {
+  spelStatus?: 'basis' | 'wissel' | 'afwezig'
+  minuten?: number
+}
 
 export type Liveevent = {
   id: number
@@ -305,6 +332,17 @@ export const api = {
         body: JSON.stringify(data),
       }),
     remove: (id: number) => request<void>(`/kaarten/${id}`, { method: 'DELETE' }),
+  },
+
+  opstellingrijen: {
+    create: (wedstrijdId: number, data: OpstellingrijInput) =>
+      request<Opstellingrij>(`/wedstrijden/${wedstrijdId}/opstellingrijen`, {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+    update: (id: number, data: OpstellingrijUpdateInput) =>
+      request<Opstellingrij>(`/opstellingrijen/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+    remove: (id: number) => request<void>(`/opstellingrijen/${id}`, { method: 'DELETE' }),
   },
 
   liveevents: {
