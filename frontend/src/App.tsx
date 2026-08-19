@@ -1,6 +1,10 @@
 import { useEffect, useState } from 'react'
+import { Navigate, Route, Routes } from 'react-router-dom'
 import { api, ApiError, type User } from './lib/api'
 import { LoginScreen } from './LoginScreen'
+import { AppShell } from './layout/AppShell'
+import { SpelersPage } from './pages/spelers/SpelersPage'
+import { SpelerDetailPage } from './pages/spelers/SpelerDetailPage'
 
 type AuthState =
   | { status: 'checking' }
@@ -30,25 +34,14 @@ function App() {
   }
 
   return (
-    <main className="dashboard-shell">
-      <header>
-        <h1>FC Harlingen JO19-2</h1>
-        <div>
-          <span>{auth.user.fullName ?? auth.user.email}</span>
-          <button
-            type="button"
-            onClick={() => api.logout().then(() => setAuth({ status: 'anonymous' }))}
-          >
-            Uitloggen
-          </button>
-        </div>
-      </header>
-      <p>
-        Ingelogd en verbonden met de backend. De modules (spelers, wedstrijden,
-        trainingen, live analyse, agenda, statistieken, tactieken) worden hier
-        vanuit <code>legacy/fc-harlingen-app.html</code> overgezet.
-      </p>
-    </main>
+    <AppShell user={auth.user} onLogout={() => api.logout().then(() => setAuth({ status: 'anonymous' }))}>
+      <Routes>
+        <Route path="/" element={<Navigate to="/spelers" replace />} />
+        <Route path="/spelers" element={<SpelersPage />} />
+        <Route path="/spelers/:id" element={<SpelerDetailPage />} />
+        <Route path="*" element={<Navigate to="/spelers" replace />} />
+      </Routes>
+    </AppShell>
   )
 }
 

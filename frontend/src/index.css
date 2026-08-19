@@ -82,21 +82,533 @@ body {
   font-size: 13px;
 }
 
-.dashboard-shell {
-  max-width: 960px;
-  margin: 0 auto;
-  padding: 24px;
+/* ── App shell ── */
+.app-shell {
+  display: flex;
+  min-height: 100vh;
 }
 
-.dashboard-shell header {
+.app-nav {
+  display: flex;
+  flex-direction: column;
+  width: 220px;
+  flex-shrink: 0;
+  padding: 20px 14px;
+  border-right: 1px solid var(--border);
+  background: var(--card-bg);
+}
+
+.app-nav-title {
+  font-weight: 700;
+  font-size: 14px;
+  margin-bottom: 20px;
+  padding: 0 8px;
+}
+
+.app-nav ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+}
+
+.app-nav a,
+.app-nav .soon {
+  display: block;
+  padding: 9px 10px;
+  border-radius: 8px;
+  text-decoration: none;
+  color: inherit;
+  font-size: 14px;
+}
+
+.app-nav a:hover {
+  background: var(--bg);
+}
+
+.app-nav a.active {
+  background: var(--accent);
+  color: #fff;
+}
+
+.app-nav .soon {
+  color: var(--border);
+  cursor: default;
+}
+
+.app-nav-user {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 24px;
+  gap: 8px;
+  padding: 10px 8px 0;
+  border-top: 1px solid var(--border);
+  margin-top: 10px;
+  font-size: 13px;
 }
 
-.dashboard-shell header div {
+.app-nav-user button {
+  border: none;
+  background: none;
+  color: var(--accent);
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.app-content {
+  flex: 1;
+  padding: 28px 32px;
+  max-width: 860px;
+}
+
+/* ── Shared page bits ── */
+.pagina-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 18px;
+  gap: 12px;
+}
+
+.pagina-header h2 {
+  margin: 2px 0;
+}
+
+.eyebrow {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.terug {
+  border: none;
+  background: none;
+  color: var(--accent);
+  cursor: pointer;
+  padding: 0;
+  margin-bottom: 14px;
+  font-size: 13px;
+}
+
+.knop-plus {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  border: none;
+  background: var(--accent);
+  color: #fff;
+  font-size: 20px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.zoekbalk {
+  width: 100%;
+  padding: 9px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: transparent;
+  color: inherit;
+  margin-bottom: 12px;
+}
+
+.chip-rij {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.chip {
+  padding: 6px 12px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: transparent;
+  color: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.chip.actief {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: #fff;
+}
+
+.leeg {
+  text-align: center;
+  padding: 48px 20px;
+  color: var(--text);
+  opacity: 0.7;
+}
+
+.knop {
+  padding: 9px 16px;
+  border: none;
+  border-radius: 8px;
+  background: var(--accent);
+  color: #fff;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.knop.lijn {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: inherit;
+}
+
+.knop.gevaar {
+  background: #c0392b;
+}
+
+.knop.klein {
+  padding: 5px 10px;
+  font-size: 12px;
+}
+
+/* ── Spelers list ── */
+.linie-groep {
+  margin-bottom: 18px;
+}
+
+.linie-kop {
+  font-size: 12px;
+  font-weight: 700;
+  opacity: 0.65;
+  margin-bottom: 6px;
+}
+
+.sp-lijst {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.sp-rij {
   display: flex;
   align-items: center;
   gap: 12px;
+  padding: 10px 14px;
+  cursor: pointer;
+  border-bottom: 1px solid var(--border);
+}
+
+.sp-rij:last-child {
+  border-bottom: none;
+}
+
+.sp-rij:hover {
+  background: var(--bg);
+}
+
+.sp-avatar {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.sp-naam {
+  flex: 1;
+  font-size: 14px;
+}
+
+.sp-nr {
+  opacity: 0.6;
+  margin-right: 6px;
+  font-size: 12px;
+}
+
+.sp-status {
+  font-size: 12px;
+}
+
+.ovr-badge {
+  font-weight: 800;
+  font-size: 15px;
+  min-width: 24px;
+  text-align: right;
+}
+
+.ovr-badge.groot {
+  font-size: 26px;
+}
+
+/* ── Cards / detail ── */
+.kaart {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 18px;
+  background: var(--card-bg);
+}
+
+.kaart-titel {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 700;
+  margin-bottom: 12px;
+}
+
+.gegevens-lijst {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 6px 16px;
+  margin: 0;
+  font-size: 13px;
+}
+
+.gegevens-lijst dt {
+  opacity: 0.6;
+}
+
+.gegevens-lijst dd {
+  margin: 0;
+}
+
+/* ── FC skills ── */
+.fc-cat {
+  margin-bottom: 10px;
+}
+
+.fc-cat-kop {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.fc-cat-streep {
+  width: 4px;
+  height: 14px;
+  border-radius: 2px;
+}
+
+.fc-cat-kop > span:nth-child(2) {
+  flex: 1;
+}
+
+.fc-rij {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 3px 0 3px 12px;
+  font-size: 12px;
+}
+
+.fc-rij-naam {
+  width: 140px;
+  flex-shrink: 0;
+  opacity: 0.8;
+}
+
+.fc-rij input[type='range'] {
+  flex: 1;
+}
+
+.fc-rij-waarde {
+  width: 24px;
+  text-align: right;
+}
+
+.fc-rij button {
+  border: none;
+  background: none;
+  color: inherit;
+  opacity: 0.5;
+  cursor: pointer;
+}
+
+.fc-ster-rij {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 0;
+  font-size: 12px;
+}
+
+.ster {
+  border: none;
+  background: none;
+  color: var(--border);
+  font-size: 15px;
+  cursor: pointer;
+}
+
+.ster.aan {
+  color: #eab308;
+}
+
+/* ── Reports ── */
+.rap-raster {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 10px;
+}
+
+.rap-kaart {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px;
+  opacity: 0.6;
+}
+
+.rap-kaart.gevuld {
+  opacity: 1;
+}
+
+.rap-kop {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.rap-icoon {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.rap-naam {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.rap-datum {
+  font-size: 11px;
+  opacity: 0.6;
+}
+
+.rap-tekst {
+  font-size: 12px;
+  margin: 6px 0;
+  opacity: 0.85;
+}
+
+/* ── Modal / forms ── */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  overflow-y: auto;
+  padding: 40px 16px;
+  z-index: 10;
+}
+
+.modal-sheet {
+  width: 100%;
+  max-width: 520px;
+  background: var(--card-bg);
+  border-radius: 14px;
+  padding: 24px;
+}
+
+.modal-titel {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 18px;
+  font-weight: 700;
+  margin-bottom: 16px;
+}
+
+.form-sectie-titel {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  opacity: 0.6;
+  margin: 20px 0 10px;
+}
+
+.form-hint {
+  font-size: 12px;
+  opacity: 0.65;
+  margin: 0 0 10px;
+}
+
+.form-groep {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 10px;
+}
+
+.form-groep label {
+  font-size: 12px;
+  opacity: 0.75;
+}
+
+.form-groep input,
+.form-groep select,
+textarea {
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+}
+
+.form-rij {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.form-error {
+  color: #c0392b;
+  font-size: 13px;
+}
+
+.form-acties {
+  display: flex;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.form-acties .knop {
+  flex: 1;
+  text-align: center;
+}
+
+.stats-raster {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+
+.stat-invoer {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+  opacity: 0.8;
+}
+
+.stat-invoer input {
+  padding: 6px 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: transparent;
+  color: inherit;
 }
