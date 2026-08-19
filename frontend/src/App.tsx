@@ -12,6 +12,7 @@ import { TrainingDetailPage } from './pages/trainingen/TrainingDetailPage'
 import { LiveAnalysePage } from './pages/live/LiveAnalysePage'
 import { LiveSessionPage } from './pages/live/LiveSessionPage'
 import { AgendaPage } from './pages/agenda/AgendaPage'
+import { StatistiekenPage } from './pages/statistieken/StatistiekenPage'
 
 type AuthState =
   | { status: 'checking' }
@@ -53,6 +54,7 @@ function App() {
         <Route path="/live" element={<LiveAnalysePage />} />
         <Route path="/live/:id" element={<LiveSessionPage />} />
         <Route path="/agenda" element={<AgendaPage />} />
+        <Route path="/statistieken" element={<StatistiekenPage />} />
         <Route path="*" element={<Navigate to="/spelers" replace />} />
       </Routes>
     </AppShell>

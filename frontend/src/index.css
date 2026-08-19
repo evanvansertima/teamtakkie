@@ -558,8 +558,14 @@ body {
   opacity: 0.75;
 }
 
-.form-groep input,
-.form-groep select,
+input[type='text'],
+input[type='number'],
+input[type='email'],
+input[type='tel'],
+input[type='date'],
+input[type='time'],
+input:not([type]),
+select,
 textarea {
   padding: 8px 10px;
   border: 1px solid var(--border);

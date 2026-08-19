@@ -183,6 +183,19 @@ export type Activiteit = {
 
 export type ActiviteitInput = Partial<Omit<Activiteit, 'id'>>
 
+export type Standrij = {
+  id: number
+  naam: string
+  gespeeld: number
+  winst: number
+  gelijk: number
+  verlies: number
+  doelVoor: number
+  doelTegen: number
+}
+
+export type StandrijInput = Partial<Omit<Standrij, 'id'>>
+
 export type Onderdeel = {
   id: number
   trainingId: number
@@ -302,6 +315,15 @@ export const api = {
     update: (id: number, data: ActiviteitInput) =>
       request<Activiteit>(`/activiteiten/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
     remove: (id: number) => request<void>(`/activiteiten/${id}`, { method: 'DELETE' }),
+  },
+
+  standrijen: {
+    list: () => request<Standrij[]>('/standrijen'),
+    create: (data: StandrijInput) =>
+      request<Standrij>('/standrijen', { method: 'POST', body: JSON.stringify(data) }),
+    update: (id: number, data: StandrijInput) =>
+      request<Standrij>(`/standrijen/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+    remove: (id: number) => request<void>(`/standrijen/${id}`, { method: 'DELETE' }),
   },
 
   trainingen: {
