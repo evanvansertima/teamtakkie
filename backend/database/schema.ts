@@ -25,12 +25,14 @@ export class AanwezighedenSchema extends BaseModel {
 }
 
 export class ActiviteitenSchema extends BaseModel {
-  static $columns = ['createdAt', 'datum', 'heleDag', 'herhaal', 'herhaalTot', 'id', 'soort', 'titel', 'updatedAt'] as const
+  static $columns = ['createdAt', 'datum', 'eindtijd', 'heleDag', 'herhaal', 'herhaalTot', 'id', 'locatie', 'notitie', 'soort', 'tijd', 'titel', 'updatedAt'] as const
   $columns = ActiviteitenSchema.$columns
   @column.dateTime({ autoCreate: true })
   declare createdAt: DateTime
   @column.date()
   declare datum: DateTime
+  @column()
+  declare eindtijd: string | null
   @column()
   declare heleDag: boolean
   @column()
@@ -40,7 +42,13 @@ export class ActiviteitenSchema extends BaseModel {
   @column({ isPrimary: true })
   declare id: number
   @column()
+  declare locatie: string | null
+  @column()
+  declare notitie: string | null
+  @column()
   declare soort: string
+  @column()
+  declare tijd: string | null
   @column()
   declare titel: string
   @column.dateTime({ autoCreate: true, autoUpdate: true })

@@ -19,6 +19,7 @@ import TrainingenController from '#controllers/trainingen_controller'
 import OnderdelenController from '#controllers/onderdelen_controller'
 import AanwezighedenController from '#controllers/aanwezigheden_controller'
 import LiveeventsController from '#controllers/liveevents_controller'
+import ActiviteitenController from '#controllers/activiteiten_controller'
 
 router.get('/api/health', () => {
   return { status: 'ok' }
@@ -65,6 +66,8 @@ router
         router.get('wedstrijden/:wedstrijdId/liveevents', [LiveeventsController, 'index'])
         router.post('wedstrijden/:wedstrijdId/liveevents', [LiveeventsController, 'store'])
         router.delete('liveevents/:id', [LiveeventsController, 'destroy'])
+
+        router.resource('activiteiten', ActiviteitenController).apiOnly().except(['show'])
       })
       .use(middleware.auth())
   })
