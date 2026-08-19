@@ -456,10 +456,14 @@ export class SpelerSchema extends BaseModel {
 }
 
 export class StandrijenSchema extends BaseModel {
-  static $columns = ['createdAt', 'gelijk', 'gespeeld', 'id', 'naam', 'updatedAt', 'verlies', 'winst'] as const
+  static $columns = ['createdAt', 'doelTegen', 'doelVoor', 'gelijk', 'gespeeld', 'id', 'naam', 'updatedAt', 'verlies', 'winst'] as const
   $columns = StandrijenSchema.$columns
   @column.dateTime({ autoCreate: true })
   declare createdAt: DateTime
+  @column()
+  declare doelTegen: number
+  @column()
+  declare doelVoor: number
   @column()
   declare gelijk: number
   @column()

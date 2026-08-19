@@ -20,6 +20,7 @@ import OnderdelenController from '#controllers/onderdelen_controller'
 import AanwezighedenController from '#controllers/aanwezigheden_controller'
 import LiveeventsController from '#controllers/liveevents_controller'
 import ActiviteitenController from '#controllers/activiteiten_controller'
+import StandrijenController from '#controllers/standrijen_controller'
 
 router.get('/api/health', () => {
   return { status: 'ok' }
@@ -68,6 +69,7 @@ router
         router.delete('liveevents/:id', [LiveeventsController, 'destroy'])
 
         router.resource('activiteiten', ActiviteitenController).apiOnly().except(['show'])
+        router.resource('standrijen', StandrijenController).apiOnly().except(['show'])
       })
       .use(middleware.auth())
   })
