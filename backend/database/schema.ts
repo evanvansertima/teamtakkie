@@ -628,7 +628,7 @@ export class TrainingenSchema extends BaseModel {
   @column()
   declare seizoenblokId: number | null
   @column()
-  declare tijd: string
+  declare tijd: string | null
   @column.dateTime({ autoCreate: true, autoUpdate: true })
   declare updatedAt: DateTime | null
   @column()
