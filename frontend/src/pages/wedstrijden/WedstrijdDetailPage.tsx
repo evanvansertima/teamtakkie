@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { api, type Wedstrijd, type WedstrijdInput, type Speler, type Opstellingrij } from '../../lib/api'
 import { WedstrijdForm } from './WedstrijdForm'
 import { FORMATIES } from '../../lib/formaties'
+import { TactiekSectie } from './TactiekSectie'
 
 export function WedstrijdDetailPage() {
   const { id } = useParams()
@@ -95,6 +96,10 @@ export function WedstrijdDetailPage() {
 
       <div className="kaart" style={{ marginBottom: 16 }}>
         <OpstellingSectie wedstrijd={wedstrijd} spelers={spelers} onChanged={laad} />
+      </div>
+
+      <div className="kaart" style={{ marginBottom: 16 }}>
+        <TactiekSectie wedstrijd={wedstrijd} spelers={spelers} />
       </div>
 
       {wedstrijd.status === 'gepland' ? (

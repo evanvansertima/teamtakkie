@@ -202,6 +202,22 @@ export type OpstellingrijUpdateInput = {
   minuten?: number
 }
 
+export type SpelerInstructie = { aanval?: string; verdediging?: string }
+
+export type Tactiekplan = {
+  id: number
+  wedstrijdId: number
+  veldType: string
+  tekening: Tekening | null
+  plan: string | null
+  balbezit: string | null
+  balverlies: string | null
+  omschakeling: string | null
+  instructies: Record<string, SpelerInstructie> | null
+}
+
+export type TactiekplanInput = Partial<Omit<Tactiekplan, 'id' | 'wedstrijdId'>>
+
 export type Liveevent = {
   id: number
   wedstrijdId: number
@@ -379,6 +395,12 @@ export const api = {
     update: (id: number, data: OpstellingrijUpdateInput) =>
       request<Opstellingrij>(`/opstellingrijen/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
     remove: (id: number) => request<void>(`/opstellingrijen/${id}`, { method: 'DELETE' }),
+  },
+
+  tactiekplannen: {
+    get: (wedstrijdId: number) => request<Tactiekplan | undefined>(`/wedstrijden/${wedstrijdId}/tactiekplan`),
+    upsert: (wedstrijdId: number, data: TactiekplanInput) =>
+      request<Tactiekplan>(`/wedstrijden/${wedstrijdId}/tactiekplan`, { method: 'PUT', body: JSON.stringify(data) }),
   },
 
   liveevents: {
