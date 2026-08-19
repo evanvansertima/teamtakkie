@@ -214,14 +214,24 @@ export class OefeningenSchema extends BaseModel {
 }
 
 export class OnderdelenSchema extends BaseModel {
-  static $columns = ['createdAt', 'duur', 'id', 'naam', 'oefeningId', 'tekening', 'trainingId', 'updatedAt'] as const
+  static $columns = ['aandachtspunten', 'aantalSpelers', 'beschrijving', 'createdAt', 'doel', 'duur', 'id', 'materialen', 'naam', 'oefeningId', 'tekening', 'trainingId', 'type', 'updatedAt', 'veldGrootte'] as const
   $columns = OnderdelenSchema.$columns
+  @column()
+  declare aandachtspunten: string | null
+  @column()
+  declare aantalSpelers: number | null
+  @column()
+  declare beschrijving: string | null
   @column.dateTime({ autoCreate: true })
   declare createdAt: DateTime
+  @column()
+  declare doel: string | null
   @column()
   declare duur: number | null
   @column({ isPrimary: true })
   declare id: number
+  @column()
+  declare materialen: string | null
   @column()
   declare naam: string
   @column()
@@ -230,8 +240,12 @@ export class OnderdelenSchema extends BaseModel {
   declare tekening: any | null
   @column()
   declare trainingId: number
+  @column()
+  declare type: string | null
   @column.dateTime({ autoCreate: true, autoUpdate: true })
   declare updatedAt: DateTime | null
+  @column()
+  declare veldGrootte: string | null
 }
 
 export class OpgaveSchema extends BaseModel {
@@ -593,7 +607,7 @@ export class ToernooiwedstrijdenSchema extends BaseModel {
 }
 
 export class TrainingenSchema extends BaseModel {
-  static $columns = ['createdAt', 'datum', 'doelstellingen', 'duur', 'id', 'locatie', 'seizoenblokId', 'tijd', 'updatedAt'] as const
+  static $columns = ['createdAt', 'datum', 'doelstellingen', 'duur', 'id', 'locatie', 'materialen', 'notities', 'seizoenblokId', 'tijd', 'updatedAt', 'voorbereidingen'] as const
   $columns = TrainingenSchema.$columns
   @column.dateTime({ autoCreate: true })
   declare createdAt: DateTime
@@ -608,11 +622,17 @@ export class TrainingenSchema extends BaseModel {
   @column()
   declare locatie: string | null
   @column()
+  declare materialen: string | null
+  @column()
+  declare notities: string | null
+  @column()
   declare seizoenblokId: number | null
   @column()
   declare tijd: string
   @column.dateTime({ autoCreate: true, autoUpdate: true })
   declare updatedAt: DateTime | null
+  @column()
+  declare voorbereidingen: string | null
 }
 
 export class UserSchema extends BaseModel {

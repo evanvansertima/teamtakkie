@@ -15,6 +15,9 @@ import RapportenController from '#controllers/rapporten_controller'
 import WedstrijdenController from '#controllers/wedstrijden_controller'
 import DoelpuntenController from '#controllers/doelpunten_controller'
 import KaartenController from '#controllers/kaarten_controller'
+import TrainingenController from '#controllers/trainingen_controller'
+import OnderdelenController from '#controllers/onderdelen_controller'
+import AanwezighedenController from '#controllers/aanwezigheden_controller'
 
 router.get('/api/health', () => {
   return { status: 'ok' }
@@ -51,6 +54,12 @@ router
         router.delete('doelpunten/:id', [DoelpuntenController, 'destroy'])
         router.post('wedstrijden/:wedstrijdId/kaarten', [KaartenController, 'store'])
         router.delete('kaarten/:id', [KaartenController, 'destroy'])
+
+        router.resource('trainingen', TrainingenController).apiOnly()
+        router.post('trainingen/:trainingId/onderdelen', [OnderdelenController, 'store'])
+        router.put('onderdelen/:id', [OnderdelenController, 'update'])
+        router.delete('onderdelen/:id', [OnderdelenController, 'destroy'])
+        router.put('aanwezigheden/:id', [AanwezighedenController, 'update'])
       })
       .use(middleware.auth())
   })
