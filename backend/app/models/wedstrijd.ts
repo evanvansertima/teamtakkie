@@ -9,9 +9,10 @@ import {
   afterFetch,
 } from '@adonisjs/lucid/orm'
 import type { BelongsTo, HasMany, HasOne } from '@adonisjs/lucid/types/relations'
-import { serializeJsonColumns, parseJsonColumns } from '#models/json_columns'
+import { serializeJsonColumns, parseJsonColumns, parseBooleanColumns } from '#models/json_columns'
 
 const JSON_COLUMNS = ['score']
+const BOOLEAN_COLUMNS = ['thuis']
 import Speler from '#models/speler'
 import Opstellingrij from '#models/opstellingrij'
 import Doelpunt from '#models/doelpunt'
@@ -42,11 +43,15 @@ export default class Wedstrijd extends WedstrijdenSchema {
   @afterFind()
   static parseJson(wedstrijd: Wedstrijd) {
     parseJsonColumns(wedstrijd, JSON_COLUMNS)
+    parseBooleanColumns(wedstrijd, BOOLEAN_COLUMNS)
   }
 
   @afterFetch()
   static parseJsonMany(wedstrijden: Wedstrijd[]) {
-    wedstrijden.forEach((w) => parseJsonColumns(w, JSON_COLUMNS))
+    wedstrijden.forEach((w) => {
+      parseJsonColumns(w, JSON_COLUMNS)
+      parseBooleanColumns(w, BOOLEAN_COLUMNS)
+    })
   }
 
   @belongsTo(() => Speler, { foreignKey: 'motmSpelerId' })

@@ -2,9 +2,10 @@ import { OefeningenSchema } from '#database/schema'
 import { hasMany, beforeSave, afterSave, afterFind, afterFetch } from '@adonisjs/lucid/orm'
 import type { HasMany } from '@adonisjs/lucid/types/relations'
 import Onderdeel from '#models/onderdeel'
-import { serializeJsonColumns, parseJsonColumns } from '#models/json_columns'
+import { serializeJsonColumns, parseJsonColumns, parseBooleanColumns } from '#models/json_columns'
 
 const JSON_COLUMNS = ['tekening']
+const BOOLEAN_COLUMNS = ['favoriet']
 
 export default class Oefening extends OefeningenSchema {
   static table = 'oefeningen'
@@ -22,11 +23,15 @@ export default class Oefening extends OefeningenSchema {
   @afterFind()
   static parseJson(oefening: Oefening) {
     parseJsonColumns(oefening, JSON_COLUMNS)
+    parseBooleanColumns(oefening, BOOLEAN_COLUMNS)
   }
 
   @afterFetch()
   static parseJsonMany(oefeningen: Oefening[]) {
-    oefeningen.forEach((o) => parseJsonColumns(o, JSON_COLUMNS))
+    oefeningen.forEach((o) => {
+      parseJsonColumns(o, JSON_COLUMNS)
+      parseBooleanColumns(o, BOOLEAN_COLUMNS)
+    })
   }
 
   @hasMany(() => Onderdeel)

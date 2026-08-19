@@ -633,7 +633,7 @@ export class UserSchema extends BaseModel {
 }
 
 export class WedstrijdenSchema extends BaseModel {
-  static $columns = ['createdAt', 'datum', 'formatie', 'id', 'motmSpelerId', 'score', 'speelduur', 'status', 'tegenstander', 'thuis', 'updatedAt'] as const
+  static $columns = ['createdAt', 'datum', 'formatie', 'id', 'locatie', 'motmSpelerId', 'notities', 'score', 'speelduur', 'status', 'tegenstander', 'thuis', 'tijd', 'updatedAt'] as const
   $columns = WedstrijdenSchema.$columns
   @column.dateTime({ autoCreate: true })
   declare createdAt: DateTime
@@ -644,7 +644,11 @@ export class WedstrijdenSchema extends BaseModel {
   @column({ isPrimary: true })
   declare id: number
   @column()
+  declare locatie: string | null
+  @column()
   declare motmSpelerId: number | null
+  @column()
+  declare notities: string | null
   @column()
   declare score: any | null
   @column()
@@ -655,6 +659,8 @@ export class WedstrijdenSchema extends BaseModel {
   declare tegenstander: string
   @column()
   declare thuis: boolean
+  @column()
+  declare tijd: string | null
   @column.dateTime({ autoCreate: true, autoUpdate: true })
   declare updatedAt: DateTime | null
 }
