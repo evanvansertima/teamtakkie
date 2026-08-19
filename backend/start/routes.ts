@@ -24,6 +24,7 @@ import StandrijenController from '#controllers/standrijen_controller'
 import FormatiesController from '#controllers/formaties_controller'
 import OpstellingrijenController from '#controllers/opstellingrijen_controller'
 import TactiekenController from '#controllers/tactieken_controller'
+import SpelerFotosController from '#controllers/speler_fotos_controller'
 
 router.get('/api/health', () => {
   return { status: 'ok' }
@@ -50,6 +51,9 @@ router
     router
       .group(() => {
         router.resource('spelers', SpelersController).apiOnly()
+        router.get('spelers/:id/foto', [SpelerFotosController, 'show'])
+        router.post('spelers/:id/foto', [SpelerFotosController, 'store'])
+        router.delete('spelers/:id/foto', [SpelerFotosController, 'destroy'])
         router.get('spelers/:spelerId/rapporten', [RapportenController, 'index'])
         router.post('spelers/:spelerId/rapporten', [RapportenController, 'store'])
         router.put('rapporten/:id', [RapportenController, 'update'])
