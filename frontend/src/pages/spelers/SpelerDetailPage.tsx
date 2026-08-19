@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { api, ApiError, type Speler, type Rapport } from '../../lib/api'
+import { api, ApiError, spelerFotoUrl, type Speler, type Rapport } from '../../lib/api'
 import { fcCategorieen, fcCategorieWaarde, fcOvr, ovrKleur, fcSterren, FC_STERREN, RAPPORT_SOORTEN, rapportVerschil, beschikbaarheidInfo } from '../../lib/fc'
 import { SpelerForm } from './SpelerForm'
 
@@ -61,7 +61,7 @@ export function SpelerDetailPage() {
       </div>
 
       {tab === 'profiel' ? (
-        <ProfielTab speler={speler} onEdit={() => setFormOpen(true)} onDelete={verwijder} />
+        <ProfielTab speler={speler} onEdit={() => setFormOpen(true)} onDelete={verwijder} onChanged={laad} />
       ) : (
         <RapportenTab speler={speler} onChanged={laad} />
       )}
@@ -80,9 +80,77 @@ export function SpelerDetailPage() {
   )
 }
 
-function ProfielTab({ speler, onEdit, onDelete }: { speler: Speler; onEdit: () => void; onDelete: () => void }) {
+function FotoSectie({ speler, onChanged }: { speler: Speler; onChanged: () => void }) {
+  const inputRef = useRef<HTMLInputElement>(null)
+  const [bezig, setBezig] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const fotoUrl = spelerFotoUrl(speler)
+
+  async function kiesBestand(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (!file) return
+    setBezig(true)
+    setError(null)
+    try {
+      await api.spelers.uploadFoto(speler.id, file)
+      onChanged()
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Uploaden mislukt.')
+    } finally {
+      setBezig(false)
+    }
+  }
+
+  async function verwijderFoto() {
+    if (!confirm('Foto verwijderen?')) return
+    setBezig(true)
+    setError(null)
+    try {
+      await api.spelers.removeFoto(speler.id)
+      onChanged()
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Verwijderen mislukt.')
+    } finally {
+      setBezig(false)
+    }
+  }
+
+  return (
+    <div className="sp-foto-acties">
+      <span className="sp-foto-groot">{fotoUrl ? <img src={fotoUrl} alt="" /> : speler.naam.charAt(0)}</span>
+      <div>
+        <div className="chip-rij">
+          <button className="knop lijn klein" disabled={bezig} onClick={() => inputRef.current?.click()}>
+            {bezig ? 'Bezig…' : fotoUrl ? 'Andere foto' : '+ Foto toevoegen'}
+          </button>
+          {fotoUrl && (
+            <button className="knop gevaar klein" disabled={bezig} onClick={verwijderFoto}>
+              Verwijderen
+            </button>
+          )}
+        </div>
+        {error && <p className="form-error">{error}</p>}
+        <input ref={inputRef} type="file" accept="image/jpeg,image/png,image/webp" style={{ display: 'none' }} onChange={kiesBestand} />
+      </div>
+    </div>
+  )
+}
+
+function ProfielTab({
+  speler,
+  onEdit,
+  onDelete,
+  onChanged,
+}: {
+  speler: Speler
+  onEdit: () => void
+  onDelete: () => void
+  onChanged: () => void
+}) {
   return (
     <div className="kaart">
+      <FotoSectie speler={speler} onChanged={onChanged} />
       <div className="kaart-titel">Vaardigheden</div>
       {fcCategorieen(speler).map((cat) => {
         const w = fcCategorieWaarde(speler, cat)

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { api, type Speler } from '../../lib/api'
+import { api, spelerFotoUrl, type Speler } from '../../lib/api'
 import { fcOvr, ovrKleur, beschikbaarheidInfo, ROL_VOLGORDE } from '../../lib/fc'
 import { SpelerForm } from './SpelerForm'
 
@@ -80,7 +80,7 @@ export function SpelersPage() {
                     const besch = beschikbaarheidInfo(s.beschikbaar)
                     return (
                       <div key={s.id} className="sp-rij" onClick={() => navigate(`/spelers/${s.id}`)}>
-                        <span className="sp-avatar">{s.naam.charAt(0)}</span>
+                        <span className="sp-avatar">{spelerFotoUrl(s) ? <img src={spelerFotoUrl(s)!} alt="" /> : s.naam.charAt(0)}</span>
                         <span className="sp-naam">
                           {s.rugnummer && <span className="sp-nr">#{s.rugnummer}</span>}
                           {s.naam}

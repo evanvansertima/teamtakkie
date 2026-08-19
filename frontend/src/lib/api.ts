@@ -39,6 +39,23 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return response.json() as Promise<T>
 }
 
+async function upload<T>(path: string, file: File, fieldName: string): Promise<T> {
+  const form = new FormData()
+  form.append(fieldName, file)
+  const response = await fetch(`${BASE_URL}${path}`, { method: 'POST', credentials: 'include', body: form })
+
+  if (!response.ok) {
+    const body = await response.json().catch(() => null)
+    const fieldErrors = (body?.errors ?? []).map((e: { field: string; message: string }) => ({
+      field: e.field,
+      message: e.message,
+    }))
+    throw new ApiError(response.status, fieldErrors[0]?.message ?? body?.message ?? response.statusText, fieldErrors)
+  }
+
+  return response.json() as Promise<T>
+}
+
 export type User = {
   id: number
   fullName: string | null
@@ -72,10 +89,15 @@ export type Speler = {
   skills: Record<string, number>
   sterren: Record<string, number>
   stats: SpelerStats
+  fotoPath: string | null
   rapporten?: Rapport[]
 }
 
-export type SpelerInput = Partial<Omit<Speler, 'id' | 'rapporten'>>
+export type SpelerInput = Partial<Omit<Speler, 'id' | 'rapporten' | 'fotoPath'>>
+
+export function spelerFotoUrl(speler: Pick<Speler, 'id' | 'fotoPath'>): string | null {
+  return speler.fotoPath ? `${BASE_URL}/spelers/${speler.id}/foto?v=${encodeURIComponent(speler.fotoPath)}` : null
+}
 
 export type Rapport = {
   id: number
@@ -304,6 +326,8 @@ export const api = {
     update: (id: number, data: SpelerInput) =>
       request<Speler>(`/spelers/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
     remove: (id: number) => request<void>(`/spelers/${id}`, { method: 'DELETE' }),
+    uploadFoto: (id: number, file: File) => upload<Speler>(`/spelers/${id}/foto`, file, 'foto'),
+    removeFoto: (id: number) => request<void>(`/spelers/${id}/foto`, { method: 'DELETE' }),
   },
 
   rapporten: {
