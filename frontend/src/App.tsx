@@ -9,6 +9,8 @@ import { WedstrijdenPage } from './pages/wedstrijden/WedstrijdenPage'
 import { WedstrijdDetailPage } from './pages/wedstrijden/WedstrijdDetailPage'
 import { TrainingenPage } from './pages/trainingen/TrainingenPage'
 import { TrainingDetailPage } from './pages/trainingen/TrainingDetailPage'
+import { LiveAnalysePage } from './pages/live/LiveAnalysePage'
+import { LiveSessionPage } from './pages/live/LiveSessionPage'
 
 type AuthState =
   | { status: 'checking' }
@@ -47,6 +49,8 @@ function App() {
         <Route path="/wedstrijden/:id" element={<WedstrijdDetailPage />} />
         <Route path="/trainingen" element={<TrainingenPage />} />
         <Route path="/trainingen/:id" element={<TrainingDetailPage />} />
+        <Route path="/live" element={<LiveAnalysePage />} />
+        <Route path="/live/:id" element={<LiveSessionPage />} />
         <Route path="*" element={<Navigate to="/spelers" replace />} />
       </Routes>
     </AppShell>

@@ -151,6 +151,22 @@ export type Wedstrijd = {
 
 export type WedstrijdInput = Partial<Omit<Wedstrijd, 'id' | 'motmSpeler' | 'doelpunten' | 'kaarten'>>
 
+export type Liveevent = {
+  id: number
+  wedstrijdId: number
+  type: string
+  minuut: number | null
+  spelerId: number | null
+  speler?: Speler | null
+  createdAt: string
+}
+
+export type LiveeventInput = {
+  type: string
+  minuut?: number
+  spelerId?: number
+}
+
 export type Onderdeel = {
   id: number
   trainingId: number
@@ -251,6 +267,16 @@ export const api = {
         body: JSON.stringify(data),
       }),
     remove: (id: number) => request<void>(`/kaarten/${id}`, { method: 'DELETE' }),
+  },
+
+  liveevents: {
+    list: (wedstrijdId: number) => request<Liveevent[]>(`/wedstrijden/${wedstrijdId}/liveevents`),
+    create: (wedstrijdId: number, data: LiveeventInput) =>
+      request<Liveevent>(`/wedstrijden/${wedstrijdId}/liveevents`, {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+    remove: (id: number) => request<void>(`/liveevents/${id}`, { method: 'DELETE' }),
   },
 
   trainingen: {
