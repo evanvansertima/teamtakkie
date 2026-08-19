@@ -612,3 +612,18 @@ textarea {
   background: transparent;
   color: inherit;
 }
+
+/* ── Match score ── */
+.score-invoer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 24px;
+}
+
+.score-blok {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}

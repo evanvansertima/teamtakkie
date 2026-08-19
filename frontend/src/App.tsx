@@ -5,6 +5,8 @@ import { LoginScreen } from './LoginScreen'
 import { AppShell } from './layout/AppShell'
 import { SpelersPage } from './pages/spelers/SpelersPage'
 import { SpelerDetailPage } from './pages/spelers/SpelerDetailPage'
+import { WedstrijdenPage } from './pages/wedstrijden/WedstrijdenPage'
+import { WedstrijdDetailPage } from './pages/wedstrijden/WedstrijdDetailPage'
 
 type AuthState =
   | { status: 'checking' }
@@ -39,6 +41,8 @@ function App() {
         <Route path="/" element={<Navigate to="/spelers" replace />} />
         <Route path="/spelers" element={<SpelersPage />} />
         <Route path="/spelers/:id" element={<SpelerDetailPage />} />
+        <Route path="/wedstrijden" element={<WedstrijdenPage />} />
+        <Route path="/wedstrijden/:id" element={<WedstrijdDetailPage />} />
         <Route path="*" element={<Navigate to="/spelers" replace />} />
       </Routes>
     </AppShell>
