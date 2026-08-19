@@ -25,6 +25,7 @@ import FormatiesController from '#controllers/formaties_controller'
 import OpstellingrijenController from '#controllers/opstellingrijen_controller'
 import TactiekenController from '#controllers/tactieken_controller'
 import SpelerFotosController from '#controllers/speler_fotos_controller'
+import TactiekplannenController from '#controllers/tactiekplannen_controller'
 
 router.get('/api/health', () => {
   return { status: 'ok' }
@@ -67,6 +68,8 @@ router
         router.post('wedstrijden/:wedstrijdId/opstellingrijen', [OpstellingrijenController, 'store'])
         router.put('opstellingrijen/:id', [OpstellingrijenController, 'update'])
         router.delete('opstellingrijen/:id', [OpstellingrijenController, 'destroy'])
+        router.get('wedstrijden/:wedstrijdId/tactiekplan', [TactiekplannenController, 'show'])
+        router.put('wedstrijden/:wedstrijdId/tactiekplan', [TactiekplannenController, 'update'])
 
         router.resource('trainingen', TrainingenController).apiOnly()
         router.post('trainingen/:trainingId/onderdelen', [OnderdelenController, 'store'])

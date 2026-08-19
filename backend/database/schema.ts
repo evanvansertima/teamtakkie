@@ -515,12 +515,22 @@ export class TactiekenSchema extends BaseModel {
 }
 
 export class TactiekplannenSchema extends BaseModel {
-  static $columns = ['createdAt', 'id', 'tekening', 'updatedAt', 'veldType', 'wedstrijdId'] as const
+  static $columns = ['balbezit', 'balverlies', 'createdAt', 'id', 'instructies', 'omschakeling', 'plan', 'tekening', 'updatedAt', 'veldType', 'wedstrijdId'] as const
   $columns = TactiekplannenSchema.$columns
+  @column()
+  declare balbezit: string | null
+  @column()
+  declare balverlies: string | null
   @column.dateTime({ autoCreate: true })
   declare createdAt: DateTime
   @column({ isPrimary: true })
   declare id: number
+  @column()
+  declare instructies: any | null
+  @column()
+  declare omschakeling: string | null
+  @column()
+  declare plan: string | null
   @column()
   declare tekening: any | null
   @column.dateTime({ autoCreate: true, autoUpdate: true })

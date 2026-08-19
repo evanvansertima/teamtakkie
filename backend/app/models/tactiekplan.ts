@@ -4,7 +4,7 @@ import type { BelongsTo } from '@adonisjs/lucid/types/relations'
 import Wedstrijd from '#models/wedstrijd'
 import { serializeJsonColumns, parseJsonColumns } from '#models/json_columns'
 
-const JSON_COLUMNS = ['tekening']
+const JSON_COLUMNS = ['tekening', 'instructies']
 
 export default class Tactiekplan extends TactiekplannenSchema {
   static table = 'tactiekplannen'
