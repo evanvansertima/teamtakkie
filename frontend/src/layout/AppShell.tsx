@@ -7,7 +7,7 @@ const MODULES = [
   { to: '/wedstrijden', label: 'Wedstrijden', ready: true },
   { to: '/trainingen', label: 'Trainingen', ready: true },
   { to: '/live', label: 'Live Analyse', ready: true },
-  { to: '/agenda', label: 'Agenda', ready: false },
+  { to: '/agenda', label: 'Agenda', ready: true },
   { to: '/statistieken', label: 'Statistieken', ready: false },
   { to: '/tactieken', label: 'Tactieken', ready: false },
 ]

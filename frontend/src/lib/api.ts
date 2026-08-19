@@ -167,6 +167,22 @@ export type LiveeventInput = {
   spelerId?: number
 }
 
+export type Activiteit = {
+  id: number
+  titel: string
+  soort: string | null
+  datum: string
+  locatie: string | null
+  heleDag: boolean
+  tijd: string | null
+  eindtijd: string | null
+  herhaal: 'nee' | 'wekelijks' | 'tweewekelijks' | 'maandelijks' | null
+  herhaalTot: string | null
+  notitie: string | null
+}
+
+export type ActiviteitInput = Partial<Omit<Activiteit, 'id'>>
+
 export type Onderdeel = {
   id: number
   trainingId: number
@@ -277,6 +293,15 @@ export const api = {
         body: JSON.stringify(data),
       }),
     remove: (id: number) => request<void>(`/liveevents/${id}`, { method: 'DELETE' }),
+  },
+
+  activiteiten: {
+    list: () => request<Activiteit[]>('/activiteiten'),
+    create: (data: ActiviteitInput) =>
+      request<Activiteit>('/activiteiten', { method: 'POST', body: JSON.stringify(data) }),
+    update: (id: number, data: ActiviteitInput) =>
+      request<Activiteit>(`/activiteiten/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+    remove: (id: number) => request<void>(`/activiteiten/${id}`, { method: 'DELETE' }),
   },
 
   trainingen: {
