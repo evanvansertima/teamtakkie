@@ -196,6 +196,15 @@ export type Standrij = {
 
 export type StandrijInput = Partial<Omit<Standrij, 'id'>>
 
+export type Formatie = {
+  id: number
+  naam: string
+  formatie: string
+  toewijzing: Record<string, number>
+}
+
+export type FormatieInput = Partial<Omit<Formatie, 'id'>>
+
 export type Onderdeel = {
   id: number
   trainingId: number
@@ -324,6 +333,15 @@ export const api = {
     update: (id: number, data: StandrijInput) =>
       request<Standrij>(`/standrijen/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
     remove: (id: number) => request<void>(`/standrijen/${id}`, { method: 'DELETE' }),
+  },
+
+  formaties: {
+    list: () => request<Formatie[]>('/formaties'),
+    create: (data: FormatieInput) =>
+      request<Formatie>('/formaties', { method: 'POST', body: JSON.stringify(data) }),
+    update: (id: number, data: FormatieInput) =>
+      request<Formatie>(`/formaties/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+    remove: (id: number) => request<void>(`/formaties/${id}`, { method: 'DELETE' }),
   },
 
   trainingen: {

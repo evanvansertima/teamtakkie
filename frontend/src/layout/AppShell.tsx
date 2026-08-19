@@ -9,7 +9,7 @@ const MODULES = [
   { to: '/live', label: 'Live Analyse', ready: true },
   { to: '/agenda', label: 'Agenda', ready: true },
   { to: '/statistieken', label: 'Statistieken', ready: true },
-  { to: '/tactieken', label: 'Tactieken', ready: false },
+  { to: '/tactieken', label: 'Tactieken', ready: true },
 ]
 
 export function AppShell({
