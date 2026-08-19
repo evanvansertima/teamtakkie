@@ -151,6 +151,47 @@ export type Wedstrijd = {
 
 export type WedstrijdInput = Partial<Omit<Wedstrijd, 'id' | 'motmSpeler' | 'doelpunten' | 'kaarten'>>
 
+export type Onderdeel = {
+  id: number
+  trainingId: number
+  naam: string
+  type: string | null
+  doel: string | null
+  duur: number | null
+  aantalSpelers: number | null
+  veldGrootte: string | null
+  materialen: string | null
+  beschrijving: string | null
+  aandachtspunten: string | null
+}
+
+export type OnderdeelInput = Partial<Omit<Onderdeel, 'id' | 'trainingId'>>
+
+export type Aanwezigheid = {
+  id: number
+  trainingId: number
+  spelerId: number
+  status: 'aanwezig' | 'afwezig' | 'geblesseerd'
+  speler?: Speler
+}
+
+export type Training = {
+  id: number
+  seizoenblokId: number | null
+  datum: string
+  tijd: string | null
+  locatie: string | null
+  duur: number
+  doelstellingen: string | null
+  voorbereidingen: string | null
+  materialen: string | null
+  notities: string | null
+  onderdelen?: Onderdeel[]
+  aanwezigheden?: Aanwezigheid[]
+}
+
+export type TrainingInput = Partial<Omit<Training, 'id' | 'seizoenblokId' | 'onderdelen' | 'aanwezigheden'>>
+
 export const api = {
   login: (email: string, password: string) =>
     request<{ data: { user: User } }>('/auth/login', {
@@ -210,5 +251,34 @@ export const api = {
         body: JSON.stringify(data),
       }),
     remove: (id: number) => request<void>(`/kaarten/${id}`, { method: 'DELETE' }),
+  },
+
+  trainingen: {
+    list: () => request<Training[]>('/trainingen'),
+    get: (id: number) => request<Training>(`/trainingen/${id}`),
+    create: (data: TrainingInput) =>
+      request<Training>('/trainingen', { method: 'POST', body: JSON.stringify(data) }),
+    update: (id: number, data: TrainingInput) =>
+      request<Training>(`/trainingen/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+    remove: (id: number) => request<void>(`/trainingen/${id}`, { method: 'DELETE' }),
+  },
+
+  onderdelen: {
+    create: (trainingId: number, data: OnderdeelInput) =>
+      request<Onderdeel>(`/trainingen/${trainingId}/onderdelen`, {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+    update: (id: number, data: OnderdeelInput) =>
+      request<Onderdeel>(`/onderdelen/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+    remove: (id: number) => request<void>(`/onderdelen/${id}`, { method: 'DELETE' }),
+  },
+
+  aanwezigheden: {
+    update: (id: number, status: Aanwezigheid['status']) =>
+      request<Aanwezigheid>(`/aanwezigheden/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify({ status }),
+      }),
   },
 }

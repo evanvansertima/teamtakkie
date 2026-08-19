@@ -5,7 +5,7 @@ import type { User } from '../lib/api'
 const MODULES = [
   { to: '/spelers', label: 'Spelers', ready: true },
   { to: '/wedstrijden', label: 'Wedstrijden', ready: true },
-  { to: '/trainingen', label: 'Trainingen', ready: false },
+  { to: '/trainingen', label: 'Trainingen', ready: true },
   { to: '/live', label: 'Live Analyse', ready: false },
   { to: '/agenda', label: 'Agenda', ready: false },
   { to: '/statistieken', label: 'Statistieken', ready: false },

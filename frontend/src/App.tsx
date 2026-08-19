@@ -7,6 +7,8 @@ import { SpelersPage } from './pages/spelers/SpelersPage'
 import { SpelerDetailPage } from './pages/spelers/SpelerDetailPage'
 import { WedstrijdenPage } from './pages/wedstrijden/WedstrijdenPage'
 import { WedstrijdDetailPage } from './pages/wedstrijden/WedstrijdDetailPage'
+import { TrainingenPage } from './pages/trainingen/TrainingenPage'
+import { TrainingDetailPage } from './pages/trainingen/TrainingDetailPage'
 
 type AuthState =
   | { status: 'checking' }
@@ -43,6 +45,8 @@ function App() {
         <Route path="/spelers/:id" element={<SpelerDetailPage />} />
         <Route path="/wedstrijden" element={<WedstrijdenPage />} />
         <Route path="/wedstrijden/:id" element={<WedstrijdDetailPage />} />
+        <Route path="/trainingen" element={<TrainingenPage />} />
+        <Route path="/trainingen/:id" element={<TrainingDetailPage />} />
         <Route path="*" element={<Navigate to="/spelers" replace />} />
       </Routes>
     </AppShell>
