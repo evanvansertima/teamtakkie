@@ -4,12 +4,13 @@ import type { HttpContext } from '@adonisjs/core/http'
 
 export default class WedstrijdenController {
   async index({}: HttpContext) {
-    // Statistieken needs per-player goals/cards across the whole season, and
-    // this dataset (one team's matches) is small enough that preloading here
-    // beats adding a dedicated aggregate endpoint.
+    // Statistieken needs per-player goals/cards/appearances across the whole
+    // season, and this dataset (one team's matches) is small enough that
+    // preloading here beats adding a dedicated aggregate endpoint.
     return Wedstrijd.query()
       .preload('doelpunten')
       .preload('kaarten')
+      .preload('opstellingrijen')
       .orderBy('datum', 'desc')
   }
 
@@ -23,6 +24,7 @@ export default class WedstrijdenController {
       .where('id', params.id)
       .preload('doelpunten', (q) => q.preload('scorerSpeler').preload('assistSpeler'))
       .preload('kaarten', (q) => q.preload('speler'))
+      .preload('opstellingrijen', (q) => q.preload('speler'))
       .preload('motmSpeler')
       .firstOrFail()
   }

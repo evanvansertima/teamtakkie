@@ -22,6 +22,7 @@ import LiveeventsController from '#controllers/liveevents_controller'
 import ActiviteitenController from '#controllers/activiteiten_controller'
 import StandrijenController from '#controllers/standrijen_controller'
 import FormatiesController from '#controllers/formaties_controller'
+import OpstellingrijenController from '#controllers/opstellingrijen_controller'
 
 router.get('/api/health', () => {
   return { status: 'ok' }
@@ -58,6 +59,9 @@ router
         router.delete('doelpunten/:id', [DoelpuntenController, 'destroy'])
         router.post('wedstrijden/:wedstrijdId/kaarten', [KaartenController, 'store'])
         router.delete('kaarten/:id', [KaartenController, 'destroy'])
+        router.post('wedstrijden/:wedstrijdId/opstellingrijen', [OpstellingrijenController, 'store'])
+        router.put('opstellingrijen/:id', [OpstellingrijenController, 'update'])
+        router.delete('opstellingrijen/:id', [OpstellingrijenController, 'destroy'])
 
         router.resource('trainingen', TrainingenController).apiOnly()
         router.post('trainingen/:trainingId/onderdelen', [OnderdelenController, 'store'])
