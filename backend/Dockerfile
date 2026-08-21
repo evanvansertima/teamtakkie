@@ -11,6 +11,7 @@ WORKDIR /app
 ENV NODE_ENV=production
 RUN apk add --no-cache python3 make g++
 COPY --from=build /app/build ./
-RUN npm ci --omit=dev && apk del python3 make g++
+COPY docker-entrypoint.sh ./
+RUN npm ci --omit=dev && apk del python3 make g++ && chmod +x docker-entrypoint.sh
 EXPOSE 3333
-CMD ["node", "bin/server.js"]
+CMD ["./docker-entrypoint.sh"]
