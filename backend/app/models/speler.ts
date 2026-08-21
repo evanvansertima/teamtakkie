@@ -1,5 +1,5 @@
 import { SpelerSchema } from '#database/schema'
-import { hasMany, beforeSave, afterSave, afterFind, afterFetch } from '@adonisjs/lucid/orm'
+import { hasMany, beforeSave, afterSave, afterFind, afterFetch, beforeDelete } from '@adonisjs/lucid/orm'
 import type { HasMany } from '@adonisjs/lucid/types/relations'
 import Rapport from '#models/rapport'
 import Doel from '#models/doel'
@@ -8,6 +8,7 @@ import Opstellingrij from '#models/opstellingrij'
 import Kaart from '#models/kaart'
 import Aanwezigheid from '#models/aanwezigheid'
 import { serializeJsonColumns, parseJsonColumns } from '#models/json_columns'
+import { verwijderSpelerFoto } from '#models/speler_foto'
 
 const JSON_COLUMNS = ['skills', 'sterren', 'stats']
 
@@ -32,6 +33,11 @@ export default class Speler extends SpelerSchema {
   @afterFetch()
   static parseJsonMany(spelers: Speler[]) {
     spelers.forEach((s) => parseJsonColumns(s, JSON_COLUMNS))
+  }
+
+  @beforeDelete()
+  static async removeFoto(speler: Speler) {
+    await verwijderSpelerFoto(speler.fotoPath)
   }
 
   @hasMany(() => Rapport)

@@ -1,19 +1,7 @@
-import { unlink } from 'node:fs/promises'
 import { join } from 'node:path'
-import app from '@adonisjs/core/services/app'
 import Speler from '#models/speler'
+import { SPELER_FOTO_DIR, verwijderSpelerFoto } from '#models/speler_foto'
 import type { HttpContext } from '@adonisjs/core/http'
-
-const UPLOAD_DIR = app.tmpPath('uploads/spelers')
-
-async function verwijderBestaandeFoto(speler: Speler) {
-  if (!speler.fotoPath) return
-  try {
-    await unlink(join(UPLOAD_DIR, speler.fotoPath))
-  } catch {
-    // Bestand al weg — niets te doen.
-  }
-}
 
 export default class SpelerFotosController {
   async store({ params, request, response }: HttpContext) {
@@ -25,10 +13,10 @@ export default class SpelerFotosController {
     if (!foto) return response.badRequest({ message: 'Geen foto ontvangen.' })
     if (!foto.isValid) return response.badRequest({ errors: foto.errors })
 
-    await verwijderBestaandeFoto(speler)
+    await verwijderSpelerFoto(speler.fotoPath)
 
     const bestandsnaam = `${speler.id}-${Date.now()}.${foto.extname}`
-    await foto.move(UPLOAD_DIR, { name: bestandsnaam })
+    await foto.move(SPELER_FOTO_DIR, { name: bestandsnaam })
 
     speler.fotoPath = bestandsnaam
     await speler.save()
@@ -37,7 +25,7 @@ export default class SpelerFotosController {
 
   async destroy({ params, response }: HttpContext) {
     const speler = await Speler.findOrFail(params.id)
-    await verwijderBestaandeFoto(speler)
+    await verwijderSpelerFoto(speler.fotoPath)
     speler.fotoPath = null
     await speler.save()
     return response.noContent()
@@ -47,6 +35,6 @@ export default class SpelerFotosController {
     const speler = await Speler.findOrFail(params.id)
     if (!speler.fotoPath) return response.notFound()
     response.header('Cache-Control', 'private, max-age=31536000, immutable')
-    return response.download(join(UPLOAD_DIR, speler.fotoPath), true)
+    return response.download(join(SPELER_FOTO_DIR, speler.fotoPath), true)
   }
 }
