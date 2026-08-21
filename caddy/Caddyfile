@@ -1,6 +1,28 @@
 {$DOMAIN:localhost} {
 	encode gzip
 
+	# Adonis (Shield) already sets these on /api/* responses, but those
+	# headers only govern the response that carries them — the actual
+	# app shell is this static bundle, served straight by Caddy, so it
+	# needs its own copy to mean anything for the browser.
+	#
+	# CSP is Report-Only for now: the policy below (self-only, no
+	# unsafe-inline/unsafe-eval) should be safe — nothing in the app
+	# loads external resources, uses eval, or sets inline styles/scripts
+	# via innerHTML — but that's from a code audit, not a live
+	# interactive check against this exact enforcing header (a
+	# self-signed cert on this host blocked browser automation from
+	# completing one). Report-only logs violations to the console
+	# without breaking anything; once a real click-through with devtools
+	# open shows zero violations, flip the header name below to plain
+	# "Content-Security-Policy" to actually enforce it.
+	header {
+		Content-Security-Policy-Report-Only "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self'; connect-src 'self'; font-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+		X-Frame-Options "DENY"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "same-origin"
+	}
+
 	handle /api/* {
 		reverse_proxy app:3333
 	}

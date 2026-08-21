@@ -9,12 +9,25 @@ const shieldConfig = defineConfig({
     /**
      * Enable the Content-Security-Policy header.
      */
-    enabled: false,
+    enabled: true,
 
     /**
-     * Per-resource CSP directives.
+     * Per-resource CSP directives. Everything the app actually loads is
+     * same-origin — no CDN scripts/fonts (unlike the legacy prototype),
+     * no data: images, no inline styles beyond React's CSSOM-driven
+     * `style` prop (which style-src doesn't govern).
      */
-    directives: {},
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'"],
+      styleSrc: ["'self'"],
+      imgSrc: ["'self'"],
+      connectSrc: ["'self'"],
+      fontSrc: ["'self'"],
+      frameAncestors: ["'none'"],
+      baseUri: ["'self'"],
+      formAction: ["'self'"],
+    },
 
     /**
      * Report violations without blocking resources.
