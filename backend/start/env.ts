@@ -29,4 +29,11 @@ export default await Env.create(new URL('../', import.meta.url), {
   ADMIN_EMAIL: Env.schema.string({ format: 'email' }),
   ADMIN_PASSWORD: Env.schema.string(),
   ADMIN_NAME: Env.schema.string.optional(),
+
+  /*
+  |----------------------------------------------------------
+  | Variables for configuring the limiter package
+  |----------------------------------------------------------
+  */
+  LIMITER_STORE: Env.schema.enum(['database', 'memory'] as const)
 })

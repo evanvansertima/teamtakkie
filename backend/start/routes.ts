@@ -26,6 +26,7 @@ import OpstellingrijenController from '#controllers/opstellingrijen_controller'
 import TactiekenController from '#controllers/tactieken_controller'
 import SpelerFotosController from '#controllers/speler_fotos_controller'
 import TactiekplannenController from '#controllers/tactiekplannen_controller'
+import { loginThrottle } from '#start/limiter'
 
 router.get('/api/health', () => {
   return { status: 'ok' }
@@ -35,7 +36,7 @@ router
   .group(() => {
     router
       .group(() => {
-        router.post('login', [controllers.Session, 'store'])
+        router.post('login', [controllers.Session, 'store']).use(loginThrottle)
       })
       .prefix('auth')
       .as('auth')
