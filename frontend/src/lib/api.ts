@@ -13,12 +13,21 @@ export class ApiError extends Error {
   }
 }
 
+// The backend sets a readable (non-httpOnly) XSRF-TOKEN cookie on every
+// response; state-changing requests must echo it back as a header. This is
+// Shield's standard SPA convention, not anything custom.
+function xsrfHeader(): Record<string, string> {
+  const match = document.cookie.match(/(?:^|; )XSRF-TOKEN=([^;]+)/)
+  return match ? { 'X-XSRF-TOKEN': decodeURIComponent(match[1]) } : {}
+}
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(`${BASE_URL}${path}`, {
     ...init,
     credentials: 'include',
     headers: {
       'Content-Type': 'application/json',
+      ...xsrfHeader(),
       ...init?.headers,
     },
   })
@@ -42,7 +51,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 async function upload<T>(path: string, file: File, fieldName: string): Promise<T> {
   const form = new FormData()
   form.append(fieldName, file)
-  const response = await fetch(`${BASE_URL}${path}`, { method: 'POST', credentials: 'include', body: form })
+  const response = await fetch(`${BASE_URL}${path}`, { method: 'POST', credentials: 'include', headers: xsrfHeader(), body: form })
 
   if (!response.ok) {
     const body = await response.json().catch(() => null)

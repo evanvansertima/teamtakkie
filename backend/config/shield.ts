@@ -30,7 +30,7 @@ const shieldConfig = defineConfig({
     /**
      * Enable CSRF token verification for state-changing requests.
      */
-    enabled: false,
+    enabled: true,
 
     /**
      * Route patterns to exclude from CSRF checks.

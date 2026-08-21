@@ -13,6 +13,12 @@ export default class HttpExceptionHandler extends ExceptionHandler {
    * response to the client
    */
   async handle(error: unknown, ctx: HttpContext) {
+    // Shield's default CSRF failure flashes session data and redirects,
+    // which makes no sense for a JSON API — the frontend just needs a
+    // clean error it can show and retry from.
+    if (error instanceof Error && (error as { code?: string }).code === 'E_BAD_CSRF_TOKEN') {
+      return ctx.response.status(403).send({ errors: [{ message: 'Sessie verlopen, herlaad de pagina.' }] })
+    }
     return super.handle(error, ctx)
   }
 
