@@ -3077,7 +3077,54 @@ function seizoenVolgend(id) {
    sleutel van vóór de seizoenen en hoort hij nergens bij. */
 function seizoenUitSleutel(s) {
   var i = String(s || "").indexOf("::");
-  return i < 0 ? null : s.slice(0, i);
+  if (i < 0) return null;
+  /* Alleen 2026-2027 is een seizoen. Elke andere kop — bijvoorbeeld een
+     geparkeerde laag uit een herstelactie — hoort niet in de
+     seizoenkiezer thuis, want dan ruil je het ene raadsel voor het
+     andere. */
+  var kop = String(s).slice(0, i);
+  return /^\d{4}-\d{4}$/.test(kop) ? kop : null;
+}
+/* Zit er überhaupt een laag voor deze sleutel? Dit is iets anders dan de
+   vraag hierboven: een geparkeerde laag is geen seizoen, maar de sleutel
+   is wél al verhuisd en moet met rust worden gelaten. */
+function heeftLaag(s) {
+  return String(s || "").indexOf("::") >= 0;
+}
+/* In welk seizoen valt deze datum, als tekst? Zelfde rekensom als
+   seizoenVanDatum, maar zonder Date — deze wordt aangeroepen tijdens de
+   verhuizing, en die draait voordat de helft van de app bestaat. */
+function seizoenVanDatumTekst(d) {
+  var m = String(d || "").match(/^(\d{4})-(\d{2})/);
+  if (!m) return null;
+  var jaar = parseInt(m[1], 10), maand = parseInt(m[2], 10);
+  if (!jaar || !maand || maand < 1 || maand > 12) return null;
+  return maand < 7 ? (jaar - 1) + "-" + jaar : jaar + "-" + (jaar + 1);
+}
+/* Verdeelt één opgeslagen blok over de seizoenen waar het thuishoort.
+
+   Een lijst met datums bepaalt dat zelf: een wedstrijd van 8 september
+   2026 hoort in 2026-2027, wat er ook in de instellingen stond. Loopt de
+   lijst over twee seizoenen, dan wordt hij gesplitst. Valt er niets te
+   verdelen — geen lijst, of geen enkel item met een bruikbare datum —
+   dan blijft het blok heel en gaat het naar de terugval. */
+function verdeelOverSeizoenen(tekst, terugval) {
+  var uit = {}, lijst = null;
+  try { lijst = JSON.parse(tekst); } catch(e) { lijst = null; }
+  if (!Array.isArray(lijst) || !lijst.length) { uit[terugval] = tekst; return uit; }
+
+  var metDatum = 0, groepen = {};
+  lijst.forEach(function (item) {
+    var s = item ? seizoenVanDatumTekst(item.datum || item.date) : null;
+    if (s) metDatum++; else s = terugval;
+    (groepen[s] = groepen[s] || []).push(item);
+  });
+  if (!metDatum) { uit[terugval] = tekst; return uit; }
+  Object.keys(groepen).forEach(function (s) {
+    try { uit[s] = JSON.stringify(groepen[s]); } catch(e) {}
+  });
+  if (!Object.keys(uit).length) uit[terugval] = tekst;
+  return uit;
 }
 function basisUitSleutel(s) {
   var i = String(s || "").indexOf("::");
@@ -3332,9 +3379,33 @@ function wisTeam(id) {
    is wat je zelf dacht. Stond daar niets bruikbaars, dan het seizoen
    waar vandaag in valt.
    ══════════════════════════════════════════════════════════ */
+/* Eén keer per team, en daarna nooit meer.
+
+   De verhuizing draaide bij elke lading. Op zichzelf onschuldig — er viel
+   na de eerste keer niets meer te verhuizen. Maar de blote sleutels
+   stonden nog op de server, de synchronisatie haalde ze terug, en dan
+   vond hij ze opnieuw. Stond het seizoen waar hij ze in zette nog leeg,
+   dan stroomde de inhoud van vóór de verhuizing erin. Zo vulde elk nieuw
+   seizoen zich met oude gegevens.
+
+   Waarom per team en niet één vlag voor het hele apparaat: deze functie
+   loopt langs de teams die op dít moment bestaan. Een apparaat waar nog
+   geen enkel team op staat — vers, of net uitgelogd — zou met één vlag
+   meteen "klaar" zijn en dat daarna blijven, ook voor teams die later
+   binnenkomen. Zo'n vlag doet dan een uitspraak over werk dat hij nooit
+   heeft gedaan. Per team zegt hij alleen wat hij werkelijk heeft
+   afgehandeld. */
+const VERHUISD_VOOR = "tt_verhuisd_v1_";
+function isVerhuisd(id) {
+  try { return !!localStorage.getItem(VERHUISD_VOOR + id); } catch(e) { return false; }
+}
+function zetVerhuisd(id) {
+  try { localStorage.setItem(VERHUISD_VOOR + id, new Date().toISOString()); } catch(e) {}
+}
 function seizoenVerhuizing() {
   var verhuisd = 0;
   _teams.forEach(function (team) {
+    if (isVerhuisd(team.id)) return;
     var voor = "tt_" + team.id + "__";
     var oud = [];
     try {
@@ -3342,33 +3413,86 @@ function seizoenVerhuizing() {
         var k = localStorage.key(i);
         if (!k || k.indexOf(voor) !== 0) continue;
         var rest = k.slice(voor.length);
-        if (seizoenUitSleutel(rest)) continue;      /* al verhuisd */
+        if (heeftLaag(rest)) continue;              /* al verhuisd of geparkeerd */
         oud.push(rest);
       }
-    } catch(e) { return; }
-    if (!oud.length) return;
+    } catch(e) { return; }   /* opslag onleesbaar: geen vlag, volgende keer opnieuw */
+    if (!oud.length) { zetVerhuisd(team.id); return; }
 
-    /* Het seizoen dat in de instellingen van dít team stond */
-    var seizoen = null;
-    try {
-      var ri = localStorage.getItem(voor + "fch_teaminstellingen_v1");
-      if (ri) seizoen = seizoenId((JSON.parse(ri) || {}).seizoen);
-    } catch(e) {}
-    if (!seizoen) seizoen = seizoenId(team.seizoen) || seizoenVanDatum();
+    /* Waar hoort dit team thuis?
+
+       Hier ging het mis. Vroeger keek deze functie in het vrije tekstveld
+       "seizoen" uit de teaminstellingen. Dat veld zei "2025/2026" terwijl
+       elke training en elke wedstrijd eronder in augustus of september
+       2026 viel — dus in 2026/2027. Alles belandde een seizoen te vroeg,
+       en niets controleerde dat.
+
+       Wat iemand ooit intypte is een vermoeden; de datum van een
+       wedstrijd is een feit. Dus tellen we eerst de datums: elk item met
+       een datum brengt een stem uit op zijn seizoen, en het seizoen met
+       de meeste stemmen wordt de terugval voor alles wat zélf geen datum
+       heeft — de selectie, de instellingen, het tenue.
+
+       Pas als er in het hele team geen enkele datum te vinden is, komt
+       het oude tekstveld alsnog aan bod. */
+    var stemmen = {};
+    oud.forEach(function (basis) {
+      var lijst = null;
+      try { lijst = JSON.parse(localStorage.getItem(voor + basis)); } catch(e) {}
+      if (!Array.isArray(lijst)) return;
+      lijst.forEach(function (item) {
+        var s = item ? seizoenVanDatumTekst(item.datum || item.date) : null;
+        if (s) stemmen[s] = (stemmen[s] || 0) + 1;
+      });
+    });
+    var terugval = Object.keys(stemmen).sort(function (a, b) {
+      return stemmen[b] - stemmen[a] || (a < b ? 1 : -1);
+    })[0] || null;
+
+    if (!terugval) {
+      try {
+        var ri = localStorage.getItem(voor + "fch_teaminstellingen_v1");
+        if (ri) terugval = seizoenId((JSON.parse(ri) || {}).seizoen);
+      } catch(e) {}
+    }
+    if (!terugval) terugval = seizoenId(team.seizoen) || seizoenVanDatum();
 
     oud.forEach(function (basis) {
-      var van = voor + basis, naar = voor + seizoen + "::" + basis;
+      var van = voor + basis;
       try {
-        if (localStorage.getItem(naar) !== null) { localStorage.removeItem(van); return; }
         var waarde = localStorage.getItem(van);
         if (waarde === null) return;
-        localStorage.setItem(naar, waarde);
-        if (localStorage.getItem(naar) === null) return;   /* niet gelukt: laat staan */
+
+        var delen = verdeelOverSeizoenen(waarde, terugval);
+        var lagen = Object.keys(delen);
+
+        /* Staat er ergens al iets? Dan is die laag van de gebruiker en
+           blijft hij zoals hij is. De oude sleutel mag dan weg: zijn
+           inhoud staat al ergens. */
+        var botsing = lagen.some(function (s) {
+          return localStorage.getItem(voor + s + "::" + basis) !== null;
+        });
+        if (botsing) { localStorage.removeItem(van); return; }
+
+        /* Eerst alles schrijven, dan pas terugkijken, en pas opruimen als
+           élk deel is aangekomen. Loopt de opslag halverwege vol — en een
+           browser schrijft dan niets weg zonder het te zeggen — dan blijft
+           de oude sleutel staan en is er niets kwijt. */
+        var aangekomen = true;
+        lagen.forEach(function (s) {
+          var naar = voor + s + "::" + basis;
+          try {
+            localStorage.setItem(naar, delen[s]);
+            if (localStorage.getItem(naar) === null) aangekomen = false;
+          } catch(e) { aangekomen = false; }
+        });
+        if (!aangekomen) return;                    /* laat de oude staan */
         localStorage.removeItem(van);
         verhuisd++;
       } catch(e) {}
     });
-    if (!seizoenKeuzes()[team.id]) kiesSeizoen(seizoen, team.id);
+    if (!seizoenKeuzes()[team.id]) kiesSeizoen(terugval, team.id);
+    zetVerhuisd(team.id);
   });
   return verhuisd;
 }
@@ -4656,8 +4780,20 @@ function syncTeamGegevens(team, uitslag) {
       (Array.isArray(r.gegevens) ? r.gegevens : []).forEach(function (g) { opServer[g.sleutel] = g; });
       /* Alles wat hier staat plus alles wat daar staat: anders mist
          een nieuw apparaat precies datgene wat het nog niet heeft. */
-      var alles = teamSleutelsVan(team.id);
-      Object.keys(opServer).forEach(function (s) { if (alles.indexOf(s) < 0) alles.push(s); });
+      /* Sleutels zonder :: komen van vóór de seizoenen. Ze staan nog op de
+         server omdat de verhuizing ze alleen op het apparaat opruimde, en
+         omdat er voor gegevens geen grafsteen bestaat zoals voor teams.
+         Haalden we ze op, dan zette de verhuizing ze bij de volgende
+         lading in het dan actieve seizoen — en zo vulde elk nieuw seizoen
+         zich met de inhoud van vóór de verhuizing.
+
+         Hier houdt die kringloop op. Er wordt niets weggegooid: de rij
+         blijft gewoon op de server staan. Hij wordt alleen niet meer
+         opgehaald en niet meer geduwd. */
+      var alles = teamSleutelsVan(team.id).filter(heeftLaag);
+      Object.keys(opServer).forEach(function (s) {
+        if (heeftLaag(s) && alles.indexOf(s) < 0) alles.push(s);
+      });
       return opEenRij(alles, function (sleutel) {
         return syncEen("gegevens", {team_id: team.id}, voor + sleutel,
                        sleutel, opServer[sleutel] || null, uitslag);
@@ -5139,7 +5275,10 @@ function zetBackupTerug(data) {
        Wat er geen heeft, gaat naar het seizoen dat nu openstaat. */
     var terugSeizoen = seizoenNu(id) || seizoenVanDatum();
     Object.keys(bewaard.gegevens || {}).forEach(function (k) {
-      var sleutel = seizoenUitSleutel(k) ? k : (terugSeizoen + "::" + k);
+      /* heeftLaag en niet seizoenUitSleutel: een sleutel uit een
+         geparkeerde laag draagt al een kop, ook al is dat geen seizoen.
+         Die hoort niet nóg een keer voorzien te worden. */
+      var sleutel = heeftLaag(k) ? k : (terugSeizoen + "::" + k);
       try { localStorage.setItem(voor + sleutel, bewaard.gegevens[k]); } catch(e) {}
     });
     if (!lijst.some(function (t) { return t.id === id; }))
