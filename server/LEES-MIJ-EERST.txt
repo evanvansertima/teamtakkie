@@ -1,0 +1,148 @@
+TEAMTAKKIE — je eigen server aanzetten
+======================================
+
+Vanaf nu kan de app je gegevens op een server bewaren in plaats van
+alleen in de browser van je telefoon. Dat lost twee dingen op:
+
+  · Safari gooit opslag van een site na zeven dagen zonder bezoek weg.
+    Dat is Apple-beleid en daar kan een app niets tegen doen. Op een
+    server heeft het er geen last van.
+  · Wat je thuis op je laptop invult, staat langs de lijn op je
+    telefoon. Nu nog niet.
+
+Je hebt hier GEEN KvK voor nodig. Dat is pas nodig als je er geld voor
+gaat vragen, of als andere clubs hun spelers erin gaan zetten.
+
+Het kost ongeveer een kwartier.
+
+
+STAP 1 — MAAK EEN SUPABASE-ACCOUNT
+----------------------------------
+  1. Ga naar https://supabase.com en klik op "Start your project".
+  2. Maak een account aan met je e-mailadres of met GitHub.
+  3. Klik op "New project".
+  4. Vul in:
+       Name      TEAMTAKKIE
+       Password  laat hem er een maken en BEWAAR HEM ergens veilig.
+                 Dit is het wachtwoord van de database zelf; je hebt
+                 hem zelden nodig, maar hij is niet terug te halen.
+       Region    kies Frankfurt (eu-central-1).
+
+Die laatste is geen detail. Je gaat namen en geboortedata van
+minderjarigen bewaren. Kies je een server in Amerika, dan verlaten die
+gegevens de Europese Unie, en dat wil je niet uitleggen aan een ouder.
+
+Het opzetten duurt een paar minuten. Koffie.
+
+
+STAP 2 — ZET DE TABELLEN KLAAR
+------------------------------
+  1. Klik links in Supabase op "SQL Editor".
+  2. Klik op "New query".
+  3. Open het bestand 01-schema.sql uit deze map, selecteer alles,
+     en plak het in dat venster.
+  4. Klik op "Run" (of Ctrl+Enter).
+
+Onderaan hoort "Success. No rows returned" te staan.
+
+CONTROLEER DIT, het is belangrijk:
+  Klik links op "Table Editor". Je ziet zes tabellen: clubs, leden,
+  teams, gegevens, persoonlijk en abonnementen. Bij elke tabel hoort
+  een gesloten hangslotje te staan. Dat betekent dat de beveiliging
+  per rij aanstaat: de database bepaalt zelf, bij elke vraag, wie
+  waarbij mag.
+
+  Staat er ergens "Unrestricted" in plaats van dat hangslot, dan ligt
+  die tabel open voor iedereen die het adres van je server kent. Draai
+  het bestand dan opnieuw en zet er pas echte gegevens in als het
+  hangslot er staat.
+
+
+STAP 3 — ZET E-MAILBEVESTIGING UIT (voor nu)
+--------------------------------------------
+Zolang jij de enige gebruiker bent is het handiger om zonder
+bevestigingsmail in te kunnen loggen.
+
+  Authentication  >  Sign In / Providers  >  Email
+  Zet "Confirm email" uit en klik op Save.
+
+Ga je later andere clubs toelaten, zet hem dan weer aan.
+
+
+STAP 4 — DE APP ERAAN KOPPELEN
+------------------------------
+  1. In Supabase:  Project Settings  >  API
+     Daar staan twee dingen die je nodig hebt:
+         Project URL       https://iets.supabase.co
+         anon public key   een lange sleutel die met eyJ begint
+  2. Open TEAMTAKKIE, ga naar Instellingen > Account instellen.
+  3. Plak allebei in de velden en klik op Bewaren.
+  4. Maak een account aan met je eigen e-mailadres en een wachtwoord.
+
+De app synchroniseert dan meteen. De eerste keer gaat alles wat je nu
+hebt omhoog; op elk volgend apparaat log je in en komt alles omlaag.
+
+Die anon public key mag gerust in de app staan en is niet geheim. Wat
+iemand ermee mag, bepaalt de database met de regels uit stap 2 — niet
+de app. De andere sleutel op die pagina, de service_role key, is dat
+wél: die mag je nooit ergens plakken waar iemand anders hem kan zien.
+
+
+STAP 5 — DE ACHTERKANT AANZETTEN
+--------------------------------
+Draai nu ook 03-beheer.sql, op dezelfde manier als stap 3. Dat maakt
+jou beheerder: je krijgt in de app onder Instellingen > Account een
+knop "De achterkant", en daar zie je alle accounts, hun vereniging en
+hun pakket. Je kunt daar een pakket wijzigen en een account
+verwijderen.
+
+Onderaan het bestand staat jouw e-mailadres. Staat er een ander adres
+dan waarmee je in de app inlogt, pas het dan aan voordat je op Run
+klikt.
+
+Na het draaien hoor je onderaan één regel te zien met jouw adres. Zie
+je niets, dan bestaat je account nog niet: log eerst één keer in de
+app in en draai dit bestand dan opnieuw.
+
+Wie beheerder is, staat in de database en niet in de app. Iemand die
+het HTML-bestand van de app openmaakt en aanpast komt er dus niet in:
+de server weigert hem gewoon.
+
+
+STAP 6 — JE PAKKET
+------------------
+Nieuwe clubs beginnen op Free. Jezelf op Max zetten kan vanaf nu in de
+app zelf, via De achterkant. Het kan ook nog steeds hier:
+
+  Table Editor  >  abonnementen  >  klik op de regel  >  pakket = max
+
+Wat niet kan, is dat iemand zijn eigen pakket ophoogt. Er is geen
+enkele regel in de database die dat toestaat — ook niet met een eigen
+verzoek buiten de app om. Alleen een beheerder kan het, en beheerder
+word je alleen in de SQL Editor.
+
+
+WAT JE MOET WETEN
+-----------------
+Synchroniseren is geen "opslaan naar de server". Het is bepalen wat er
+moet gebeuren als er op twee plekken tegelijk iets is veranderd. De
+regel die de app aanhoudt:
+
+  · Veranderde er maar aan één kant iets, dan wint die kant helemaal —
+    inclusief wat je hebt weggehaald.
+  · Veranderde er aan allebei de kanten iets, dan worden de lijsten
+    samengevoegd: alles wat aan één van beide kanten bestaat komt
+    erin. Je krijgt dat na het synchroniseren ook te zien.
+
+Dat betekent dat een speler die je op je laptop weggooide kan
+terugkomen als je hem tegelijk op je telefoon aan het bewerken was.
+Dat is met opzet zo gekozen: liever een speler die terugkomt dan een
+avond werk dat verdwijnt.
+
+De gratis Supabase pauzeert een project dat een week lang niet is
+gebruikt. Hij start weer zodra je hem opent, maar de eerste keer duurt
+dat een halve minuut. Je gegevens raak je er niet mee kwijt.
+
+Blijf een back-up maken. Instellingen > Back-up downloaden pakt al je
+teams in één bestand. Een server is geen back-up: als jij per ongeluk
+een team weggooit, gooit de server hem netjes mee weg.

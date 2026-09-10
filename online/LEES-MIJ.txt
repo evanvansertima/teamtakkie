@@ -1,0 +1,429 @@
+TEAMTAKKIE — de map die online moet
+════════════════════════════════════════════════════════════
+
+Sleep deze hele map naar Netlify. Meer is het niet.
+
+  index.html   de app zelf
+  sw.js        zorgt dat de app werkt zonder bereik
+
+
+V34 — DE HELFTEN KLOPPEN, EN ER VERSPRINGT NIETS MEER
+════════════════════════════════════════════════════════════
+
+DE SPEELHELFT IS NU ECHT EEN HELFT
+Ik tekende nog steeds een dichte rechthoek met vier hoekboogjes en een
+streep erin. Dat is een heel veld met een lijn, geen helft. Nu:
+
+  • aan de kant waar het veld doorloopt is er GEEN achterlijn
+  • en staan daar ook GEEN hoekboogjes — er wordt daar niet gescoord
+  • de zijlijnen lopen door tot de rand
+  • de middencirkel is een HELE cirkel die door de rand wordt
+    afgesneden. Een nette halve maan die precies op de middellijn
+    eindigt bestaat niet: op het echte veld loopt hij door.
+
+Bij doel bovenaan ligt de middellijn onderin en steekt de cirkel over
+de onderrand; bij doel onderaan precies andersom.
+
+WAAROM ALLES VERSPRONG
+Eén regel CSS was de oorzaak:
+
+    .bord-doek .teken-veld { width:100%; height:auto; }
+
+Het doek was dus altijd zo breed als de kolom, en de HOOGTE volgde de
+verhouding van het gekozen veld — liggend 1,57, staand 0,69, een helft
+1,34. Bij elke andere veldkeuze werd het doek een andere hoogte en
+schoof alles eronder mee: de frames, de knoppen. Vandaar het scrollen.
+
+Nu heeft de tekenruimte een vaste maat, bepaald door de breedte van de
+kolom en de hoogte van het scherm — niet door het veld. Het veld wordt
+er gecentreerd in gepast. Kies je een staand veld, dan wordt het
+smaller, maar niet hoger of lager. Onder het doek beweegt nooit meer
+iets. Het paneel is het enige dat van lengte verschilt; dat scrolt in
+zichzelf, dus ook bij het aanklikken van een item blijft de rest staan.
+
+NAGEMETEN IN CHROME
+  laptop 1470x764   doek altijd t=0  h=428, frames altijd t=498,
+                    pagina 599 — bij alle negen veldvormen gelijk
+                    veld 670 (liggend) / 293 (staand) / 575 (helft)
+  smal scherm       doek altijd t=197 h=290, frames altijd t=496,
+                    pagina 598 van 764 — alles op één scherm
+  Blik              breed: drie knoppen onder elkaar, 80 px, geen woord
+                    smal:  drie naast elkaar, 359 px, mét woord
+
+Die laatste regel was ook een fout: Plat, Schuin en Laag liepen op een
+iPad staand over elkaar heen omdat de regel ervoor alleen vanaf 900
+pixels gold. Hij hoort bij een kolom die écht smal is — ingebed op een
+breed scherm, en altijd in volledig scherm.
+
+  118 controles op de veldvormen, 13 opzettelijke fouten teruggezet,
+  alle 13 gevangen. Alle 28 testbestanden groen.
+
+
+V33 — DE VELDVORMEN
+════════════════════════════════════════════════════════════
+
+DE LIJST STAAT NU ONDER ELKAAR
+Linksboven begin je met het hele veld. Klik je erop, dan schuift er een
+smalle tweede kolom open met de veldvormen onder elkaar, het ene
+plaatje onder het andere — zoals je het bij een tekenbord verwacht.
+Alle knoppen zijn even groot, dus de vormen lijnen netjes uit. Op een
+telefoon lopen ze door in een rij, want negen onder elkaar is daar te
+lang. Op een breed scherm is die kolom 104 pixels; de rest is veld.
+
+NEGEN VORMEN, IN DEZE VOLGORDE
+  1  heel veld liggend
+  2  heel veld staand
+  3  speelhelft, doel bovenaan
+  4  speelhelft, doel onderaan
+  5  vak met stippellijn
+  6  heel vak
+  7  twee vakken naast elkaar
+  8  drie vakken naast elkaar
+  9  vier vakken (blok van twee bij twee)
+
+DE SPEELHELFT LOOPT NU DOOR OVER DE MIDDELLIJN
+Hij hield precies op bij de middellijn, en die middellijn was een
+streepje op de rand. Je zag dus niet dat het veld daar doorloopt, en de
+middencirkel — het ding waaraan je een helft herkent — stond er
+helemaal niet op. Nu ligt de middellijn 14% naar binnen, doorgetrokken,
+met de halve middencirkel eraan vast die naar het doel toe bolt, en een
+middenstip erop. Precies zoals op de foto die je stuurde.
+
+DE VIER HALVE HELFTEN ZIJN ER TWEE GEWORDEN
+Doel links en doel rechts staan niet meer in het menu. Ze blijven wél
+gewoon tekenen, dus oefeningen die je eerder hebt gemaakt met zo'n veld
+zien er nog hetzelfde uit.
+
+HET DOEK VERSPRINGT NIET MEER
+De vijf kale vakken hebben allemaal dezelfde maat, 580 bij 370 — net
+als het hele veld liggend. Wissel je tussen stippelvak, heel vak, twee,
+drie of vier vakken, dan blijft de tekening staan waar hij staat.
+
+NAGEMETEN
+  vak-2   scheidingslijn op 290, precies het midden
+  vak-3   op 198 en 382, dus op een derde en twee derde
+  vak-4   één staande op 290 en één liggende op 185
+  half-b  middellijn op 268 van de 310, cirkel bolt omhoog
+  half-o  middellijn op  52 van de 310, cirkel bolt omlaag
+  80 controles op de veldvormen, 14 opzettelijke fouten teruggezet,
+  alle 14 gevangen. Alle 28 testbestanden groen.
+
+
+V32 — NU KLOPT DE INDELING ECHT
+════════════════════════════════════════════════════════════
+
+Twee dingen die er nog steeds niet goed uitzagen. Allebei één regel
+CSS, en allebei door mij over het hoofd gezien omdat ik mijn eigen
+nabouw testte in plaats van de opmaak van de app zelf.
+
+ALLES STOND ONDER ELKAAR IN PLAATS VAN NAAST ELKAAR
+De regel zette wél display:flex maar niet de richting. De regel erboven
+zet die op "kolom" voor smalle schermen, en die bleef gewoon gelden.
+Dus: de smalle kolom bovenaan, het paneel eronder over de volle
+breedte, en het veld daar weer onder.
+
+DE KNOPPEN IN HET PANEEL WERDEN BALKEN
+Hier zat de rest van je klacht. De regel "knop zo breed als de kolom"
+gold niet alleen voor de kolom, maar voor élke knop met die opmaak —
+dus ook voor die in het paneel ernaast. Vandaar "Zet neer" als een
+stapel van vier balken, en hetzelfde bij materiaal, zones en lijnen.
+
+Nu geldt die regel alleen voor de directe kinderen van de kolom, en
+liggen de knoppen in een paneel in een raster van vier. Materiaal,
+zones, lijnen en objecten lijnen daardoor allemaal hetzelfde uit.
+
+NAGEMETEN, MET DE OPMAAK VAN DE APP ZELF
+Niet meer met een nabouw. De echte regels uit het bestand, de echte
+structuur, drie schermformaten:
+
+    laptop 1280:   kolom 56 | paneel 190 | veld 972   naast elkaar
+    schermvullend: kolom 56 | paneel 232 | veld 944   naast elkaar
+    telefoon 375:  kolom als rij bovenaan, dan paneel, dan veld
+
+En "Zet neer": vier knoppen van 38 pixels op één rij, alle vier even
+breed, allemaal op dezelfde hoogte.
+
+
+V31 — EN DAARVOOR
+════════════════════════════════════════════════════════════
+
+DE KOLOM LIEP UIT TOT EEN LANGE LIJST
+Je zag het goed en het was mijn fout. Ik had de kolom alleen een
+flex-basis van 56 pixels gegeven. Dat werkt in het schermvullende bord,
+waar de kolom in een flexrij staat — maar níét in de twee vensters waar
+het bord óók staat: de tekening bij een oefening, en de tactiek bij een
+wedstrijd. Daar is de ouder geen flexrij, dus deed die 56 niets, en werd
+elke knop zo breed als het venster. Vandaar die lijst van elf balken.
+
+Nu heeft de kolom een echte breedte. Dan kan het niet meer gebeuren,
+waar het bord ook staat. Er is een test bij die dat vasthoudt.
+
+DE VELDEN ZIJN NU TEKENINGEN
+Ze stonden er als tekst met pijltjes. Dat moet je eerst lezen en dan nog
+ontcijferen, en zelfs dan wist je niet zeker welke helft je kreeg.
+
+Nu staat er een tekeningetje van het veld zelf, in de échte
+verhoudingen van dat veldtype — een liggend veld oogt liggend, een
+staand veld staand. Bij een speelhelft zie je het doeltje buiten de
+lijn aan de kant waar gescoord wordt, en de gestreepte middellijn aan
+de kant waar het veld doorloopt. Precies zoals het echte veld het
+tekent, dus wat je kiest is wat je krijgt.
+
+Twee op een rij en niet drie: bij drie werd elk plaatje zo klein dat je
+een staand veld niet meer van een halve helft kon onderscheiden, en dan
+is een pictogram niets waard. De naam staat er nog wel als tooltip.
+
+
+V30 — EN DAARVOOR
+════════════════════════════════════════════════════════════
+
+HET TEKENBORD: EEN KOLOM DIE UITKLAPT
+Zoals in TacticalBoards, maar in onze stijl.
+
+Er stond één rail met alles erin: verplaatsen, gum, bal, pion, doel,
+coachpunt, materiaal, zone, spelers, vijf lijnsoorten, ongedaan en
+wissen. Meer dan twintig vakjes, in twee kolommen — en het paneel dat
+daarbij hoorde stond aan de ándere kant van het veld. Je tekening zat
+klem tussen gereedschap aan beide zijden.
+
+Nu is de vraag eerst "waarmee?" en pas daarna "welke?":
+
+    smalle kolom (56 px)      tweede kolom          het veld
+    ─────────────────────     ──────────────        ────────
+    ✋  verplaatsen           wat er bij jouw       de rest
+    ⌫  gum                    keuze hoort
+    ─────────────────────
+    ▦  veld en aanzicht
+    👥 spelers en teams
+    ⚽ bal, pion, doel
+    🧰 trainingsmateriaal
+    ✒  lijnen en pijlen
+    ▭  zones en vlakken
+    ─────────────────────
+    ↺  ongedaan
+    🗑  wissen
+
+Zes soorten, in de volgorde waarin je een oefening opbouwt: eerst het
+veld, dan wie erop staat, dan wat erop ligt, en pas daarna wat ze doen.
+
+Een soort kiezen zet meteen het juiste gereedschap klaar — kies je
+"lijnen", dan tekent je volgende tik een lijn en geen pion. Wat je al
+had gekozen binnen die soort blijft staan.
+
+Nog een keer op dezelfde soort tikken klapt de kolom dicht. Nagemeten
+op je iPad in liggende stand, 1194 breed:
+
+        kolom open:        veld 858 px
+        kolom dicht:       veld 1102 px
+        oude indeling:     veld 874 px, altijd, zonder keuze
+
+Verplaatsen, gum, ongedaan en wissen staan bewust buiten de soorten:
+die heb je bij élk gereedschap nodig, en je hoort niet van soort te
+moeten wisselen om iets te kunnen verschuiven.
+
+Frames en afspelen zaten er al in en zijn niet aangeraakt.
+
+
+V29 — EN DAARVOOR
+════════════════════════════════════════════════════════════
+
+SPELERSFOTO'S WORDEN VERKLEIND
+Dit was de tijdbom. Het clublogo werd netjes teruggebracht naar 160
+pixels; een spelersfoto ging ongewijzigd de opslag in. Een foto uit je
+telefoon is een paar megabyte, en als tekst opgeslagen nog een derde
+meer — terwijl de browser je vijf tot tien megabyte geeft voor álles
+bij elkaar.
+
+Nagemeten met een echte foto van 4032 × 3024:
+
+        voor:   2286 kB          na:  63 kB
+        ruimte voor 2 spelers    ruimte voor 81 spelers
+
+Vierhonderd pixels is ruim voor een pasfotootje van veertig pixels op
+het scherm. Op het scherm zie je geen verschil; in de opslag scheelt het
+een factor 36. En elke foto ging tot nu toe integraal mee naar de server
+bij elke uitwisseling, over de verbinding van een parkeerplaats bij een
+sportpark.
+
+Doorzichtigheid blijft waar die hoort: een uitgeknipt logo blijft png en
+houdt zijn doorzichtige achtergrond (nagemeten: hoek blijft leeg, kleur
+blijft exact #004aad). Een gewone foto wordt jpeg met een witte
+ondergrond — zonder dat zouden doorzichtige randen zwart worden.
+
+Dit geldt nu voor alle drie de plekken waar de app een afbeelding
+bewaart: de spelersfoto, het clubwapen en een afbeelding op een tenue.
+
+EN ALS HET TOCH MISGAAT, HOOR JE HET
+In slaJson stond een lege catch: lukte het schrijven niet, dan deed de
+app alsof er niets aan de hand was. Dat is de gevaarlijkste soort
+stilte — je typt langs de lijn een wissel in, ziet geen melding, en de
+volgende dag staat er niets. Nu komt er een melding, met wat je eraan
+kunt doen, en niet vaker dan eens per vijftien seconden.
+
+
+V28 — EN DAARVOOR
+════════════════════════════════════════════════════════════
+
+DE HALVE BREEDTE VAN JE SCHERM
+Op je iPad in liggende stand stond alles onder elkaar in een smalle
+kolom, met rechts een zwart vlak. Dat was geen ontwerpkeuze maar een
+fout: er stond een lege kolom in de code, blijven staan na de
+verbouwing van tabbladen naar kolommen. Het raster gaf die lege kolom
+netjes de rechterhelft, waarna de échte tweede kolom naar de volgende
+rij zakte — precies onder de eerste.
+
+Op twee plekken, en dus zag je het bij Voorbereiding én bij Uitslag.
+
+Nu staat links de opgave (wie kan er spelen) en rechts het rijschema,
+de teamtaken, uitgeleend en de gastspelers. Gemeten op iPad-formaat
+1194 breed: twee kolommen van 350 naast elkaar, en de inhoud loopt door
+tot 22 pixels van de rechterrand.
+
+De code klopte, de app startte, en geen enkele test zag het — dit soort
+fout wordt alleen zichtbaar als iemand ernaar kijkt. Er is nu wel een
+test die per kolommenraster telt dat er precies twee kolommen zijn en
+dat er geen leeg is.
+
+
+V27 — EN DAARVOOR
+════════════════════════════════════════════════════════════
+
+WIE WAT MAG
+Drie rollen, en met opzet niet meer: eigenaar, trainer, kijker. Ze
+stonden al in je database en worden daar ook afgedwongen — de
+beveiligingsregels laten alleen een eigenaar of trainer schrijven.
+
+Wat de app nu doet is de deur ervoor: een eigenaar beheert teams,
+seizoenen en clubgegevens, een trainer zijn eigen wedstrijden en
+selectie, en een kijker ziet die knoppen niet meer staan. Bovenaan de
+instellingen staat één regel wat je bent en wat dat betekent.
+
+Een kijker stuurt ook niets meer omhoog. De database zou het toch
+tegenhouden, maar dan zou de app het blijven proberen en elke keer een
+fout terugkrijgen — een rood lampje bij iemand die niets verkeerd doet.
+
+Ik heb géén vierde of vijfde rol verzonnen. Een rol die alleen de app
+kent, is een slot dat niet op slot zit: de knop verdwijnt, maar wie de
+ontwikkelaarsconsole opent kan alles nog. Liever drie die echt iets
+betekenen. Wat jij als ontwikkelaar mag staat daar los van en komt uit
+de beheerderstabel.
+
+
+V26 — EN DAARVOOR
+════════════════════════════════════════════════════════════
+
+VENSTERS STAAN NIET MEER ONDERIN
+Het teammenu en de instellingen begonnen op een laptop halverwege het
+scherm en liepen er onderaan uit — gemeten: bij een venster van 820
+pixels hoog begon het blad op 508 en eindigde het op 855, dus 35 pixels
+onder de rand. Dat kwam doordat ze waren gebouwd als bodemblad: op een
+telefoon precies goed, want daar komt je duim vandaan, maar op een
+laptop onzin. Vanaf tabletbreedte staan ze nu midden op het scherm.
+
+WIE FLUIT ER
+Bij een wedstrijd kun je nu de scheidsrechter en de assistent invullen.
+Allebei mag iedereen zijn: iemand uit je selectie, of een naam van
+buiten. Vul je een assistent in, dan wordt die voorgesteld voor Vlaggen
+1e en 2e helft — maar alleen als daar nog niemand staat, en je kunt het
+altijd wijzigen.
+
+UITLENEN
+Speelt Tommy zaterdag met de JO19-1, dan zet je hem bij de opgave op
+"Uitgeleend" en vul je in bij welk team. Dat telt als voetbalactiviteit,
+dus niet als afwezig. Zijn speelminuten krijgen een streepje in plaats
+van een nul: hij heeft gespeeld, alleen niet bij ons, en een nul zou een
+leugen zijn.
+
+TWEE KEER DEZELFDE PLEK
+Bij een positiewissel kon je kiezen uit "CV" en "CV" zonder te weten
+welke van de twee. De formatie wist het antwoord al, en gebruikt dat nu:
+CV-L en CV-R, CVM-L en CVM-R. De lijst komt bovendien uit jouw
+opstelling in plaats van uit een algemene lijst van veertien codes, dus
+je kunt alleen naar plekken die in deze formatie bestaan.
+
+NOTITIE TIJDENS DE WEDSTRIJD
+Er staat een zesde snelknop bij de wedstrijd: Notitie. Eén tik, typen,
+klaar — geen apart scherm.
+
+
+V25 — EN DAARVOOR
+════════════════════════════════════════════════════════════
+
+SEIZOENEN
+Dit is de grote verandering. Een team bestaat vanaf nu door meerdere
+seizoenen heen, en elk seizoen heeft zijn eigen spelers, wedstrijden,
+trainingen en cijfers.
+
+Wat er nu staat verhuist bij het eerste opstarten vanzelf naar het
+seizoen dat in je instellingen stond. Er wordt daarbij niets weggegooid
+voordat de kopie er werkelijk staat — lukt het schrijven niet, dan
+blijft alles precies zoals het was.
+
+Je vindt de seizoenen onder je teamnaam linksboven. Daar staat ook
+"Nieuw seizoen starten": je kiest wat er meegaat (spelers, tenues,
+formaties, afspraken) en wat er achterblijft. Wedstrijden en
+statistieken gaan nooit mee — die blijven staan onder het oude seizoen
+en zijn daar altijd terug te kijken.
+
+Het tekstveld "Seizoen" in de instellingen is weg. Dat was een tweede
+waarheid: het kon "2025/2026" zeggen terwijl je naar de wedstrijden van
+dit jaar keek.
+
+EEN TEAM VERWIJDEREN BLIJFT VERWIJDERD
+JO19-test kwam terug omdat het weggooien alleen op je eigen apparaat
+gebeurde. De server wist van niets en stuurde het team keurig terug.
+Een verwijdering is nu zelf een gegeven dat wordt doorgegeven, ook als
+je op dat moment geen bereik hebt.
+
+INSTELLINGEN
+Vijf groepen: Account, Team, App, en — alleen als je beheerder bent —
+Beheer. De knop "Nu synchroniseren" is weg voor gewone gebruikers: het
+gaat vanzelf, en een knop die suggereert dat het níét vanzelf gaat is
+precies de gedachte die op 5 september een wedstrijd heeft gekost.
+Back-up, verbinding testen en de serverinstellingen zitten nu achter de
+beheerdersrol.
+
+Nieuw: een abonnementenkaart met een overzicht van de vier pakketten.
+
+DE WEDSTRIJD
+De volgorde is nu die van de week naar de wedstrijd toe:
+Voorbereiding → Tactiek → Spelersrollen → Opstelling →
+Spelhervattingen → Tegenstander → Uitslag → Speelminuten.
+
+"Rondom" heet Voorbereiding, "Wedstrijd" heet Uitslag en staat onderaan.
+Een geplande wedstrijd opent op Voorbereiding.
+
+DE MINUUT IS NIET MEER VERPLICHT
+Weet je zondagavond niet meer wanneer Luuk erin kwam, dan voer je de
+wissel gewoon in zonder minuut. De app verzint dan geen getal: de
+speeltijd van die twee spelers krijgt een streepje.
+
+Bij een wissel staat nu een knop "Rust". Die gebruikt de helft van jouw
+wedstrijdduur — bij 2 × 40 dus minuut 40, niet 45.
+
+VERDER
+· Hoekschop in plaats van corner, plus aftrap, inworp en doelschop.
+· Drie soorten vrije trap zijn er één geworden: Vrije trappen. Wat je
+  eerder invulde blijft leesbaar.
+· Thuis en Uit hebben nu iconen in de stijl van de rest van de app.
+· De vier soorten wedstrijd staan recht onder elkaar uitgelijnd.
+· De kleine uitlegzinnen op het inlogscherm zijn weg.
+
+
+NA HET UPLOADEN
+════════════════════════════════════════════════════════════
+Sluit de app helemaal af op je laptop én op je tablet, en open hem dan
+opnieuw. Niet alleen het tabblad wegklikken — anders blijft de oude
+versie hangen.
+
+Werk beide apparaten bij vóórdat je verder gaat. Zolang er één op de
+oude versie staat, stuurt die zijn gegevens onder de oude vorm omhoog.
+
+
+ALS ER IETS MISGAAT
+════════════════════════════════════════════════════════════
+Verhoog VERSIE in sw.js en upload opnieuw:
+
+         const VERSIE = "takkie-v34";
+
+Dan gooit elke browser zijn voorraad weg en haalt alles vers op.
