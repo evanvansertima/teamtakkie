@@ -1,0 +1,70 @@
+%%{init:{"theme":"base","themeVariables":{"background":"#eaeef4","primaryColor":"#ffffff","primaryTextColor":"#141c28","primaryBorderColor":"#5b6577","lineColor":"#3f4a5c","tertiaryColor":"#dfe5ee","fontFamily":"IBM Plex Mono, monospace","fontSize":"12px"}}}%%
+erDiagram
+  auth_users  ||--o{ leden        : "is lid van clubs"
+  auth_users  ||--o{ persoonlijk  : "bezit eigen sleutels"
+  auth_users  ||--o| beheerders   : "kan beheerder zijn"
+  clubs       ||--o{ leden        : "heeft leden"
+  clubs       ||--o{ teams        : "heeft teams"
+  clubs       ||--|| abonnementen : "heeft één pakket"
+  teams       ||--o{ gegevens     : "bevat alle teamdata"
+
+  auth_users {
+    uuid id PK "beheerd door Supabase Auth"
+    text email UK
+    timestamptz created_at
+    timestamptz last_sign_in_at
+  }
+
+  clubs {
+    uuid id PK "gen_random_uuid()"
+    text naam "verplicht"
+    text logo "data-url, mag leeg"
+    timestamptz gemaakt_op
+  }
+
+  leden {
+    uuid id PK
+    uuid club_id FK, UK "clubs, on delete cascade"
+    uuid gebruiker_id FK, UK "auth.users, on delete cascade"
+    text naam
+    text rol "check: eigenaar-trainer-kijker"
+    timestamptz gemaakt_op
+  }
+
+  teams {
+    text id PK "door de app verzonnen, nooit wijzigen"
+    uuid club_id FK "clubs, on delete cascade"
+    text naam "verplicht"
+    timestamptz gemaakt_op
+    timestamptz bijgewerkt_op "trigger zet dit"
+    timestamptz verwijderd_op "leeg betekent bestaat nog"
+  }
+
+  gegevens {
+    text team_id PK, FK "teams, on delete cascade"
+    text sleutel PK "seizoen dubbelepunt basissleutel"
+    jsonb waarde "spelers wedstrijden trainingen aanwezigheid"
+    timestamptz bijgewerkt_op "trigger zet dit"
+    text apparaat "wie schreef het"
+  }
+
+  persoonlijk {
+    uuid gebruiker_id PK, FK "auth.users, on delete cascade"
+    text sleutel PK "oefeningen voorkeuren sportpark"
+    jsonb waarde
+    timestamptz bijgewerkt_op "trigger zet dit"
+    text apparaat
+  }
+
+  abonnementen {
+    uuid club_id PK, FK "clubs, on delete cascade"
+    text pakket "check: free-basic-pro-max"
+    date geldig_tot
+    text notitie
+  }
+
+  beheerders {
+    uuid gebruiker_id PK, FK "auth.users, on delete cascade"
+    text notitie
+    timestamptz gemaakt_op
+  }
