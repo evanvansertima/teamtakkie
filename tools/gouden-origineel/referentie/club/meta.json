@@ -1,13 +1,16 @@
 {
   "opgenomenMet": "tools/gouden-origineel.js",
+  "set": "club",
+  "pakket": "club",
+  "pakketNaam": "Club",
   "vasteTijd": "2026-10-15T10:00:00.000Z",
   "tijdzone": "Europe/Amsterdam",
   "venster": {
     "breedte": 1280,
     "hoogte": 900
   },
-  "appBytes": 1919784,
-  "appRegels": 33920,
+  "appBytes": 1937079,
+  "appRegels": 34233,
   "schermen": [
     "dashboard",
     "wedstrijden",
@@ -18,6 +21,7 @@
     "live",
     "clubhuis"
   ],
+  "schermenOpSlot": [],
   "dieptes": [
     "selectie-ontwikkeling"
   ],

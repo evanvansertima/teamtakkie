@@ -1,0 +1,246 @@
+<html lang="nl" data-thema="licht">
+  <div class="app-schil">
+    <aside class="zijbalk">
+      <button class="zijbalk-merk zijbalk-team" title="Van team wisselen">
+        <img alt="VV Verzonnen Kamp" class="logo-img" src="data:image/png#28734-10ebnl0">
+        <div class="header-tekst">
+          <h1>
+            "VV Verzonnen Kamp"
+          <div class="header-subtitel">
+            "JO19-2"
+            <i class="fa-solid fa-chevron-down header-pijl">
+      <nav class="zijbalk-nav">
+        <button class="zij-item">
+          <span class="zij-icoon">
+            <i class="fa-solid fa-house">
+          <span>
+            "Dashboard"
+        <button aria-current="page" class="zij-item actief">
+          <span class="zij-icoon">
+            <i class="fa-solid fa-futbol">
+          <span>
+            "Wedstrijden"
+        <button aria-label="Trainingen — hoort bij Coach" class="zij-item">
+          <span class="zij-icoon">
+            <i class="fa-solid fa-person-running">
+          <span>
+            "Trainingen"
+          <i aria-hidden="true" class="fa-solid fa-lock slotje">
+        <button class="zij-item">
+          <span class="zij-icoon">
+            <i class="fa-solid fa-users">
+          <span>
+            "Selectie"
+        <button class="zij-item">
+          <span class="zij-icoon">
+            <i class="fa-solid fa-calendar-days">
+          <span>
+            "Agenda"
+        <div class="zijbalk-kop">
+          "Analyse"
+        <button aria-label="Statistieken — hoort bij Coach" class="zij-item">
+          <span class="zij-icoon">
+            <i class="fa-solid fa-chart-bar">
+          <span>
+            "Statistieken"
+          <i aria-hidden="true" class="fa-solid fa-lock slotje">
+        <button aria-label="Live analyse — hoort bij Coach" class="zij-item">
+          <span class="zij-icoon">
+            <i class="fa-solid fa-stopwatch">
+          <span>
+            "Live analyse"
+          <i aria-hidden="true" class="fa-solid fa-lock slotje">
+        <div class="zijbalk-kop">
+          "Extra"
+        <button aria-label="Clubhuis — hoort bij Coach" class="zij-item">
+          <span class="zij-icoon">
+            <i class="fa-solid fa-map">
+          <span>
+            "Clubhuis"
+          <i aria-hidden="true" class="fa-solid fa-lock slotje">
+      <div class="zijbalk-voet">
+        <button class="sync-lampje mislukt" title="Er staat iets klaar dat nog niet verstuurd is. Zodra er weer bereik is gaat het vanzelf.">
+          <i class="fa-solid fa-triangle-exclamation">
+          <span>
+            "Geen verbinding"
+        <button class="zij-item">
+          <span class="zij-icoon">
+            <i class="fa-solid fa-gear">
+          <span>
+            "Instellingen"
+        <div class="zij-ontwerp">
+          <span class="zij-ontwerp-studio">
+            "TEAMTAKKIE"
+          <span class="zij-ontwerp-naam">
+            "EVS production"
+    <header class="header">
+      <button class="header-logo header-team" title="Van team wisselen">
+        <img alt="VV Verzonnen Kamp" class="logo-img" src="data:image/png#28734-10ebnl0">
+        <div class="header-tekst">
+          <h1>
+            "VV Verzonnen Kamp"
+          <div class="header-subtitel">
+            "JO19-2 · TEAMTAKKIE"
+            <i class="fa-solid fa-chevron-down header-pijl">
+      <button aria-label="Instellingen" style="font-size: 20px; cursor: pointer; background: none; border-width: medium; border-style: none; border-color: currentcolor; border-image: none; color: inherit; padding: 6px 4px;">
+        <i class="fa-solid fa-gear">
+    <main class="inhoud">
+      <div>
+        <div class="tabs">
+          <button class="tab-knop actief">
+            <i class="fa-solid fa-futbol">
+            "Wedstrijden"
+          <button class="tab-knop">
+            <i class="fa-solid fa-trophy">
+            "Toernooien"
+        <div class="pagina-header">
+          <div class="pagina-header-tekst">
+            <div class="eyebrow">
+              "Programma & uitslagen"
+            <h2>
+              "Wedstrijden"
+            <p>
+              "5"
+              "wedstrijd"
+              "en"
+              "gepland"
+          <div style="display: flex; gap: 8px; align-items: center;">
+            <button class="knop lijn klein" style="padding: 9px 12px;" title="Programma van voetbal.nl laden">
+              <i class="fa-solid fa-download">
+            <button class="knop lijn klein" style="padding: 9px 12px;" title="Uit bestand importeren">
+              <i class="fa-solid fa-file-import">
+            <button class="knop-plus">
+              "+"
+        <input class="zoekbalk" placeholder="Zoek op tegenstander of locatie…" value="">
+        <div style="display: flex; gap: 6px; margin-bottom: 10px; flex-wrap: wrap;">
+          <button class="filter-chip" style="border-color: var(--grijs); background: var(--wit); color: var(--grijs-donker);">
+            "Uitslagen"
+            <span style="opacity: 0.75;">
+              "3"
+          <button class="filter-chip" style="border-color: var(--grijs); background: var(--wit); color: var(--grijs-donker);">
+            "Aankomende"
+            <span style="opacity: 0.75;">
+              "2"
+          <button class="filter-chip" style="border-color: var(--blauw); background: var(--blauw); color: var(--wit);">
+            "Alle"
+            <span style="opacity: 0.75;">
+              "5"
+        <div>
+          <div class="linie-groep">
+            <div class="linie-kop">
+              <span class="db-agenda-icoon" style="background: var(--blauw); width: 24px; height: 24px; font-size: 10px; border-radius: 7px;">
+                <i class="fa-solid fa-calendar-days">
+              <span class="linie-naam">
+                "Nog te spelen"
+              <span class="linie-tel">
+                "2"
+            <div class="kaart lijst-raster">
+              <div class="w-item">
+                <div class="w-status-dot gepland">
+                <div class="w-info">
+                  <div class="w-tegenstander">
+                    "vs."
+                    "VV Stuifzand O19-1"
+                  <div class="w-sub">
+                    "17 okt"
+                    "· 14:30"
+                    "· Uit"
+                    "· Sportpark De Verzonnen Heide"
+                    "· overmorgen"
+                <div class="w-score-badge gepland">
+                  "Gepland"
+              <div class="w-item">
+                <div class="w-status-dot gepland">
+                <div class="w-info">
+                  <div class="w-tegenstander">
+                    "vs."
+                    "SJO Bellevaart O19-2"
+                  <div class="w-sub">
+                    "24 okt"
+                    "· 12:30"
+                    "· Thuis"
+                    "· Sportpark De Verzonnen Kamp"
+                    "· over 9 dagen"
+                <div class="w-score-badge gepland">
+                  "Gepland"
+          <div class="linie-groep">
+            <div class="linie-kop">
+              <span class="db-agenda-icoon" style="background: var(--grijs-donker); width: 24px; height: 24px; font-size: 10px; border-radius: 7px;">
+                <i class="fa-solid fa-clock-rotate-left">
+              <span class="linie-naam">
+                "Gespeeld"
+              <span class="linie-tel">
+                "3"
+            <div class="kaart lijst-raster">
+              <div class="w-item">
+                <div class="w-status-dot gelijk">
+                <div class="w-info">
+                  <div class="w-tegenstander">
+                    "vs."
+                    "RKVV Harkstede O19-3"
+                  <div class="w-sub">
+                    "10 okt"
+                    "· 11:00"
+                    "· Thuis"
+                    "· Sportpark De Verzonnen Kamp"
+                <div class="w-score-badge gelijk">
+                  "4 – 4"
+              <div class="w-item">
+                <div class="w-status-dot verlies">
+                <div class="w-info">
+                  <div class="w-tegenstander">
+                    "vs."
+                    "SC Duinklinker O19-2"
+                  <div class="w-sub">
+                    "26 sep"
+                    "· 12:15"
+                    "· Uit"
+                    "· Sportpark Het Verzonnen Duin"
+                <div class="w-score-badge verlies">
+                  "1 – 2"
+              <div class="w-item">
+                <div class="w-status-dot winst">
+                <div class="w-info">
+                  <div class="w-tegenstander">
+                    "vs."
+                    "VV Nevelmeer O19-1"
+                  <div class="w-sub">
+                    "12 sep"
+                    "· 14:30"
+                    "· Thuis"
+                    "· Sportpark De Verzonnen Kamp"
+                <div class="w-score-badge winst">
+                  "3 – 1"
+    <nav class="bottom-nav">
+      <button class="nav-item">
+        <div class="nav-pip">
+        <span class="nav-icon">
+          <i class="fa-solid fa-house">
+        <span>
+          "Home"
+      <button class="nav-item actief">
+        <div class="nav-pip">
+        <span class="nav-icon">
+          <i class="fa-solid fa-futbol">
+        <span>
+          "Wedstrijden"
+      <button class="nav-item">
+        <div class="nav-pip">
+        <span class="nav-icon">
+          <i class="fa-solid fa-users">
+        <span>
+          "Selectie"
+      <button aria-label="Training — hoort bij Coach" class="nav-item">
+        <div class="nav-pip">
+        <span class="nav-icon">
+          <i class="fa-solid fa-person-running">
+          <i aria-hidden="true" class="fa-solid fa-lock slot-badge">
+        <span>
+          "Training"
+      <button aria-label="Stats — hoort bij Coach" class="nav-item">
+        <div class="nav-pip">
+        <span class="nav-icon">
+          <i class="fa-solid fa-chart-bar">
+          <i aria-hidden="true" class="fa-solid fa-lock slot-badge">
+        <span>
+          "Stats"

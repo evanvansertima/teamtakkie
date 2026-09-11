@@ -186,41 +186,45 @@ const SESSIE = {
 };
 
 /* ── Het pakket ──────────────────────────────────────────────
-   Bewust "club": het ruimste pakket, zodat het gouden origineel alle
-   acht schermen laat zien. Stond hier free, dan legde de opname een
-   app vast met vier schermen en was er van de andere vier geen
-   referentiebeeld — precies wat Fenna nodig heeft.
+   Dit bestand kent geen vást pakket meer. opslag(pakket) krijgt er
+   één mee, want er worden twee opnamesets gemaakt van dezelfde app:
+
+     club  het ruimste pakket. Alle acht schermen staan open, er is
+           geen enkel slotje te zien. Dit is de betaalde beleving.
+     free  het zuinigste pakket. Vier schermen zitten op slot, en
+           juist dát is wat deze set vastlegt: de slotjes in het
+           zijmenu en de onderbalk, de vergrendelde Trainingen-kaart
+           op het dashboard, het slot op het tabblad Ontwikkeling, de
+           melding na een tik en de prijskaart erachter.
+
+   Waarom het er twee moeten zijn: alles wat achter !magPagina(...)
+   of !magModule(...) staat is in een opname met club onzichtbaar.
+   Eén set dekt dus per definitie maar de helft van het scherm.
+
+   De pakketnaam moet een id zijn dat in PAKKETTEN in
+   online/index.html bestaat. Staat hij daar niet in, dan valt
+   pakketNu() terug op het eerste pakket (free) en legt de opname
+   stilletjes iets anders vast dan de bedoeling. Het script
+   controleert dat daarom vooraf; zie controleerSlot() in
+   gouden-origineel.js.
 
    Tot 11 september stond hier "max". Dat pakket bestaat niet meer;
-   zie docs/pakketten-besluit.md.
-
-   LET OP — wat dit vandaag doet, en wat het straks doet:
-   In online/index.html staan op dit moment nog de oude pakketten
-   (free/basic/pro/max). "club" staat daar dus niet tussen, en
-   pakketNu() valt dan terug op het laatste pakket in de rij: max.
-   De opname van vandaag is daardoor precies dezelfde als die met
-   "max" — geen enkel beeldpunt anders, nagemeten met --vergelijk.
-
-   Zodra Fenna PAKKETTEN bijwerkt wijst "club" een echt pakket aan,
-   met dezelfde onderdelen en hetzelfde onbeperkte aantal teams als
-   max nu. De opname blijft dan geldig. Eén ding verandert wél, en
-   dat is met opzet geen probleem: de pakketnaam die in beeld komt
-   gaat van "Max" naar "Club". Die tekst staat alleen op het scherm
-   Instellingen (regel ~32979 en ~33201), en Instellingen hoort niet
-   bij de acht opgenomen schermen — geverifieerd: het woord "Max"
-   komt in geen van de acht .dom.txt-bestanden voor. */
-const LICENTIE = {pakket: "club"};
+   zie docs/pakketten-besluit.md. */
+const PAKKET_STANDAARD = "club";
 
 /* Alles bij elkaar: precies wat er in localStorage komt te staan.
-   Waarden zijn tekst, net als in de browser. */
-function opslag() {
+   Waarden zijn tekst, net als in de browser. Alleen het pakket
+   verschilt per opnameset; al het andere is voor beide sets
+   identiek, zodat een verschil tussen de twee sets nooit aan de
+   gegevens kan liggen. */
+function opslag(pakket) {
   var o = {};
   function zet(k, v) { o[k] = (typeof v === "string") ? v : JSON.stringify(v); }
 
   /* Van jou, over alle teams heen */
   zet("fch_instellingen_v1", INSTELLINGEN_JIJ);
   zet("tt_voorkeuren_v1",    VOORKEUREN);
-  zet("tt_licentie_v1",      LICENTIE);
+  zet("tt_licentie_v1",      {pakket: pakket || PAKKET_STANDAARD});
   zet("tt_teams_v1",         TEAMS);
   zet("tt_actief_v1",        TEAM_ID);
   zet("tt_seizoenactief_v1", (function(){ var s={}; s[TEAM_ID]=SEIZOEN; s[TEAM2_ID]=SEIZOEN; return s; })());
@@ -259,5 +263,6 @@ function opslag() {
 module.exports = {
   VASTE_TIJD: VASTE_TIJD, TIJDZONE: TIJDZONE, TAAL: TAAL,
   TEAM_ID: TEAM_ID, SEIZOEN: SEIZOEN,
+  PAKKET_STANDAARD: PAKKET_STANDAARD,
   opslag: opslag
 };

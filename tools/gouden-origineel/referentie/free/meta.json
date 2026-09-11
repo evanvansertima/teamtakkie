@@ -1,0 +1,33 @@
+{
+  "opgenomenMet": "tools/gouden-origineel.js",
+  "set": "free",
+  "pakket": "free",
+  "pakketNaam": "Free",
+  "vasteTijd": "2026-10-15T10:00:00.000Z",
+  "tijdzone": "Europe/Amsterdam",
+  "venster": {
+    "breedte": 1280,
+    "hoogte": 900
+  },
+  "appBytes": 1937079,
+  "appRegels": 34233,
+  "schermen": [
+    "dashboard",
+    "wedstrijden",
+    "selectie",
+    "agenda"
+  ],
+  "schermenOpSlot": [
+    "trainingen",
+    "statistieken",
+    "live",
+    "clubhuis"
+  ],
+  "dieptes": [
+    "slot-melding",
+    "slot-prijskaart",
+    "slot-ontwikkeling",
+    "slot-ontwikkeling-melding"
+  ],
+  "paginaFouten": []
+}

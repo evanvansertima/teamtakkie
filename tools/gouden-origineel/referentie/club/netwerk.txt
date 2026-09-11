@@ -1,6 +1,6 @@
 Welke buitenadressen de app aanraakt tijdens het opstarten en het
-doorlopen van alle acht schermen. Komt hier iets bij, dan is dat een
-privacyvraag en geen detail.
+doorlopen van deze opnameset (club). Komt hier iets bij, dan is
+dat een privacyvraag en geen detail.
 
 cdnjs.cloudflare.com  (toegestaan, uit cdn-cache)
 escibxugiyjclrwmivkn.supabase.co  (geblokkeerd, verwacht: de server)
