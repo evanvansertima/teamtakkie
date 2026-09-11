@@ -138,6 +138,31 @@ verzoek buiten de app om. Alleen een beheerder kan het, en beheerder
 word je alleen in de SQL Editor.
 
 
+STAP 7 — EEN SPELER ÉCHT WISSEN, EN EEN CLUB KUNNEN OPHEFFEN
+-----------------------------------------------------------
+Draai 08-bewaartermijn.sql, nadat 06-pakketten.sql is gedraaid. Twee
+dingen die je pas mist op het moment dat je ze nodig hebt:
+
+  · Een speler verwijderen in de app haalde hem maar uit één van de
+    vier lijsten die er van hem in de database staan (één per
+    seizoen). Naam, geboortedatum, telefoonnummer en een eventuele
+    blessurenotitie bleven dus gewoon staan. Vanaf nu is er een
+    functie wis_speler() die hem uit alle lijsten haalt en zijn naam
+    ook uit de wedstrijdanalyse wist. De doelpunten zelf blijven
+    staan, zonder naam — anders klopt de uitslag niet meer.
+  · Een vereniging opheffen deed niets, maar meldde wel "gelukt". Nu
+    kan de eigenaar het echt, en verdwijnen de teams en alle gegevens
+    van die vereniging mee. Dat is niet terug te draaien.
+
+Onderaan dat bestand staat een lijstje van lege verenigingen, zodat je
+de twee weesclubs van de verbindingstest kunt opruimen. Eerst kijken,
+dan pas weggooien; dat staat er in twee aparte stukken.
+
+Wil je zeker weten dat het klopt: plak daarna ook
+tests/bewaartermijn.test.sql. Die probeert twaalf dingen uit (waarvan
+er drie móéten mislukken) en ruimt zichzelf weer op.
+
+
 WAT JE MOET WETEN
 -----------------
 Synchroniseren is geen "opslaan naar de server". Het is bepalen wat er

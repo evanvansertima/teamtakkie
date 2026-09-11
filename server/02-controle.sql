@@ -1,9 +1,10 @@
 -- ══════════════════════════════════════════════════════════════
 --  TEAMTAKKIE — controle: staat de beveiliging echt aan?
 --  ─────────────────────────────────────────────────────────────
---  Plak dit in de SQL Editor en klik op Run. Er staan drie
---  controles in dit bestand, onder elkaar. Je krijgt dus drie
---  uitkomsten terug; loop ze alle drie na.
+--  Plak dit in de SQL Editor en klik op Run. Er staan vier
+--  controles in dit bestand, onder elkaar. Je krijgt dus vier
+--  uitkomsten terug; loop ze alle vier na. De laatste twee melden
+--  zich onder het tabblad "Messages", onderin het scherm.
 --
 --  Je hoort zes regels terug te krijgen. Bij elke regel moet
 --  beveiliging_aan op "true" staan en moet aantal_regels minstens
@@ -121,3 +122,63 @@ begin
   reset role;
 end
 $ctrl$;
+
+-- ══════════════════════════════════════════════════════════════
+--  CONTROLE 4 — kan een eigenaar zijn vereniging opheffen?
+--  ─────────────────────────────────────────────────────────────
+--  Hoort bij server/08-bewaartermijn.sql. Draai je die nog niet,
+--  dan hoort hier "STUK" te staan; dat is dan geen verrassing.
+--
+--  Deze controle is nodig omdat een ontbrekende regel voor "delete"
+--  zich niet als fout gedraagt: de database gooit er dan nul weg en
+--  PostgREST maakt daar een keurige 204 ("gelukt") van. De app merkt
+--  dus niets. Wat je hier meet is niet of het lukt, maar of de
+--  database überhaupt iets van plan is.
+--
+--  Er wordt niets verwijderd: door "explain" maakt Postgres wel het
+--  volledige plan — inclusief alle beveiligingsregels — maar voert
+--  hij het niet uit.
+--
+--  Wat je hoort te zien, onderin het resultaatvenster of onder
+--  "Messages":
+--
+--      OK: clubs heeft een regel voor weggooien en die vraagt het
+--      aan is_eigenaar
+-- ══════════════════════════════════════════════════════════════
+do $ctrl4$
+declare
+  eigenaar_id uuid;
+  club        uuid;
+  voorwaarde  text;
+begin
+  select pg_get_expr(polqual, polrelid) into voorwaarde
+  from pg_policy where polrelid = 'public.clubs'::regclass and polcmd = 'd' limit 1;
+
+  if voorwaarde is null then
+    raise notice 'STUK: er is geen regel voor weggooien op clubs. Een vereniging opheffen doet niets, maar meldt wel "gelukt". Draai server/08-bewaartermijn.sql.';
+    return;
+  end if;
+
+  if voorwaarde not like '%is_eigenaar%' then
+    raise notice 'LET OP: de regel op clubs gebruikt niet is_eigenaar() maar: %', voorwaarde;
+  end if;
+
+  select gebruiker_id, club_id into eigenaar_id, club
+  from public.leden where rol = 'eigenaar' limit 1;
+
+  if eigenaar_id is null then
+    raise notice 'HALF: de regel staat er (%), maar er is nog geen eigenaar om het mee te proberen.', voorwaarde;
+    return;
+  end if;
+
+  perform set_config('request.jwt.claim.sub', eigenaar_id::text, true);
+  set local role authenticated;
+  begin
+    execute format('explain delete from public.clubs where id = %L', club);
+    raise notice 'OK: clubs heeft een regel voor weggooien en die vraagt het aan is_eigenaar';
+  exception when others then
+    raise notice 'STUK: %', sqlerrm;
+  end;
+  reset role;
+end
+$ctrl4$;
