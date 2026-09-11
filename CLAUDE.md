@@ -68,12 +68,13 @@ afdwingbaar), en er is geen foutrapportage of bewaking.
 
 ## Het team
 
-In `.claude/agents/` staan negen gespecialiseerde agents, elk met een naam.
+In `.claude/agents/` staan tien gespecialiseerde agents, elk met een naam.
 Roep ze op door hun naam te typen ("Tess, kijk hier eens naar") of laat Claude
 zelf kiezen.
 
 | Naam | Rol |
 |---|---|
+| **Pien** | producent — bepaalt wie wat doet. Bel haar als je niet weet wie je moet hebben |
 | **Tess** | tester — het vangnet: tests, controles, mutatietesten |
 | **Veerle** | beveiliging, privacy/AVG, het afdwingen van abonnementen |
 | **Fenna** | frontend — de schermen in `online/index.html` |

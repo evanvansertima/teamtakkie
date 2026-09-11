@@ -109,6 +109,22 @@ het HTML-bestand van de app openmaakt en aanpast komt er dus niet in:
 de server weigert hem gewoon.
 
 
+STAP 5B — DE REPARATIE VAN DE LEDENREGELS
+-----------------------------------------
+Draai daarna 04-leden-fix.sql, weer op dezelfde manier. Dat repareert
+twee regels uit stap 3 die vastliepen zodra je iemand aan een club
+wilde toevoegen of eruit wilde halen. Zonder deze stap kan het
+uitnodigen van een trainer nooit werken.
+
+Bovenaan dat bestand staat precies wat het doet en wat je daarna hoort
+te zien; onderaan staat hoe je het terugdraait. Er worden geen
+gegevens aangepast, alleen regels.
+
+Wil je zeker weten dat het klopt: plak daarna ook
+tests/leden-policy.test.sql uit de map tests. Die probeert zes dingen
+uit (waaronder twee die móéten mislukken) en ruimt zichzelf weer op.
+
+
 STAP 6 — JE PAKKET
 ------------------
 Nieuwe clubs beginnen op Free. Jezelf op Max zetten kan vanaf nu in de
