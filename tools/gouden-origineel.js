@@ -8,7 +8,8 @@
 
    --opnemen   opent online/index.html in een echte browser, met een
                vaste localStorage-vulling, en schrijft van elk van de
-               acht schermen de DOM en een schermafdruk weg.
+               acht schermen de DOM en een schermafdruk weg — plus van
+               elke plek in DIEPTES, die alleen achter een klik zit.
    --vergelijk doet precies hetzelfde en legt het naast de opname.
                Is er ook maar één regel DOM anders, dan eindigt het
                script met code 1 en staat in tools/gouden-origineel/
@@ -78,6 +79,8 @@
      • de volledige DOM onder <div id="root">, dus inclusief zijbalk,
        kopbalk en onderbalk. Dat is met opzet: Fenna gaat de router en
        béide menu's aanpassen, en dan moet elk scherm dat merken.
+     • en hetzelfde van elke diepteopname uit DIEPTES: een plek die
+       alleen te bereiken is door ergens op te klikken.
      • één schermafdruk van 1280×900 (het zichtbare deel), geen
        volledige pagina.
 
@@ -109,6 +112,13 @@
       onderdelen van het Clubhuis, en voor elk formulier.
       → Wie daar iets verandert, heeft hier géén vangnet. Dat is de
         belangrijkste bekende beperking van dit gereedschap.
+
+      OP 11 SEPTEMBER IS DAAR ÉÉN GAT VAN GEDICHT. Het tabblad
+      Ontwikkeling wordt nu wél aangeklikt en vastgelegd, omdat daar
+      een slot komt. Zie DIEPTES hieronder. Alle ándere tabs, vensters
+      en formulieren staan nog steeds nergens op: dat zijn er, geteld
+      in online/index.html, nog tientallen. Er staan er dus negen
+      opnames, niet acht: acht schermen en één tabblad.
    2. Het tweede team en andere seizoenen. De opname staat op één team
       in één seizoen; van team wisselen gebeurt niet.
    3. Smalle schermen. Er wordt één venster van 1280×900 vastgelegd. De
@@ -176,6 +186,52 @@ const CDN_HOSTS = [
   "cdnjs.cloudflare.com",
   "fonts.googleapis.com",
   "fonts.gstatic.com"
+];
+
+/* ── Wat er achter een tabblad zit ───────────────────────────
+   De belangrijkste bekende beperking van dit gereedschap staat hier
+   bovenaan: alles achter een venster, een tab of een knop staat bij
+   geen enkele opname op het scherm. Voor één plek is dat nu wél
+   geregeld, en niet zomaar één: op het tabblad Ontwikkeling komt een
+   slot, want Ontwikkeling zit vanaf 11 september in de betaalde
+   pakketten (docs/pakketten-besluit.md).
+
+   Het besluit noemt Ontwikkeling "een tabblad in Selectie". In de code
+   zit het één laag dieper: Selectie → een speler aanklikken → het
+   tabblad Ontwikkeling. Twee klikken dus, en die staan hieronder
+   uitgeschreven in plaats van verstopt in het script.
+
+   Waarom dit niet broos is, hoewel het op tekst klikt:
+     • De spelernaam komt uit vulling.js. Dat is ons eigen verzinsel,
+       geen gegeven uit de app — die naam verandert alleen als wij hem
+       veranderen, en dan moet de opname toch opnieuw.
+     • De tabtekst komt wél uit de app. Verandert die, dan valt het
+       script om met een melding die precies zegt wat er mis is, in
+       plaats van stilletjes een leeg scherm vast te leggen. Zie de
+       controle "bewijs" hieronder: pas als het gevraagde element er
+       echt staat, telt de opname.
+     • De diepteopnames gaan ná de acht schermen, zodat een klik hier
+       nooit een van de acht kan beïnvloeden.
+
+   Wil je er een tweede bij (het instellingenvenster, de tabs binnen
+   Statistieken, de vier onderdelen van het Clubhuis), dan is dat een
+   regel in deze lijst plus één keer --opnemen. */
+const DIEPTES = [
+  {
+    id: "selectie-ontwikkeling",
+    label: "Selectie › speler › Ontwikkeling",
+    begin: "selectie",
+    stappen: [
+      {wat: 'de speler "Joep Bramsloot" in de spelerslijst',
+       kies: 'table.sp-tabel tr:has-text("Joep Bramsloot")'},
+      {wat: 'het tabblad "Ontwikkeling" in het spelerprofiel',
+       kies: '.tabs .tab-knop:has-text("Ontwikkeling")'}
+    ],
+    /* Het bewijs dat we ook echt aangekomen zijn. Zonder deze controle
+       zou een opname van het verkeerde scherm net zo goed groen staan,
+       en dat is erger dan geen opname. */
+    bewijs: '.stat-label:has-text("Gemiddelde voortgang")'
+  }
 ];
 
 const BEELD = {breedte: 1280, hoogte: 900};
@@ -531,31 +587,50 @@ async function neemOp(vergelijkBeelden) {
   await page.goto(adres + "/index.html", {waitUntil: "domcontentloaded"});
   await wachtTotRustig(page, "dashboard (opstarten)");
 
-  const opnames = [];
-  for (const scherm of SCHERMEN) {
-    /* Navigeren zoals een gebruiker dat doet: op de knop in het
-       zijmenu drukken. Dat controleert meteen dat die knop er is en
-       dat de router hem kent — een route die alleen via de URL te
-       bereiken is, is voor een trainer onbereikbaar. */
-    await page.click('.zijbalk-nav .zij-item:has-text("' + knopTekst(scherm.id) + '")')
-      .catch(async function () {
-        /* Terugval op volgorde in het menu, voor het geval het label
-           verandert. Gebeurt dat, dan moet knopTekst() bijgewerkt. */
-        const i = menuVolgorde.indexOf(scherm.id);
-        await page.locator(".zijbalk-nav .zij-item").nth(i).click();
-      });
-    const dom = await wachtTotRustig(page, scherm.id);
-    const beeld = await page.screenshot({
-      /* Alleen het zichtbare deel: zie de uitleg bovenaan. Canvassen
-         worden afgedekt — het 3D-sportpark en de grafieken tekenen niet
-         altijd precies dezelfde pixels, en een schermafdruk die elke
-         keer anders is, kijkt niemand meer naar. */
+  /* Alleen het zichtbare deel: zie de uitleg bovenaan. Canvassen
+     worden afgedekt — het 3D-sportpark en de grafieken tekenen niet
+     altijd precies dezelfde pixels, en een schermafdruk die elke keer
+     anders is, kijkt niemand meer naar. */
+  async function fotografeer() {
+    return page.screenshot({
       mask: await page.locator("canvas").all(),
       maskColor: "#ff00ff",
       animations: "disabled"
     });
-    opnames.push({id: scherm.id, dom: dom, beeld: beeld});
+  }
+
+  const opnames = [];
+  for (const scherm of SCHERMEN) {
+    await naarScherm(page, scherm.id, menuVolgorde);
+    const dom = await wachtTotRustig(page, scherm.id);
+    opnames.push({id: scherm.id, dom: dom, beeld: await fotografeer()});
     proces(scherm.label + " vastgelegd (" + dom.split("\n").length + " regels DOM)");
+  }
+
+  /* En dan wat er achter een tabblad zit. Bewust ná de acht schermen:
+     een klik hier kan er dan geen een meer beïnvloeden. */
+  for (const diepte of DIEPTES) {
+    await naarScherm(page, diepte.begin, menuVolgorde);
+    await wachtTotRustig(page, diepte.begin + " (beginpunt van " + diepte.id + ")");
+    for (const stap of diepte.stappen) {
+      const hoeveel = await page.locator(stap.kies).count();
+      if (hoeveel === 0)
+        throw new Error("Diepteopname \"" + diepte.id + "\" liep vast.\n" +
+          "  Niet gevonden: " + stap.wat + "\n" +
+          "  Gezocht met:   " + stap.kies + "\n" +
+          "Er is iets hernoemd of verplaatst in online/index.html. Pas DIEPTES\n" +
+          "aan in tools/gouden-origineel.js en neem opnieuw op. Dit is met opzet\n" +
+          "een harde fout: een lege opname die groen staat is erger dan geen.");
+      await page.locator(stap.kies).first().click();
+      await wachtTotRustig(page, diepte.id + " — na het aanklikken van " + stap.wat);
+    }
+    if (await page.locator(diepte.bewijs).count() === 0)
+      throw new Error("Diepteopname \"" + diepte.id + "\" kwam ergens anders uit.\n" +
+        "  Alle klikken lukten, maar het bewijs ontbreekt: " + diepte.bewijs + "\n" +
+        "Er wordt dus een ander scherm vastgelegd dan de bedoeling was.");
+    const dom = await wachtTotRustig(page, diepte.id);
+    opnames.push({id: diepte.id, dom: dom, beeld: await fotografeer()});
+    proces(diepte.label + " vastgelegd (" + dom.split("\n").length + " regels DOM)");
   }
 
   /* Nog vóór het sluiten van de browser: de schermafdrukken tellen.
@@ -576,6 +651,20 @@ async function neemOp(vergelijkBeelden) {
   server.close();
   return {opnames: opnames, buiten: Array.from(buitenAdressen).sort(),
           fouten: consoleFouten, beeldVerschil: beeldVerschil};
+}
+
+/* Navigeren zoals een gebruiker dat doet: op de knop in het zijmenu
+   drukken. Dat controleert meteen dat die knop er is en dat de router
+   hem kent — een route die alleen via de URL te bereiken is, is voor
+   een trainer onbereikbaar. */
+async function naarScherm(page, id, menuVolgorde) {
+  await page.click('.zijbalk-nav .zij-item:has-text("' + knopTekst(id) + '")')
+    .catch(async function () {
+      /* Terugval op volgorde in het menu, voor het geval het label
+         verandert. Gebeurt dat, dan moet knopTekst() bijgewerkt. */
+      const i = menuVolgorde.indexOf(id);
+      await page.locator(".zijbalk-nav .zij-item").nth(i).click();
+    });
 }
 
 /* De tekst op de knop in het zijmenu. Komt uit de vertaling in de app;
@@ -609,6 +698,9 @@ function schrijfReferentie(uitslag) {
     appBytes: fs.statSync(path.join(APP_MAP, "index.html")).size,
     appRegels: fs.readFileSync(path.join(APP_MAP, "index.html"), "utf8").split("\n").length,
     schermen: SCHERMEN.map(function (s) { return s.id; }),
+    /* Wat er achter een tabblad vandaan is gehaald. Staat hier niets,
+       dan heeft niets achter een tab of knop een vangnet. */
+    dieptes: DIEPTES.map(function (d) { return d.id; }),
     /* Met opzet geen opnamedatum: die zou elke opname een verschil
        geven in git zonder dat er iets veranderd is. */
     paginaFouten: uitslag.fouten
@@ -647,7 +739,7 @@ async function vergelijk() {
   /* De schermafdrukken van het origineel meegeven, zodat ze binnen de
      browser geteld kunnen worden vóór hij dichtgaat. */
   const refBeelden = {};
-  SCHERMEN.forEach(function (sc) {
+  SCHERMEN.concat(DIEPTES).forEach(function (sc) {
     const p2 = path.join(REFERENTIE, sc.id + ".png");
     if (fs.existsSync(p2)) refBeelden[sc.id] = fs.readFileSync(p2);
   });
@@ -697,10 +789,10 @@ async function vergelijk() {
   console.log("");
   if (domRood) {
     console.log("ROOD — DOM: " + domRood + " van de " + uitslag.opnames.length +
-                " schermen verschillen.");
+                " opnames verschillen.");
     console.log(melding.join("\n"));
   } else {
-    console.log("DOM: alle " + uitslag.opnames.length + " schermen gelijk aan het origineel.");
+    console.log("DOM: alle " + uitslag.opnames.length + " opnames gelijk aan het origineel.");
   }
 
   if (uitslag.beeldVerschil.length) {
@@ -732,7 +824,8 @@ async function vergelijk() {
   console.log("");
   console.log(mislukt
     ? "ROOD: er is iets veranderd. Zie hierboven."
-    : "GROEN: " + uitslag.opnames.length + " schermen gelijk aan het gouden origineel.");
+    : "GROEN: " + uitslag.opnames.length + " opnames gelijk aan het gouden origineel " +
+      "(" + SCHERMEN.length + " schermen + " + DIEPTES.length + " achter een tabblad).");
   process.exit(mislukt ? 1 : 0);
 }
 
@@ -743,7 +836,8 @@ async function hoofd() {
     console.log("Gouden origineel opnemen …");
     const uitslag = await neemOp();
     schrijfReferentie(uitslag);
-    console.log("\nOpgenomen: " + uitslag.opnames.length + " schermen in\n  " + REFERENTIE);
+    console.log("\nOpgenomen: " + uitslag.opnames.length + " opnames (" + SCHERMEN.length +
+                " schermen + " + DIEPTES.length + " achter een tabblad) in\n  " + REFERENTIE);
     if (uitslag.fouten.length)
       console.log("\nLet op: " + uitslag.fouten.length + " fout(en) in de pagina, " +
                   "vastgelegd in meta.json.");

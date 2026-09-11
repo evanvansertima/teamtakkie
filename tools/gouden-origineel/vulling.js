@@ -186,15 +186,30 @@ const SESSIE = {
 };
 
 /* ── Het pakket ──────────────────────────────────────────────
-   Bewust "max": dat is ook wat pakketNu() vandaag hoe dan ook
-   teruggeeft (var id = "max"). Zou het gouden origineel op een ander
-   pakket staan, dan legde het een toestand vast die de app op dit
-   moment nergens laat zien, en zou het bij het inbouwen van het slot
-   om de verkeerde reden rood worden.
+   Bewust "club": het ruimste pakket, zodat het gouden origineel alle
+   acht schermen laat zien. Stond hier free, dan legde de opname een
+   app vast met vier schermen en was er van de andere vier geen
+   referentiebeeld — precies wat Fenna nodig heeft.
 
-   Let op: gaan de pakketnamen veranderen (free/coach/club), dan is dit
-   een van de plekken die mee moet. */
-const LICENTIE = {pakket: "max"};
+   Tot 11 september stond hier "max". Dat pakket bestaat niet meer;
+   zie docs/pakketten-besluit.md.
+
+   LET OP — wat dit vandaag doet, en wat het straks doet:
+   In online/index.html staan op dit moment nog de oude pakketten
+   (free/basic/pro/max). "club" staat daar dus niet tussen, en
+   pakketNu() valt dan terug op het laatste pakket in de rij: max.
+   De opname van vandaag is daardoor precies dezelfde als die met
+   "max" — geen enkel beeldpunt anders, nagemeten met --vergelijk.
+
+   Zodra Fenna PAKKETTEN bijwerkt wijst "club" een echt pakket aan,
+   met dezelfde onderdelen en hetzelfde onbeperkte aantal teams als
+   max nu. De opname blijft dan geldig. Eén ding verandert wél, en
+   dat is met opzet geen probleem: de pakketnaam die in beeld komt
+   gaat van "Max" naar "Club". Die tekst staat alleen op het scherm
+   Instellingen (regel ~32979 en ~33201), en Instellingen hoort niet
+   bij de acht opgenomen schermen — geverifieerd: het woord "Max"
+   komt in geen van de acht .dom.txt-bestanden voor. */
+const LICENTIE = {pakket: "club"};
 
 /* Alles bij elkaar: precies wat er in localStorage komt te staan.
    Waarden zijn tekst, net als in de browser. */
