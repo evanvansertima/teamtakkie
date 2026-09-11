@@ -629,7 +629,35 @@
     .nav-item.actief { color:var(--blauw); }
     .nav-pip { width:32px; height:4px; border-radius:2px; background:transparent; margin-bottom:2px; transition:background .2s; }
     .nav-item.actief .nav-pip { background:var(--blauw-licht); }
-    .nav-icon { font-size:20px; line-height:1; }
+    .nav-icon { font-size:20px; line-height:1; position:relative; display:inline-block; }
+
+    /* ── HET SLOTJE ──────────────────────────────────────────
+       Een onderdeel dat niet in je pakket zit blijft staan waar het
+       stond, in dezelfde kleur en hetzelfde gewicht. Het enige
+       verschil is dit slotje. Twee redenen om niets te dimmen: grijs
+       op grijs is buiten in de zon onzichtbaar, en een menu dat per
+       pakket van vorm verandert haalt de plek waar je duim op
+       vertrouwt onder je vandaan.
+
+       Twee vormen. Los ernaast waar ruimte is (zijmenu, tabblad,
+       tegel), en als rond badge-je op het icoon waar die ruimte er
+       niet is: de onderbalk heeft vijf knoppen van 10px tekst op één
+       regel. Dat badge-je is hetzelfde recept als .terug-teller —
+       een bestaand patroon voor "iets extra's op een knop", nu met
+       een slotje in plaats van een cijfer. */
+    .slotje { color:var(--goud); font-size:11px; flex-shrink:0; margin-left:5px; }
+    .slot-badge { position:absolute; top:-4px; right:-9px; font-size:8px; line-height:1;
+      color:var(--goud); background:var(--vlak-goud); border-radius:50%;
+      width:14px; height:14px; display:flex; align-items:center; justify-content:center; }
+    /* Op een tegel is de hele kaart de knop, dus zit het badge-je in
+       de hoek van de kaart en niet op het icoon — anders zou het over
+       de rand heen steken. */
+    .snelkoppeling { position:relative; }
+    .snelkoppeling .slot-badge { top:8px; right:8px; }
+    /* Een kaart die zelf een knop is: dezelfde kaart als alle andere,
+       alleen met een aanwijzer erbij. Niets gedimd, niets grijs. */
+    .db-slot { cursor:pointer; }
+    .db-slot-tekst { font-size:13px; color:var(--grijs-donker); line-height:1.5; }
 
     /* ── LAYOUT ── */
     .pagina-header { margin-bottom:20px; display:flex; align-items:flex-start; justify-content:space-between; gap:12px; }
@@ -1482,10 +1510,16 @@
       color:var(--blauw); font-family:'Helvetica Neue',Arial,sans-serif; }
     .pakket-raster { display:grid; grid-template-columns:1fr; gap:10px; }
     @media (min-width:620px)  { .pakket-raster { grid-template-columns:1fr 1fr; } }
-    @media (min-width:1000px) { .pakket-raster { grid-template-columns:repeat(4,1fr); } }
+    @media (min-width:1000px) { .pakket-raster { grid-template-columns:repeat(3,1fr); } }
     .pakket-kaart { position:relative; border:2px solid var(--grijs); border-radius:14px;
       padding:15px 15px 13px; background:var(--wit); display:flex; flex-direction:column; gap:9px; }
     .pakket-kaart.nu { border-color:var(--blauw); background:var(--vlak-info); }
+    /* Kom je hier binnen via een slotje, dan is er één kaart die het
+       antwoord geeft. Die krijgt een gouden rand en verder niets —
+       geen tekst, geen badge. Zo hoeft niemand drie kaarten te lezen
+       om te zien welke van toepassing is. Via Instellingen komt er
+       geen nadruk mee: daar bekijk je het hele overzicht. */
+    .pakket-kaart.nadruk { border-color:var(--goud); box-shadow:0 0 0 3px var(--vlak-goud); }
     .pakket-vlag { position:absolute; top:-9px; right:12px; background:var(--blauw);
       color:#fff; font-size:10px; font-weight:800; letter-spacing:.4px;
       padding:3px 9px; border-radius:7px; }
@@ -2838,6 +2872,10 @@
       .zij-item.actief { background:rgba(255,255,255,.18); }
       .zij-item.actief::before { content:""; position:absolute; left:-10px; top:9px; bottom:9px; width:4px; border-radius:0 3px 3px 0; background:var(--blauw-licht); }
       .zij-icoon { width:20px; text-align:center; font-size:15px; flex-shrink:0; opacity:.9; }
+      /* Het slotje hangt rechts in de knop, niet tegen het label aan:
+         zo staan ze bij vijf menu-items onder elkaar op één lijn in
+         plaats van te dansen op de lengte van het woord ervoor. */
+      .zij-item .slotje { margin-left:auto; }
       .zij-item.actief .zij-icoon { opacity:1; }
       .zijbalk-voet { padding:10px; border-top:1px solid rgba(255,255,255,.14); flex-shrink:0; }
       .zij-ontwerp { padding:9px 12px 3px; line-height:1.35; }
@@ -3498,45 +3536,77 @@ function seizoenVerhuizing() {
 }
 
 /* ── Pakketten ───────────────────────────────────────────────
-   Vier pakketten, één tabel. Wat een pakket mag staat hier en
+   Drie pakketten, één tabel. Wat een pakket mag staat hier en
    nergens anders, zodat er nooit twee plekken zijn die het met
    elkaar oneens kunnen worden.
 
-   Let goed op wat hier níét staat: een slot. Zolang het antwoord in
-   de browser wordt gegeven, kan iedereen die de ontwikkelaarsconsole
-   opent zijn pakket op max zetten. Dat is genoeg om de app te
-   ordenen en om te laten zien wat een pakket oplevert, maar niet om
-   er geld voor te vragen. Zodra er een server met accounts is, komt
-   het antwoord daarvandaan en verandert hier alleen pakketNu().
+   De indeling komt uit docs/pakketten-besluit.md (11 september 2026)
+   en staat gelijk aan pakket_grenzen in server/06-pakketten.sql. Die
+   tabel is de baas; loopt deze lijst ermee uit de pas, dan is deze
+   lijst fout. Vandaar dezelfde id's en dezelfde aantallen.
 
-   Zolang er nog geen accounts zijn staat iedereen op max. Anders zou
-   ik je uit je eigen app sluiten. */
+   Wat het verschil tussen Coach en Club is: níét welke schermen je
+   krijgt, alleen hoeveel teams. Dat is met opzet zo. Zou er ooit een
+   scherm tussen Coach en Club in vallen, dan klopt de redenering
+   hieronder niet meer — beide zitten namelijk wél op de server, en
+   dan valt er ook echt iets te halen.
+
+   Let goed op wat hier níét staat: een slot met een sleutel. Het
+   antwoord wordt in de browser gegeven, dus wie de ontwikkelaars-
+   console opent zet zijn pakket in tien seconden op club. Dat is hier
+   geen probleem: Free komt helemaal niet op de server, dus wie
+   zichzelf toegang geeft, geeft zichzelf toegang tot zijn eigen
+   gegevens op zijn eigen telefoon. Wat geld kost — de server — wordt
+   daarginds bewaakt, niet hier. Wat hier staat ordent de app en laat
+   zien wat een pakket oplevert.
+
+   Zodra er een server met accounts is komt het antwoord daarvandaan
+   en verandert hier alleen pakketNu(). */
 const MODULES = ["basis", "trainingen", "ontwikkeling", "analyse", "clubhuis"];
 const PAKKETTEN = [
   {id:"free",  naam:"Free",  teams:1,
    modules:["basis"]},
-  {id:"basic", naam:"Basic", teams:3,
-   modules:["basis", "trainingen", "ontwikkeling"]},
-  {id:"pro",   naam:"Pro",   teams:15,
+  {id:"coach", naam:"Coach", teams:1,
    modules:["basis", "trainingen", "ontwikkeling", "analyse", "clubhuis"]},
-  {id:"max",   naam:"Max",   teams:Infinity,
+  /* In pakket_grenzen staat club op teams = null, want SQL kent geen
+     oneindig. Dat één op één overnemen gaat hier mis: magNieuwTeam
+     rekent met _teams.length < maxTeams, en "iets < null" is altijd
+     onwaar. Club zou dan geen enkel team meer mogen aanmaken —
+     precies het omgekeerde van onbeperkt. Infinity is hetzelfde
+     besluit in een taal die het wél kan opschrijven. */
+  {id:"club",  naam:"Club",  teams:Infinity,
    modules:["basis", "trainingen", "ontwikkeling", "analyse", "clubhuis"]}
 ];
 /* Welk scherm hoort bij welke module. Staat een scherm hier niet in,
-   dan hoort het bij de basis en mag iedereen erbij. */
+   dan hoort het bij de basis en mag iedereen erbij.
+
+   De agenda stond hier tot 11 september bij "trainingen". Dat was een
+   technische verwantschap (trainingen vullen de agenda), geen
+   commerciële: iemand die alleen wedstrijden bijhoudt wil nog steeds
+   zien wanneer ze zijn. De agenda hoort dus bij de basis, en dat is
+   precies waarom hij hier niet meer staat. */
 const PAGINA_MODULE = {
-  trainingen:"trainingen", agenda:"trainingen",
+  trainingen:"trainingen",
   statistieken:"analyse",  live:"analyse",
   clubhuis:"clubhuis"
 };
+/* Een apparaat waar niets op staat is geen klant. Daarom begint dit
+   op het zuinigste pakket en niet op het ruimste: iemand die nog
+   nooit iets heeft ingesteld hoort niet stilletjes alles te krijgen,
+   want dan is er ook niets meer om voor te betalen.
+
+   Let op de laatste regel: ook de terugval voor een pakketnaam die
+   we niet kennen (een oude basic/pro/max, of een verschrijving) is
+   het eerste pakket, niet het laatste. Op de server staat het al zo —
+   pakket_van_club() eindigt op coalesce(..., 'free'). */
 function pakketNu() {
-  var id = "max";
+  var id = PAKKETTEN[0].id;
   try {
     var r = localStorage.getItem(LICENTIE_KEY);
     if (r) { var o = JSON.parse(r); if (o && o.pakket) id = o.pakket; }
   } catch(e) {}
   for (var i = 0; i < PAKKETTEN.length; i++) if (PAKKETTEN[i].id === id) return PAKKETTEN[i];
-  return PAKKETTEN[PAKKETTEN.length - 1];
+  return PAKKETTEN[0];
 }
 function zetPakket(id) {
   try { localStorage.setItem(LICENTIE_KEY, JSON.stringify({pakket:id})); } catch(e) {}
@@ -3549,6 +3619,88 @@ function magModule(module) {
 function magPagina(pagina) { return magModule(PAGINA_MODULE[pagina]); }
 function maxTeams() { return pakketNu().teams; }
 function magNieuwTeam() { return _teams.length < maxTeams(); }
+
+/* ── Het slot ────────────────────────────────────────────────
+   Hierboven staat wát iemand mag. Hieronder staat wat er gebeurt als
+   het antwoord nee is, en dat is met opzet één plek: drie menu's, een
+   rooster met snelkoppelingen en een tabblad geven straks allemaal
+   hetzelfde antwoord, want ze stellen allemaal dezelfde vraag.
+
+   De toon is die van de melding bij de teamlimiet die er al stond:
+   feitelijk, het pakket bij naam, geen uitroepteken. Iemand die dit
+   leest staat langs de lijn en heeft geen behoefte aan een verkoper. */
+
+/* Het goedkoopste pakket waar een onderdeel in zit. PAKKETTEN staat
+   van zuinig naar ruim, dus het eerste dat past is meteen het
+   goedkoopste antwoord — en dat is het pakket dat straks goud
+   omrand in de prijskaart staat. */
+function pakketVoorModule(module) {
+  if (!module) return null;
+  for (var i = 0; i < PAKKETTEN.length; i++)
+    if (PAKKETTEN[i].modules.indexOf(module) >= 0) return PAKKETTEN[i];
+  return null;
+}
+/* Eén zin per onderdeel. Niet opgebouwd uit losse woorden, want dan
+   krijg je "Trainingen hoort bij Coach" — het onderwerp is soms
+   enkelvoud en soms meervoud, en een zin die kreupel loopt leest als
+   een foutmelding in plaats van als een antwoord. */
+const SLOT_ZIN = {
+  trainingen:   function (p) { return "Trainingen horen bij " + p + "."; },
+  ontwikkeling: function (p) { return "Beoordelingen en ontwikkeling horen bij " + p + "."; },
+  analyse:      function (p) { return "Statistieken en live-analyse horen bij " + p + "."; },
+  clubhuis:     function (p) { return "Het clubhuis hoort bij " + p + "."; }
+};
+function slotZin(module) {
+  var p = pakketVoorModule(module);
+  var naam = p ? p.naam : "een groter pakket";
+  var maak = SLOT_ZIN[module];
+  return maak ? maak(naam) : "Dit onderdeel hoort bij " + naam + ".";
+}
+/* De prijskaart opendoen vanuit een slotje. App zet hier bij het
+   opstarten zijn eigen functie neer, zoals de toasts dat ook doen:
+   het slotje kan overal in de app zitten en hoeft niet via twintig
+   schermen een prop doorgereikt te krijgen. Staat er niets, dan
+   gebeurt er niets — dat is beter dan een fout in een scherm waar
+   iemand middenin een wedstrijd op staat. */
+var _pakkettenOpener = null;
+/* Wat er gebeurt bij een tik op iets dat vergrendeld is: géén
+   navigatie, géén venster dat vanzelf opengaat, géén vraag om te
+   bevestigen. Alleen een melding die vanzelf weer weggaat. Een
+   ongelukkige tik met natte handen kost zo nul vervolgtikken: niets
+   doen is genoeg. Wie wél wil kijken is er met één tik. */
+function slotMelding(module) {
+  var p = pakketVoorModule(module);
+  return toon(slotZin(module), {
+    soort:"info",
+    actieLabel:"Bekijk pakketten",
+    actie:function () { if (_pakkettenOpener) _pakkettenOpener(p ? p.id : null); }
+  });
+}
+/* Het slotje zelf. Goud, want die kleur betekent in deze app al "dit
+   onderscheidt zich" — Man of the Match, favoriete speler, "Al
+   bekend". Geen nieuwe kleur dus, wel een nieuwe betekenis die
+   aansluit bij de oude.
+
+   Wat hier bewust níét gebeurt: niets wordt gedimd. Een vergrendeld
+   onderdeel blijft even leesbaar als een open onderdeel. Grijs op
+   grijs is in fel zonlicht op een veld onleesbaar, en een
+   dichtgetimmerd icoon voelt als een uitsluiting terwijl dit een
+   aanbod hoort te zijn.
+
+   Twee vormen: los ernaast (zijmenu, tabblad, tegel) en als badge
+   bovenop een icoon (de onderbalk, waar naast de tekst geen
+   millimeter over is). */
+function SlotJe({ badge }) {
+  return <i className={"fa-solid fa-lock " + (badge ? "slot-badge" : "slotje")} aria-hidden="true"/>;
+}
+/* De uitleg voor een voorleeshulp. Niet het attribuut disabled: een
+   uitgeschakelde knop is voor een schermlezer onbereikbaar en meldt
+   hooguit "niet beschikbaar", zonder waarom. Deze knop moet juist wél
+   bereikbaar zijn en juist wél vertellen wat eraan scheelt. */
+function slotLabel(naam, module) {
+  var p = pakketVoorModule(module);
+  return naam + " — hoort bij " + (p ? p.naam : "een groter pakket");
+}
 
 /* ══ DE SERVER ═══════════════════════════════════════════════
    TEAMTAKKIE praat met Supabase zonder extra bibliotheek, gewoon met
@@ -22758,12 +22910,31 @@ function SpelerProfiel({ speler, onTerug, onBewerken, onVerwijderen, onOpslaanSp
         <button className={"tab-knop"+(tab==="profiel"?" actief":"")} onClick={function(){setTab("profiel");}}>
           <i className="fa-solid fa-id-card"/>{" Profiel"}
         </button>
-        <button className={"tab-knop"+(tab==="ontwikkeling"?" actief":"")} onClick={function(){setTab("ontwikkeling");}}>
+        {/* Ontwikkeling is geen scherm maar een tabblad, dus magPagina
+            kan er niets over zeggen — PAGINA_MODULE gaat over
+            schermen. De vraag wordt hier dus rechtstreeks aan
+            magModule gesteld.
+
+            Het tabblad blijft staan, ook als het niet mag. Wie het
+            nooit ziet, weet niet dat er beoordelingen, doelen en
+            rapporten bestaan en gaat er dus ook nooit voor betalen.
+            Free ziet zo de spelerslijst én het profiel — naam,
+            rugnummer, Man of the Match, statistieken — en alleen wat
+            daarachter zit zit achter het slotje. */}
+        <button className={"tab-knop"+(tab==="ontwikkeling"?" actief":"")}
+          aria-label={magModule("ontwikkeling")?undefined:slotLabel("Ontwikkeling", "ontwikkeling")}
+          onClick={function(){
+            if (!magModule("ontwikkeling")) { slotMelding("ontwikkeling"); return; }
+            setTab("ontwikkeling");
+          }}>
           <i className="fa-solid fa-seedling"/>{" Ontwikkeling"}
+          {!magModule("ontwikkeling") && <SlotJe />}
         </button>
       </div>
 
-      {tab==="ontwikkeling" && <OntwikkelingTab speler={speler} />}
+      {/* Ook hier nog een keer: zou het pakket wijzigen terwijl dit
+          tabblad openstaat, dan hoort de inhoud mee te verdwijnen. */}
+      {tab==="ontwikkeling" && magModule("ontwikkeling") && <OntwikkelingTab speler={speler} />}
 
       {tab==="profiel" && (motmAantal>0||cijfer)&&(
         <div className="stat-raster" style={{marginBottom:12}}>
@@ -24538,11 +24709,45 @@ function Dashboard({ navigeer }) {
                   {k.tijd ? k.tijd+(k.sub?" · "+k.sub:"") : (k.sub||"hele dag")}
                 </span>
               </span>
+              {/* Een rij kan naar een scherm wijzen dat niet in je
+                  pakket zit — bijvoorbeeld een training die nog van
+                  vroeger in dit apparaat staat. De rij blijft staan,
+                  de tik geeft hetzelfde antwoord als overal. */}
+              {!magPagina(k.pagina) && <SlotJe />}
               <span className="db-agenda-tel">{dagenTot(k.datum)}</span>
             </div>
           );
         })}
       </div>
+
+      {/* ── Trainingen, voor wie er niet bij mag ────────────────
+          Dit blok staat er juist wél als het niet in je pakket zit.
+          Weglaten is rustiger om te bouwen en rustiger om te zien,
+          maar het lost het probleem van de klant niet op — het
+          verbergt het. Wie nooit ziet dat er trainingen met
+          aanwezigheid en oefenstof bestaan, weet niet dat hij iets
+          mist en gaat er dus ook nooit voor betalen. Dan hoort
+          iemand het over een jaar aan de bar van een andere club, en
+          dat is een slecht moment om daarachter te komen.
+
+          Leeg laten is geen alternatief: een kaart met niets erin is
+          een storing, geen aanbod. Er staat dus in één zin wat het
+          is en bij welk pakket het hoort. */}
+      {!magPagina("trainingen") && (
+        <div className="kaart db-slot" role="button" tabIndex={0}
+          aria-label={slotLabel("Trainingen", "trainingen")}
+          onClick={function(){ navigeer("trainingen"); }}
+          onKeyDown={function(e){ if (e.key==="Enter"||e.key===" ") { e.preventDefault(); navigeer("trainingen"); } }}>
+          <div className="kaart-titel" style={{justifyContent:"space-between"}}>
+            <span><i className="fa-solid fa-person-running"/> Trainingen</span>
+            <SlotJe />
+          </div>
+          <div className="db-slot-tekst">
+            Trainingen inplannen, aanwezigheid bijhouden en je oefenstof vastleggen.
+            {" "+slotZin("trainingen")}
+          </div>
+        </div>
+      )}
 
       {/* ── Seizoen in cijfers ── */}
       <div className="stat-raster">
@@ -24620,7 +24825,7 @@ function Dashboard({ navigeer }) {
           )}
           {opkomst!==null && (
             <div className="db-blink" onClick={function(){ navigeer("trainingen"); }}>
-              <div className="db-blink-kop">Trainingsopkomst</div>
+              <div className="db-blink-kop">Trainingsopkomst{!magPagina("trainingen") && <SlotJe />}</div>
               <div className="db-blink-rij">
                 <span className="db-blink-cirkel"><i className="fa-solid fa-person-running"/></span>
                 <span style={{flex:1,minWidth:0}}>
@@ -24694,9 +24899,29 @@ function Dashboard({ navigeer }) {
             {icoon:"fa-solid fa-chart-bar",naam:"Statistieken",p:"statistieken"},
             {icoon:"fa-solid fa-stopwatch",naam:"Live",p:"live",kleur:"#dc3545"},
             {icoon:"fa-solid fa-map",naam:"Clubhuis",p:"clubhuis",kleur:"#16a34a"}].map(function(s){
+            /* Deze tegels wijzen naar dezelfde zeven schermen als de
+               knoppen in het menu. Zonder slotje zou je hier op iets
+               tikken dat zich anders gedraagt dan de knop ernaast, en
+               dat is precies het soort verrassing dat niet mag. */
+            const open = magPagina(s.p);
+            /* role en tabIndex alleen op een vergrendelde tegel. Een
+               tegel die wél mag blijft precies wat hij was — er is
+               vandaag geen reden om die zeven tegels te verbouwen, en
+               een verbouwing die meelift op een andere verbouwing is
+               een verbouwing die niemand heeft nagekeken. Op een
+               vergrendelde tegel is het er wél nodig: zonder role
+               slaat een voorleeshulp het aria-label over, en dan is
+               het slotje alleen een kleurtje. */
             return (
-              <div key={s.p} className="snelkoppeling" onClick={function(){navigeer(s.p);}}>
-                <div className="snelkoppeling-icoon"><i className={s.icoon} style={s.kleur?{color:s.kleur}:{}}/></div>
+              <div key={s.p} className="snelkoppeling"
+                role={open?undefined:"button"} tabIndex={open?undefined:0}
+                aria-label={open?undefined:slotLabel(s.naam, PAGINA_MODULE[s.p])}
+                onKeyDown={open?undefined:function(e){ if (e.key==="Enter"||e.key===" ") { e.preventDefault(); navigeer(s.p); } }}
+                onClick={function(){navigeer(s.p);}}>
+                <div className="snelkoppeling-icoon">
+                  <i className={s.icoon} style={s.kleur?{color:s.kleur}:{}}/>
+                  {!open && <SlotJe badge />}
+                </div>
                 <div className="snelkoppeling-naam">{s.naam}</div>
               </div>
             );
@@ -32446,12 +32671,21 @@ function NieuwSeizoenKaart({ van, naar, onNaar, onAnnuleer, onKlaar }) {
    de server. Wie wil overstappen krijgt straks een knop die naar de
    betaling gaat; tot die er is staat er wat er nu waar is.
    ══════════════════════════════════════════════════════════ */
+/* De agenda staat sinds 11 september bij de basis en niet meer bij
+   trainingen. Deze twee regels moesten daarin mee: een prijskaart die
+   de agenda bij een betaald pakket noemt verkoopt iets wat de app
+   weggeeft, en dat is precies het soort verschil waarvan je een half
+   jaar later niet meer weet hoe het is ontstaan. */
 const MODULE_LABEL = {
-  basis:"Team, spelers en wedstrijden", trainingen:"Trainingen en agenda",
+  basis:"Team, spelers, wedstrijden en agenda", trainingen:"Trainingen en aanwezigheid",
   ontwikkeling:"Beoordelingen en ontwikkeling", analyse:"Statistieken en live-analyse",
   clubhuis:"Clubhuis, sportpark en tenues"
 };
-function PakkettenSheet({ onSluiten }) {
+/* nadruk is optioneel: het id van het pakket dat het antwoord geeft
+   op een slotje waar net op getikt is. Via Instellingen komt er niets
+   mee en is er dus geen nadruk — daar bekijkt iemand het hele
+   overzicht, niet één antwoord. */
+function PakkettenSheet({ onSluiten, nadruk }) {
   const nu = pakketNu();
   return (
     <div className="formatie-overlay" onClick={function(e){ if(e.target===e.currentTarget) onSluiten(); }}>
@@ -32465,7 +32699,7 @@ function PakkettenSheet({ onSluiten }) {
           {PAKKETTEN.map(function (p) {
             const dit = p.id === nu.id;
             return (
-              <div key={p.id} className={"pakket-kaart"+(dit?" nu":"")}>
+              <div key={p.id} className={"pakket-kaart"+(dit?" nu":"")+(p.id===nadruk?" nadruk":"")}>
                 {dit && <span className="pakket-vlag">Jouw pakket</span>}
                 <div className="pakket-kop">
                   <span className="pakket-merk">TEAMTAKKIE</span>
@@ -33750,6 +33984,11 @@ function App() {
      schermen halen hun gegevens dan gewoon opnieuw op, precies zoals
      bij het opstarten. */
   const [teamStand,setTeamStand]=useState(0);
+  /* Welk pakket goud omrand in de prijskaart staat. null betekent
+     dicht. Deze staat hoort hier en niet in Instellingen, want een
+     slotje kan overal in de app zitten en moet de prijskaart kunnen
+     openen zonder eerst een instellingenscherm te passeren. */
+  const [slotPakket,setSlotPakket]=useState(null);
   const i = gebruikInstellingen();
 
   /* De taal van de pagina meegeven aan de browser: dat bepaalt hoe
@@ -33770,13 +34009,62 @@ function App() {
       else if (mq.removeListener) mq.removeListener(volg);
     };
   },[i.thema, i.accent]);
+
+  /* Het slotje mag overal in de app zitten — in een tegel op het
+     dashboard, op een tabblad drie schermen diep. Het zou onzinnig
+     zijn om daarvoor een prop door twintig componenten te reiken, dus
+     zet App hier zijn eigen opener neer, precies zoals de toasts hun
+     luisteraar aanmelden. */
+  useEffect(function(){
+    _pakkettenOpener = function(id){ setSlotPakket(id || "-"); };
+    return function(){ _pakkettenOpener = null; };
+  }, []);
+
+  /* De enige plek in de app die "nee" zegt tegen een scherm. Elke
+     knop die van pagina wisselt loopt hierlangs, zodat er nergens een
+     tweede plek is die het antwoord anders kan geven dan magPagina.
+
+     Een geweigerde tik navigeert niet en opent niets: er komt alleen
+     een melding die vanzelf weer verdwijnt. Iemand die er tijdens de
+     wedstrijd per ongeluk op tikt is er dus zonder één vervolgtik
+     weer vanaf. */
+  function gaNaar(p) {
+    if (!magPagina(p)) { slotMelding(PAGINA_MODULE[p]); return; }
+    setPagina(p);
+  }
+
+  /* Ook als alle knoppen kloppen kun je hier staan: je pakket
+     verandert terwijl je op een betaald scherm bent, of je komt
+     ergens binnen langs een weg die we vandaag nog niet kennen. Dan
+     hoort er geen leeg of half scherm te verschijnen, maar hetzelfde
+     rustige antwoord als bij een knop — en het dashboard eronder.
+
+     Het pakket staat er met opzet bij als aanleiding en niet alleen
+     de pagina: syncPakket() haalt elke dertig seconden op wat de
+     server zegt, dus een club die terugvalt naar Free kan dat
+     meemaken terwijl er iemand op Statistieken staat. Zonder deze
+     aanleiding zou dat scherm leeg blijven tot de eerstvolgende
+     paginawissel, en een leeg scherm zonder uitleg is precies wat
+     hier niet mag gebeuren. */
+  const pakketId = pakketNu().id;
+  useEffect(function(){
+    if (magPagina(pagina)) return;
+    slotMelding(PAGINA_MODULE[pagina]);
+    setPagina("dashboard");
+  }, [pagina, pakketId]);
+
   function renderPagina() {
+    /* De router houdt zich aan dezelfde regel als de knoppen. Het
+       terugsturen doet de useEffect hierboven; hier wordt alleen
+       voorkomen dat een geweigerd scherm ook maar één tel in beeld
+       komt. */
+    if (!magPagina(pagina)) return null;
     switch(pagina) {
-      case "dashboard":    return <Dashboard navigeer={setPagina} />;
+      case "dashboard":    return <Dashboard navigeer={gaNaar} />;
       case "selectie":     return <SelectiePagina />;
       case "wedstrijden":  return <WedstrijdenModule />;
       case "trainingen":   return <TrainingenModule />;
-      case "agenda":       return <AgendaModule navigeer={setPagina} />;
+      case "agenda":       return <AgendaModule navigeer={gaNaar} />;
       case "statistieken": return <StatistiekenModule />;
       case "live":         return <StatistiekenModule defaultTab="live" />;
       case "clubhuis":     return <ClubhuisModule />;
@@ -33847,13 +34135,22 @@ function App() {
               <React.Fragment key={"g"+gi}>
                 {groep.kopTekstSleutel && <div className="zijbalk-kop">{t(groep.kopTekstSleutel)}</div>}
                 {groep.items.map(function(item){
+                  /* Hier wordt het gevraagd, niet in zijGroepen zelf:
+                     die lijst is een lijst en hoort niet te weten wat
+                     iemand betaalt. Bovendien verandert het antwoord
+                     zodra het pakket verandert, en dan moet het menu
+                     mee — een lijst die één keer is samengesteld doet
+                     dat niet. */
+                  const open = magPagina(item.id);
                   return (
                     <button key={item.id}
                       className={"zij-item"+(pagina===item.id?" actief":"")}
                       aria-current={pagina===item.id?"page":undefined}
-                      onClick={function(){ setPagina(item.id); }}>
+                      aria-label={open?undefined:slotLabel(t(item.tekstSleutel), PAGINA_MODULE[item.id])}
+                      onClick={function(){ gaNaar(item.id); }}>
                       <span className="zij-icoon"><i className={item.icoon}/></span>
                       <span>{t(item.tekstSleutel)}</span>
+                      {!open && <SlotJe />}
                     </button>
                   );
                 })}
@@ -33901,13 +34198,29 @@ function App() {
       {instellingenOpen && <InstellingenSheet onSluiten={function(){setInstellingenOpen(false);}}
         onTeams={function(){ setInstellingenOpen(false); setTeamsOpen(true); }}
         onGewisseld={function(){ setTeamStand(function(n){ return n+1; }); }} />}
+      {/* De prijskaart vanuit een slotje. Hij gaat nooit vanzelf open:
+          alleen als iemand in de melding op "Bekijk pakketten" tikt.
+          Het pakket dat het antwoord geeft staat goud omrand. */}
+      {slotPakket && <PakkettenSheet nadruk={slotPakket}
+        onSluiten={function(){ setSlotPakket(null); }} />}
       <ToastHouder />
       <nav className="bottom-nav">
-        {navItems.map(item=>(
-          <button key={item.id} className={`nav-item ${pagina===item.id?"actief":""}`} onClick={()=>setPagina(item.id)}>
-            <div className="nav-pip"/><span className="nav-icon"><i className={item.icoon}/></span><span>{t(item.tekstSleutel)}</span>
+        {navItems.map(item=>{
+          /* Zelfde vraag als in het zijmenu, op de plek waar getekend
+             wordt. De vijf knoppen blijven staan waar ze staan: een
+             balk die van vorm verandert zodra je up- of downgradet
+             haalt de plek waar je duim op vertrouwt onder je vandaan. */
+          const open = magPagina(item.id);
+          return (
+          <button key={item.id} className={`nav-item ${pagina===item.id?"actief":""}`}
+            aria-label={open?undefined:slotLabel(t(item.tekstSleutel), PAGINA_MODULE[item.id])}
+            onClick={()=>gaNaar(item.id)}>
+            <div className="nav-pip"/>
+            <span className="nav-icon"><i className={item.icoon}/>{!open && <SlotJe badge />}</span>
+            <span>{t(item.tekstSleutel)}</span>
           </button>
-        ))}
+          );
+        })}
       </nav>
     </div>
   );
