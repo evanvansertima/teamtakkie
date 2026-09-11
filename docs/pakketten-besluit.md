@@ -30,7 +30,7 @@ Geen Enterprise, geen maatwerk, geen prijs per team.
 | Wedstrijden | ja | ja |
 | Agenda | ja | ja |
 | Trainingen | — | ja |
-| Ontwikkeling (tabblad in Selectie) | — | ja |
+| Ontwikkeling (tabblad in het spelerprofiel) | — | ja |
 | Statistieken | — | ja |
 | Live-analyse | — | ja |
 | Clubhuis | — | ja |
@@ -43,10 +43,18 @@ Twee dingen die hiervoor moeten veranderen in `online/index.html`:
 2. **Het dashboard toont het trainingenblok met een slot**, niet leeg en niet
    weggelaten — wie niet weet dat trainingen bestaan, koopt er nooit voor.
 
-**Let op bij Ontwikkeling:** dat is een *tabblad binnen* Selectie, geen eigen
-scherm. Dat wordt dus een slot op een tabblad, en het gouden origineel
-(`tools/gouden-origineel.js`) kijkt niet achter tabbladen — die dekking moet
-apart geregeld worden.
+**Waar Ontwikkeling precies zit.** Niet in de tabbalk van Selectie — die heeft
+Spelers, Opstellingen, Tactieken, Blessures en Boetepot. Ontwikkeling zit één
+laag dieper: je klikt in Selectie een speler aan en krijgt dan `SpelerProfiel`
+(regel 22761) met twee tabbladen, Profiel en Ontwikkeling (regel 22766).
+
+**Het slot komt op dat tabblad.** Een Free-gebruiker ziet dus de spelerslijst
+én het profiel — naam, rugnummer, Man of the Match, statistieken — maar niet de
+beoordelingen, doelen en rapporten daarachter.
+
+Die plek is gedekt: `tools/gouden-origineel.js` legt sinds 11 september ook dat
+tabblad vast, via Selectie → speler → Ontwikkeling. Negen opnames in plaats van
+acht.
 
 ## Is dat wel af te dwingen?
 
