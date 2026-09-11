@@ -105,7 +105,7 @@ create table if not exists public.persoonlijk (
 create table if not exists public.abonnementen (
   club_id    uuid primary key references public.clubs(id) on delete cascade,
   pakket     text not null default 'free'
-             check (pakket in ('free', 'basic', 'pro', 'max')),
+             check (pakket in ('free', 'coach', 'club')),
   geldig_tot date,
   notitie    text
 );

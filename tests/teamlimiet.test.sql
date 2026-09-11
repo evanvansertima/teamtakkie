@@ -76,34 +76,41 @@ begin
       r := array_append(r, ('2§free: tweede team aanmaken§mislukt om de VERKEERDE reden: ' || sqlerrm || '§WIJKT AF'));
     end;
 
-    -- Pakket omhoog naar basic (drie teams). Dat kan alleen buiten
-    -- de rol authenticated om: op abonnementen staat met opzet geen
-    -- enkele schrijfregel.
+    -- Over naar coach. Dat kan alleen buiten de rol authenticated om:
+    -- op abonnementen staat met opzet geen enkele schrijfregel.
+    --
+    -- Coach heeft echt maar één team. Om de rekenkant van de trigger te
+    -- toetsen -- telt hij goed, en telt hij de rij die hij nu behandelt
+    -- niet mee -- zetten we de grens hier tijdelijk op drie. Dat rolt
+    -- met de rest van de test weer terug. Zonder deze stap zou de
+    -- trigger alleen ooit bij één getal getest worden, en dan weet je
+    -- niet of hij telt of gewoon alles boven de eerste weigert.
     reset role;
-    update public.abonnementen set pakket = 'basic', geldig_tot = null where club_id = club;
+    update public.abonnementen set pakket = 'coach', geldig_tot = null where club_id = club;
+    update public.pakket_grenzen set teams = 3 where pakket = 'coach';
     set local role authenticated;
 
-    -- ── 3. Basic, drie teams erin en een vierde erbij ─────────
+    -- ── 3. Grens van drie: drie erin, een vierde erbij ────────
     begin
       insert into public.teams (id, club_id, naam) values
         ('tt-test-2', club, 'Testteam 2'),
         ('tt-test-3', club, 'Testteam 3');
-      r := array_append(r, '3a§basic: drie teams aanmaken§GELUKT§ZOALS VERWACHT');
+      r := array_append(r, '3a§grens 3: drie teams aanmaken§GELUKT§ZOALS VERWACHT');
     exception when others then
       afwijkingen := afwijkingen + 1;
-      r := array_append(r, ('3a§basic: drie teams aanmaken§MISLUKT: ' || sqlerrm || '§WIJKT AF'));
+      r := array_append(r, ('3a§grens 3: drie teams aanmaken§MISLUKT: ' || sqlerrm || '§WIJKT AF'));
     end;
 
     begin
       insert into public.teams (id, club_id, naam)
         values ('tt-test-4', club, 'Testteam 4');
       afwijkingen := afwijkingen + 1;
-      r := array_append(r, '3b§basic: vierde team aanmaken§GELUKT§<< LEK — dit hoort te mislukken');
+      r := array_append(r, '3b§grens 3: vierde team aanmaken§GELUKT§<< LEK — dit hoort te mislukken');
     exception when raise_exception then
-      r := array_append(r, ('3b§basic: vierde team aanmaken§GEWEIGERD: ' || sqlerrm || '§ZOALS VERWACHT'));
+      r := array_append(r, ('3b§grens 3: vierde team aanmaken§GEWEIGERD: ' || sqlerrm || '§ZOALS VERWACHT'));
     when others then
       afwijkingen := afwijkingen + 1;
-      r := array_append(r, ('3b§basic: vierde team aanmaken§mislukt om de VERKEERDE reden: ' || sqlerrm || '§WIJKT AF'));
+      r := array_append(r, ('3b§grens 3: vierde team aanmaken§mislukt om de VERKEERDE reden: ' || sqlerrm || '§WIJKT AF'));
     end;
 
     -- ── 4. Dezelfde drie teams nóg eens duwen ─────────────────
@@ -162,6 +169,22 @@ begin
     when others then
       afwijkingen := afwijkingen + 1;
       r := array_append(r, ('6§weggegooid team terughalen aan de limiet§mislukt om de VERKEERDE reden: ' || sqlerrm || '§WIJKT AF'));
+    end;
+
+    -- ── 6b. Club is onbeperkt ─────────────────────────────────
+    -- Het hele verschil tussen Coach en Club is het aantal teams. Als
+    -- Club ergens toch een grens blijkt te hebben, is dat precies het
+    -- soort fout dat je pas ontdekt bij een vereniging met dertig teams.
+    reset role;
+    update public.abonnementen set pakket = 'club', geldig_tot = null where club_id = club;
+    set local role authenticated;
+    begin
+      insert into public.teams (id, club_id, naam)
+      select 'tt-ruim-' || g, club, 'Ruim team ' || g from generate_series(1, 30) g;
+      r := array_append(r, '6b§club: dertig teams erbij§GELUKT§ZOALS VERWACHT');
+    exception when others then
+      afwijkingen := afwijkingen + 1;
+      r := array_append(r, ('6b§club: dertig teams erbij§MISLUKT: ' || sqlerrm || '§WIJKT AF'));
     end;
 
     -- ── 7. Bezoeker zonder account maakt een vereniging ───────
@@ -279,7 +302,7 @@ begin
   end loop;
 
   if afwijkingen = 0 then
-    insert into tt_uitslag values ('', '── SLOTSOM ──', 'alle dertien scenario''s zoals verwacht', 'GESLAAGD');
+    insert into tt_uitslag values ('', '── SLOTSOM ──', 'alle veertien scenario''s zoals verwacht', 'GESLAAGD');
   else
     insert into tt_uitslag values ('', '── SLOTSOM ──', afwijkingen || ' scenario(s) wijken af', 'ZIE server/06-pakketten.sql');
   end if;

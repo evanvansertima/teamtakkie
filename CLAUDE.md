@@ -56,6 +56,11 @@ Uitrollen gaat met de hand: map naar Netlify slepen.
    of de test rood wordt. Een groene test die niets vangt is erger dan geen test.
 6. **Klopt de marketingsite nog?** Verkoop nooit een functie of limiet die de
    software niet afdwingt.
+7. **Vraag het liever dan het in te vullen.** Als Evan iets niet heeft gezegd,
+   verzin het dan niet — stel de vraag. Dit is al twee keer misgegaan op één
+   dag: "ook voor korfbalclubs" stond nergens op, en "Free krijgt de volledige
+   app" was een aanname die het hele verkoopmodel onderuit haalde. Een gat
+   invullen kost hem meer dan een vraag beantwoorden.
 
 ## De twee dingen die nu het meest kosten
 

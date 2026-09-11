@@ -146,7 +146,7 @@ on conflict (sleutel) do nothing;
 --  In alle drie de gevallen blijft deze tabel kloppen en veranderen
 --  alleen de regels erin. Voorbeeld:
 --
---      update public.pakket_grenzen set teams = 5 where pakket = 'basic';
+--      update public.pakket_grenzen set teams = 5 where pakket = 'coach';
 --
 --  Verder hoeft er dan niets gedraaid te worden: de bewaker op teams
 --  leest deze tabel bij elke schrijfpoging opnieuw.
@@ -160,11 +160,48 @@ create table if not exists public.pakket_grenzen (
   modules text[] not null default '{}'
 );
 
+-- ══════════════════════════════════════════════════════════════
+--  EERST: de oude pakketnamen omzetten
+--  ─────────────────────────────────────────────────────────────
+--  Tot 11 september heetten de pakketten free/basic/pro/max. Ze
+--  heten nu free/coach/club. Bestaande abonnementen moeten mee
+--  vóórdat de nieuwe regel erop gezet wordt, anders weigert
+--  Postgres de wijziging omdat er rijen zijn die er niet aan
+--  voldoen.
+--
+--  basic wordt coach (allebei een team), pro en max worden club
+--  (allebei onbeperkt in de nieuwe indeling).
+-- ══════════════════════════════════════════════════════════════
+do $omzetten$
+declare naam text;
+begin
+  -- De oude regel weghalen, hoe hij ook heet.
+  for naam in
+    select con.conname from pg_constraint con
+    join pg_class c on c.oid = con.conrelid
+    where c.relname = 'abonnementen' and con.contype = 'c'
+  loop
+    execute format('alter table public.abonnementen drop constraint %I', naam);
+  end loop;
+
+  update public.abonnementen set pakket = case pakket
+    when 'basic' then 'coach'
+    when 'pro'   then 'club'
+    when 'max'   then 'club'
+    else pakket end
+  where pakket in ('basic','pro','max');
+
+  alter table public.abonnementen
+    add constraint abonnementen_pakket_check
+    check (pakket in ('free','coach','club'));
+end $omzetten$;
+
+delete from public.pakket_grenzen where pakket in ('basic','pro','max');
+
 insert into public.pakket_grenzen (pakket, teams, modules) values
   ('free',  1,    array['basis']),
-  ('basic', 3,    array['basis','trainingen','ontwikkeling']),
-  ('pro',   15,   array['basis','trainingen','ontwikkeling','analyse','clubhuis']),
-  ('max',   null, array['basis','trainingen','ontwikkeling','analyse','clubhuis'])
+  ('coach', 1,    array['basis','trainingen','ontwikkeling','analyse','clubhuis']),
+  ('club',  null, array['basis','trainingen','ontwikkeling','analyse','clubhuis'])
 on conflict (pakket) do nothing;
 
 -- Beide tabellen mogen gelezen worden door wie is ingelogd — het is

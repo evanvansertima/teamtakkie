@@ -21,6 +21,49 @@ leidend.
 
 Geen Enterprise, geen maatwerk, geen prijs per team.
 
+## Welk scherm bij welk pakket hoort
+
+| Scherm | Free | Coach / Club |
+|---|:--:|:--:|
+| Dashboard | ja | ja |
+| Selectie (spelers) | ja | ja |
+| Wedstrijden | ja | ja |
+| Agenda | ja | ja |
+| Trainingen | — | ja |
+| Ontwikkeling (tabblad in Selectie) | — | ja |
+| Statistieken | — | ja |
+| Live-analyse | — | ja |
+| Clubhuis | — | ja |
+
+Twee dingen die hiervoor moeten veranderen in `online/index.html`:
+
+1. **Agenda hoort bij `basis`.** Nu staat `agenda:"trainingen"` in
+   `PAGINA_MODULE` (regel 3529). Die regel eruit, dan valt agenda vanzelf
+   terug op de basis.
+2. **Het dashboard toont het trainingenblok met een slot**, niet leeg en niet
+   weggelaten — wie niet weet dat trainingen bestaan, koopt er nooit voor.
+
+**Let op bij Ontwikkeling:** dat is een *tabblad binnen* Selectie, geen eigen
+scherm. Dat wordt dus een slot op een tabblad, en het gouden origineel
+(`tools/gouden-origineel.js`) kijkt niet achter tabbladen — die dekking moet
+apart geregeld worden.
+
+## Is dat wel af te dwingen?
+
+Statistieken en live-analyse zijn **niet** op de server af te dwingen:
+statistieken schrijft niets weg (het is een rekensom over gegevens die de club
+al legitiem heeft) en live deelt zijn opslag met het registreren van doelpunten.
+
+Dat is hier geen probleem, en de reden is belangrijk: **Free komt helemaal niet
+op de server.** Een Free-gebruiker die met de ontwikkelaarsconsole het
+statistiekenscherm tevoorschijn haalt, ziet een rekensom over zijn eigen
+gegevens op zijn eigen telefoon. Dat kost niets.
+
+**De grens die je niet moet oversteken:** zou je ooit een scherm tussen Coach en
+Club willen afschermen, dan werkt dit niet meer — die zitten allebei op de
+server en dan valt er wél iets te halen. Zolang het enige verschil tussen de
+betaalde pakketten het aantal teams is, zit je goed.
+
 ## De twee keuzes die dit besluit dragen
 
 **1. De scheidslijn is de server, niet de functies.**
