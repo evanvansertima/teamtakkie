@@ -49,80 +49,26 @@
    mee zodra het pakket bestaat, en dán is groen ook echt groen.
 
    ┌─────────────────────────────────────────────────────────────┐
-   │ ER HOREN VANDAAG TESTS ROOD TE ZIJN, IN TWEE SOORTEN.       │
+   │ ROOD BETEKENT HIER WEER GEWOON: ER IS IETS STUK.            │
    │                                                             │
-   │ Rood betekent hier NIET "het vangnet is stuk". Het betekent │
-   │ "dit stuk is nog niet gebouwd". Beide soorten staan met een │
-   │ merkteken in de naam van de test, zodat je ze in de uitslag │
-   │ uit elkaar houdt.                                           │
+   │ Tot 12 september stond er een merkteken [ROOD] voor de acht │
+   │ tests die op het slot wachtten. Zolang dat merkteken er     │
+   │ stond, werd een falende test altijd geëxcuseerd: hij telde  │
+   │ niet mee als onverwacht rood. Dat klopte toen -- het slot   │
+   │ was nog niet gebouwd -- maar het is nu een gat: breekt      │
+   │ iemand het slot, dan zouden die acht tests rood worden en   │
+   │ tóch als "verwacht" geteld worden.                          │
    │                                                             │
-   │ ── [WACHT] — wacht op Fenna ────────────────────────────────│
-   │ De SQL-kant staat al op free/coach/club, maar                │
-   │ online/index.html nog niet: daar staan regel 3515-3524 nog  │
-   │ op free/basic/pro/max en staat agenda nog bij trainingen.   │
-   │ Elke [WACHT]-test wordt groen zodra Fenna PAKKETTEN en      │
-   │ PAGINA_MODULE bijwerkt volgens het besluit. Ze hoeft er     │
-   │ niets anders voor te doen; ze zijn met opzet haar lijstje.  │
+   │ Het slot is gebouwd (commit 5dbc94f) en alle acht staan     │
+   │ groen. De merktekens zijn daarom weggehaald. Gaat een van   │
+   │ deze tests nu rood, dan is dat een echte regressie.         │
    │                                                             │
-   │ ── [ROOD] — wacht op het slot ──────────────────────────────│
-   │ De pakketlaag kan wél rekenen maar houdt niemand tegen:     │
-   │ magPagina() wordt nergens aangeroepen en pakketNu() zet     │
-   │ iedereen op het ruimste pakket. Het slot ligt naast de deur.│
-   │                                                             │
-   │   (a1) magPagina wordt ergens aangeroepen                   │
-   │        → groen zodra een van de drie plekken hieronder      │
-   │          hem gebruikt                                       │
-   │   (a2) de router renderPagina() vraagt het na               │
-   │        → groen zodra de switch op ~33774 een geweigerde     │
-   │          pagina niet meer rendert                           │
-   │   (a3) het zijmenu zeeft zijn items                         │
-   │        → groen zodra de zijGroepen.map op ~33845 een        │
-   │          geweigerde knop niet meer tekent                   │
-   │   (a4) de onderbalk zeeft zijn items                        │
-   │        → groen zodra de navItems.map op ~33906 hetzelfde    │
-   │          doet                                               │
-   │   (b1) pakketNu() heeft geen hardgecodeerd betaald pakket   │
-   │        als terugval                                         │
-   │        → groen zodra regel ~3533 (var id = "max") weg is    │
-   │          of op "free" staat                                 │
-   │   (b2) een leeg apparaat krijgt niet stilletjes het ruimste │
-   │        pakket                                               │
-   │        → groen zodra óók de laatste terugval                │
-   │          (PAKKETTEN[PAKKETTEN.length - 1]) niet meer op het │
-   │          ruimste pakket uitkomt. Dit is de dubbele bodem:   │
-   │          (b1) kun je groen maken zonder het lek te dichten, │
-   │          (b2) niet.                                         │
-   │                                                             │
-   │ Die zes staan zo in het plan van 11 september. Er staan er  │
-   │ twee bij die ik er zelf bij heb gezet, omdat het besluit    │
-   │ ze nodig maakte. Haal ze weg als je het er niet mee eens    │
-   │ bent — ze zijn met opzet apart gemerkt:                     │
-   │                                                             │
-   │   (b3) de terugval is precies "free", het zuinigste pakket  │
-   │        → (b2) zegt alleen "niet het ruimste". Bij drie      │
-   │          pakketten is "niet het ruimste" ook waar voor      │
-   │          coach, en coach is betaald. Dit pint het vast.     │
-   │   (c1) het slot op het tabblad Ontwikkeling wordt gevraagd  │
-   │        → magModule() wordt vandaag alleen door magPagina()  │
-   │          aangeroepen. Ontwikkeling heeft geen scherm, dus   │
-   │          magPagina() kan er niets over zeggen. Groen zodra  │
-   │          er ergens magModule("ontwikkeling") staat. Deze    │
-   │          test zegt niet HOE het slot eruit moet zien,       │
-   │          alleen dát de vraag gesteld wordt.                 │
-   │                                                             │
-   │ Alle andere tests horen groen te zijn. Gaat er één van die  │
-   │ op rood, dan is er iets kapot. Dat getal staat onderaan     │
-   │ apart: "onverwacht rood" hoort nul te zijn.                 │
-   │                                                             │
-   │ Verwacht vandaag (11 september 2026, gemeten):              │
-   │     57 geslaagd, 26 gefaald, 20 niet te meten               │
-   │     onverwacht rood: 0                                      │
-   │                                                             │
-   │ Verwacht zodra Fenna PAKKETTEN en PAGINA_MODULE bijwerkt:   │
-   │     95 geslaagd, 8 gefaald, 0 niet te meten                 │
-   │     die 8 zijn (a1)-(a4), (b1)-(b3) en (c1)                 │
-   │                                                             │
-   │ Verwacht zodra het slot erop zit: 103 geslaagd, 0 gefaald.  │
+   │ ── [WACHT] blijft wél bestaan ──────────────────────────────│
+   │ Dat merkteken hoort bij iets anders: een test die niet te   │
+   │ méten is omdat het pakket nog niet in de app staat. Zo'n    │
+   │ test wordt overgeslagen en apart geteld, niet geëxcuseerd.  │
+   │ Dat onderscheid is de reden dat de uitslag drie getallen    │
+   │ heeft in plaats van twee.                                   │
    └─────────────────────────────────────────────────────────────┘
    ══════════════════════════════════════════════════════════════ */
 
@@ -242,7 +188,7 @@ const FENNA_KLAAR = OUDE_PAKKETTEN.length === 0;
 let goed = 0, gepland = 0, onverwacht = 0, ongemeten = 0;
 const teVroegGroen = [];
 const nietTeMeten = [];
-const GEMERKT = /^\[(WACHT|ROOD)\]/;
+const GEMERKT = /^\[WACHT\]/;
 /* JSON.stringify(Infinity) geeft "null". Zonder deze vervanger zou
    teams:null hetzelfde lijken als teams:Infinity — en dat is precies
    de fout die iemand maakt die pakket_grenzen (waar club op null
@@ -262,7 +208,7 @@ const ok = (naam, echt, verwacht) => {
   const merk = GEMERKT.test(naam);
   /* [ROOD] blijft altijd een excuus: het slot is apart werk. [WACHT]
      alleen zolang de oude pakketten nog in de app staan. */
-  const excuus = merk && (naam.indexOf("[ROOD]") === 0 || !FENNA_KLAAR);
+  const excuus = merk && !FENNA_KLAAR;   /* alleen [WACHT] nog; zie de kop */
   let teken;
   if (gelijk) {
     goed++;
@@ -570,7 +516,7 @@ ok("die component bestaat ook echt",
 /* ══════════════════════════════════════════════════════════════
    (a) HET SLOT — vandaag ROOD, en dat hoort zo
    ══════════════════════════════════════════════════════════════ */
-groep("[ROOD] (a) het slot — magPagina moet ergens worden aangeroepen");
+groep("(a) het slot — magPagina moet ergens worden aangeroepen");
 const paginaPlekken = aanroepen("magPagina");
 if (!paginaPlekken.length) {
   console.log("   magPagina() rekent keurig uit wie waar bij mag, maar niemand");
@@ -578,19 +524,48 @@ if (!paginaPlekken.length) {
   console.log("   'nog niet gebouwd', niet 'vangnet stuk' — zie de kop.");
 }
 console.log("        aangeroepen op regel(s): " + (paginaPlekken.join(", ") || "nergens"));
-ok("[ROOD] (a1) magPagina wordt minstens één keer aangeroepen buiten zijn definitie",
+ok("(a1) magPagina wordt minstens één keer aangeroepen buiten zijn definitie",
    paginaPlekken.length > 0, true);
-ok("[ROOD] (a2) de router renderPagina() vraagt het na voor hij een scherm toont",
+ok("(a2) de router renderPagina() vraagt het na voor hij een scherm toont",
    /magPagina\s*\(/.test(ROUTER), true);
-ok("[ROOD] (a3) het zijmenu zeeft zijn items voor het ze tekent",
+ok("(a3) het zijmenu zeeft zijn items voor het ze tekent",
    /mag(Pagina|Module)\s*\(/.test(knipNavRondom("zijGroepen")), true);
-ok("[ROOD] (a4) de onderbalk op de telefoon zeeft ook",
+ok("(a4) de onderbalk op de telefoon zeeft ook",
    /mag(Pagina|Module)\s*\(/.test(knipNavRondom("navItems")), true);
+
+/* (a5) — gevonden doordat het weghalen van dit slot door NIETS werd gevangen.
+   gaNaar() is de enige doorgang naar een ander scherm. Haal je de controle
+   daar weg, dan komt niemand alsnog op een vergrendeld scherm: de useEffect
+   eronder stuurt terug naar het dashboard, met dezelfde melding. De
+   eindtoestand is dus gelijk, en daarom zag het gouden origineel het niet --
+   dat wacht tot het scherm stilstaat.
+
+   Wat er wél gebeurt is een flits: de app rendert één keer met de
+   vergrendelde pagina, renderPagina() geeft niets terug, en dan springt hij
+   terug. Je verliest je plek in het scherm en je ziet een lege pagina
+   opflikkeren. Geen gat in de betaalmuur, wel een zichtbare hapering die
+   niemand zou opmerken tot een gebruiker erover belt.
+
+   Deze test is statisch en kijkt alleen of de vraag nog gesteld wordt. */
+const GANAAR = (function () {
+  const a = regels.findIndex((r) => /^\s+function gaNaar\s*\(/.test(r));
+  if (a < 0) {
+    console.log("\n   gaNaar() staat niet meer in online/index.html.");
+    console.log("   Hernoemd of verplaatst? Zoek hem op en pas deze test aan.");
+    return "";
+  }
+  const inspring = regels[a].match(/^(\s*)/)[1];
+  let e = a + 1;
+  while (e < regels.length && regels[e] !== inspring + "}") e++;
+  return regels.slice(a, e + 1).join("\n");
+})();
+ok("(a5) gaNaar() vraagt het na voor hij van scherm wisselt",
+   /mag(Pagina|Module)\s*\(/.test(GANAAR), true);
 
 /* ══════════════════════════════════════════════════════════════
    (b) DE TERUGVAL — vandaag ROOD, en dat hoort zo
    ══════════════════════════════════════════════════════════════ */
-groep("[ROOD] (b) de terugval — een leeg apparaat hoort op free uit te komen");
+groep("(b) de terugval — een leeg apparaat hoort op free uit te komen");
 const PAKKETNU = knipFunctie("pakketNu");
 const BETAALD = /["'](max|pro|basic|coach|club)["']/;
 if (BETAALD.test(PAKKETNU)) {
@@ -599,13 +574,13 @@ if (BETAALD.test(PAKKETNU)) {
   console.log("   die niets betaalt. Rood hier betekent 'nog niet gebouwd', niet");
   console.log("   'vangnet stuk' — zie de kop.");
 }
-ok("[ROOD] (b1) pakketNu() heeft geen hardgecodeerd betaald pakket als terugval",
+ok("(b1) pakketNu() heeft geen hardgecodeerd betaald pakket als terugval",
    BETAALD.test(PAKKETNU), false);
 leeg();
 const ruimste = PAKKETTEN[PAKKETTEN.length - 1].id;
-ok("[ROOD] (b2) een apparaat zonder licentie komt niet op het ruimste pakket uit",
+ok("(b2) een apparaat zonder licentie komt niet op het ruimste pakket uit",
    pakketNu().id !== ruimste, true);
-ok("[ROOD] (b3) en het komt precies op free uit — het zuinigste, niet het ruimste",
+ok("(b3) en het komt precies op free uit — het zuinigste, niet het ruimste",
    pakketNu().id, "free");
 console.log("        (b2/b3) een leeg apparaat krijgt nu: " + pakketNu().id +
             "   (ruimste pakket is: " + ruimste + ")");
@@ -620,7 +595,7 @@ if (pakketNu().id === ruimste) {
 /* ══════════════════════════════════════════════════════════════
    (c) HET TABBLAD — vandaag ROOD, en dat hoort zo
    ══════════════════════════════════════════════════════════════ */
-groep("[ROOD] (c) het slot op het tabblad Ontwikkeling");
+groep("(c) het slot op het tabblad Ontwikkeling");
 /* magPagina() kan hier niets: Ontwikkeling is geen scherm en staat
    dus niet in PAGINA_MODULE. De enige functie die er iets over kan
    zeggen is magModule("ontwikkeling"). Vandaag wordt magModule alleen
@@ -633,7 +608,7 @@ const moduleVraag = regels
   .map((r) => r.nr);
 console.log("        magModule(\"ontwikkeling\") staat op regel(s): " +
             (moduleVraag.join(", ") || "nergens"));
-ok("[ROOD] (c1) ergens in de app wordt magModule(\"ontwikkeling\") gevraagd",
+ok("(c1) ergens in de app wordt magModule(\"ontwikkeling\") gevraagd",
    moduleVraag.length > 0, true);
 
 }
@@ -645,7 +620,7 @@ try { draai(); } catch (e) {
 }
 const totaalFout = gepland + onverwacht;
 console.log(`\n${goed} geslaagd, ${totaalFout} gefaald, ${ongemeten} niet te meten`);
-console.log(`  waarvan ${gepland} bewust rood ([WACHT] of [ROOD] — zie de kop)`);
+console.log(`  waarvan ${gepland} bewust rood ([WACHT] — zie de kop)`);
 console.log(`  ONVERWACHT ROOD: ${onverwacht}   (dit getal hoort nul te zijn)`);
 if (nietTeMeten.length) {
   console.log("\nNiet te meten (" + nietTeMeten.length + ") — geen groen en geen rood.");
