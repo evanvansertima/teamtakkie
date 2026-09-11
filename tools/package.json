@@ -1,0 +1,13 @@
+{
+  "name": "teamtakkie-tools",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Gereedschap dat NIET met kale node kan draaien. Zie gouden-origineel.js.",
+  "scripts": {
+    "opnemen": "node gouden-origineel.js --opnemen",
+    "vergelijk": "node gouden-origineel.js --vergelijk"
+  },
+  "dependencies": {
+    "playwright-core": "1.55.0"
+  }
+}

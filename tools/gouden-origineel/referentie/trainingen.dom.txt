@@ -1,0 +1,282 @@
+<html lang="nl" data-thema="licht">
+  <div class="app-schil">
+    <aside class="zijbalk">
+      <button class="zijbalk-merk zijbalk-team" title="Van team wisselen">
+        <img alt="VV Verzonnen Kamp" class="logo-img" src="data:image/png#28734-10ebnl0">
+        <div class="header-tekst">
+          <h1>
+            "VV Verzonnen Kamp"
+          <div class="header-subtitel">
+            "JO19-2"
+            <i class="fa-solid fa-chevron-down header-pijl">
+      <nav class="zijbalk-nav">
+        <button class="zij-item">
+          <span class="zij-icoon">
+            <i class="fa-solid fa-house">
+          <span>
+            "Dashboard"
+        <button class="zij-item">
+          <span class="zij-icoon">
+            <i class="fa-solid fa-futbol">
+          <span>
+            "Wedstrijden"
+        <button aria-current="page" class="zij-item actief">
+          <span class="zij-icoon">
+            <i class="fa-solid fa-person-running">
+          <span>
+            "Trainingen"
+        <button class="zij-item">
+          <span class="zij-icoon">
+            <i class="fa-solid fa-users">
+          <span>
+            "Selectie"
+        <button class="zij-item">
+          <span class="zij-icoon">
+            <i class="fa-solid fa-calendar-days">
+          <span>
+            "Agenda"
+        <div class="zijbalk-kop">
+          "Analyse"
+        <button class="zij-item">
+          <span class="zij-icoon">
+            <i class="fa-solid fa-chart-bar">
+          <span>
+            "Statistieken"
+        <button class="zij-item">
+          <span class="zij-icoon">
+            <i class="fa-solid fa-stopwatch">
+          <span>
+            "Live analyse"
+        <div class="zijbalk-kop">
+          "Extra"
+        <button class="zij-item">
+          <span class="zij-icoon">
+            <i class="fa-solid fa-map">
+          <span>
+            "Clubhuis"
+      <div class="zijbalk-voet">
+        <button class="sync-lampje mislukt" title="Er staat iets klaar dat nog niet verstuurd is. Zodra er weer bereik is gaat het vanzelf.">
+          <i class="fa-solid fa-triangle-exclamation">
+          <span>
+            "Geen verbinding"
+        <button class="zij-item">
+          <span class="zij-icoon">
+            <i class="fa-solid fa-gear">
+          <span>
+            "Instellingen"
+        <div class="zij-ontwerp">
+          <span class="zij-ontwerp-studio">
+            "TEAMTAKKIE"
+          <span class="zij-ontwerp-naam">
+            "EVS production"
+    <header class="header">
+      <button class="header-logo header-team" title="Van team wisselen">
+        <img alt="VV Verzonnen Kamp" class="logo-img" src="data:image/png#28734-10ebnl0">
+        <div class="header-tekst">
+          <h1>
+            "VV Verzonnen Kamp"
+          <div class="header-subtitel">
+            "JO19-2 · TEAMTAKKIE"
+            <i class="fa-solid fa-chevron-down header-pijl">
+      <button aria-label="Instellingen" style="font-size: 20px; cursor: pointer; background: none; border-width: medium; border-style: none; border-color: currentcolor; border-image: none; color: inherit; padding: 6px 4px;">
+        <i class="fa-solid fa-gear">
+    <main class="inhoud">
+      <div>
+        <div class="tabs">
+          <button class="tab-knop actief">
+            <i class="fa-solid fa-person-running">
+            "Trainingen"
+          <button class="tab-knop">
+            <i class="fa-solid fa-book-open">
+            "Oefeningen"
+          <button class="tab-knop">
+            <i class="fa-solid fa-timeline">
+            "Seizoen"
+        <div class="pagina-header">
+          <div class="pagina-header-tekst">
+            <div class="eyebrow">
+              "Weekplanning"
+            <h2>
+              "Trainingen"
+            <p>
+              "4"
+              "training"
+              "en"
+          <button class="knop-plus">
+            "+"
+        <input class="zoekbalk" placeholder="Zoek op locatie, oefening of notitie…" value="">
+        <div>
+          <div class="week-groep">
+            <div class="week-kop">
+              <span class="week-nr">
+                "Week 43"
+              <span class="week-bereik">
+                "19 – 25 oktober"
+              <span class="week-tel">
+                "1 training"
+                "· 90 min"
+            <div class="kaart week-rij">
+              <div class="tr-item">
+                <div class="tr-datum-blok">
+                  <div class="tr-datum-dag">
+                    "20"
+                  <div class="tr-datum-mnd">
+                    "OKT"
+                <div class="tr-info">
+                  <div class="tr-naam">
+                    "Training 20-10-2026"
+                  <div class="tr-sub">
+                    <span style="margin-right: 8px;">
+                      <i class="fa-solid fa-location-dot">
+                      "Sportpark De Verzonnen Kamp"
+                    <span style="margin-right: 8px;">
+                      "⏰"
+                      "19:00"
+                    <span style="margin-right: 8px;">
+                      "⏱"
+                      "90"
+                      "'"
+                <div class="tr-badge">
+                  "Training"
+          <div class="week-groep">
+            <div class="week-kop">
+              <span class="week-nr">
+                "Week 41"
+              <span class="week-bereik">
+                "5 – 11 oktober"
+              <span class="week-tel">
+                "1 training"
+                "· 90 min"
+            <div class="kaart week-rij">
+              <div class="tr-item">
+                <div class="tr-datum-blok">
+                  <div class="tr-datum-dag">
+                    "6"
+                  <div class="tr-datum-mnd">
+                    "OKT"
+                <div class="tr-info">
+                  <div class="tr-naam">
+                    "Training 06-10-2026"
+                  <div class="tr-sub">
+                    <span style="margin-right: 8px;">
+                      <i class="fa-solid fa-location-dot">
+                      "Sportpark De Verzonnen Kamp"
+                    <span style="margin-right: 8px;">
+                      "⏰"
+                      "19:00"
+                    <span style="margin-right: 8px;">
+                      "⏱"
+                      "90"
+                      "'"
+                    <span>
+                      "👥"
+                      "12"
+                      "/"
+                      "14"
+                <div class="tr-badge">
+                  "Training"
+          <div class="week-groep">
+            <div class="week-kop">
+              <span class="week-nr">
+                "Week 39"
+              <span class="week-bereik">
+                "21 – 27 september"
+              <span class="week-tel">
+                "1 training"
+                "· 90 min"
+            <div class="kaart week-rij">
+              <div class="tr-item">
+                <div class="tr-datum-blok">
+                  <div class="tr-datum-dag">
+                    "22"
+                  <div class="tr-datum-mnd">
+                    "SEP"
+                <div class="tr-info">
+                  <div class="tr-naam">
+                    "Training 22-09-2026"
+                  <div class="tr-sub">
+                    <span style="margin-right: 8px;">
+                      <i class="fa-solid fa-location-dot">
+                      "Sportpark De Verzonnen Kamp"
+                    <span style="margin-right: 8px;">
+                      "⏰"
+                      "19:00"
+                    <span style="margin-right: 8px;">
+                      "⏱"
+                      "90"
+                      "'"
+                    <span>
+                      "👥"
+                      "11"
+                      "/"
+                      "14"
+                <div class="tr-badge">
+                  "Training"
+          <div class="week-groep">
+            <div class="week-kop">
+              <span class="week-nr">
+                "Week 38"
+              <span class="week-bereik">
+                "14 – 20 september"
+              <span class="week-tel">
+                "1 training"
+                "· 90 min"
+            <div class="kaart week-rij">
+              <div class="tr-item">
+                <div class="tr-datum-blok">
+                  <div class="tr-datum-dag">
+                    "15"
+                  <div class="tr-datum-mnd">
+                    "SEP"
+                <div class="tr-info">
+                  <div class="tr-naam">
+                    "Training 15-09-2026"
+                  <div class="tr-sub">
+                    <span style="margin-right: 8px;">
+                      <i class="fa-solid fa-location-dot">
+                      "Sportpark De Verzonnen Kamp"
+                    <span style="margin-right: 8px;">
+                      "⏰"
+                      "19:00"
+                    <span style="margin-right: 8px;">
+                      "⏱"
+                      "90"
+                      "'"
+                    <span>
+                      "👥"
+                      "11"
+                      "/"
+                      "14"
+                <div class="tr-badge">
+                  "Training"
+    <nav class="bottom-nav">
+      <button class="nav-item">
+        <div class="nav-pip">
+        <span class="nav-icon">
+          <i class="fa-solid fa-house">
+        <span>
+          "Home"
+      <button class="nav-item">
+        <div class="nav-pip">
+        <span class="nav-icon">
+          <i class="fa-solid fa-futbol">
+        <span>
+          "Wedstrijden"
+      <button class="nav-item">
+        <div class="nav-pip">
+        <span class="nav-icon">
+          <i class="fa-solid fa-users">
+        <span>
+          "Selectie"
+      <button class="nav-item actief">
+        <div class="nav-pip">
+        <span class="nav-icon">
+          <i class="fa-solid fa-person-running">
+        <span>
+          "Training"
+      <button class="nav-item">
+        <div class="nav-pip">
+        <span class="nav-icon">
+          <i class="fa-solid fa-chart-bar">
+        <span>
+          "Stats"
