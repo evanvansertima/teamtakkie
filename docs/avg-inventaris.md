@@ -455,7 +455,7 @@ geen enkele tekst over gegevensverwerking in de app.
 
 **Wie regelt dit:** de tekst komt van de jurist of van een model van de
 sportbond; het inbouwen is werk voor Fenna. Vraag in het gesprek expliciet of de
-bond een model heeft — voetbal- en korfbalclubs hebben allemaal met dit
+bond een model heeft — amateurvoetbalclubs hebben allemaal met dit
 probleem te maken en de kans is groot dat er iets ligt dat je mag hergebruiken.
 
 ---
@@ -526,7 +526,7 @@ Dit noem ik alleen als lijstje; het invullen ervan is niet aan mij.
 
 ## 4. De vraag die ik stel maar niet beantwoord
 
-**Als korfbalvereniging De Granaet € 9,99 per maand betaalt voor TEAMTAKKIE —
+**Als voetbalvereniging De Granaet € 9,99 per maand betaalt voor TEAMTAKKIE —
 wie is dan verwerkingsverantwoordelijke voor de gegevens van hun spelers: de
 vereniging, of Van Sertima Studios?**
 

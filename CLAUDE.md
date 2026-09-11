@@ -1,6 +1,11 @@
 # TEAMTAKKIE
 
-Teammanagement-app voor voetbal- en korfbalclubs. Draait in de browser.
+Teammanagement-app voor amateurvoetbalclubs. Draait in de browser.
+
+Gebouwd vanuit FC Harlingen JO19-2. In de code staat geen enkele verwijzing
+naar een andere sport — `grep -i korfbal online/index.html` geeft nul
+treffers. Wil je weten of iets ook voor korfbal of handbal werkt: dat is
+een openstaande vraag aan Evan, geen vaststaand gegeven.
 Gebouwd en onderhouden door Evan van Sertima (geen programmeur van beroep).
 
 **Schrijf en antwoord in het Nederlands.** Evan is geen ontwikkelaar. Leg
