@@ -2,7 +2,7 @@
 
 **Datum:** 11 september 2026
 **Genomen door:** Evan
-**Status:** vastgesteld; twee punten nog open (onderaan)
+**Status:** vastgesteld
 
 Dit is de bron voor `pakket_grenzen` in `server/06-pakketten.sql`, voor
 `PAKKETTEN` in `online/index.html` (regel 3517-3526) en voor elke tekst die
@@ -11,71 +11,96 @@ leidend.
 
 ---
 
-## De vier pakketten
+## De drie pakketten
 
-| Pakket | Teams | Server | Voor wie |
-|---|---|---|---|
-| **Free** | 1 | nee — alles op het eigen apparaat | uitproberen, of één team zonder gedoe |
-| **Coach** | 1 | ja | de losse trainer |
-| **Club** | tot 10 | ja | een vereniging |
-| **Enterprise** | 11 en meer | ja | grote verenigingen, op maat |
+| Pakket | Teams | Server | Per maand | Per jaar (2 maanden korting) |
+|---|---|---|---:|---:|
+| **Free** | 1 | nee — alles op het eigen apparaat | gratis | gratis |
+| **Coach** | 1 | ja | € 6,99 | € 69,90 |
+| **Club** | onbeperkt | ja | € 49,00 | € 490,00 |
 
-**Enterprise:** het Club-tarief plus **€ 2,50 per team per maand**.
-**Jaarlijks betalen:** twee maanden korting (betaal 10, krijg 12).
+Geen Enterprise, geen maatwerk, geen prijs per team.
 
-## De scheidslijn, en waarom hij daar ligt
+## De twee keuzes die dit besluit dragen
 
-Niet de functies, maar **de server**. Dat is de enige grens die aan de
-serverkant hard af te dwingen is: zonder abonnement komt er niets binnen.
+**1. De scheidslijn is de server, niet de functies.**
 
-Statistieken, live-analyse en spelerkaarten zijn **niet** af te dwingen —
-ze rekenen met gegevens die de club al legitiem heeft, of ze delen hun
-opslag met de basis. Ze mogen in de tekst staan als wat de app kan, maar
-nooit als wat je bij een duurder pakket krijgt.
+Dat is het enige dat aan de serverkant hard af te dwingen is: zonder
+abonnement komt er niets binnen. Statistieken, live-analyse en spelerkaarten
+zijn níét af te dwingen — ze rekenen met gegevens die de club al legitiem
+heeft, of ze delen hun opslag met de basis. Ze mogen in de tekst staan als
+wat de app kan, nooit als wat je bij een duurder pakket krijgt.
 
-**Gebruikersaantallen staan er bewust niet in.** De app schrijft nergens in
-`public.leden`, dus gebruikers zijn niet te tellen en een gebruikerslimiet is
-niet af te dwingen. Zolang er geen uitnodigingssysteem is, verkoop je dat niet.
+**2. Coach rekent per team, Club rekent niet per team.**
+
+Dat is met opzet een andere vórm, niet alleen een ander bedrag. Zou Club ook
+per team rekenen, dan is de goedkoopste altijd de slimste keuze en
+registreert elke losse trainer zich als vereniging met één team. Twee
+verschillende vormen sluiten die sluiproute.
+
+Het omslagpunt ligt daardoor vanzelf op **zeven teams**:
+
+| Teams | Als losse coaches | Club | Voordeliger |
+|---:|---:|---:|---|
+| 3 | € 20,97 | € 49 | los |
+| 5 | € 34,95 | € 49 | los |
+| 7 | € 48,93 | € 49 | gelijk |
+| 10 | € 69,90 | € 49 | Club |
+| 26 | € 181,74 | € 49 | Club |
+
+Eén zin voor de prijspagina: **"Meer dan zes teams? Dan is Club voordeliger."**
+
+## Waarom dit bij een echte vereniging past
+
+Gemeten, niet gegokt. Nederland heeft ongeveer 2.900 amateurvoetbalclubs met
+samen 1,26 miljoen leden — gemiddeld ruim 400 leden per club. Uit het aantal
+gespeelde wedstrijden (499.105 jeugd, 214.077 senioren per seizoen, elk met
+twee teams, ongeveer 22 wedstrijden per team per jaar) volgt een gemiddelde
+van **ruim twintig teams per club**. vv De Meern bevestigt de orde van
+grootte: 120 teams bij 1.600 leden.
+
+Een gemiddelde club van 26 teams betaalt met jaarkorting € 490 — dat is
+€ 1,17 per lid per jaar, of € 19 per team. Met een prijs per team van € 6,99
+zou dat € 2.184 zijn geweest, en dat is voor een amateurclub geen gesprek.
+
+**Bron:** KNVB ledencijfers en "Het amateurseizoen in cijfers: wedstrijden".
 
 ## Wat dit technisch betekent
 
-**`pakket_grenzen` krijgt een rij erbij.** Dat is één `insert` — geen code.
-Dat was precies de reden om de getallen als gegevens te bouwen.
+**De teamlimiet hoeft nog maar één ding te doen:** Free en Coach op één team
+houden. Club is onbeperkt (`teams = null` in `pakket_grenzen`).
 
-**Enterprise vraagt wél iets nieuws: een grens per club.** `pakket_grenzen`
-heeft één getal per pakketnaam, maar "op maat" betekent dat clubs met
-Enterprise verschillende aantallen hebben. De kleinste oplossing: een
-nullable kolom `teams_max` op `abonnementen`, die `pakket_grenzen.teams`
-overschrijft zodra hij gevuld is. `teamlimiet_bewaken()` leest dan eerst
-die kolom.
+Daarmee vervalt alles wat eerder is overwogen en níét gebouwd hoeft te worden:
+
+- geen kolom `teams_max` op `abonnementen`
+- geen Enterprise en geen maatwerkgrenzen per club
+- geen afrekenen per team, dus een gewone vaste incasso volstaat
 
 **Jaarlijks betalen kost geen code.** Dat is `geldig_tot` twaalf maanden
-vooruit in plaats van één. De respijttermijn van veertien dagen werkt
-hetzelfde.
+vooruit in plaats van één. De respijttermijn van veertien dagen werkt hetzelfde.
 
-**Afrekenen per team is wél meer werk dan een vast bedrag.** Het bedrag
-verandert zodra een club een team toevoegt. Mollie en Stripe kunnen dat,
-maar het is geen vaste incasso meer.
+**Boven de limiet raken blokkeert niets bestaands.** De trigger weigert alleen
+een *nieuw* team. Een club die terugvalt houdt zijn teams en kan er alleen geen
+bij maken. Dat is met opzet zo.
 
-**Boven de limiet raken blokkeert niets bestaands.** De trigger weigert
-alleen een *nieuw* team. Een club die terugvalt houdt zijn teams en kan er
-alleen geen bij maken. Dat is met opzet zo.
+**En dit is precies waarom de limiet moet werken:** zonder hem koopt één coach
+voor € 6,99 een account en zet er zesentwintig teams in.
 
-## Wat de rekensom oplevert
+## Gebruikersaantallen: bewust niet
 
-Bovenop het Club-tarief, per maand:
+De app schrijft nergens in `public.leden`. Gebruikers zijn dus niet te tellen
+en een gebruikerslimiet is niet af te dwingen. Zolang er geen uitnodigings-
+systeem is, staat er geen aantal beheerders of gebruikers op de prijslijst.
 
-| Teams | Extra boven 10 | Erbij per maand | Per jaar (met 2 maanden korting) |
-|---:|---:|---:|---:|
-| 11 | 1 | € 2,50 | € 25,00 |
-| 15 | 5 | € 12,50 | € 125,00 |
-| 25 | 15 | € 37,50 | € 375,00 |
-| 30 | 20 | € 50,00 | € 500,00 |
+## Wat er nu moet veranderen
 
-## Nog open
+De pakketnamen veranderen van `free / basic / pro / max` naar
+`free / coach / club`. Dat raakt vier plekken, en die moeten in één keer mee:
 
-1. **Wat kosten Coach en Club?** Zonder die twee bedragen kan Mark geen
-   prijspagina schrijven.
-2. **Is de € 2,50 per team bóven de tien, of per team in totaal?** De tabel
-   hierboven gaat uit van "boven de tien". Bij 25 teams scheelt dat
-   € 37,50 tegen € 62,50 per maand.
+1. `server/06-pakketten.sql` — de rijen in `pakket_grenzen`
+2. `tests/teamlimiet.test.sql` — de scenario's gebruiken nu `basic`
+3. `tests/pakket.test.js` — verwacht nu vier pakketten
+4. `online/index.html` regel 3517-3526 — `PAKKETTEN`
+
+De eerste drie kunnen nu. De vierde is werk voor Fenna, en die wacht op het
+gouden origineel.
