@@ -1,0 +1,8 @@
+Welke buitenadressen de app aanraakt tijdens het opstarten en het
+doorlopen van deze opnameset (free). Komt hier iets bij, dan is
+dat een privacyvraag en geen detail.
+
+cdnjs.cloudflare.com  (toegestaan, uit cdn-cache)
+escibxugiyjclrwmivkn.supabase.co  (geblokkeerd, verwacht: de server)
+fonts.googleapis.com  (toegestaan, uit cdn-cache)
+fonts.gstatic.com  (toegestaan, uit cdn-cache)

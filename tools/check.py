@@ -1,13 +1,25 @@
 # -*- coding: utf-8 -*-
-"""Controleert fc-harlingen-app.html voor het wordt opgeleverd:
+"""Controleert online/index.html voor het wordt opgeleverd:
    1. balans van accolades, haakjes en blokhaken
    2. JSX-nesting (met JS/JSX-contextwissel, zodat apostrofs in tekst geen vals alarm geven)
    3. strings die niet op dezelfde regel worden gesloten
    4. dubbele const/let/function binnen hetzelfde blok
-Draai met: python3 .controle/check.py"""
+
+Draai met:  python3 tools/check.py
+Of op een ander bestand:  python3 tools/check.py pad/naar/bestand.html
+
+WAAROM DIT BESTAND HIER STAAT EN NIET MEER IN legacy/
+Tot 11 september 2026 wees hij naar legacy/fc-harlingen-app.html -- het oude
+prototype van 922 KB, niet naar de app die wordt uitgerold. Wie hem draaide
+kreeg te horen dat alles in orde was, over een bestand dat niemand meer
+uitrolt. Dat is erger dan geen controle: het is een groen vinkje dat niets
+dekt. De audit van 10 september noemde dit met zoveel woorden."""
 import re, sys, os
-BESTAND = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-                       "fc-harlingen-app.html")
+HIER = os.path.dirname(os.path.abspath(__file__))
+BESTAND = (sys.argv[1] if len(sys.argv) > 1
+           else os.path.join(os.path.dirname(HIER), "online", "index.html"))
+if not os.path.exists(BESTAND):
+    print("Bestand niet gevonden: " + BESTAND); raise SystemExit(2)
 VOID = {'br','img','input','hr','meta','link','area','base','col','embed','source','track','wbr'}
 
 def jsxControle(code):

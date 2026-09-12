@@ -105,7 +105,7 @@ create table if not exists public.persoonlijk (
 create table if not exists public.abonnementen (
   club_id    uuid primary key references public.clubs(id) on delete cascade,
   pakket     text not null default 'free'
-             check (pakket in ('free', 'basic', 'pro', 'max')),
+             check (pakket in ('free', 'coach', 'club')),
   geldig_tot date,
   notitie    text
 );
@@ -171,6 +171,29 @@ returns boolean language sql stable security definer set search_path = public as
   )
 $$;
 
+-- Ben ik eigenaar van deze club? Apart van mag_schrijven omdat een
+-- trainer wel gegevens mag wijzigen maar geen leden mag toevoegen:
+-- wie leden mag toevoegen, mag namelijk ook rollen uitdelen.
+--
+-- Deze functie moet bestaan. De regels op leden hieronder mogen niet
+-- zelf in leden kijken met een subquery: Postgres past dan bij het
+-- controleren van de regel de regel opnieuw toe, en stopt met
+-- "infinite recursion detected in policy for relation leden". Dat is
+-- hier maanden onopgemerkt gebleven omdat de app nooit in deze tabel
+-- schrijft. security definer verbreekt die kring: binnen de functie
+-- gelden de regels op leden niet.
+create or replace function public.is_eigenaar(doel uuid)
+returns boolean language sql stable security definer set search_path = public as $$
+  select exists (
+    select 1 from public.leden
+    where gebruiker_id = auth.uid()
+      and club_id = doel
+      and rol = 'eigenaar'
+  )
+$$;
+
+grant execute on function public.is_eigenaar(uuid) to authenticated;
+
 -- ── Clubs ────────────────────────────────────────────────────
 drop policy if exists clubs_lezen on public.clubs;
 create policy clubs_lezen on public.clubs for select
@@ -191,27 +214,29 @@ drop policy if exists leden_lezen on public.leden;
 create policy leden_lezen on public.leden for select
   using (gebruiker_id = auth.uid() or club_id in (select public.mijn_clubs()));
 
--- Jezelf toevoegen mag alleen bij het oprichten van een club; iemand
--- anders toevoegen mag alleen de eigenaar.
+-- Toevoegen mag alleen de eigenaar van diezelfde club.
+--
+-- Er stond hier eerder ook "of je voegt jezelf toe". Dat klinkt
+-- onschuldig maar is het niet: bij een insert kiest de indiener zelf
+-- zowel het club_id als de rol. Wie dat mag, kan zichzelf tot eigenaar
+-- van zijn eigen club promoveren, en wie het club_id van een vreemde
+-- club kent (dat staat in de browser van elk lid) kan zichzelf daar
+-- naar binnen schrijven. Die tak is dus met opzet weg.
+--
+-- Er gaat niets verloren: bij het oprichten van een club voegt
+-- nieuwe_club() je als eigenaar toe, en die functie is security
+-- definer en gaat sowieso langs deze regel heen.
 drop policy if exists leden_toevoegen on public.leden;
 create policy leden_toevoegen on public.leden for insert
-  with check (
-    gebruiker_id = auth.uid()
-    or exists (select 1 from public.leden l
-               where l.club_id = leden.club_id
-                 and l.gebruiker_id = auth.uid()
-                 and l.rol = 'eigenaar')
-  );
+  with check (public.is_eigenaar(club_id));
 
+-- Bij weghalen blijft de zelf-tak wél staan, en dat verschil met de
+-- regel hierboven is bedoeld: jezelf uit een club terugtrekken is
+-- legitiem en levert je geen enkel recht op dat je nog niet had.
+-- Iemand anders eruit zetten mag alleen de eigenaar.
 drop policy if exists leden_weghalen on public.leden;
 create policy leden_weghalen on public.leden for delete
-  using (
-    gebruiker_id = auth.uid()
-    or exists (select 1 from public.leden l
-               where l.club_id = leden.club_id
-                 and l.gebruiker_id = auth.uid()
-                 and l.rol = 'eigenaar')
-  );
+  using (gebruiker_id = auth.uid() or public.is_eigenaar(club_id));
 
 -- ── Teams ────────────────────────────────────────────────────
 drop policy if exists teams_lezen on public.teams;

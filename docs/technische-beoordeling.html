@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>TEAMTAKKIE — Technische beoordeling</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bitter:wght@500;700&family=Source+Sans+3:ital,wght@0,400;0,600;1,400&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+  :root{
+    --grond:#f3f5f8; --vlak:#ffffff; --inkt:#111722; --zacht:#5b6577; --lijn:#d6dce6;
+    --blauw:#004aad; --blauw-vlak:#e4ecf9;
+    --groen:#1c6b3f; --groen-vlak:#e2f2e8;
+    --oker:#a2660c; --oker-vlak:#f8eeda;
+    --rood:#96242a; --rood-vlak:#f9e6e6;
+    --dot-aan:#004aad; --dot-uit:#c9d2e0;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --grond:#0d1117; --vlak:#151b24; --inkt:#e6eaf1; --zacht:#96a1b3; --lijn:#28313f;
+      --blauw:#7aaaff; --blauw-vlak:#16233a;
+      --groen:#63c48d; --groen-vlak:#12291d;
+      --oker:#e0a544; --oker-vlak:#2a2114;
+      --rood:#e58b8b; --rood-vlak:#2c1719;
+      --dot-aan:#7aaaff; --dot-uit:#2f3a4a;
+    }
+  }
+  :root[data-theme="dark"]{
+    --grond:#0d1117; --vlak:#151b24; --inkt:#e6eaf1; --zacht:#96a1b3; --lijn:#28313f;
+    --blauw:#7aaaff; --blauw-vlak:#16233a; --groen:#63c48d; --groen-vlak:#12291d;
+    --oker:#e0a544; --oker-vlak:#2a2114; --rood:#e58b8b; --rood-vlak:#2c1719;
+    --dot-aan:#7aaaff; --dot-uit:#2f3a4a;
+  }
+
+  *{box-sizing:border-box}
+  body{margin:0; background:var(--grond); color:var(--inkt);
+       font:400 16.5px/1.65 "Source Sans 3","Helvetica Neue",Arial,sans-serif;
+       -webkit-font-smoothing:antialiased}
+  .wrap{max-width:860px; margin:0 auto; padding-block:clamp(28px,5vw,56px);
+        padding-left:20px; padding-right:20px}
+
+  h1,h2,h3{font-family:Bitter,Georgia,serif; text-wrap:balance; margin:0}
+  h1{font-size:clamp(28px,4.4vw,40px); font-weight:700; letter-spacing:-.015em; line-height:1.14}
+  h2{font-size:clamp(20px,2.9vw,26px); font-weight:700; letter-spacing:-.01em}
+  h3{font-size:17px; font-weight:700}
+  p{margin:0; max-width:66ch}
+  ul{margin:0; padding-left:1.15em; max-width:66ch}
+  li{margin-bottom:.4em}
+  code{font-family:"IBM Plex Mono",ui-monospace,monospace; font-size:.87em;
+       background:var(--blauw-vlak); color:var(--blauw); padding:1px 5px; border-radius:4px}
+  em{color:var(--zacht)}
+
+  .eyebrow{font:500 11.5px/1 "IBM Plex Mono",monospace; letter-spacing:.16em;
+           text-transform:uppercase; color:var(--zacht)}
+
+  header{display:flex; flex-direction:column; gap:14px; padding-bottom:24px;
+         border-bottom:2px solid var(--inkt)}
+  .meta{display:flex; flex-wrap:wrap; gap:5px 18px;
+        font:400 13px/1.6 "IBM Plex Mono",monospace; color:var(--zacht)}
+
+  section{display:flex; flex-direction:column; gap:18px; padding-block:38px;
+          border-bottom:1px solid var(--lijn)}
+  section:last-of-type{border-bottom:0}
+
+  /* het oordeel vooraan */
+  .oordeel{background:var(--vlak); border:2px solid var(--inkt); border-radius:5px;
+           padding:22px 24px; display:flex; flex-direction:column; gap:14px}
+  .oordeel p{font-size:17.5px; max-width:64ch}
+  .oordeel .slot{font-weight:600}
+
+  /* scorekaart */
+  .scroll{overflow-x:auto; border:1px solid var(--lijn); border-radius:4px; background:var(--vlak)}
+  table{border-collapse:collapse; width:100%; font-size:15px; min-width:520px}
+  th,td{text-align:left; padding:10px 14px; border-bottom:1px solid var(--lijn); vertical-align:top}
+  th{font:600 11.5px/1.3 "IBM Plex Mono",monospace; letter-spacing:.06em;
+     text-transform:uppercase; color:var(--zacht); white-space:nowrap}
+  tbody tr:last-child td{border-bottom:0}
+  tr.zwaar td{background:var(--rood-vlak)}
+  tr.zwaar td:first-child{font-weight:600}
+
+  .meter{display:inline-flex; gap:4px; align-items:center; white-space:nowrap}
+  .meter i{width:9px; height:9px; border-radius:50%; background:var(--dot-uit); display:block}
+  .meter i.aan{background:var(--dot-aan)}
+  .meter.slecht i.aan{background:var(--rood)}
+  .meter.matig i.aan{background:var(--oker)}
+  .meter.goed i.aan{background:var(--groen)}
+
+  /* blokken */
+  .blok{border-left:3px solid var(--lijn); padding:2px 0 2px 18px;
+        display:flex; flex-direction:column; gap:8px}
+  .blok.rood{border-color:var(--rood)}
+  .blok.rood h3{color:var(--rood)}
+  .blok.groen{border-color:var(--groen)}
+  .blok.groen h3{color:var(--groen)}
+
+  blockquote{margin:0; padding:14px 18px; background:var(--vlak);
+             border:1px solid var(--lijn); border-radius:4px;
+             font-style:italic; color:var(--zacht); max-width:64ch}
+
+  .kern{background:var(--rood-vlak); border-radius:4px; padding:16px 18px;
+        display:flex; flex-direction:column; gap:8px}
+  .kern strong{color:var(--rood)}
+
+  pre{margin:0; background:var(--vlak); border:1px solid var(--lijn); border-radius:4px;
+      padding:14px 16px; overflow-x:auto; font-family:"IBM Plex Mono",monospace;
+      font-size:13.5px; line-height:1.6}
+
+  .weken{display:grid; gap:12px; grid-template-columns:1fr}
+  @media (min-width:640px){ .weken{grid-template-columns:1fr 1fr} }
+  .week{background:var(--vlak); border:1px solid var(--lijn); border-radius:4px;
+        padding:14px 16px; display:flex; flex-direction:column; gap:5px}
+  .week b{font-family:"IBM Plex Mono",monospace; font-size:11.5px; letter-spacing:.08em;
+          text-transform:uppercase; color:var(--blauw)}
+  .week p{font-size:14.5px}
+
+  .slotsom td:first-child{width:44%}
+  footer{padding-top:28px; font-size:14px; color:var(--zacht)}
+  @media print{ body{background:#fff} section{break-inside:avoid} }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <span class="eyebrow">Technische beoordeling · vertrouwelijk</span>
+  <h1>TEAMTAKKIE</h1>
+  <div class="meta">
+    <span>Peildatum 10 september 2026 · versie V34 · commit 5044b75</span>
+    <span>Basis: online/index.html (33.781 regels), het Supabase-schema, de productiedatabase en de back-up van vandaag</span>
+    <span>Alles hieronder is gemeten, niet ingeschat</span>
+  </div>
+</header>
+
+<section>
+  <h2>Het oordeel</h2>
+  <div class="oordeel">
+    <p>Dit is een <strong>sterk product met een zwak fundament</strong>. De functionaliteit is breder en beter doordacht dan bij de meeste startende SaaS-producten die wij zien, en het domeinbegrip is uitzonderlijk — dit is duidelijk gebouwd door iemand die zelf langs de lijn staat.</p>
+    <p>Maar het is nog geen commercieel softwareproduct. Twee dingen staan daaraan in de weg, en ze zijn allebei fundamenteel: <strong>je verkoopt abonnementen voor functionaliteit die de software niet afschermt, en je kunt van geen enkele versie aantonen dat hij werkt.</strong></p>
+    <p>Alles daaronder — één bestand van 33.000 regels, geen bouwstap, geen typen — is vervelend maar oplosbaar. Die twee zijn dat op dit moment niet.</p>
+    <p class="slot">Zou deze codebase bij ons langs due diligence komen voor een overname of investering, dan zou het advies zijn: niet afwijzen, wel eerst zes weken herstellen.</p>
+  </div>
+</section>
+
+<section>
+  <h2>Scorekaart</h2>
+  <div class="scroll">
+  <table>
+    <thead><tr><th>Onderdeel</th><th>Score</th><th>Kort</th></tr></thead>
+    <tbody>
+      <tr><td>Domeinbegrip</td><td><span class="meter goed"><i class="aan"></i><i class="aan"></i><i class="aan"></i><i class="aan"></i><i class="aan"></i></span></td><td>uitzonderlijk; het beste aan dit project</td></tr>
+      <tr><td>Functionaliteit</td><td><span class="meter goed"><i class="aan"></i><i class="aan"></i><i class="aan"></i><i class="aan"></i><i></i></span></td><td>breed, af, en werkt</td></tr>
+      <tr><td>Beveiliging — opzet</td><td><span class="meter goed"><i class="aan"></i><i class="aan"></i><i class="aan"></i><i class="aan"></i><i></i></span></td><td>RLS is goed doordacht</td></tr>
+      <tr><td>Documentatie in de code</td><td><span class="meter goed"><i class="aan"></i><i class="aan"></i><i class="aan"></i><i class="aan"></i><i></i></span></td><td>zeldzaam goed commentaar</td></tr>
+      <tr><td>Beveiliging — uitvoering</td><td><span class="meter matig"><i class="aan"></i><i class="aan"></i><i></i><i></i><i></i></span></td><td>één gat open, één policy stuk</td></tr>
+      <tr><td>Datamodel</td><td><span class="meter matig"><i class="aan"></i><i class="aan"></i><i></i><i></i><i></i></span></td><td>alles in JSON; niets afdwingbaar</td></tr>
+      <tr><td>Architectuur</td><td><span class="meter matig"><i class="aan"></i><i class="aan"></i><i></i><i></i><i></i></span></td><td>één bestand, geen bouwstap</td></tr>
+      <tr><td>Onderhoudbaarheid</td><td><span class="meter matig"><i class="aan"></i><i class="aan"></i><i></i><i></i><i></i></span></td><td>draagbaar door het commentaar, niet door de structuur</td></tr>
+      <tr><td>Operatie en uitrol</td><td><span class="meter matig"><i class="aan"></i><i class="aan"></i><i></i><i></i><i></i></span></td><td>handmatig, geen foutrapportage</td></tr>
+      <tr><td>Privacy en AVG</td><td><span class="meter matig"><i class="aan"></i><i class="aan"></i><i></i><i></i><i></i></span></td><td>goede regiokeuze, verder niets geregeld</td></tr>
+      <tr class="zwaar"><td>Betrouwbaarheid</td><td><span class="meter slecht"><i class="aan"></i><i></i><i></i><i></i><i></i></span></td><td>geen reproduceerbare verificatie</td></tr>
+      <tr class="zwaar"><td>Commerciële gereedheid</td><td><span class="meter slecht"><i class="aan"></i><i></i><i></i><i></i><i></i></span></td><td>het abonnement schermt niets af</td></tr>
+    </tbody>
+  </table>
+  </div>
+</section>
+
+<section>
+  <h2>Wat wij als sterk beoordelen</h2>
+  <p>Dit is geen beleefdheid vooraf. Deze punten zijn zeldzaam en ze zijn geld waard.</p>
+
+  <div class="blok groen">
+    <h3>Het domeinbegrip is het beste aan dit project</h3>
+    <p>De aanwezigheidsstatussen zijn het duidelijkste voorbeeld. Er is een aparte status <code>uitgeleend</code>, met in het commentaar:</p>
+    <blockquote>Tommy speelt zaterdag met de JO19-1. Hij is er dus niet bij ons — maar hij is wél aan het voetballen voor de club, en dat is precies het omgekeerde van wat "afwezig" betekent. Wie dit als afwezig wegschrijft, straft een speler voor iets waar hij om gevraagd is.</blockquote>
+    <p>En bij langdurige blessures vallen spelers uit teller én noemer, zodat een revalidant het opkomstcijfer van de hele avond niet drukt. Dat soort onderscheid bedenkt geen ontwikkelaar achter een bureau. Dit is de moeilijkste laag om in te halen en die heb je al.</p>
+  </div>
+
+  <div class="blok groen">
+    <h3>Het beveiligingsontwerp klopt conceptueel</h3>
+    <p>De opzet met <code>mijn_clubs()</code> en <code>mag_schrijven()</code> als <code>security definer</code> functies, zodat elke policy dezelfde vraag stelt en er nooit twee antwoorden kunnen ontstaan, is precies zoals het hoort. <code>abonnementen</code> heeft bewust géén schrijfregel, zodat niemand zijn eigen pakket kan ophogen — ook niet met een handgemaakte API-aanroep. Dat is een bewuste, juiste keuze die veel teams pas na een incident maken.</p>
+    <p>En het werkt: de tenantisolatie tussen clubs is echt. Wij hebben het getest.</p>
+  </div>
+
+  <div class="blok groen">
+    <h3>Het commentaar is beter dan bij de meeste betaalde teams</h3>
+    <p>Niet "wat" maar "waarom", met de afweging erbij. Bij het datamodel staat waarom er één blob-tabel is in plaats van een tabel per entiteit. Bij een nieuw seizoen staat waarom de selectie wél meegaat en de wedstrijden niet. Dat commentaar overleeft elke refactor en is de reden dat dit bestand ondanks 33.000 regels leesbaar is.</p>
+    <p><strong>Behoud die gewoonte.</strong> Het is op dit moment je enige overdrachtsdocumentatie, en het is verrassend goede.</p>
+  </div>
+</section>
+
+<section>
+  <h2>Wat een go-live blokkeert</h2>
+
+  <div class="blok rood">
+    <h3>1 · Het abonnement schermt niets af — dit is het duurste probleem</h3>
+    <p><code>magPagina()</code> bepaalt of een gebruiker bij een module mag. Die functie komt in het hele bestand van 33.781 regels <strong>precies één keer voor: op de regel waar hij gedefinieerd wordt.</strong> Hij wordt nergens aangeroepen. Trainingen, agenda, statistieken, live-analyse en clubhuis staan voor iedereen open, ongeacht pakket.</p>
+    <p>Daarbovenop begint <code>pakketNu()</code> met <code>var id = "max"</code>. Zonder licentiegegevens in de browser is elke gebruiker Max.</p>
+    <p>Commercieel betekent dit: <strong>Free-gebruikers krijgen vandaag alles.</strong> Je marketingsite verkoopt Trainer voor € 9,99 met drie teams, en Team voor € 9,99 met drie beheerders — beide functies bestaan technisch niet, en het enige wat wél begrensd is (het aantal teams) wordt in de browser gecontroleerd en is met de ontwikkelaarsconsole in tien seconden te omzeilen.</p>
+    <p>Je kunt hier vandaag geen geld voor vragen. Niet omdat het onethisch zou zijn, maar omdat je eerste klant die het doorheeft gelijk heeft.</p>
+  </div>
+
+  <div class="blok rood">
+    <h3>2 · Je kunt van geen enkele versie aantonen dat hij werkt</h3>
+    <p>De release notes van V34 melden <em>"118 controles op de veldvormen, 13 opzettelijke fouten teruggezet, alle 13 gevangen. Alle 28 testbestanden groen."</em> Die 28 testbestanden staan niet in de repo, niet in de projectmap, nergens. Het controlescript dat er wél is (<code>legacy/controle/check.py</code>) wijst naar <code>fc-harlingen-app.html</code> — het oude prototype van 922 KB, niet naar de app die je uitrolt. Draai je hem vandaag, dan controleert hij het verkeerde bestand en meldt hij dat alles in orde is.</p>
+    <p>Voor een buitenstaander leest dat als documentatie die verificatie claimt die niemand kan herhalen. Dat is het soort bevinding dat bij due diligence een streep zet — niet omdat er gelogen is, maar omdat het niet controleerbaar is.</p>
+    <p><strong>Het gevolg was vandaag zichtbaar.</strong> Wij vonden een fout waardoor dezelfde trainingen in twee seizoenen tegelijk stonden — vijf van de zes met exact dezelfde id's — die zichzelf bij elke synchronisatie herhaalde en elk nieuw seizoen opnieuw zou vullen. Die stond weken in productie zonder dat iets alarm sloeg.</p>
+  </div>
+
+  <div class="blok rood">
+    <h3>3 · Twee beveiligingsbevindingen, waarvan één open</h3>
+    <p><code>clubs_maken</code> heeft <code>with check (true)</code>. Een anonieme bezoeker met de publieke sleutel uit <code>index.html</code> kan onbeperkt rijen in <code>public.clubs</code> schrijven. Wij hebben dat op een kopie van je schema uitgevoerd en het lukte. Geen datalek — de leesregels houden stand — maar wel een gevulde database en een gevulde rekening.</p>
+    <p>Ernstiger als patroon: <code>leden_toevoegen</code> en <code>leden_weghalen</code> bevatten allebei een subquery op hun eigen tabel, waardoor Postgres weigert met:</p>
+    <pre>ERROR: infinite recursion detected in policy for relation "leden"</pre>
+    <p><strong>Elke insert en delete op <code>leden</code> is dus kapot</strong> — de aanval én het normale gebruik. Niemand heeft dat gemerkt omdat de app nooit in die tabel schrijft. Het uitnodigingssysteem dat je in fase H wilt bouwen zou hier onherroepelijk op stuklopen.</p>
+    <p>Dat is de aard van de bevinding: niet dat er een gat is, maar dat er maanden een kapotte policy in productie stond die niemand kon zien.</p>
+  </div>
+
+  <div class="blok rood">
+    <h3>4 · Het datamodel maakt handhaving onmogelijk</h3>
+    <p>Zeven tabellen, en alle domeingegevens — spelers, wedstrijden, trainingen, aanwezigheid — zitten als JSON-blob in één kolom. De database weet niet wat een speler is. Dat heeft twee harde gevolgen:</p>
+    <ul>
+      <li><strong>Wat je in een blob stopt, kun je niet afdwingen.</strong> Een limiet op het aantal spelers, op opslag, op exports of op statistieken kan alleen in de browser worden gecontroleerd, en dat is geen controle. Verkoop geen limiet die je niet kunt handhaven.</li>
+      <li><strong>Er is geen referentiële integriteit op je domein.</strong> Gooi een speler weg en zijn doelpunten, wissels en aanwezigheidsregels blijven staan. Geen enkele <code>foreign key</code> bewaakt dat.</li>
+    </ul>
+    <p>Verdedigbaar voor een app die uit een localStorage-prototype komt. Niet houdbaar voor een product met betalende klanten en meerdere beheerders.</p>
+  </div>
+
+  <div class="blok rood">
+    <h3>5 · In-browser vertaling van 30.870 regels</h3>
+    <p><code>babel-standalone</code> vertaalt alle JSX in de browser van élke bezoeker, bij elk koud bezoek. Babel raadt dat voor productie zelf af. Op een telefoon langs de lijn met 4G is het merkbaar, en het is de enige plek waar één ingreep — vooraf vertalen bij het uitrollen — grote winst oplevert zonder één regel code te veranderen.</p>
+  </div>
+
+  <div class="blok rood">
+    <h3>6 · Operatie: er is geen</h3>
+    <p>Handmatig een map naar Netlify slepen. Geen foutrapportage: je hoort het niet als een gebruiker een witte pagina ziet. Geen bewaking. Supabase op het gratis plan, dat een project na een week inactiviteit pauzeert. Back-ups zijn handwerk en de laatste staat als losse CSV's in je projectmap.</p>
+    <p>Bij vier clubs merk je alles zelf. Bij vijftig niet.</p>
+  </div>
+</section>
+
+<section>
+  <h2>Wat dit commercieel betekent</h2>
+  <div class="scroll">
+  <table>
+    <thead><tr><th>Risico</th><th>Kans</th><th>Gevolg</th></tr></thead>
+    <tbody>
+      <tr><td>Klant ontdekt dat Free alles kan</td><td>hoog</td><td>omzet die er nooit komt; terugbetaling</td></tr>
+      <tr><td>Klant koopt Trainer voor 3 teams, krijgt er 1</td><td>hoog</td><td>terugbetaling en reputatie</td></tr>
+      <tr><td>Datacorruptie zoals de seizoenbug bij een klant</td><td>middel</td><td>verlies van een heel seizoen; onherstelbaar vertrouwen</td></tr>
+      <tr><td>Klacht over gegevens van minderjarigen</td><td>laag</td><td>AVG; geen verwerkersovereenkomst, geen bewaartermijn</td></tr>
+      <tr><td><code>clubs</code> volgeschreven door een geintje</td><td>laag</td><td>rekening en handmatig opruimen</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p>De eerste twee zijn geen risico maar zekerheid zodra je de eerste betalende klant hebt. Dat is de reden dat wij de entitlement-laag vóór alles zouden zetten.</p>
+</section>
+
+<section>
+  <h2>Wat wij zouden doen, in deze volgorde</h2>
+  <p>Zes weken, uitgaande van één ontwikkelaar met ondersteuning.</p>
+  <div class="weken">
+    <div class="week"><b>Week 1 · Vangnet</b><p>Tests in de repo, het controlescript op het juiste bestand, een gouden origineel met schermafdrukken van alle acht pagina's, en CI die rood wordt. Zonder dit is elke stap daarna gokken. Niet het leukste werk, wel het werk dat het meeste oplevert.</p></div>
+    <div class="week"><b>Week 1 · Fase A en de seizoenfix</b><p>Beide liggen klaar en getest. De seizoenbug staat nu in productie.</p></div>
+    <div class="week"><b>Week 2 · De bouwstap</b><p>Babel eruit, uitrol blijft hetzelfde, gedrag identiek en bewijsbaar via het gouden origineel. Meteen meetbare winst voor de gebruiker.</p></div>
+    <div class="week"><b>Week 3–4 · Entitlements</b><p>Centrale plancatalogus, <code>magPagina()</code> daadwerkelijk aanroepen, en wat server-side kan ook server-side afdwingen: aantal teams via een trigger, modules via een policy op <code>gegevens.sleutel</code> — want de sleutel ís een kolom, ook al is de inhoud dat niet. En de marketingsite gelijktrekken.</p></div>
+    <div class="week"><b>Week 5 · Multi-beheerder</b><p><code>team_leden</code>, rollen, uitnodigingen. Dit is wat je site al verkoopt.</p></div>
+    <div class="week"><b>Week 6 · Operatie</b><p>Foutrapportage, een uitrolprocedure die geen slepen is, automatische back-ups, en een betaald Supabase-plan.</p></div>
+  </div>
+  <p><strong>Daarna pas</strong> het opsplitsen in modules. Dat is onderhoud, geen bedrijfsrisico, en het kan tussen de functionele fasen door.</p>
+</section>
+
+<section>
+  <h2>Wat wij níét zouden doen</h2>
+  <ul>
+    <li><strong>Niet herschrijven.</strong> De verleiding om 33.000 regels opnieuw te beginnen in Next.js is voorspelbaar en het is de bekendste manier om een werkend product te verliezen. Het domeinbegrip in dit bestand is niet in een sprint na te bouwen.</li>
+    <li><strong>Het datamodel niet nu normaliseren.</strong> De juiste einddoelstelling, maar het raakt elke rij en elke regel berekening. Doe eerst de entitlements, de tests en de operatie. Normaliseer als je weet welke tabellen je echt nodig hebt.</li>
+    <li><strong>Niet alles tegelijk.</strong> Er liggen nu vier trajecten klaar: seizoenfix, fase A, de Engelse hernoeming en het professionaliseringsplan. Twee daarvan raken dezelfde functie. Volgorde is hier belangrijker dan snelheid.</li>
+  </ul>
+</section>
+
+<section>
+  <h2>Waar wij eerlijk over zijn</h2>
+  <p><strong>Dit is voor één persoon een indrukwekkende prestatie.</strong> 33.000 regels, een werkende synchronisatie met conflictafhandeling, een tekenbord, een 3D-sportpark en een live-analysemodule. De meeste eenmansprojecten die wij zien komen niet half zo ver.</p>
+  <div class="kern">
+    <p><strong>En precies dat is het risico.</strong> Alles hangt aan één persoon: de kennis, de verificatie, de accounts, de uitrol. Er is geen test die iemand anders kan draaien, geen document dat de architectuur uitlegt zonder jou erbij, en geen tweede paar ogen dat de recursiefout in <code>leden_toevoegen</code> had kunnen vangen.</p>
+    <p>De vraag is niet of de code goed genoeg is. De vraag is of het bedrijf verder kan als jij twee weken ziek bent. Vandaag is het antwoord nee, en dat is met zes weken werk te veranderen.</p>
+  </div>
+</section>
+
+<section>
+  <h2>Samengevat</h2>
+  <div class="scroll">
+  <table class="slotsom">
+    <tbody>
+      <tr><td>Als prototype</td><td>ruim boven gemiddeld</td></tr>
+      <tr><td>Als product voor gebruikers</td><td>werkt, met één datacorruptiefout die nu opgelost moet</td></tr>
+      <tr><td>Als commercieel product</td><td>nog niet — het abonnement schermt niets af</td></tr>
+      <tr><td>Als overdraagbare codebase</td><td>nog niet — geen reproduceerbare verificatie</td></tr>
+      <tr><td>Als investering waard om door te zetten</td><td><strong>ja, zonder aarzeling</strong></td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p>Het fundament onder dit product is het domeinbegrip, en dat is het deel dat je niet kunt kopen. De rest is techniek, en techniek is planbaar.</p>
+</section>
+
+<footer>
+  Opgesteld op basis van <code>online/index.html</code> (V34), <code>server/01-schema.sql</code>, <code>server/03-beheer.sql</code>, de productiedatabase en de back-up van 10 september 2026. Bevindingen zijn nagemeten op een kopie van het schema; er is niets op productie uitgevoerd.
+</footer>
+
+</div>
+</body>
+</html>

@@ -1,0 +1,236 @@
+<html lang="nl" data-thema="licht">
+  <div class="app-schil">
+    <aside class="zijbalk">
+      <button class="zijbalk-merk zijbalk-team" title="Van team wisselen">
+        <img alt="VV Verzonnen Kamp" class="logo-img" src="data:image/png#28734-10ebnl0">
+        <div class="header-tekst">
+          <h1>
+            "VV Verzonnen Kamp"
+          <div class="header-subtitel">
+            "JO19-2"
+            <i class="fa-solid fa-chevron-down header-pijl">
+      <nav class="zijbalk-nav">
+        <button class="zij-item">
+          <span class="zij-icoon">
+            <i class="fa-solid fa-house">
+          <span>
+            "Dashboard"
+        <button class="zij-item">
+          <span class="zij-icoon">
+            <i class="fa-solid fa-futbol">
+          <span>
+            "Wedstrijden"
+        <button class="zij-item">
+          <span class="zij-icoon">
+            <i class="fa-solid fa-person-running">
+          <span>
+            "Trainingen"
+        <button aria-current="page" class="zij-item actief">
+          <span class="zij-icoon">
+            <i class="fa-solid fa-users">
+          <span>
+            "Selectie"
+        <button class="zij-item">
+          <span class="zij-icoon">
+            <i class="fa-solid fa-calendar-days">
+          <span>
+            "Agenda"
+        <div class="zijbalk-kop">
+          "Analyse"
+        <button class="zij-item">
+          <span class="zij-icoon">
+            <i class="fa-solid fa-chart-bar">
+          <span>
+            "Statistieken"
+        <button class="zij-item">
+          <span class="zij-icoon">
+            <i class="fa-solid fa-stopwatch">
+          <span>
+            "Live analyse"
+        <div class="zijbalk-kop">
+          "Extra"
+        <button class="zij-item">
+          <span class="zij-icoon">
+            <i class="fa-solid fa-map">
+          <span>
+            "Clubhuis"
+      <div class="zijbalk-voet">
+        <button class="sync-lampje mislukt" title="Er staat iets klaar dat nog niet verstuurd is. Zodra er weer bereik is gaat het vanzelf.">
+          <i class="fa-solid fa-triangle-exclamation">
+          <span>
+            "Geen verbinding"
+        <button class="zij-item">
+          <span class="zij-icoon">
+            <i class="fa-solid fa-gear">
+          <span>
+            "Instellingen"
+        <div class="zij-ontwerp">
+          <span class="zij-ontwerp-studio">
+            "TEAMTAKKIE"
+          <span class="zij-ontwerp-naam">
+            "EVS production"
+    <header class="header">
+      <button class="header-logo header-team" title="Van team wisselen">
+        <img alt="VV Verzonnen Kamp" class="logo-img" src="data:image/png#28734-10ebnl0">
+        <div class="header-tekst">
+          <h1>
+            "VV Verzonnen Kamp"
+          <div class="header-subtitel">
+            "JO19-2 · TEAMTAKKIE"
+            <i class="fa-solid fa-chevron-down header-pijl">
+      <button aria-label="Instellingen" style="font-size: 20px; cursor: pointer; background: none; border-width: medium; border-style: none; border-color: currentcolor; border-image: none; color: inherit; padding: 6px 4px;">
+        <i class="fa-solid fa-gear">
+    <main class="inhoud">
+      <div>
+        <div class="pagina-slide">
+          <button class="back-knop">
+            <i class="fa-solid fa-arrow-left">
+            "Terug naar spelers"
+          <div class="profiel-banner">
+            <div class="profiel-foto">
+              <svg aria-hidden="true" height="100%" style="display: block; overflow: visible;" viewBox="0 0 64 64" width="100%">
+                <defs>
+                  <clippath id="pop82806-1-h">
+                    <rect height="20" width="38" x="13" y="5">
+                <path d="M32 41c12 0 21 9 22 24H10c1-15 10-24 22-24z" fill="#004aad">
+                <path d="M25.6 42.8L32 50.6l6.4-7.8-3-1.6h-6.8z" fill="#ffffff" opacity=".34">
+                <rect fill="#cbb29d" height="11" rx="4.7" width="9.4" x="27.3" y="31">
+                <circle cx="19" cy="26" fill="#f7d9c0" r="3.1">
+                <circle cx="45" cy="26" fill="#f7d9c0" r="3.1">
+                <circle cx="32" cy="24" fill="#f7d9c0" r="13">
+                <circle cx="27.2" cy="23" fill="#2b2118" r="1.6">
+                <circle cx="36.8" cy="23" fill="#2b2118" r="1.6">
+                <path d="M28.6 30.4c2 1.7 4.8 1.7 6.8 0" fill="none" stroke="#2b2118" stroke-linecap="round" stroke-opacity=".55" stroke-width="1.4">
+                <circle clip-path="url(#pop82806-1-h)" cx="32" cy="24.5" fill="#101010" r="13.6">
+            <div style="flex: 1 1 0%; min-width: 0px;">
+              <div class="profiel-naam">
+                "Joep Bramsloot"
+              <div class="profiel-sub">
+                <span style="margin-right: 6px;">
+                  "Keeper"
+                <span>
+                  "18"
+                  "jaar"
+            <div class="profiel-nr-badge">
+              "#"
+              "1"
+          <div class="tabs">
+            <button class="tab-knop">
+              <i class="fa-solid fa-id-card">
+              "Profiel"
+            <button class="tab-knop actief">
+              <i class="fa-solid fa-seedling">
+              "Ontwikkeling"
+          <div>
+            <div class="stat-raster">
+              <div class="stat-kaart primair">
+                <div class="stat-getal">
+                  "–"
+                <div class="stat-label">
+                  "Gemiddelde voortgang"
+              <div class="stat-kaart accent">
+                <div class="stat-getal">
+                  "0/0"
+                <div class="stat-label">
+                  "Doelen behaald"
+            <div class="tabs">
+              <button class="tab-knop actief">
+                <i class="fa-solid fa-chart-simple">
+                "Profiel"
+              <button class="tab-knop">
+                <i class="fa-solid fa-bullseye">
+                "Doelen"
+              <button class="tab-knop">
+                <i class="fa-solid fa-file-lines">
+                "Rapport"
+              <button class="tab-knop">
+                <i class="fa-solid fa-comments">
+                "Reviews"
+            <div>
+              <div class="kaart">
+                <div class="kaart-titel">
+                  <i class="fa-solid fa-lightbulb">
+                  "Wat opvalt"
+                <div class="inz-rij">
+                  <span class="inz-merk" style="background: var(--grijs-licht); color: var(--grijs-donker);">
+                    <i class="fa-solid fa-circle-info">
+                  <span class="inz-tekst">
+                    "Nog geen ontwikkeldoelen gesteld voor Joep."
+                <p style="font-size: 11px; color: var(--grijs-donker); font-weight: 400; margin-top: 10px; line-height: 1.5;">
+                  "Deze observaties komen automatisch uit je wedstrijden, trainingen, beoordelingen en doelen."
+              <div class="stat-raster">
+                <div class="stat-kaart primair">
+                  <div class="stat-getal">
+                    "0"
+                  <div class="stat-label">
+                    "Wedstrijden"
+                <div class="stat-kaart accent">
+                  <div class="stat-getal">
+                    "0"
+                  <div class="stat-label">
+                    "Minuten"
+              <div class="stat-mini-raster" style="grid-template-columns: repeat(4, 1fr);">
+                <div class="stat-mini">
+                  <div class="stat-mini-getal">
+                    "0"
+                  <div class="stat-mini-label">
+                    "Basis"
+                <div class="stat-mini">
+                  <div class="stat-mini-getal">
+                    "0"
+                  <div class="stat-mini-label">
+                    "Inval"
+                <div class="stat-mini">
+                  <div class="stat-mini-getal">
+                    "–"
+                  <div class="stat-mini-label">
+                    "Cijfer"
+                <div class="stat-mini">
+                  <div class="stat-mini-getal" style="color: var(--goud);">
+                    "0"
+                  <div class="stat-mini-label">
+                    "MOTM"
+              <div class="kaart" style="text-align: center; padding: 22px 16px;">
+                <div style="font-size: 26px; color: var(--grijs-donker); margin-bottom: 9px;">
+                  <i class="fa-solid fa-chart-simple">
+                <div style="font-size: 15px; font-weight: 700; font-family: "Helvetica Neue", Arial; margin-bottom: 5px;">
+                  "Nog geen vaardigheden"
+                <p style="font-size: 13px; color: var(--grijs-donker); font-weight: 400; line-height: 1.55;">
+                  "Vul ze in bij Bewerken. Dan verschijnt hier zijn eindcijfer, de zes categorieën en het profiel met de norm voor zijn positie."
+          <div style="display: flex; gap: 10px; margin-top: 4px;">
+            <button class="knop lijn" style="flex: 1 1 0%; justify-content: center;">
+              <i class="fa-solid fa-pen">
+              "Bewerken"
+            <button class="knop gevaar klein">
+              <i class="fa-solid fa-trash">
+    <nav class="bottom-nav">
+      <button class="nav-item">
+        <div class="nav-pip">
+        <span class="nav-icon">
+          <i class="fa-solid fa-house">
+        <span>
+          "Home"
+      <button class="nav-item">
+        <div class="nav-pip">
+        <span class="nav-icon">
+          <i class="fa-solid fa-futbol">
+        <span>
+          "Wedstrijden"
+      <button class="nav-item actief">
+        <div class="nav-pip">
+        <span class="nav-icon">
+          <i class="fa-solid fa-users">
+        <span>
+          "Selectie"
+      <button class="nav-item">
+        <div class="nav-pip">
+        <span class="nav-icon">
+          <i class="fa-solid fa-person-running">
+        <span>
+          "Training"
+      <button class="nav-item">
+        <div class="nav-pip">
+        <span class="nav-icon">
+          <i class="fa-solid fa-chart-bar">
+        <span>
+          "Stats"

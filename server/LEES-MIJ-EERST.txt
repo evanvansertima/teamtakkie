@@ -109,6 +109,22 @@ het HTML-bestand van de app openmaakt en aanpast komt er dus niet in:
 de server weigert hem gewoon.
 
 
+STAP 5B — DE REPARATIE VAN DE LEDENREGELS
+-----------------------------------------
+Draai daarna 04-leden-fix.sql, weer op dezelfde manier. Dat repareert
+twee regels uit stap 3 die vastliepen zodra je iemand aan een club
+wilde toevoegen of eruit wilde halen. Zonder deze stap kan het
+uitnodigen van een trainer nooit werken.
+
+Bovenaan dat bestand staat precies wat het doet en wat je daarna hoort
+te zien; onderaan staat hoe je het terugdraait. Er worden geen
+gegevens aangepast, alleen regels.
+
+Wil je zeker weten dat het klopt: plak daarna ook
+tests/leden-policy.test.sql uit de map tests. Die probeert zes dingen
+uit (waaronder twee die móéten mislukken) en ruimt zichzelf weer op.
+
+
 STAP 6 — JE PAKKET
 ------------------
 Nieuwe clubs beginnen op Free. Jezelf op Max zetten kan vanaf nu in de
@@ -120,6 +136,31 @@ Wat niet kan, is dat iemand zijn eigen pakket ophoogt. Er is geen
 enkele regel in de database die dat toestaat — ook niet met een eigen
 verzoek buiten de app om. Alleen een beheerder kan het, en beheerder
 word je alleen in de SQL Editor.
+
+
+STAP 7 — EEN SPELER ÉCHT WISSEN, EN EEN CLUB KUNNEN OPHEFFEN
+-----------------------------------------------------------
+Draai 08-bewaartermijn.sql, nadat 06-pakketten.sql is gedraaid. Twee
+dingen die je pas mist op het moment dat je ze nodig hebt:
+
+  · Een speler verwijderen in de app haalde hem maar uit één van de
+    vier lijsten die er van hem in de database staan (één per
+    seizoen). Naam, geboortedatum, telefoonnummer en een eventuele
+    blessurenotitie bleven dus gewoon staan. Vanaf nu is er een
+    functie wis_speler() die hem uit alle lijsten haalt en zijn naam
+    ook uit de wedstrijdanalyse wist. De doelpunten zelf blijven
+    staan, zonder naam — anders klopt de uitslag niet meer.
+  · Een vereniging opheffen deed niets, maar meldde wel "gelukt". Nu
+    kan de eigenaar het echt, en verdwijnen de teams en alle gegevens
+    van die vereniging mee. Dat is niet terug te draaien.
+
+Onderaan dat bestand staat een lijstje van lege verenigingen, zodat je
+de twee weesclubs van de verbindingstest kunt opruimen. Eerst kijken,
+dan pas weggooien; dat staat er in twee aparte stukken.
+
+Wil je zeker weten dat het klopt: plak daarna ook
+tests/bewaartermijn.test.sql. Die probeert twaalf dingen uit (waarvan
+er drie móéten mislukken) en ruimt zichzelf weer op.
 
 
 WAT JE MOET WETEN

@@ -1,0 +1,10 @@
+# Hier komen React, Babel, jsPDF, Three.js, Font Awesome en de
+# lettertypen te staan, precies zoals ze van het CDN kwamen. Eén keer
+# opgehaald, daarna nooit meer — zo is de tweede opname niet van
+# internet afhankelijk en kan de app niet stilletjes op een nieuwe
+# versie van een bibliotheek komen te staan.
+#
+# Niet in git: het is andermans code, het is een paar megabyte, en het
+# is bij verlies in één run weer opgehaald. Weggooien mag altijd.
+*
+!.gitignore
