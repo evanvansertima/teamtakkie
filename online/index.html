@@ -1524,6 +1524,19 @@
       color:#fff; font-size:10px; font-weight:800; letter-spacing:.4px;
       padding:3px 9px; border-radius:7px; }
     .pakket-kop { display:flex; flex-direction:column; }
+    /* Het bedrag in de kleur van gewone tekst en niet in een accentkleur:
+       een prijs is een feit, geen aanbieding. Zwart op wit is bovendien
+       het enige dat op een telefoon in de volle zon gegarandeerd
+       leesbaar blijft. */
+    .pakket-prijs { display:flex; flex-direction:column; gap:2px; }
+    .pakket-prijs-rij { display:flex; align-items:baseline; gap:6px; flex-wrap:wrap; }
+    .pakket-prijs-bedrag { font-size:24px; font-weight:800; letter-spacing:-.6px;
+      color:var(--tekst); font-family:'Helvetica Neue',Arial,sans-serif; }
+    .pakket-prijs-per { font-size:12px; font-weight:700; color:var(--grijs-donker); }
+    /* Wel kleiner, niet vager: geen opacity en geen lichter grijs dan de
+       rest van de kaart al gebruikt. */
+    .pakket-prijs-jaar { font-size:11.5px; font-weight:600; line-height:1.5;
+      color:var(--grijs-donker); }
     .pakket-teams { font-size:12.5px; font-weight:700; color:var(--grijs-donker); }
     .pakket-lijst { list-style:none; margin:0; padding:0; display:flex;
       flex-direction:column; gap:5px; flex:1; }
@@ -3577,6 +3590,26 @@ const PAKKETTEN = [
   {id:"club",  naam:"Club",  teams:Infinity,
    modules:["basis", "trainingen", "ontwikkeling", "analyse", "clubhuis"]}
 ];
+/* Wat een pakket kost. Dit is de enige plek in de app waar een bedrag
+   staat, en de bedragen komen uit docs/pakketten-besluit.md (het
+   besluit van 11 september). Wijkt dit daarvan af, dan is het besluit
+   leidend en dit fout.
+
+   De jaarprijs staat er voluit bij en wordt niet uitgerekend uit de
+   maandprijs. Dat is met opzet: twee maanden korting is een besluit
+   en geen som, en wie het volgend jaar anders wil doen hoort dat hier
+   te kunnen opschrijven zonder eerst een formule te moeten begrijpen.
+
+   Het nadeel dat hier bewust bij is genomen: een prijs die in het
+   bestand staat, verandert alleen mee met een nieuwe versie van de
+   app. Een prijswijziging is dus een uitrol, geen knop op de server.
+   Dat is de prijs voor een prijskaart die overal hetzelfde laat zien,
+   ook op een telefoon zonder verbinding langs de lijn. */
+const PAKKET_PRIJS = {
+  free:  {maand:"Gratis",  jaar:null},
+  coach: {maand:"\u20ac 6,99",  jaar:"\u20ac 69,90"},
+  club:  {maand:"\u20ac 49,00", jaar:"\u20ac 490,00"}
+};
 /* Welk scherm hoort bij welke module. Staat een scherm hier niet in,
    dan hoort het bij de basis en mag iedereen erbij.
 
@@ -5266,6 +5299,31 @@ const laadSpelers = function() {
 const laadWedstrijden = () => laadJson(WEDSTRIJDEN_KEY);
 const TRAININGEN_KEY = "fch_trainingen_v1";
 const laadTrainingen = () => laadJson(TRAININGEN_KEY);
+
+/* De trainingen die je in dít pakket te zien krijgt. Zit de module
+   er niet in, dan komt daar een lege lijst uit.
+
+   Let op wat hier níét gebeurt: er wordt niets gewist, niets
+   opgeslagen en niets opgeruimd. De trainingen blijven gewoon in
+   localStorage staan en komen ongeschonden terug zodra iemand weer
+   Coach of Club heeft. Dit is een weergavefilter, geen opruimactie —
+   wie een maand overslaat mag daar niet zijn seizoen door kwijtraken.
+
+   En waarom dan verbergen in plaats van een slotje ernaast, zoals bij
+   de schermen zelf? Omdat je met een slotje één maand Coach kunt
+   afnemen, daarin alle trainingen van het seizoen kunt vastleggen, en
+   daarna op Free vrolijk in diezelfde trainingen kunt doorwerken. Bij
+   een scherm is het slotje juist goed: dat laat zien dát trainingen
+   bestaan, zonder één training prijs te geven. Bij de gegevens erin
+   niet.
+
+   Gebruik dit overal waar trainingen alleen getóónd worden. Alles wat
+   met de gegevens zélf omgaat — opslaan, de back-up, het seizoen
+   omzetten — blijft met de volledige lijst werken, want daar horen
+   álle trainingen in, ook die nu niet in beeld komen. */
+function zichtbareTrainingen() {
+  return magModule("trainingen") ? laadTrainingen() : [];
+}
 
 /* Datum als 18-08-2026 */
 function datumCijfers(d) {
@@ -23463,7 +23521,11 @@ function SpelersLijst({ spelers, onSelecteer, onNieuw }) {
   const [alleenNietFit,setAlleenNietFit]=useState(false);
   const [weergave,setWeergave]=useState("lijst");
   const alleWedstrijden = laadWedstrijden();
-  const alleTrainingen = laadTrainingen();
+  /* Zonder de module trainingen komt hier een lege lijst uit, en
+     verdwijnen de inzichten over trainingsopkomst vanzelf uit de
+     spelerskaarten. De rest van de kaart — cijfers, doelpunten,
+     beschikbaarheid — blijft staan. */
+  const alleTrainingen = zichtbareTrainingen();
   const alleReviews = laadReviews();
   const posities=["Alle","Keeper","Verdediger","Middenvelder","Aanvaller"];
   const gefilterd=spelers
@@ -24520,7 +24582,7 @@ function waKnopSVG() {
 function Dashboard({ navigeer }) {
   const spelers      = laadSpelers();
   const wedstrijden  = laadWedstrijden();
-  const trainingen   = laadTrainingen();
+  const trainingen   = zichtbareTrainingen();
   const activiteiten = laadActiviteiten();
   const [deelOpen, setDeelOpen] = useState(false);
 
@@ -24592,7 +24654,11 @@ function Dashboard({ navigeer }) {
   /* ── Wie is er niet inzetbaar ── */
   const uitDeRoulatie = spelers.filter(function(s){ return s.beschikbaar && s.beschikbaar!=="fit"; });
 
-  /* ── Opkomst op de training ── */
+  /* ── Opkomst op de training ──
+     Rekent over `trainingen` hierboven, dus zonder de module blijft
+     metOpkomst leeg, blijft opkomst null en valt het hele blokje
+     hieronder weg. Een percentage is óók een trainingsgegeven: het
+     vertelt hoeveel er getraind is en hoe trouw de selectie komt. */
   const metOpkomst = trainingen.filter(function(t){ return (t.aanwezigheid||[]).length; });
   var opkomst = null;
   if (metOpkomst.length) {
@@ -24709,10 +24775,14 @@ function Dashboard({ navigeer }) {
                   {k.tijd ? k.tijd+(k.sub?" · "+k.sub:"") : (k.sub||"hele dag")}
                 </span>
               </span>
-              {/* Een rij kan naar een scherm wijzen dat niet in je
-                  pakket zit — bijvoorbeeld een training die nog van
-                  vroeger in dit apparaat staat. De rij blijft staan,
-                  de tik geeft hetzelfde antwoord als overal. */}
+              {/* Trainingen komen hier niet meer in terecht als ze niet
+                  in je pakket zitten: deze lijst leest zichtbareTrainingen()
+                  en die geeft er dan geen. Wedstrijden, agenda en
+                  activiteiten horen bij de basis, dus in de praktijk staat
+                  dit slotje er nooit. Het blijft staan als vangnet: komt er
+                  ooit een rij bij die naar een afgeschermd scherm wijst,
+                  dan zegt hij dat hier vanzelf, in plaats van stilletjes
+                  een tik te weigeren. */}
               {!magPagina(k.pagina) && <SlotJe />}
               <span className="db-agenda-tel">{dagenTot(k.datum)}</span>
             </div>
@@ -24825,7 +24895,7 @@ function Dashboard({ navigeer }) {
           )}
           {opkomst!==null && (
             <div className="db-blink" onClick={function(){ navigeer("trainingen"); }}>
-              <div className="db-blink-kop">Trainingsopkomst{!magPagina("trainingen") && <SlotJe />}</div>
+              <div className="db-blink-kop">Trainingsopkomst</div>
               <div className="db-blink-rij">
                 <span className="db-blink-cirkel"><i className="fa-solid fa-person-running"/></span>
                 <span style={{flex:1,minWidth:0}}>
@@ -30656,7 +30726,11 @@ function AgendaModule({ navigeer }) {
   const [wisOpen, setWisOpen] = useState(null);
 
   const wedstrijden = laadWedstrijden();
-  const trainingen  = laadTrainingen();
+  /* De agenda hoort bij de basis en staat dus voor iedereen open,
+     maar de trainingen erin horen bij een pakket. Zonder dat pakket
+     blijft de kalender gewoon werken met wedstrijden, activiteiten en
+     verjaardagen — er staan alleen geen trainingen meer in. */
+  const trainingen  = zichtbareTrainingen();
   const spelers     = laadSpelers();
 
   const MAANDEN = ["Januari","Februari","Maart","April","Mei","Juni","Juli","Augustus","September","Oktober","November","December"];
@@ -32698,6 +32772,9 @@ function PakkettenSheet({ onSluiten, nadruk }) {
         <div className="pakket-raster">
           {PAKKETTEN.map(function (p) {
             const dit = p.id === nu.id;
+            /* Een onbekend pakket-id hoort een kaart zonder bedrag op te
+               leveren, geen lege regel met een euroteken. */
+            const prijs = PAKKET_PRIJS[p.id] || {};
             return (
               <div key={p.id} className={"pakket-kaart"+(dit?" nu":"")+(p.id===nadruk?" nadruk":"")}>
                 {dit && <span className="pakket-vlag">Jouw pakket</span>}
@@ -32705,6 +32782,26 @@ function PakkettenSheet({ onSluiten, nadruk }) {
                   <span className="pakket-merk">TEAMTAKKIE</span>
                   <span className="pakket-naam">{p.naam}</span>
                 </div>
+                {/* De maandprijs is het getal waar mensen naar kijken, dus
+                    die staat groot en zwart — geen grijs op grijs, want dat
+                    is buiten in de zon niet te lezen. Het jaarbedrag staat
+                    eronder als tweede regel: wie het zoekt vindt het, wie
+                    het niet zoekt wordt er niet mee opgehouden. Bij Free
+                    staat er alleen "Gratis" en verder niets; "per maand"
+                    bij een bedrag van nul is een grap die niemand snapt. */}
+                {prijs.maand && (
+                  <div className="pakket-prijs">
+                    <div className="pakket-prijs-rij">
+                      <span className="pakket-prijs-bedrag">{prijs.maand}</span>
+                      {prijs.jaar && <span className="pakket-prijs-per">per maand</span>}
+                    </div>
+                    {prijs.jaar && (
+                      <div className="pakket-prijs-jaar">
+                        {"of " + prijs.jaar + " per jaar \u2014 twee maanden korting"}
+                      </div>
+                    )}
+                  </div>
+                )}
                 <div className="pakket-teams">
                   {p.teams === Infinity ? "Onbeperkt teams"
                     : p.teams + (p.teams === 1 ? " team" : " teams")}
