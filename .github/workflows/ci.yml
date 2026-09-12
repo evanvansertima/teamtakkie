@@ -1,0 +1,77 @@
+# CI voor TEAMTAKKIE — draait bij elke push en elke pull request.
+#
+# Wat hier WEL in zit, en waarom dat genoeg is om rood te vertrouwen:
+#   - de drie tests in tests/*.test.js, met kale node — geen npm install.
+#     Dat is dezelfde harde regel als op Evans eigen Mac: als dit een
+#     installatiestap nodig had, zou niemand hem ooit draaien.
+#   - tools/check.py — de syntaxcontrole op online/index.html zelf.
+#
+# Wat hier NIET in zit: het gouden origineel
+# (tools/gouden-origineel.js). Dat is met opzet weggelaten, niet
+# vergeten:
+#   1. Het stuurt op Evans Mac de eigen Chrome van die Mac aan
+#      (channel: "chrome" in het script). Een GitHub-runner heeft een
+#      andere Chrome, op Linux in plaats van macOS.
+#   2. De opgeslagen schermafdrukken in tools/gouden-origineel/referentie/
+#      zijn gemaakt met de manier waarop macOS letters tekent
+#      (antialiasing, hinting). Linux tekent dat anders. Dat verschil zit
+#      áltijd in de pixels, ook als er in de app niets is veranderd.
+#   3. De DOM-vergelijking in datzelfde script raakt aan dat probleem
+#      niet — DOM-inhoud hangt niet af van het besturingssysteem — maar
+#      het script vergelijkt DOM én schermafdruk in één stap
+#      (--vergelijk) en heeft geen los "alleen DOM"-schakelaar. Zo'n
+#      schakelaar toevoegen is een wijziging aan tools/, en dat is voor
+#      deze opdracht uitdrukkelijk niet toegestaan.
+#
+# Een CI die op een andere machine rood wordt om een reden die niets met
+# een echte fout te maken heeft, leert iedereen om rood te negeren. Dat
+# is erger dan geen CI. Daarom blijft het gouden origineel een
+# handmatige controle, op Evans eigen Mac, vóór een grote wijziging aan
+# het scherm:
+#
+#     npm install --prefix tools     (eenmalig)
+#     node tools/gouden-origineel.js --vergelijk
+#
+# Open vraag voor later (geen aanname, dus hier neergezet in plaats van
+# stilzwijgend ingevuld): als er ooit behoefte is om ín CI automatisch
+# te bewijzen dat de DOM niet stiekem is veranderd — zonder de
+# schermafdrukken, die toch alleen met het blote oog te beoordelen zijn
+# — dan is dat een uitbreiding van tools/gouden-origineel.js zelf (een
+# vlag als --vergelijk --alleen-dom die de schermafdruk overslaat). Dat
+# is een keuze voor wie dat bestand mag aanraken, niet voor deze CI.
+
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  vangnet:
+    name: Tests en syntaxcontrole
+    runs-on: ubuntu-latest
+    steps:
+      - name: Code ophalen
+        uses: actions/checkout@v4
+
+      - name: Node vastzetten (geen npm install nodig — kale node)
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: node tests/seizoen.test.js
+        run: node tests/seizoen.test.js
+
+      - name: node tests/sync.test.js
+        run: node tests/sync.test.js
+
+      - name: node tests/pakket.test.js
+        run: node tests/pakket.test.js
+
+      - name: Python vastzetten
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: python3 tools/check.py
+        run: python3 tools/check.py
