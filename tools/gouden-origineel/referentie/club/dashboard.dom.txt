@@ -135,6 +135,9 @@
               "RKVV Harkstede O19-3"
           <div class="db-uitslag-extra">
             <span>
+              <i class="fa-solid fa-futbol" style="color: var(--blauw);">
+              "Luuk, Luuk, Stijn, Ravi"
+            <span>
               <i class="fa-solid fa-star" style="color: rgb(245, 197, 24);">
               "Stijn Ravelijn"
         <div class="kaart">
@@ -282,9 +285,9 @@
                 <span class="db-blink-naam">
                   "Luuk Grasmaaijer"
                 <span class="db-blink-sub">
-                  "5 doelpunten"
+                  "9 doelpunten"
               <span class="db-blink-getal" style="color: var(--blauw);">
-                "5"
+                "9"
           <div class="db-blink">
             <div class="db-blink-kop">
               "Meeste assists"

@@ -379,12 +379,12 @@
             <div class="stat-raster">
               <div class="stat-kaart" style="border-top: 3px solid rgb(255, 193, 7);">
                 <div class="stat-getal" style="font-size: 26px; color: var(--goud);">
-                  "0"
+                  "3"
                 <div class="stat-label">
                   "Gele kaarten"
               <div class="stat-kaart" style="border-top: 3px solid var(--gevaar);">
                 <div class="stat-getal" style="font-size: 26px; color: var(--gevaar);">
-                  "0"
+                  "1"
                 <div class="stat-label">
                   "Rode kaarten"
           <div class="kaart grafiek-kaart">
