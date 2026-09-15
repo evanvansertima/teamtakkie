@@ -9,8 +9,8 @@
     "breedte": 1280,
     "hoogte": 900
   },
-  "appBytes": 1949822,
-  "appRegels": 34457,
+  "appBytes": 1959033,
+  "appRegels": 34630,
   "schermen": [
     "dashboard",
     "wedstrijden",
@@ -23,7 +23,9 @@
   ],
   "schermenOpSlot": [],
   "dieptes": [
-    "selectie-ontwikkeling"
+    "selectie-ontwikkeling",
+    "instellingen",
+    "instellingen-opheffen"
   ],
   "paginaFouten": []
 }

@@ -23,9 +23,12 @@
    Sinds 11 september schermt het pakket echt iets af. Daarmee is er
    niet één app meer om vast te leggen maar twee:
 
-     referentie/club/   8 schermen + 1 achter een tabblad = 9 opnames
+     referentie/club/   8 schermen + 3 achter een klik = 11 opnames
                         Alles open, geen enkel slotje. Dit bewijst dat
-                        de betaalde beleving onveranderd is.
+                        de betaalde beleving onveranderd is. De drie
+                        achter een klik zijn het tabblad Ontwikkeling,
+                        het instellingenvenster en het bevestigings-
+                        scherm van "Vereniging opheffen".
      referentie/free/   4 schermen + 4 achter een klik   = 8 opnames
                         Trainingen, Statistieken, Live en Clubhuis
                         zitten op slot. Dit bewijst hoe een slot eruit-
@@ -136,11 +139,11 @@
    online/index.html teruggezet om te kijken wat het vangnet vangt.
    Zeven werden gevangen. Wat er níét uit komt:
 
-   1. Alles achter een venster, een tab of een knop. Een tikfout in de
-      titel van het instellingenvenster ("Instelingen") gaf groen: dat
-      venster staat bij geen van de acht opnames open. Hetzelfde geldt
-      voor de tabs Individu/Stand binnen Statistieken, voor de vier
-      onderdelen van het Clubhuis, en voor elk formulier.
+   1. Alles achter een venster, een tab of een knop. Zo'n plek staat bij
+      geen enkele schermopname open, dus verandert er iets, dan blijft
+      alles groen. Dat geldt voor de tabs Individu/Stand binnen
+      Statistieken, voor de vier onderdelen van het Clubhuis, en voor
+      elk formulier.
       → Wie daar iets verandert, heeft hier géén vangnet. Dat is de
         belangrijkste bekende beperking van dit gereedschap.
 
@@ -149,6 +152,14 @@
       Ontwikkeling (open in club, op slot in free), de melding na een
       tik op een vergrendeld menu-item, de prijskaart die daarachter
       opengaat, en de melding na een tik op het vergrendelde tabblad.
+
+      OP 16 SEPTEMBER ZIJN ER TWEE BIJ GEKOMEN: het instellingenvenster
+      en het bevestigingsscherm van "Vereniging opheffen". Dat venster
+      wás het schoolvoorbeeld in deze alinea — een tikfout in de titel
+      ("Instelingen") gaf groen — en het werd dringend toen de knop die
+      een hele vereniging weggooit erin kwam te staan. De meting die dat
+      besluit droeg staat bij DIEPTES_CLUB hieronder.
+
       Alle ándere tabs, vensters en formulieren staan nog steeds
       nergens op: dat zijn er, geteld in online/index.html, nog
       tientallen.
@@ -257,17 +268,24 @@ const CDN_HOSTS = [
      • De diepteopnames gaan ná de schermen, zodat een klik hier nooit
        een scherm kan beïnvloeden.
 
-   Wil je er een bij (het instellingenvenster, de tabs binnen
-   Statistieken, de vier onderdelen van het Clubhuis), dan is dat een
-   regel in een van deze lijsten plus één keer --opnemen. */
+   Wil je er een bij (de tabs binnen Statistieken, de vier onderdelen
+   van het Clubhuis, de formulieren), dan is dat een regel in een van
+   deze lijsten plus één keer --opnemen. */
 
-/* Met Club is er niets op slot. De enige diepteopname is het tabblad
-   Ontwikkeling, en die staat er om te bewijzen dat er voor een
-   betalende club níéts veranderd is. Het besluit noemt Ontwikkeling
-   "een tabblad in Selectie"; in de code zit het één laag dieper:
-   Selectie → een speler aanklikken → het tabblad. Twee klikken dus,
-   en die staan hier uitgeschreven in plaats van verstopt in het
-   script. */
+/* Met Club is er niets op slot. Wat hier staat is er dus niet om een
+   slotje vast te leggen, maar om drie plekken te dekken die op geen
+   enkel scherm te zien zijn.
+
+   De eerste is het tabblad Ontwikkeling, en die staat er om te bewijzen
+   dat er voor een betalende club níéts veranderd is. Het besluit noemt
+   Ontwikkeling "een tabblad in Selectie"; in de code zit het één laag
+   dieper: Selectie → een speler aanklikken → het tabblad. Twee klikken
+   dus, en die staan hier uitgeschreven in plaats van verstopt in het
+   script.
+
+   De twee erna gaan over het instellingenvenster, en die zijn er sinds
+   16 september 2026. Waarom juist die twee, met de meting erbij, staat
+   hieronder bij de opnames zelf. */
 const DIEPTES_CLUB = [
   {
     id: "selectie-ontwikkeling",
@@ -280,6 +298,85 @@ const DIEPTES_CLUB = [
        kies: '.tabs .tab-knop:has-text("Ontwikkeling")'}
     ],
     bewijs: '.stat-label:has-text("Gemiddelde voortgang")'
+  },
+  /* ── Het instellingenvenster ──
+     Dit venster stond sinds het begin bovenaan de bekende beperkingen
+     van dit gereedschap: het was hét voorbeeld van "alles achter een
+     venster staat nergens op". Op 16 september 2026 is dat gemeten in
+     plaats van vermoed, op een kopie van de app, met drie opzettelijke
+     fouten in InstellingenSheet:
+
+       • de titel "Instellingen" → "Instelingen"              groen
+       • de overtyprem van het opheffen weg (één klik genoeg)  groen
+       • de hele opheffen-sectie onzichtbaar ({false && …})    groen
+
+     Alle drie onopgemerkt, en geen enkele test in tests/ vangt ze:
+     opheffen.test.js knipt alleen hefClubOp() uit het bestand, de
+     dataregel dus, niet de deur ernaartoe. De knop die als enige in de
+     app iets weggooit dat niet terug te halen is, kon daarmee spoorloos
+     verdwijnen zonder dat er ergens iets rood werd.
+
+     Twee opnames en niet één, want de rem zit niet in het venster maar
+     in het bevestigingsscherm daarachter. Alleen het venster vastleggen
+     zou de tweede fout hierboven nog steeds hebben gemist.
+
+     Er hoefde niets aan vulling.js bij: serverAan() (vaste URL in het
+     bestand), ingelogd() (tt_sessie_v1), clubIdNu() (tt_club_v1) en
+     magRol("club") (rolNu() valt zonder tt_rol_v1 terug op "eigenaar")
+     zijn met deze vulling alle vier waar, dus de sectie staat er.
+
+     LET OP bij het toevoegen van nog een diepteopname aan deze lijst:
+     "instellingen-opheffen" hoort de laatste te blijven. sluitVensters()
+     ruimt vóór elke volgende opname een openstaand venster op met het
+     kruisje rechtsboven, en dat kruisje zit onder de bevestig-overlay —
+     die vangt de klik af. Zolang deze opname de laatste is, komt er geen
+     volgende die erover hoeft. */
+  {
+    id: "instellingen",
+    label: "Instellingen",
+    begin: "dashboard",
+    stappen: [
+      /* Het tandwiel onderaan het zijmenu, en niet dat in de kopbalk.
+         Dat laatste is de eerste poging geweest en die liep vast: op
+         1280 breed is de kopbalk verborgen (hij is er voor smalle
+         schermen), dus die knop stáát wel in de DOM maar is niet aan te
+         klikken. Zie ook punt 3 bij "wat dit niet dekt" hierboven.
+
+         Bewust zonder :has-text("Instellingen"): er is maar één
+         .zij-item in de voet — het lampje ernaast is een .sync-lampje —
+         en door de tekst hier níét vast te pinnen wordt een hernoemd
+         menu-item een leesbaar DOM-verschil in plaats van een
+         omgevallen script. */
+      {wat: 'het tandwiel onderaan het zijmenu',
+       kies: '.zijbalk-voet .zij-item'}
+    ],
+    /* Niet de titel van het venster, met opzet. De titel hoort door de
+       DOM-vergelijking beoordeeld te worden (die meldt een tikfout als
+       een verschil) en niet door dit bewijs (dat zou omvallen met een
+       melding over het gereedschap in plaats van over de app).
+       .inst-groep bestaat alleen in InstellingenSheet en bewijst dus
+       dat dit venster openstaat en geen ander. */
+    bewijs: '.formatie-overlay .inst-groep'
+  },
+  {
+    id: "instellingen-opheffen",
+    label: "Instellingen › Vereniging opheffen › bevestigen",
+    begin: "dashboard",
+    stappen: [
+      {wat: 'het tandwiel onderaan het zijmenu',
+       kies: '.zijbalk-voet .zij-item'},
+      /* De knop, niet de kaarttitel erboven: beide dragen de tekst
+         "Vereniging opheffen". .knop.gevaar staat in dit venster maar
+         op één plek buiten de overlays, en dat is deze. */
+      {wat: 'de knop "Vereniging opheffen" onderaan Instellingen',
+       kies: '.formatie-sheet .knop.gevaar:has-text("Vereniging opheffen")'}
+    ],
+    /* Alleen dát het bevestigingsscherm openstaat. Wat erin staat — het
+       overtypveld, de uitgeschakelde knop, de opsomming van wat er
+       weggaat — is werk voor de DOM-vergelijking. Haalt iemand het
+       overtypveld weg, dan hoort dat een leesbaar verschil te geven en
+       geen omgevallen script. */
+    bewijs: '.bevestig-overlay .bevestig-kaart'
   }
 ];
 
