@@ -163,6 +163,33 @@ tests/bewaartermijn.test.sql. Die probeert twaalf dingen uit (waarvan
 er drie móéten mislukken) en ruimt zichzelf weer op.
 
 
+CONTROLE — WAT STAAT ER EIGENLIJK AL OP MIJN SERVER?
+----------------------------------------------------
+Er liggen intussen drie losse reparaties in deze map: 04-leden-fix.sql,
+06-pakketten.sql en 10-laatste-eigenaar.sql. Van elk daarvan staat wel
+ergens genoteerd dát hij gedraaid is, maar een notitie is de database
+niet.
+
+Draai daarom 11-controle-productie.sql als je het zeker wilt weten. Dat
+bestand KIJKT ALLEEN: het verandert niets, maakt niets aan en gooit
+niets weg. Je kunt het zo vaak draaien als je wilt.
+
+Je krijgt één tabel terug. In de kolom "oordeel" hoort overal "in orde"
+te staan. Onderaan staan drie regels met SAMENVATTING ervoor — één per
+reparatie — zodat je in één oogopslag ziet of alle drie erop staan.
+
+Staat er ergens "LET OP", dan noemt de kolom "reparatie" welk bestand
+erbij hoort: draai dat bestand alsnog en draai daarna 11 opnieuw.
+
+Wanneer je het draait:
+  · nu meteen, om te zien wat er al op je server staat;
+  · vlak na het draaien van 04, 06 of 10, om te bevestigen dat het is
+    aangekomen;
+  · als er iets raars gebeurt in de app rond leden, verenigingen of
+    pakketten — dan weet je meteen of het aan een ontbrekende
+    reparatie ligt.
+
+
 WAT JE MOET WETEN
 -----------------
 Synchroniseren is geen "opslaan naar de server". Het is bepalen wat er

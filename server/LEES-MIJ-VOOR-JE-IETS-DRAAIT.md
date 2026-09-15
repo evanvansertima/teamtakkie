@@ -28,6 +28,11 @@ Evan heeft op 11 september op de échte database gedraaid, met bewijs:
 Dat is de **Nederlandstalige** lijn: `is_eigenaar()`, `pakket_grenzen`,
 `06-pakketten.sql`, `08-bewaartermijn.sql`.
 
+Wil je niet op een commit-bericht hoeven vertrouwen: draai
+`server/11-controle-productie.sql` in de SQL Editor. Dat bestand kijkt alleen
+(het verandert niets) en zegt per reparatie — 04, 06 en 10 — of hij op die
+database staat.
+
 ## Wat je NIET moet draaien
 
 ### `server/fase-a/A2-fix-leden.sql`
