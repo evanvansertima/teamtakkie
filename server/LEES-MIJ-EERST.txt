@@ -197,9 +197,16 @@ Wanneer je het draait:
 
 Draai daarna ook 12-controle-opheffen.sql. Dat is dezelfde soort
 controle — het kijkt alleen — maar dan voor één vraag die 11 niet
-stelt: kan een vereniging eigenlijk wel opgeheven worden? Onder
-"Messages" komt het antwoord in gewone taal, inclusief wat je eraan
-zou doen.
+stelt: kan een vereniging eigenlijk wel opgeheven worden?
+
+Het antwoord in gewone taal staat ONDERAAN DIEZELFDE TABEL: scroll in
+het vak "Results" naar beneden, voorbij de regel met SAMENVATTING, tot
+je een regel ziet met "─── CONCLUSIE ───" erin. Daaronder staat zin
+voor zin wat er aan de hand is en wat je eraan zou doen. Je hoeft
+nergens op een ander tabblad te kijken; alles staat in die ene tabel.
+(Dat gold vroeger niet: toen stond de conclusie in een logboek dat de
+Supabase-editor niet laat zien. Sinds 15 september staat hij in de
+tabel zelf.)
 
 Staat daar dat het niet werkt, dan hoort 13-reconciliatie-is-eigenaar.sql
 erbij. Dat bestand zet één functie neer en verandert verder niets:

@@ -86,9 +86,19 @@
 --
 --
 --  WAT JE DAARNA HOORT TE ZIEN
---  Een tabel met vijf regels. In de kolom "oordeel" hoort overal
---  "in orde" te staan en nergens "LET OP". Daaronder, onder
---  "Messages", staat wat de volgende stap is.
+--  Eén tabel onderin het scherm, in het vak "Results". De eerste
+--  vijf regels zijn de controles: in de kolom "oordeel" hoort
+--  overal "in orde" te staan en nergens "LET OP".
+--
+--  SCROLL IN DIE TABEL NAAR BENEDEN. Onder die vijf regels staat,
+--  na een regel met "─── WAT NU ───" erin, in gewone taal wat de
+--  volgende stap is. Elke zin staat op zijn eigen regel in de
+--  eerste kolom.
+--
+--  Je hoeft nergens anders te kijken: alles staat in die ene tabel.
+--  (Eerder stond hier dat dat stuk onder een tabblad "Messages" zou
+--  staan. Die is in de Supabase-editor niet te vinden, en daarom
+--  staat het nu gewoon in de tabel zelf.)
 --
 --  TERUGDRAAIEN staat helemaal onderaan, met streepjes ervoor zodat
 --  het niet vanzelf meedraait.
@@ -158,6 +168,12 @@ comment on function public.is_eigenaar(uuid) is
 --  geeft als ben_eigenaar() — voor jou, nu, op je eigen
 --  verenigingen. Een functie die bestaat maar iets anders zegt dan
 --  ben_eigenaar() zou het hele punt van dit bestand onderuithalen.
+--
+--  Onder die vijf regels hangt in dezelfde tabel het stuk "WAT NU":
+--  daar staat in gewone zinnen wat de volgende stap is. Dat staat
+--  bewust in de tabel en niet in een blok met "raise notice" — dat
+--  schrijft naar een logboek dat de Supabase-editor niet toont, en
+--  een conclusie die je niet ziet is geen conclusie.
 -- ══════════════════════════════════════════════════════════════
 with functies as (
   select p.proname, p.prosecdef, p.proconfig
@@ -210,43 +226,62 @@ controles as (
                       else 'NEE — verschilt op ' || verschillen || ' van de ' || clubs || ' verenigingen' end
           from vergelijk),
          (select verschillen = 0 from vergelijk)
+),
+
+-- ── WAT NU ───────────────────────────────────────────────────
+--  Elke zin één regel; ze worden hieronder één voor één een rij
+--  onderaan dezelfde tabel. De middelste alinea verschijnt alleen
+--  als basis_van_sleutel() hier niet staat — want dan is er nog een
+--  tweede blokkade voor 08-bewaartermijn.sql.
+volgende as (
+  select
+    array[
+      ' ',
+      '─── WAT NU ────────────────────────────────────────',
+      'is_eigenaar() staat er. Er is verder NIETS veranderd:',
+      'geen regel, geen rij, geen recht. De app gedraagt zich',
+      'precies zoals een minuut geleden.',
+      ' ',
+      'Volgende stap, als je het opheffen van een vereniging',
+      'wilt laten werken: 08-bewaartermijn.sql draaien, en',
+      'daarna 12-controle-opheffen.sql opnieuw — daar hoort',
+      'dan "MEEVALLER" te staan.',
+      ' '
+    ]
+    || case when not exists (select 1 from functies where proname = 'basis_van_sleutel')
+         then array[
+           'Maar doe dat NOG NIET. 08 gebruikt ook basis_van_sleutel(),',
+           'en die komt uit 06-pakketten.sql. Die functie staat hier',
+           'niet, dus 08 loopt alsnog vast en draait zichzelf terug.',
+           '06 is geen kleine stap — overleg dat eerst.',
+           ' '
+         ] else array[]::text[] end
+    || array[
+      'Draai 10-laatste-eigenaar.sql NIET zonder overleg. Die',
+      'schrijft de regel leden_weghalen opnieuw, en die werkt',
+      'hier al (via ben_eigenaar). Wat 10 toevoegt heb je op',
+      'is_laatste_eigenaar na al.',
+      '───────────────────────────────────────────────────'
+    ] as regels
 )
-select controle, gevonden,
-       case when goed then 'in orde' else 'LET OP' end as oordeel
-from controles order by nr;
+
+select controle, gevonden, oordeel
+from (
+  select nr, controle, gevonden,
+         case when goed then 'in orde' else 'LET OP' end as oordeel
+  from controles
+
+  union all
+
+  -- De uitleg onderaan dezelfde tabel (nummer 1000+), in de eerste
+  -- kolom. De twee andere kolommen blijven leeg: zo zie je meteen
+  -- dat dit geen controle meer is maar de volgende stap.
+  select 1000 + u.volgnr, u.regel, '', ''
+  from volgende v, unnest(v.regels) with ordinality as u(regel, volgnr)
+) t
+order by t.nr;
 
 
--- ══════════════════════════════════════════════════════════════
---  WAT NU?
--- ══════════════════════════════════════════════════════════════
-do $volgende$
-begin
-  raise notice ' ';
-  raise notice '─── WAT NU ────────────────────────────────────────';
-  raise notice 'is_eigenaar() staat er. Er is verder NIETS veranderd:';
-  raise notice 'geen regel, geen rij, geen recht. De app gedraagt zich';
-  raise notice 'precies zoals een minuut geleden.';
-  raise notice ' ';
-  raise notice 'Volgende stap, als je het opheffen van een vereniging';
-  raise notice 'wilt laten werken: 08-bewaartermijn.sql draaien, en';
-  raise notice 'daarna 12-controle-opheffen.sql opnieuw — daar hoort';
-  raise notice 'dan "MEEVALLER" te staan.';
-  raise notice ' ';
-  if not exists (select 1 from pg_proc p join pg_namespace n on n.oid = p.pronamespace
-                 where n.nspname = 'public' and p.proname = 'basis_van_sleutel') then
-    raise notice 'Maar doe dat NOG NIET. 08 gebruikt ook basis_van_sleutel(),';
-    raise notice 'en die komt uit 06-pakketten.sql. Die functie staat hier';
-    raise notice 'niet, dus 08 loopt alsnog vast en draait zichzelf terug.';
-    raise notice '06 is geen kleine stap — overleg dat eerst.';
-    raise notice ' ';
-  end if;
-  raise notice 'Draai 10-laatste-eigenaar.sql NIET zonder overleg. Die';
-  raise notice 'schrijft de regel leden_weghalen opnieuw, en die werkt';
-  raise notice 'hier al (via ben_eigenaar). Wat 10 toevoegt heb je op';
-  raise notice 'is_laatste_eigenaar na al.';
-  raise notice '───────────────────────────────────────────────────';
-end
-$volgende$;
 
 
 -- ══════════════════════════════════════════════════════════════

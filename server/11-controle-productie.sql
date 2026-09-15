@@ -40,9 +40,15 @@
 --  één per reparatie. Daar lees je in één oogopslag of een reparatie
 --  helemaal gedraaid is of niet.
 --
---  Daarna volgt onder "Messages" nog een klein lijstje met de
---  pakketten die in de database staan. Staat pakket_grenzen er nog
---  niet, dan zegt hij dat gewoon; hij loopt er niet op stuk.
+--  Helemaal onderaan diezelfde tabel — scroll door — staat na een
+--  regel met "EXTRA" erin nog een klein lijstje met de pakketten die
+--  in de database staan. Staat pakket_grenzen er nog niet, dan zegt
+--  hij dat gewoon in een regel; hij loopt er niet op stuk.
+--
+--  Alles staat dus in die ene tabel in het vak "Results". Je hoeft
+--  nergens anders te kijken. (Eerder stond hier dat dat lijstje
+--  onder een tabblad "Messages" zou verschijnen. Die is in de
+--  Supabase-editor niet te vinden.)
 --
 --  ALS ER "LET OP" STAAT
 --  Dan is die reparatie op deze database nog niet (of niet helemaal)
@@ -321,6 +327,70 @@ controles as (
          case when f.fn_verlaat_club then 'ja' else 'nee' end,
          f.fn_verlaat_club
   from feiten f
+),
+
+-- ── EXTRA: welke pakketten staan er in de database? ──────────
+--  Je hoort drie pakketten te zien: free (1 team), coach (1 team) en
+--  club (onbeperkt). Zie je nog basic, pro of max, dan is 06 maar
+--  half gedraaid — die oude namen hoorden om te gaan naar coach en
+--  club.
+--
+--  Dit stuk moet uit pakket_grenzen lezen, en die tabel bestaat niet
+--  op een database waar 06 nooit gedraaid is. Rechtstreeks "select
+--  ... from public.pakket_grenzen" schrijven kan daarom niet: dan
+--  weigert Postgres het hele bestand nog vóór hij iets uitvoert, en
+--  zie je ook de tabel hierboven niet meer.
+--
+--  Vandaar de omweg met query_to_xml(): dat is een ingebouwde
+--  functie die een query pas op het moment zelf uitvoert en het
+--  antwoord als XML teruggeeft. Staat de tabel er niet, dan wordt de
+--  query nooit uitgevoerd en geven we een leeg document mee. Dit
+--  leest alleen; er wordt niets aangemaakt of veranderd.
+pakket_staat as (
+  select to_regclass('public.pakket_grenzen') is not null as tabel_er,
+         (select count(*) from information_schema.columns
+          where table_schema = 'public' and table_name = 'pakket_grenzen'
+            and column_name in ('pakket', 'teams', 'modules')) = 3 as kolommen_er
+),
+
+pakket_rijen as (
+  select u.volgnr,
+         (xpath('/row/pakket/text()',  u.x))[1]::text as pakket,
+         (xpath('/row/teams/text()',   u.x))[1]::text as teams,
+         (xpath('/row/modules/text()', u.x))[1]::text as modules
+  from pakket_staat s,
+       unnest(xpath('/table/row',
+         case when s.tabel_er and s.kolommen_er
+              then query_to_xml(
+                     'select pakket,
+                             coalesce(teams::text, ''onbeperkt'') as teams,
+                             array_to_string(modules, '' '') as modules
+                      from public.pakket_grenzen order by pakket',
+                     false, false, '')
+              else '<table/>'::xml
+         end)) with ordinality as u(x, volgnr)
+),
+
+extra as (
+  select 0 as volgnr, '' as reparatie, ' ' as controle, '' as gevonden
+  union all
+  select 1, 'EXTRA', '─── welke pakketten staan er in de database? ───', ''
+  union all
+  select 1 + p.volgnr::int, 'EXTRA', 'pakket ' || p.pakket,
+         p.teams || ' team(s) — onderdelen: ' || coalesce(p.modules, '')
+  from pakket_rijen p
+  union all
+  -- Eén regel in plaats van een leeg gat, zodat "ik zie niets" nooit
+  -- verward kan worden met "er is niets aan de hand".
+  select 900, 'EXTRA',
+         case when not s.tabel_er
+              then 'pakket_grenzen bestaat nog niet — 06-pakketten.sql is hier nooit gedraaid.'
+              when not s.kolommen_er
+              then 'pakket_grenzen ziet er anders uit dan verwacht — meld dit voor je iets draait.'
+              else 'pakket_grenzen staat er wel, maar er staat geen enkel pakket in.'
+         end, ''
+  from pakket_staat s
+  where not exists (select 1 from pakket_rijen)
 )
 
 select reparatie, controle, gevonden, oordeel
@@ -347,44 +417,18 @@ from (
          case when count(*) filter (where not goed) = 0 then 'in orde' else 'LET OP' end
   from controles
   group by reparatie
+
+  union all
+
+  -- Het pakketlijstje, onderaan dezelfde tabel. De nummers beginnen
+  -- bij 2000 omdat de samenvattingsregels hierboven al tot 1201
+  -- lopen (900 + 301); zo blijft dit stuk gegarandeerd het laatste.
+  select 2000 + e.volgnr, e.reparatie, e.controle, e.gevonden, ''
+  from extra e
 ) t
 order by t.nr;
 
 
--- ══════════════════════════════════════════════════════════════
---  EXTRA — welke pakketten staan er in de database?
---  ─────────────────────────────────────────────────────────────
---  Dit hoort onder "Messages" te verschijnen, niet als tabel. Dat is
---  met opzet: rechtstreeks uit pakket_grenzen lezen zou een harde
---  foutmelding geven op een database waar 06 nog niet gedraaid is,
---  en dan zie je de tabel hierboven ook niet meer. Zo blijft dit
---  bestand overal leesbaar.
---
---  Je hoort drie pakketten te zien: free (1 team), coach (1 team) en
---  club (onbeperkt). Zie je nog basic, pro of max, dan is 06 maar
---  half gedraaid — die oude namen hoorden om te gaan naar coach en
---  club.
---
---  Ook dit stuk leest alleen.
--- ══════════════════════════════════════════════════════════════
-do $kijk$
-declare
-  r record;
-begin
-  if to_regclass('public.pakket_grenzen') is null then
-    raise notice 'pakket_grenzen bestaat nog niet — 06-pakketten.sql is hier nooit gedraaid.';
-    return;
-  end if;
-
-  for r in execute
-    'select pakket, coalesce(teams::text, ''onbeperkt'') as teams,
-            array_to_string(modules, '' '') as modules
-     from public.pakket_grenzen order by pakket'
-  loop
-    raise notice 'pakket % — % team(s) — onderdelen: %', r.pakket, r.teams, r.modules;
-  end loop;
-end
-$kijk$;
 
 
 -- ══════════════════════════════════════════════════════════════

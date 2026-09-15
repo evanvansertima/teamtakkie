@@ -35,11 +35,20 @@
 --  twee bij elkaar passen.
 --
 --  WAT JE HOORT TE ZIEN
---  Eén tabel met drie kolommen: controle, gevonden en oordeel.
---  Daaronder, onder het tabblad "Messages", staat de conclusie in
---  gewone taal — één alinea die zegt wat er aan de hand is en wat
---  je eraan zou doen. Begin met die alinea; de tabel is de
+--  Eén tabel met drie kolommen: controle, gevonden en oordeel. Die
+--  tabel verschijnt onderin het scherm, in het vak "Results".
+--
+--  SCROLL IN DIE TABEL NAAR BENEDEN. Onder de controleregels staat
+--  eerst een regel met SAMENVATTING, en daaronder — na een regel
+--  met "─── CONCLUSIE ───" erin — de conclusie in gewone taal,
+--  zin voor zin, elke zin op zijn eigen regel in de eerste kolom.
+--  Begin met die conclusie; de controleregels erboven zijn de
 --  onderbouwing.
+--
+--  Je hoeft nergens anders te kijken: alles staat in die ene tabel.
+--  (Eerder stond hier dat de conclusie onder een tabblad "Messages"
+--  zou staan. Die is in de Supabase-editor niet te vinden, en
+--  daarom staat de conclusie nu gewoon in de tabel zelf.)
 --
 --  Het kan zijn dat er "LET OP" staat. Dat is hier geen ramp en
 --  geen haast: het betekent dat het opheffen van een vereniging nu
@@ -183,6 +192,107 @@ controles as (
          case when f.fn_ben_eigenaar then 'ja' else 'nee' end,
          f.fn_ben_eigenaar
   from feiten f
+),
+
+-- ── DE CONCLUSIE IN GEWONE TAAL ──────────────────────────────
+--  Dit stuk trekt geen nieuwe conclusie: het kijkt naar exact
+--  dezelfde feiten als de controles hierboven en zegt in gewone
+--  zinnen wat ze samen betekenen.
+--
+--  Waarom het hier staat en niet in een apart blok onderaan: de
+--  Supabase-editor toont het resultaat van de tabel, en een blok met
+--  "raise notice" schrijft naar een logboek dat daar niet zichtbaar
+--  is. De conclusie hoort in de tabel die je toch al leest, anders
+--  lees je hem nooit.
+--
+--  Elke zin is één regel in de lijst hieronder, en wordt straks één
+--  rij in de tabel. Zo blijft hij leesbaar in een smalle kolom.
+conclusie as (
+  select
+    array[' ', '─── CONCLUSIE ─────────────────────────────────────']
+    ||
+    case
+      when not f.tabel_clubs then
+        array['De tabel clubs bestaat hier niet. Draai eerst 01-schema.sql.']
+
+      when f.weg_bestaat and f.ontbrekend = '' then
+        array[
+          'MEEVALLER. Er is een regel (' || f.weg_naam || ') en alles waar hij naar',
+          'verwijst bestaat. Een eigenaar kan zijn vereniging echt',
+          'opheffen en een trainer niet. Hier hoeft niets te gebeuren.'
+        ]
+        || case when not f.fn_wis_speler then array[
+             ' ',
+             'Wel nog dit: wis_speler() ontbreekt. Dat is de andere',
+             'helft van 08-bewaartermijn.sql — een speler verwijderen',
+             'haalt hem nu uit één seizoenslijst en laat hem in de',
+             'andere staan. Dat is een privacy-punt, geen storing.'
+           ] else array[]::text[] end
+
+      when f.weg_bestaat and f.ontbrekend <> '' then
+        array[
+          'DIT MOET GEREPAREERD. De regel ' || f.weg_naam
+            || ' verwijst naar ' || f.ontbrekend || '(),',
+          'en die functie bestaat hier niet. Het opheffen van een',
+          'vereniging geeft dan een databasefout in plaats van een',
+          'nette weigering. Dit is zeldzaam — Postgres hoort dit',
+          'tegen te houden — dus meld het voordat je iets draait.'
+        ]
+
+      else
+        array[
+          'HET OPHEFFEN VAN EEN VERENIGING WERKT NIET.',
+          'Er is geen enkele regel voor weggooien op clubs. De',
+          'database gooit er dan nul weg en meldt geen fout, dus de',
+          'app krijgt een "gelukt" terug en zegt dat tegen jou. Je',
+          'vereniging staat er daarna gewoon nog.',
+          ' ',
+          'Het is GEEN lek: niemand ziet hierdoor iets wat hij niet',
+          'mag zien, en er gaat niets verloren. Het is een knop die',
+          'liegt.',
+          ' '
+        ]
+        || case
+             when not f.fn_is_eigenaar and f.fn_ben_eigenaar then
+               array[
+                 'De oorzaak is te zien: is_eigenaar() bestaat hier niet,',
+                 'ben_eigenaar() wel. 08-bewaartermijn.sql vraagt om',
+                 'is_eigenaar() en stopt dus met een foutmelding zodra je',
+                 'hem draait — daarom is hij nooit aangekomen, en daarom',
+                 'ontbreekt ook wis_speler().',
+                 ' ',
+                 'WAT JE DOET: draai eerst 13-reconciliatie-is-eigenaar.sql',
+                 '(die zet is_eigenaar() ernaast en verandert verder niets),',
+                 'daarna 08-bewaartermijn.sql, daarna dit bestand opnieuw.'
+               ]
+               || case when not f.fn_basis then array[
+                    ' ',
+                    'MAAR LET OP — er is nog een tweede blokkade. 08 gebruikt',
+                    'ook basis_van_sleutel(), en die komt uit 06-pakketten.sql.',
+                    'Die staat hier niet. 08 stopt dan alsnog met een fout en',
+                    'draait zichzelf helemaal terug. 06 draaien is geen kleine',
+                    'stap (het zet ook teamlimieten en een prijslijst neer):',
+                    'overleg dat eerst, draai het niet zomaar tussendoor.'
+                  ] else array[]::text[] end
+
+             when not f.fn_is_eigenaar and not f.fn_ben_eigenaar then
+               array[
+                 'Let op: geen van beide hulpfuncties bestaat hier',
+                 '(is_eigenaar noch ben_eigenaar). Deze database is verder',
+                 'achter dan verwacht. Draai eerst 11-controle-productie.sql',
+                 'en meld de uitkomst voordat je iets draait.'
+               ]
+
+             else
+               array[
+                 'is_eigenaar() bestaat hier wel. Draai dan gewoon',
+                 '08-bewaartermijn.sql en daarna dit bestand opnieuw.'
+               ]
+           end
+    end
+    || array['───────────────────────────────────────────────────']
+      as regels
+  from feiten f
 )
 
 select controle, gevonden, oordeel
@@ -197,135 +307,23 @@ from (
               else count(*) filter (where not goed) || ' van de ' || count(*)
                    || case when count(*) filter (where not goed) = 1
                            then ' controles staat open' else ' controles staan open' end
-                   || ' — lees de conclusie onder Messages'
+                   || ' — lees de conclusie onderaan deze tabel'
          end,
          case when count(*) filter (where not goed) = 0 then 'in orde' else 'LET OP' end
   from controles
+
+  union all
+
+  -- De conclusieregels, onderaan dezelfde tabel (nummer 1000+). Ze
+  -- staan in de eerste kolom omdat die het breedst is; de twee
+  -- andere kolommen blijven leeg, zodat meteen te zien is dat dit
+  -- geen controle meer is maar de uitleg.
+  select 1000 + u.volgnr, u.regel, '', ''
+  from conclusie c, unnest(c.regels) with ordinality as u(regel, volgnr)
 ) t
 order by t.nr;
 
 
--- ══════════════════════════════════════════════════════════════
---  DE CONCLUSIE IN GEWONE TAAL
---  ─────────────────────────────────────────────────────────────
---  Dit verschijnt onder "Messages", niet als tabel. Ook dit stuk
---  leest alleen: er staat geen enkele insert, update of delete in.
---  raise notice schrijft naar het logboek van je sessie en raakt
---  geen enkele tabel aan.
--- ══════════════════════════════════════════════════════════════
-do $kijk$
-declare
-  heeft_regel   boolean;
-  regel_naam    text;
-  regel_tekst   text;
-  heeft_iseig   boolean;
-  heeft_beneig  boolean;
-  heeft_wisser  boolean;
-  heeft_basis   boolean;
-  ontbrekend    text;
-begin
-  if to_regclass('public.clubs') is null then
-    raise notice 'De tabel clubs bestaat hier niet. Draai eerst 01-schema.sql.';
-    return;
-  end if;
-
-  select polname, coalesce(pg_get_expr(polqual, polrelid), '')
-    into regel_naam, regel_tekst
-  from pg_policy
-  where polrelid = to_regclass('public.clubs')::oid and polcmd = 'd'
-  limit 1;
-
-  heeft_regel := regel_naam is not null;
-
-  select exists (select 1 from pg_proc p join pg_namespace n on n.oid = p.pronamespace
-                 where n.nspname = 'public' and p.proname = 'is_eigenaar'),
-         exists (select 1 from pg_proc p join pg_namespace n on n.oid = p.pronamespace
-                 where n.nspname = 'public' and p.proname = 'ben_eigenaar'),
-         exists (select 1 from pg_proc p join pg_namespace n on n.oid = p.pronamespace
-                 where n.nspname = 'public' and p.proname = 'wis_speler'),
-         exists (select 1 from pg_proc p join pg_namespace n on n.oid = p.pronamespace
-                 where n.nspname = 'public' and p.proname = 'basis_van_sleutel')
-    into heeft_iseig, heeft_beneig, heeft_wisser, heeft_basis;
-
-  -- Zelfde lijst en zelfde vraag als in de tabel hierboven: noemt de
-  -- regel een hulpfunctie die hier niet bestaat?
-  ontbrekend := '';
-  if heeft_regel then
-    select coalesce(string_agg(h.naam, ', ' order by h.naam), '')
-      into ontbrekend
-    from (values ('is_eigenaar'), ('ben_eigenaar'), ('is_laatste_eigenaar'),
-                 ('mijn_clubs'),  ('mag_schrijven'), ('is_beheerder'),
-                 ('pakket_van_club')) as h(naam)
-    where regel_tekst ~* ('\m' || h.naam || '\M')
-      and not exists (select 1 from pg_proc p join pg_namespace n on n.oid = p.pronamespace
-                      where n.nspname = 'public' and p.proname = h.naam);
-  end if;
-
-  raise notice ' ';
-  raise notice '─── CONCLUSIE ─────────────────────────────────────';
-
-  if heeft_regel and ontbrekend = '' then
-    raise notice 'MEEVALLER. Er is een regel (%) en alles waar hij naar', regel_naam;
-    raise notice 'verwijst bestaat. Een eigenaar kan zijn vereniging echt';
-    raise notice 'opheffen en een trainer niet. Hier hoeft niets te gebeuren.';
-    if not heeft_wisser then
-      raise notice ' ';
-      raise notice 'Wel nog dit: wis_speler() ontbreekt. Dat is de andere';
-      raise notice 'helft van 08-bewaartermijn.sql — een speler verwijderen';
-      raise notice 'haalt hem nu uit één seizoenslijst en laat hem in de';
-      raise notice 'andere staan. Dat is een privacy-punt, geen storing.';
-    end if;
-
-  elsif heeft_regel and ontbrekend <> '' then
-    raise notice 'DIT MOET GEREPAREERD. De regel % verwijst naar %(),', regel_naam, ontbrekend;
-    raise notice 'en die functie bestaat hier niet. Het opheffen van een';
-    raise notice 'vereniging geeft dan een databasefout in plaats van een';
-    raise notice 'nette weigering. Dit is zeldzaam — Postgres hoort dit';
-    raise notice 'tegen te houden — dus meld het voordat je iets draait.';
-
-  else
-    raise notice 'HET OPHEFFEN VAN EEN VERENIGING WERKT NIET.';
-    raise notice 'Er is geen enkele regel voor weggooien op clubs. De';
-    raise notice 'database gooit er dan nul weg en meldt geen fout, dus de';
-    raise notice 'app krijgt een "gelukt" terug en zegt dat tegen jou. Je';
-    raise notice 'vereniging staat er daarna gewoon nog.';
-    raise notice ' ';
-    raise notice 'Het is GEEN lek: niemand ziet hierdoor iets wat hij niet';
-    raise notice 'mag zien, en er gaat niets verloren. Het is een knop die';
-    raise notice 'liegt.';
-    raise notice ' ';
-    if not heeft_iseig and heeft_beneig then
-      raise notice 'De oorzaak is te zien: is_eigenaar() bestaat hier niet,';
-      raise notice 'ben_eigenaar() wel. 08-bewaartermijn.sql vraagt om';
-      raise notice 'is_eigenaar() en stopt dus met een foutmelding zodra je';
-      raise notice 'hem draait — daarom is hij nooit aangekomen, en daarom';
-      raise notice 'ontbreekt ook wis_speler().';
-      raise notice ' ';
-      raise notice 'WAT JE DOET: draai eerst 13-reconciliatie-is-eigenaar.sql';
-      raise notice '(die zet is_eigenaar() ernaast en verandert verder niets),';
-      raise notice 'daarna 08-bewaartermijn.sql, daarna dit bestand opnieuw.';
-      if not heeft_basis then
-        raise notice ' ';
-        raise notice 'MAAR LET OP — er is nog een tweede blokkade. 08 gebruikt';
-        raise notice 'ook basis_van_sleutel(), en die komt uit 06-pakketten.sql.';
-        raise notice 'Die staat hier niet. 08 stopt dan alsnog met een fout en';
-        raise notice 'draait zichzelf helemaal terug. 06 draaien is geen kleine';
-        raise notice 'stap (het zet ook teamlimieten en een prijslijst neer):';
-        raise notice 'overleg dat eerst, draai het niet zomaar tussendoor.';
-      end if;
-    elsif not heeft_iseig and not heeft_beneig then
-      raise notice 'Let op: geen van beide hulpfuncties bestaat hier';
-      raise notice '(is_eigenaar noch ben_eigenaar). Deze database is verder';
-      raise notice 'achter dan verwacht. Draai eerst 11-controle-productie.sql';
-      raise notice 'en meld de uitkomst voordat je iets draait.';
-    else
-      raise notice 'is_eigenaar() bestaat hier wel. Draai dan gewoon';
-      raise notice '08-bewaartermijn.sql en daarna dit bestand opnieuw.';
-    end if;
-  end if;
-  raise notice '───────────────────────────────────────────────────';
-end
-$kijk$;
 
 
 -- ══════════════════════════════════════════════════════════════
