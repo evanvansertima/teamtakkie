@@ -4662,6 +4662,60 @@ function zetClubGegevens(wijziging) {
   });
 }
 
+/* ── De vereniging opheffen ──────────────────────────────────
+   Dit is de enige knop in de app die iets weggooit dat niet terug te
+   halen is. Wat er meegaat staat uitgeschreven in de kop van
+   server/08-bewaartermijn.sql: de club zelf, alle leden, alle teams
+   (ook die in de prullenbak), alles wat onder die teams hangt, en het
+   abonnement. De database ruimt dat mee op via "on delete cascade".
+
+   WAAROM HIER "Prefer: return=representation" STAAT, EN WAAROM DAT
+   GEEN DETAIL IS.
+   Vraag je niets terug, dan antwoordt PostgREST op een verwijdering
+   met 204: "gelukt, niets te melden". Dat antwoord krijg je óók als de
+   beveiligingsregels je verwijdering hebben tegengehouden en er dus
+   nul rijen weg zijn. Tot 15 september 2026 was dat precies de
+   situatie — er bestond helemaal geen regel voor verwijderen op clubs,
+   en de app kreeg al die tijd een keurig "gelukt" terug terwijl er
+   niets gebeurde. Dat is de vervelendste soort fout: eentje die zich
+   voordoet als succes.
+
+   Met deze kop komt de verwijderde rij zélf terug. Is die lijst leeg
+   terwijl de status 2xx is, dan is er niets weggegooid en zeggen we
+   dat ook. Dezelfde afweging staat bij verlaat_club() in
+   server/10-laatste-eigenaar.sql.
+
+   Alleen de eigenaar mag dit, en dat wordt op de server beslist
+   (is_eigenaar in de policy clubs_weghalen). De knop hiervoor is de
+   deur, niet het slot. */
+function hefClubOp() {
+  var id = clubIdNu();
+  if (!id) return Promise.resolve(serverFout("geen-club", "Er is geen vereniging om op te heffen."));
+  return serverVraag("/rest/v1/clubs?id=eq." + encodeURIComponent(id), {
+    methode: "DELETE",
+    koppen: {"Prefer": "return=representation"}
+  }).then(function (r) {
+    if (!r.ok) return r;
+    var weg = Array.isArray(r.gegevens) ? r.gegevens : [];
+    if (!weg.length) return serverFout("geweigerd",
+      "De vereniging is niet verwijderd — controleer of je de eigenaar bent.");
+    /* Pas nu, en geen seconde eerder, mag er lokaal iets weg. Zou dit
+       boven de controle staan, dan was een geweigerde verwijdering op
+       de server tóch een lege app op dit apparaat geweest.
+
+       De aanmelding blijft staan: het account van deze persoon bestaat
+       gewoon nog, alleen zijn vereniging niet meer. Hij hoort dus in
+       het scherm "Je vereniging" te belanden en niet op het
+       inlogscherm — dat laatste zou lijken alsof hij ook zijn account
+       kwijt is. */
+    var aanmelding = sessieNu();
+    wisAllesLokaal();
+    zetSessie(aanmelding);
+    herlaadInstellingen();
+    return {ok:true, gegevens: weg[0]};
+  });
+}
+
 /* ── De achterkant ───────────────────────────────────────────
    Hier ziet één iemand wat alle anderen niet mogen zien: elk account,
    bij welke vereniging het hoort en welk pakket eraan hangt.
@@ -33552,6 +33606,9 @@ function InstellingenSheet({ onSluiten, onGewisseld, onTeams }) {
   const [melding, setMelding] = useState(null);
   const [fout, setFout] = useState(null);
   const [bevestigImport, setBevestigImport] = useState(null);
+  const [opheffenOpen, setOpheffenOpen] = useState(false);
+  const [opheffenTekst, setOpheffenTekst] = useState("");
+  const [opheffenBezig, setOpheffenBezig] = useState(false);
   const bestandRef = useRef(null);
   const logoRef = useRef(null);
 
@@ -33581,6 +33638,36 @@ function InstellingenSheet({ onSluiten, onGewisseld, onTeams }) {
     var bestand = e.target.files && e.target.files[0];
     if (bestand) setBevestigImport(bestand);
     e.target.value = "";
+  }
+
+  /* Wat je moet overtypen om te bevestigen: de naam van je vereniging.
+     Staat die er nog niet, dan is er niets te typen en zou een leeg veld
+     meteen genoeg zijn — vandaar het woord OPHEFFEN als terugval. Het
+     hele punt van overtypen is dat je even moet nadenken; dat mag niet
+     wegvallen omdat een veld toevallig leeg is. */
+  const opheffenNaam = (i.clubNaam || "").trim() || "OPHEFFEN";
+
+  function voerOpheffenUit() {
+    setOpheffenBezig(true);
+    setFout(null); setMelding(null);
+    hefClubOp().then(function (r) {
+      setOpheffenBezig(false);
+      setOpheffenOpen(false);
+      setOpheffenTekst("");
+      if (!r.ok) {
+        /* Ook "de server zei ja maar er ging niets weg" komt hier
+           binnen als een fout, en dat hoort ook zo: de vereniging staat
+           er dan nog gewoon. */
+        setFout((r.fout && r.fout.tekst) || "De vereniging kon niet worden opgeheven.");
+        return;
+      }
+      setMelding("De vereniging is opgeheven. De app wordt opnieuw geladen…");
+      /* Opnieuw laden en niet alleen het scherm bijwerken: na het
+         opheffen klopt er op dit apparaat niets meer — geen club, geen
+         teams, geen instellingen. De poort in App bepaalt dan vanzelf
+         dat je in "Je vereniging" terechtkomt. */
+      setTimeout(function(){ window.location.reload(); }, 1400);
+    });
   }
 
   function voerImportUit() {
@@ -33868,6 +33955,42 @@ function InstellingenSheet({ onSluiten, onGewisseld, onTeams }) {
           </div>
         )}
 
+        {/* ── De vereniging opheffen ──
+            Helemaal onderaan, want dit is geen instelling maar een
+            einde. Wie hier komt is aan het scrollen langs alles wat hij
+            kwijtraakt, en dat is geen toeval.
+
+            WIE DIT ZIET. Alleen wie het recht "club" heeft, dus de
+            eigenaar. Die rol komt van de server (zorgVoorClub haalt hem
+            uit de tabel leden) en niet uit dit bestand, dus hij is niet
+            in de browser om te draaien naar iets anders. Maar hij is ook
+            niet het slot: dat zit in de policy clubs_weghalen, die
+            is_eigenaar() vraagt. Een trainer die deze knop met de
+            ontwikkelaarsconsole tevoorschijn tovert krijgt van de server
+            nul verwijderde rijen terug en dus een eerlijke weigering.
+
+            En zonder server valt er niets op te heffen: dan staat je
+            vereniging alleen op dit apparaat en is er geen rij om weg te
+            halen. Vandaar serverAan() en ingelogd() ervoor. */}
+        {serverAan() && ingelogd() && clubIdNu() && magRol("club") && (
+          <React.Fragment>
+            <div className="inst-groep">Vereniging</div>
+            <div className="kaart">
+              <div className="kaart-titel"><i className="fa-solid fa-triangle-exclamation"/> Vereniging opheffen</div>
+              <p style={{fontSize:12.5,color:"var(--grijs-donker)",fontWeight:400,margin:"0 0 10px",lineHeight:1.65}}>
+                Hiermee verdwijnt {i.clubNaam ? "“" + i.clubNaam + "”" : "je vereniging"} met
+                alles wat eronder hangt: alle teams, alle spelers, wedstrijden, trainingen,
+                opstellingen, tactieken, boetes en het sportpark. Er is geen prullenbak en
+                geen ongedaan maken.
+              </p>
+              <button className="knop gevaar" style={{width:"100%",justifyContent:"center"}}
+                onClick={function(){ setOpheffenTekst(""); setOpheffenOpen(true); }}>
+                <i className="fa-solid fa-trash"/> Vereniging opheffen
+              </button>
+            </div>
+          </React.Fragment>
+        )}
+
         {melding && (
           <div className="kaart" style={{background:"var(--vlak-succes)",borderLeft:"4px solid var(--succes)",color:"var(--op-succesvlak)"}}>
             <div style={{fontSize:13,fontWeight:600,lineHeight:1.5}}>
@@ -33903,6 +34026,56 @@ function InstellingenSheet({ onSluiten, onGewisseld, onTeams }) {
               </div>
             </div>
           </div>
+        )}
+
+        {/* Hetzelfde bevestigingsscherm als bij "Account verwijderen?" in
+            de achterkant: overtypen wat je kwijtraakt. Een vraag met Ja
+            en Nee klik je per ongeluk weg; een naam typ je niet per
+            ongeluk over.
+
+            Er zit met opzet geen wegklikken op de achtergrond onder:
+            daarvoor staat er te veel op het spel om het per ongeluk goed
+            te laten gaan. Annuleren is een knop. */}
+        {opheffenOpen && (
+          <div className="bevestig-overlay"><div className="bevestig-kaart">
+            <h3>Vereniging opheffen?</h3>
+            <p>
+              Alles van {i.clubNaam ? "“" + i.clubNaam + "”" : "je vereniging"} gaat
+              definitief weg: de vereniging zelf met naam en logo, alle leden, en alle teams —
+              ook de teams die al in de prullenbak stonden. Met die teams verdwijnen hun
+              spelers, wedstrijden, trainingen, opstellingen, tactieken, boetes en het
+              sportpark, en ook het abonnement van de vereniging.
+            </p>
+            <p>
+              De accounts van de andere leden blijven gewoon bestaan; alleen hun plek in
+              déze vereniging niet. Dit kan niet ongedaan worden gemaakt.
+            </p>
+            <p style={{fontSize:12.5,fontWeight:600,margin:"0 0 6px"}}>
+              Typ {"“" + opheffenNaam + "”"} over om te bevestigen:
+            </p>
+            <input type="text" autoComplete="off" value={opheffenTekst} autoFocus
+              onChange={function(e){ setOpheffenTekst(e.target.value); }} />
+            <div className="bevestig-knoppen">
+              <button className="knop lijn" disabled={opheffenBezig}
+                onClick={function(){ setOpheffenOpen(false); setOpheffenTekst(""); }}>Annuleren</button>
+              {/* Er is in het hele bestand geen stijl voor een knop die
+                  uitstaat (.knop:disabled bestaat niet). Deze knop stáát
+                  het grootste deel van de tijd uit — dat is het hele idee
+                  van overtypen — en dan mag hij er niet uitzien alsof je
+                  erop kunt drukken. Vandaar dit hier, op deze ene knop, en
+                  niet als algemene regel in de opmaak: dat zou het uiterlijk
+                  van elke uitgeschakelde knop in de app veranderen en dat is
+                  een andere beslissing dan deze. In het beheerscherm staat
+                  hetzelfde gat nog open. */}
+              <button className="knop gevaar"
+                disabled={opheffenBezig || opheffenTekst.trim() !== opheffenNaam}
+                style={(opheffenBezig || opheffenTekst.trim() !== opheffenNaam)
+                       ? {opacity:.45, cursor:"default"} : null}
+                onClick={voerOpheffenUit}>
+                {opheffenBezig ? "Bezig…" : "Opheffen"}
+              </button>
+            </div>
+          </div></div>
         )}
       </div>
     </div>
