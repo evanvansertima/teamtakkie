@@ -111,6 +111,12 @@ de server weigert hem gewoon.
 
 STAP 5B — DE REPARATIE VAN DE LEDENREGELS
 -----------------------------------------
+LET OP als je dit op JOUW bestaande server leest: op 15 september
+bleek dat daar al een andere reparatie van hetzelfde probleem staat,
+uit fase-a/A2-fix-leden.sql. Die werkt. 04-leden-fix.sql draaien zou
+daar een stap terug zijn. Lees eerst LEES-MIJ-VOOR-JE-IETS-DRAAIT.md.
+Dit stukje geldt voor een NIEUWE, lege server.
+
 Draai daarna 04-leden-fix.sql, weer op dezelfde manier. Dat repareert
 twee regels uit stap 3 die vastliepen zodra je iemand aan een club
 wilde toevoegen of eruit wilde halen. Zonder deze stap kan het
@@ -188,6 +194,17 @@ Wanneer je het draait:
   · als er iets raars gebeurt in de app rond leden, verenigingen of
     pakketten — dan weet je meteen of het aan een ontbrekende
     reparatie ligt.
+
+Draai daarna ook 12-controle-opheffen.sql. Dat is dezelfde soort
+controle — het kijkt alleen — maar dan voor één vraag die 11 niet
+stelt: kan een vereniging eigenlijk wel opgeheven worden? Onder
+"Messages" komt het antwoord in gewone taal, inclusief wat je eraan
+zou doen.
+
+Staat daar dat het niet werkt, dan hoort 13-reconciliatie-is-eigenaar.sql
+erbij. Dat bestand zet één functie neer en verandert verder niets:
+geen beveiligingsregel, geen rij, geen recht. Bovenaan het bestand
+staat waarom dat nodig is.
 
 
 WAT JE MOET WETEN
