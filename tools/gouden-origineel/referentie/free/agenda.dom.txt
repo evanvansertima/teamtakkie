@@ -91,7 +91,10 @@
             <h2>
               "Agenda"
             <p>
-              "Wedstrijden, trainingen & activiteiten"
+              "Wedstrijden, trainingen"
+              <button aria-label="Trainingen — hoort bij Coach" class="slot-knop" type="button">
+                <i aria-hidden="true" class="fa-solid fa-lock slotje">
+              "& activiteiten"
           <button class="knop klein">
             <i class="fa-solid fa-plus">
             "Activiteit"
@@ -159,10 +162,6 @@
               <div class="agenda-dag-nr">
                 "6"
               <div class="agenda-events">
-                <div class="agenda-event type-training">
-                  <span class="agenda-event-tijd">
-                    "19:00"
-                  "Training"
             <div class="agenda-dag">
               <div class="agenda-dag-nr">
                 "7"
@@ -227,10 +226,6 @@
               <div class="agenda-dag-nr">
                 "20"
               <div class="agenda-events">
-                <div class="agenda-event type-training">
-                  <span class="agenda-event-tijd">
-                    "19:00"
-                  "Training"
             <div class="agenda-dag">
               <div class="agenda-dag-nr">
                 "21"
@@ -298,6 +293,8 @@
             <span>
               <i class="agenda-stip" style="background: var(--blauw-licht);">
               "Training"
+              <button aria-label="Trainingen — hoort bij Coach" class="slot-knop" type="button">
+                <i aria-hidden="true" class="fa-solid fa-lock slotje">
             <span>
               <i class="agenda-stip" style="background: rgb(139, 92, 246);">
               "Activiteit"

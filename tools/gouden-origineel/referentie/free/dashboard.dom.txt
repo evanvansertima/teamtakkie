@@ -139,6 +139,9 @@
               "RKVV Harkstede O19-3"
           <div class="db-uitslag-extra">
             <span>
+              <i class="fa-solid fa-futbol" style="color: var(--blauw);">
+              "Luuk, Luuk, Stijn, Ravi"
+            <span>
               <i class="fa-solid fa-star" style="color: rgb(245, 197, 24);">
               "Stijn Ravelijn"
         <div class="kaart">
@@ -163,22 +166,6 @@
                 "14:30 · Uit · Sportpark De Verzonnen Heide"
             <span class="db-agenda-tel">
               "overmorgen"
-          <div class="db-agenda-rij">
-            <span class="db-agenda-datum">
-              <span class="db-dag">
-                "20"
-              <span class="db-mnd">
-                "okt"
-            <span class="db-agenda-icoon" style="background: var(--blauw-licht);">
-              <i class="fa-solid fa-person-running">
-            <span style="flex: 1 1 0%; min-width: 0px;">
-              <span class="db-agenda-titel">
-                "Training 20-10-2026"
-              <span class="db-agenda-sub">
-                "19:00 · Sportpark De Verzonnen Kamp · 90 min"
-            <i aria-hidden="true" class="fa-solid fa-lock slotje">
-            <span class="db-agenda-tel">
-              "over 5 dagen"
           <div class="db-agenda-rij">
             <span class="db-agenda-datum">
               <span class="db-dag">
@@ -296,9 +283,9 @@
                 <span class="db-blink-naam">
                   "Luuk Grasmaaijer"
                 <span class="db-blink-sub">
-                  "5 doelpunten"
+                  "9 doelpunten"
               <span class="db-blink-getal" style="color: var(--blauw);">
-                "5"
+                "9"
           <div class="db-blink">
             <div class="db-blink-kop">
               "Meeste assists"
@@ -325,20 +312,6 @@
                   "3 assists"
               <span class="db-blink-getal" style="color: var(--blauw-licht);">
                 "3"
-          <div class="db-blink">
-            <div class="db-blink-kop">
-              "Trainingsopkomst"
-              <i aria-hidden="true" class="fa-solid fa-lock slotje">
-            <div class="db-blink-rij">
-              <span class="db-blink-cirkel">
-                <i class="fa-solid fa-person-running">
-              <span style="flex: 1 1 0%; min-width: 0px;">
-                <span class="db-blink-naam">
-                  "81%"
-                <span class="db-blink-sub">
-                  "over 3 trainingen"
-            <div class="db-balk">
-              <span style="width: 81%; background: var(--oranje);">
         <div class="kaart">
           <div class="kaart-titel">
             <i class="fa-solid fa-triangle-exclamation" style="color: var(--oranje);">

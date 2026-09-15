@@ -68,6 +68,19 @@ jobs:
       - name: node tests/pakket.test.js
         run: node tests/pakket.test.js
 
+      - name: node tests/boetepot.test.js
+        run: node tests/boetepot.test.js
+
+      # vulling.test.js controleert de vaste vulling van het gouden
+      # origineel tegen wat de app werkelijk schrijft. Dat klinkt als een
+      # test op een test, maar het is de enige die vangt dat een opname
+      # alleen in schijn iets vastlegt: tot 12 september stonden kaarten,
+      # doelpunten en presentieregels onder verkeerde veldnamen, waardoor
+      # de app ze niet zag en het origineel al maanden een lege
+      # disciplinepagina vastlegde als "zo hoort het".
+      - name: node tests/vulling.test.js
+        run: node tests/vulling.test.js
+
       - name: Python vastzetten
         uses: actions/setup-python@v5
         with:

@@ -48,7 +48,25 @@ function teamSleutel(basis, team, seizoen) {
 
 /* ── De selectie ─────────────────────────────────────────────
    Veertien spelers: genoeg voor een elftal met wissels, weinig genoeg
-   om een DOM-verschil nog met het oog te kunnen lezen. */
+   om een DOM-verschil nog met het oog te kunnen lezen.
+
+   ── LET OP: `stats` is een beginstand, geen totaal ───────────
+   De app telt dit blok óp bij wat hij zelf uit de wedstrijden rekent
+   (berekenSpelerStats: "afgeleid uit wedstrijden + handmatige
+   beginstand"). Dat is bedoeld voor een team dat halverwege het
+   seizoen overstapt en zijn oude cijfers meeneemt.
+
+   Zolang de doelpunten hierboven geen eigenTeam:true hadden, telde de
+   app er nul bij op en was wat er op het scherm stond precies dit
+   blok. Sinds die reparatie niet meer: Luuk Grasmaaijer staat nu op
+   9 doelpunten op het dashboard — 5 uit dit blok plus 4 uit de drie
+   gespeelde wedstrijden.
+
+   Dat is geen fout in de app, maar wel een keuze in de vulling die
+   nooit bewust gemaakt is. Wil je dat het gouden origineel laat zien
+   wat er écht in de wedstrijden staat, dan gaan deze getallen naar
+   nul — en dan moet er opnieuw opgenomen worden. Die keuze ligt bij
+   Evan; hij is hier niet stilletjes voor hem gemaakt. */
 const SPELERS = [
   spl("s01", "Joep Bramsloot",     1, "Keeper",       "2008-03-11", {doelpunten:0, assists:0, geelKaarten:0, roodKaarten:0, speelMinuten:270, wedstrijden:3}),
   spl("s02", "Ravi Kwartelaar",    2, "Verdediger",   "2008-07-02", {doelpunten:1, assists:0, geelKaarten:1, roodKaarten:0, speelMinuten:270, wedstrijden:3}),
@@ -95,26 +113,61 @@ function wed(o) {
     soort: "competitie", tegen: null, scheids: "", assistent: ""
   }, o);
 }
+/* ── Doelpunten en kaarten: precies de velden die de app schrijft ──
+   Hier stond tot 12 september {spelerId, soort, minuut}. De app leest
+   een kaart op k.type (zie berekenSpelerStats en boeteRegels) en
+   schrijft hem als {id, spelerId, naam, type, minuut}. Met `soort`
+   bestond er in het gouden origineel dus géén enkele kaart: de
+   kaartenstatistiek, de tijdlijn en de boetes met bron "kaart" werden
+   alleen in schijn vastgelegd, en een opname daarvan stond groen
+   zonder iets te dekken.
+
+   Bij de doelpunten was hetzelfde aan de hand, maar dan erger: zonder
+   eigenTeam:true telt de app een doelpunt als een tegendoelpunt
+   (scoreVerschil, wedstrijdTijdlijn) en telt het bij niemand mee als
+   doelpunt.
+
+   Beide worden daarom niet meer met de hand geschreven maar door een
+   hulpfunctie, die de naam uit SPELERS haalt en een vast id geeft.
+   Een verzonnen id is nodig omdat de app ze normaal met Date.now()
+   maakt; dat zou elke opname anders maken. */
+function spelerNaam(id) {
+  var s = SPELERS.filter(function (p) { return p.id === id; })[0];
+  if (!s) throw new Error("vulling.js: onbekende speler " + id);
+  return s.naam;
+}
+/* Een doelpunt van ons eigen team. */
+function doel(id, spelerId, minuut, assistId) {
+  return {id: id, spelerId: spelerId, naam: spelerNaam(spelerId),
+          minuut: String(minuut), eigenTeam: true,
+          assist: assistId || null, assistNaam: assistId ? spelerNaam(assistId) : ""};
+}
+/* Een gele of rode kaart. `type`, niet `soort`. */
+function kaart(id, spelerId, type, minuut) {
+  return {id: id, spelerId: spelerId, naam: spelerNaam(spelerId),
+          type: type, minuut: String(minuut)};
+}
+
 const BASIS_ELF = ["s01","s02","s03","s04","s05","s06","s07","s08","s09","s10","s11"];
 const WEDSTRIJDEN = [
   wed({id: "w01", tegenstander: "VV Nevelmeer O19-1", datum: "2026-09-12", tijd: "14:30",
        thuis: true, status: "gespeeld", score: {fch: 3, teg: 1},
        opstelling: BASIS_ELF.slice(), motm: "s09",
-       scorers: [{spelerId:"s09", minuut:12}, {spelerId:"s09", minuut:38}, {spelerId:"s06", minuut:71}],
-       kaarten: [{spelerId:"s04", soort:"geel", minuut:55}],
+       scorers: [doel("d01","s09",12), doel("d02","s09",38), doel("d03","s06",71)],
+       kaarten: [kaart("k01","s04","geel",55)],
        notities: "Sterke eerste helft, na rust te veel ruimte weggegeven."}),
   wed({id: "w02", tegenstander: "SC Duinklinker O19-2", datum: "2026-09-26", tijd: "12:15",
        thuis: false, locatie: "Sportpark Het Verzonnen Duin", status: "gespeeld",
        score: {fch: 1, teg: 2}, opstelling: BASIS_ELF.slice(), motm: "s07",
-       scorers: [{spelerId:"s10", minuut:63}],
-       kaarten: [{spelerId:"s07", soort:"geel", minuut:22}, {spelerId:"s11", soort:"rood", minuut:80}],
+       scorers: [doel("d04","s10",63)],
+       kaarten: [kaart("k02","s07","geel",22), kaart("k03","s11","rood",80)],
        notities: "Met tien man de laatste tien minuten."}),
   wed({id: "w03", tegenstander: "RKVV Harkstede O19-3", datum: "2026-10-10", tijd: "11:00",
        thuis: true, status: "gespeeld", score: {fch: 4, teg: 4},
        opstelling: BASIS_ELF.slice(), motm: "s10",
-       scorers: [{spelerId:"s09", minuut:9}, {spelerId:"s09", minuut:27},
-                 {spelerId:"s10", minuut:44}, {spelerId:"s02", minuut:88}],
-       kaarten: [{spelerId:"s04", soort:"geel", minuut:70}],
+       scorers: [doel("d05","s09",9), doel("d06","s09",27),
+                 doel("d07","s10",44), doel("d08","s02",88)],
+       kaarten: [kaart("k04","s04","geel",70)],
        notities: "Vier keer op voorsprong, vier keer weggegeven."}),
   wed({id: "w04", tegenstander: "VV Stuifzand O19-1", datum: "2026-10-17", tijd: "14:30",
        thuis: false, locatie: "Sportpark De Verzonnen Heide", status: "gepland"}),
@@ -135,10 +188,15 @@ function trn(id, datum, tijd, doel, aanwezigheid, onderdelen) {
 }
 function aanw(patroon) {
   /* patroon is één letter per speler, in de volgorde van SPELERS */
-  var kaart = {a:"aanwezig", l:"telaat", m:"afwezig", g:"geenbericht",
-               z:"ziek", b:"geblesseerd", w:"werk", u:"uitgeleend"};
+  var letters = {a:"aanwezig", l:"telaat", m:"afwezig", g:"geenbericht",
+                 z:"ziek", b:"geblesseerd", w:"werk", u:"uitgeleend"};
+  /* naam en foto horen erbij: de app schrijft een presentieregel als
+     {spelerId, naam, foto, status} en tékent a.naam rechtstreeks. Zonder
+     naam staat er in de presentielijst van een training een rij zonder
+     naam, en het WhatsApp-bericht slaat de speler helemaal over. */
   return patroon.split("").map(function (c, i) {
-    return {spelerId: SPELERS[i].id, status: kaart[c]};
+    return {spelerId: SPELERS[i].id, naam: SPELERS[i].naam,
+            foto: SPELERS[i].foto, status: letters[c]};
   });
 }
 const TRAININGEN = [

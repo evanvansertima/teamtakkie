@@ -649,6 +649,16 @@
     .slot-badge { position:absolute; top:-4px; right:-9px; font-size:8px; line-height:1;
       color:var(--goud); background:var(--vlak-goud); border-radius:50%;
       width:14px; height:14px; display:flex; align-items:center; justify-content:center; }
+    /* Een slotje dat zelf de knop is. Nodig op plekken waar het slotje
+       niet in een knop of een aantikbare rij zit maar los in een
+       tekst of een legenda staat: een slotje waar je op drukt en waar
+       niets van komt, is een doodlopend eindje. Geen knopvorm dus —
+       geen rand, geen vlak, geen extra ruimte — alleen het gedrag van
+       een knop, zodat het er precies hetzelfde uitziet als een slotje
+       dat wél in een rij zit. */
+    .slot-knop { background:none; border:0; padding:0; margin:0; font:inherit;
+      color:inherit; cursor:pointer; display:inline-flex; align-items:center;
+      vertical-align:baseline; }
     /* Op een tegel is de hele kaart de knop, dus zit het badge-je in
        de hoek van de kaart en niet op het icoon — anders zou het over
        de rand heen steken. */
@@ -1706,6 +1716,9 @@
     .agenda-event-item.type-training { background:var(--vlak-info); border-left-color:var(--blauw-licht); }
     .agenda-legenda { display:flex; gap:14px; flex-wrap:wrap; align-items:center; margin-top:12px; padding-top:11px; border-top:1px solid var(--grijs); font-size:11px; color:var(--grijs-donker); font-weight:600; font-family:'Helvetica Neue',Arial,sans-serif; }
     .agenda-legenda span { display:inline-flex; align-items:center; gap:6px; }
+    /* De legenda zet er zelf al 6px tussen; de marge die het slotje
+       overal elders nodig heeft zou hier dubbelop zijn. */
+    .agenda-legenda .slot-knop .slotje { margin-left:0; }
     .agenda-stip { width:9px; height:9px; border-radius:3px; flex-shrink:0; }
     .act-icoon { width:34px; height:34px; border-radius:11px; display:flex; align-items:center; justify-content:center; font-size:14px; flex-shrink:0; color:#fff; }
     /* Vier gelijke vakken in plaats van vakken die zich naar hun tekst
@@ -3725,6 +3738,19 @@ function slotMelding(module) {
    millimeter over is). */
 function SlotJe({ badge }) {
   return <i className={"fa-solid fa-lock " + (badge ? "slot-badge" : "slotje")} aria-hidden="true"/>;
+}
+/* Hetzelfde slotje, maar dan als knop — voor de plekken waar het los
+   in een tekst of een legenda staat en er dus geen omliggende knop is
+   die het antwoord al geeft. Het stopt de tik ook: staat dit slotje
+   toevallig in iets wat zelf aanklikbaar is, dan hoort de tik hier te
+   eindigen en niet óók nog die achterliggende actie af te vuren. */
+function SlotKnop({ naam, module }) {
+  return (
+    <button type="button" className="slot-knop" aria-label={slotLabel(naam, module)}
+      onClick={function (e) { e.stopPropagation(); slotMelding(module); }}>
+      <SlotJe />
+    </button>
+  );
 }
 /* De uitleg voor een voorleeshulp. Niet het attribuut disabled: een
    uitgeschakelde knop is voor een schermlezer onbereikbaar en meldt
@@ -9428,41 +9454,51 @@ function boeteRegels(spelers, wedstrijden, trainingen, activiteiten, handmatig, 
   (spelers||[]).forEach(function(s){ bekend[s.id] = s; });
   var uit = [];
 
-  function voegToe(sleutel, spelerId, datum, redenId, bedrag, wat) {
+  /* `herkomst` zegt waar een regel vandaan komt: training, activiteit,
+     wedstrijd of met de hand ingevoerd. Dat is iets anders dan `reden`
+     (te laat, gele kaart) en iets anders dan de `bron` van een
+     BOETE_REDEN (presentie, kaart, hand) — vandaar een derde woord.
+
+     Het staat er omdat de boetepot moet kunnen laten zien dát er
+     regels uit trainingen komen zonder ze te tonen. Zonder dit veld
+     zou je dat uit de sleutel moeten raden ("begint met een t"), en
+     dat is precies het soort afspraak dat een halfjaar later stilletjes
+     breekt zodra iemand de sleutel anders opbouwt. */
+  function voegToe(herkomst, sleutel, spelerId, datum, redenId, bedrag, wat) {
     /* Een gastspeler staat niet in de selectie en krijgt dus ook
        geen boete: hij is hier te gast. */
     if (!bekend[spelerId]) return;
     if (!bedrag) return;
     uit.push({id:sleutel, spelerId:spelerId, datum:datum||"", reden:redenId,
-              bedrag:bedrag, wat:wat, automatisch:true});
+              bedrag:bedrag, wat:wat, automatisch:true, herkomst:herkomst});
   }
 
   /* Uit de presentielijsten van trainingen en activiteiten */
-  function uitLijst(soort, id, datum, titel, lijst) {
+  function uitLijst(herkomst, soort, id, datum, titel, lijst) {
     (lijst||[]).forEach(function(a){
       BOETE_REDENEN.forEach(function(reden){
         if (reden.bron !== "presentie" || a.status !== reden.status) return;
         if (!tar[reden.id].aan) return;
-        voegToe(soort+id+"-"+a.spelerId+"-"+reden.id, a.spelerId, datum,
+        voegToe(herkomst, soort+id+"-"+a.spelerId+"-"+reden.id, a.spelerId, datum,
                 reden.id, tar[reden.id].bedrag, titel);
       });
     });
   }
   (trainingen||[]).forEach(function(t){
-    uitLijst("t", t.id, t.datum, trainingTitel(t), t.aanwezigheid);
+    uitLijst("training", "t", t.id, t.datum, trainingTitel(t), t.aanwezigheid);
   });
   (activiteiten||[]).forEach(function(a){
-    uitLijst("a", a.id, a.datum, a.titel, a.aanwezigheid);
+    uitLijst("activiteit", "a", a.id, a.datum, a.titel, a.aanwezigheid);
   });
   (wedstrijden||[]).forEach(function(w){
-    uitLijst("w", w.id, w.datum, "vs. "+(w.tegenstander||"tegenstander"), w.aanwezigheid);
+    uitLijst("wedstrijd", "w", w.id, w.datum, "vs. "+(w.tegenstander||"tegenstander"), w.aanwezigheid);
     /* En de kaarten uit gespeelde wedstrijden */
     if (w.status !== "gespeeld") return;
     (w.kaarten||[]).forEach(function(k, i){
       BOETE_REDENEN.forEach(function(reden){
         if (reden.bron !== "kaart" || k.type !== reden.kaart) return;
         if (!tar[reden.id].aan) return;
-        voegToe("k"+w.id+"-"+i+"-"+reden.id, k.spelerId, w.datum, reden.id,
+        voegToe("wedstrijd", "k"+w.id+"-"+i+"-"+reden.id, k.spelerId, w.datum, reden.id,
                 tar[reden.id].bedrag, "vs. "+(w.tegenstander||"tegenstander"));
       });
     });
@@ -9472,10 +9508,44 @@ function boeteRegels(spelers, wedstrijden, trainingen, activiteiten, handmatig, 
   (handmatig||[]).forEach(function(b){
     if (!bekend[b.spelerId]) return;
     uit.push({id:"h"+b.id, spelerId:b.spelerId, datum:b.datum||"", reden:b.reden||"overig",
-              bedrag:Number(b.bedrag)||0, wat:b.omschrijving||"", automatisch:false, bronId:b.id});
+              bedrag:Number(b.bedrag)||0, wat:b.omschrijving||"", automatisch:false,
+              herkomst:"hand", bronId:b.id});
   });
 
   return uit.sort(function(a,b){ return String(b.datum).localeCompare(String(a.datum)); });
+}
+
+/* ── Wat je van de boetelijst te zien krijgt in dit pakket ──
+   Zonder de module trainingen mag een boete die uit een
+   trainingspresentie komt niet als losse regel in beeld staan: daar
+   staan de datum en de naam van die training in, en dat is precies
+   het trainingsgegeven dat niet bij Free hoort. Anders neem je één
+   maand Coach, legt daarin het seizoen vast, en leest het daarna
+   gratis terug via de boetepot.
+
+   Maar — en dit is de hele reden dat deze functie bestaat in plaats
+   van dat boeteRegels() zelf de trainingen weglaat — het bedrag
+   blijft meetellen. De totalen boven de lijst, de stand per speler
+   en het overzicht dat je deelt rekenen over de vólledige lijst.
+   Een openstaand bedrag dat zakt op het moment dat je van pakket
+   wisselt, leest als "mijn administratie is weg", en dat is erger
+   dan wat we hier proberen te voorkomen. Er wordt dus niets
+   weggerekend, alleen samengevouwen.
+
+   Wat eruit komt is daarom een splitsing en geen filter: de regels
+   die je mag zien, plus hoeveel er zijn samengevouwen en voor welk
+   bedrag. Met die twee getallen kan het scherm één vergrendelde
+   regel tonen die het verschil tussen de lijst en het totaal
+   uitlegt, zonder één datum of één trainingsnaam prijs te geven. */
+function boeteRegelsGesplitst(regels) {
+  var alle = regels || [];
+  if (magModule("trainingen")) return {zichtbaar: alle, verborgen: 0, verborgenBedrag: 0};
+  var zichtbaar = [], verborgen = 0, bedrag = 0;
+  alle.forEach(function (r) {
+    if (r.herkomst === "training") { verborgen++; bedrag += r.bedrag || 0; return; }
+    zichtbaar.push(r);
+  });
+  return {zichtbaar: zichtbaar, verborgen: verborgen, verborgenBedrag: bedrag};
 }
 
 /* De stand per speler en van de pot als geheel */
@@ -24125,9 +24195,16 @@ function BoetepotTab({ spelers }) {
 
   const seizoen = huidigSeizoen();
   const actief = boetepotActief(tarieven, seizoen);
+  /* Let op de volle laadTrainingen() hier, en niet zichtbareTrainingen():
+     de berékening gaat altijd over alles. Een boete die iemand heeft
+     staan, blijft hij schuldig, ook in een pakket waarin hij de
+     training er niet bij kan zien. Wat er per pakket verschilt is
+     alleen wat er in de lijst hieronder komt te staan, en dat regelt
+     boeteRegelsGesplitst(). */
   const regels = boeteRegels(spelers, laadWedstrijden(), laadTrainingen(),
                              laadActiviteiten(), boetes, tarieven, actief);
   const stand = boeteStand(spelers, regels, betalingen);
+  const lijst = boeteRegelsGesplitst(regels);
   const spelerVan = function(id){ return spelers.filter(function(s){ return s.id===id; })[0]; };
 
   function zetSeizoen(aan) {
@@ -24310,11 +24387,40 @@ function BoetepotTab({ spelers }) {
 
       {actief && toon==="regels" && (
         <div className="kaart">
+          {/* De samenvatting van wat er niet in de lijst staat, komt
+              bovenaan en niet onderaan. Een uitleg die je pas vindt na
+              veertig regels scrollen legt niets uit: juist wie zich
+              afvraagt waarom de lijst niet optelt tot het totaal
+              hierboven, moet dat antwoord meteen zien.
+
+              Wat er wél staat: hoeveel het er zijn en voor welk bedrag
+              samen. Wat er niet staat: geen datum, geen trainingsnaam,
+              geen bedrag per stuk, geen speler. Het bedrag is er met
+              opzet bij — zonder dat getal kun je de lijst naast het
+              totaal leggen, een gat zien, en alsnog denken dat er iets
+              kwijt is. */}
+          {lijst.verborgen > 0 && (
+            <div className="boete-regel" onClick={function(){ slotMelding("trainingen"); }}
+              style={{cursor:"pointer"}}>
+              <span className="boete-reden" style={{background:"var(--goud)"}}>
+                <i className="fa-solid fa-lock"/>
+              </span>
+              <div style={{flex:1,minWidth:0}}>
+                <div className="boete-naam">
+                  {lijst.verborgen + (lijst.verborgen===1 ? " boete" : " boetes") + " uit trainingen"}
+                </div>
+                <div className="boete-sub">
+                  {slotZin("trainingen") + " Tellen wel mee in het totaal."}
+                </div>
+              </div>
+              <span className="boete-bedrag">{centenNaarTekst(lijst.verborgenBedrag)}</span>
+            </div>
+          )}
           {regels.length===0 ? (
             <p style={{fontSize:13,color:"var(--grijs-donker)",fontWeight:400,margin:0}}>
               Nog geen boetes.
             </p>
-          ) : regels.map(function(r){
+          ) : lijst.zichtbaar.map(function(r){
             var sp = spelerVan(r.spelerId), red = boeteReden(r.reden);
             return (
               <div key={r.id} className="boete-regel">
@@ -30794,7 +30900,21 @@ function AgendaModule({ navigeer }) {
   return (
     <div>
       <div className="pagina-header">
-        <div className="pagina-header-tekst"><h2>Agenda</h2><p>Wedstrijden, trainingen &amp; activiteiten</p></div>
+        {/* De ondertitel blijft ook zonder de module trainingen precies
+            zo staan: dit is de plek waar iemand voor het eerst leest
+            dát er trainingen in de agenda kunnen staan. Een ondertitel
+            die stilletjes "Wedstrijden & activiteiten" wordt verkoopt
+            niets en verbergt alleen dat er meer is.
+
+            Het slotje staat achter het wóórd trainingen en niet achter
+            de hele zin. Achteraan zou het over alle drie de woorden
+            gaan en dus suggereren dat ook wedstrijden en activiteiten
+            op slot zitten — terwijl die bij de basis horen en gewoon
+            in deze kalender staan. */}
+        <div className="pagina-header-tekst"><h2>Agenda</h2>
+          <p>{magModule("trainingen")
+            ? "Wedstrijden, trainingen & activiteiten"
+            : <>Wedstrijden, trainingen<SlotKnop naam="Trainingen" module="trainingen"/> &amp; activiteiten</>}</p></div>
         <button className="knop klein" onClick={function(){
           setFormulier({datum: gekozenDag ? datumSleutel(gekozenDag) : ""});
         }}>
@@ -30839,7 +30959,14 @@ function AgendaModule({ navigeer }) {
 
         <div className="agenda-legenda">
           <span><i className="agenda-stip" style={{background:"var(--blauw)"}}/> Wedstrijd</span>
-          <span><i className="agenda-stip" style={{background:"var(--blauw-licht)"}}/> Training</span>
+          {/* Het bolletje Training blijft staan, ook als er dit pakket
+              geen enkele training in de kalender komt. Een legenda met
+              een gat erin roept geen vraag op — je ziet niet wat er
+              niet staat. Een bolletje met een slotje wel: dat is het
+              verschil tussen "deze app doet geen trainingen" en "deze
+              trainingen horen bij een ander pakket". */}
+          <span><i className="agenda-stip" style={{background:"var(--blauw-licht)"}}/> Training
+            {!magModule("trainingen") && <SlotKnop naam="Trainingen" module="trainingen"/>}</span>
           <span><i className="agenda-stip" style={{background:"#8b5cf6"}}/> Activiteit</span>
           {!isDezeMaand && (
             <button className="deel-schakelknop" style={{marginLeft:"auto"}} onClick={naarVandaag}>
