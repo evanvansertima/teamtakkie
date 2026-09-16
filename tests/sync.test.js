@@ -1,12 +1,12 @@
 /* ══════════════════════════════════════════════════════════════
-   Tests voor syncTeamGegevens in online/index.html
+   Tests voor syncTeamGegevens in src/app.jsx
    ─────────────────────────────────────────────────────────────
    Draaien:  node tests/sync.test.js
 
    Deze test knipt de synchronisatiefuncties uit de app zelf en draait
    ze tegen een nagebootste localStorage en een nagebootste
-   serverVraag(). Geen bouwstap, geen testframework, geen npm install
-   — node en verder niets.
+   serverVraag(). Geen testframework, geen npm install — node en
+   verder niets.
 
    Waarom uit het bestand zelf en niet een kopie: een kopie loopt uit
    de pas. Deze test faalt zodra iemand de functies hernoemt, en dat
@@ -24,7 +24,20 @@
 const fs = require("fs");
 const path = require("path");
 
-const APP = path.join(__dirname, "..", "online", "index.html");
+/* Sinds de bouwstap (P1) is src/app.jsx de bron die mensen bewerken en
+   is online/index.html wat esbuild daarvan maakt: zonder commentaar,
+   met de JSX al vertaald en met eenregelige functies over drie regels
+   uitgespreid. Deze test knipt op tekst en beantwoordt daarmee de
+   vraag "heeft iemand een functie hernoemd of kapotgemaakt" — een
+   vraag over de bron. Zou hij het gebouwde bestand lezen, dan werd hij
+   ook rood van een nieuwe esbuild-versie die anders afdrukt: ruis die
+   niets over de app zegt.
+
+   Of de bóuwstap zelf iets verandert is een andere vraag, en die wordt
+   beantwoord waar hij hoort: tools/gouden-origineel.js draait het
+   gebouwde online/index.html in een echte browser en vergelijkt de DOM
+   en de beeldpunten. Dat vangt precies wat deze knip niet kan zien. */
+const APP = path.join(__dirname, "..", "src", "app.jsx");
 const regels = fs.readFileSync(APP, "utf8").split("\n");
 
 /* Eén functie uit de app, van zijn kop tot de eerste } op kolom 1 */
@@ -32,7 +45,7 @@ function knip(naam) {
   const kop = new RegExp("^function " + naam + "\\(");
   let a = -1;
   for (let i = 0; i < regels.length; i++) if (kop.test(regels[i])) { a = i; break; }
-  if (a < 0) throw new Error(naam + " niet gevonden in online/index.html");
+  if (a < 0) throw new Error(naam + " niet gevonden in src/app.jsx");
   let e = a; while (e < regels.length && !/^\}/.test(regels[e])) e++;
   return regels.slice(a, e + 1).join("\n");
 }

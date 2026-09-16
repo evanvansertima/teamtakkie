@@ -149,6 +149,23 @@ of het aan de bouwstap of aan de verplaatsing ligt.
 **Meetbaar:** tijd tot interactief op een telefoon, vóór en na. Dat getal is het
 argument om door te gaan.
 
+**Afgerond op 16 september 2026.** Gemeten op een laptop, echte Chrome, drie
+metingen per versie: 2637 ms → 447 ms (factor 5,9, -2,2 sec). Op een telefoon
+langs de lijn met 4G loopt dat verder uiteen, want er verdwijnt ook 2,80 MB aan
+downloads (`babel-standalone` zelf, verreweg het grootste bestand dat de app
+ophaalde). Het gouden origineel bleef groen op alle 19 opnames, DOM en
+schermafdrukken, dus dit is geleverd zonder gedragswijziging.
+
+Broncode (`src/app.jsx`, `src/index.html`) en het bouwscript (`tools/bouw.js`)
+staan nu naast `online/index.html`, dat het bouwproduct is geworden.
+Commentaar (1.196 regels) leeft voortaan alleen in `src/app.jsx` — esbuild kan
+het niet behouden in de uitvoer. `python3 tools/check.py` en de vijf
+knip-tests lezen sindsdien `src/app.jsx`, niet meer `online/index.html`; het
+gouden origineel blijft het gebouwde bestand meten, want dat is wat de
+bezoeker krijgt. `check.py` controleert er ook bij of `online/index.html` nog
+actueel is ten opzichte van de bron, zodat een vergeten `node tools/bouw.js`
+vóór een uitrol niet stilletjes voorbijgaat.
+
 ---
 
 ### P2 — De kern eruit · ± 3 dagen

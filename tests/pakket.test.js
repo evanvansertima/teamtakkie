@@ -1,12 +1,12 @@
 /* ══════════════════════════════════════════════════════════════
-   Tests voor de pakketlaag (entitlements) in online/index.html
+   Tests voor de pakketlaag (entitlements) in src/app.jsx
    ─────────────────────────────────────────────────────────────
    Draaien:  node tests/pakket.test.js
 
    Deze test knipt MODULES, PAKKETTEN, PAGINA_MODULE en de zes
    pakketfuncties uit de app zelf en draait ze tegen een nagebootste
-   localStorage. Geen bouwstap, geen testframework, geen npm install
-   — node en verder niets.
+   localStorage. Geen testframework, geen npm install — node en
+   verder niets.
 
    Waarom uit het bestand zelf en niet een kopie: een kopie loopt uit
    de pas. Deze test faalt zodra iemand de functies hernoemt, en dat
@@ -75,12 +75,30 @@
 const fs = require("fs");
 const path = require("path");
 
-const APP = path.join(__dirname, "..", "online", "index.html");
+/* Sinds de bouwstap (P1) is src/app.jsx de bron die mensen bewerken en
+   is online/index.html wat esbuild daarvan maakt: zonder commentaar,
+   met de JSX al vertaald en met eenregelige functies over drie regels
+   uitgespreid. Dat laatste brak deze test precies hier: knipBlok()
+   hieronder knipt t/m de régel van magNieuwTeam, en die functie stond
+   in zijn geheel op één regel. esbuild spreidt hem over drie, waarmee
+   de knip halverwege een accolade eindigde.
+
+   Deze test knipt op tekst en beantwoordt daarmee de vraag "heeft
+   iemand een functie hernoemd of kapotgemaakt" — een vraag over de
+   bron. Zou hij het gebouwde bestand lezen, dan werd hij ook rood van
+   een nieuwe esbuild-versie die anders afdrukt: ruis die niets over de
+   app zegt.
+
+   Of de bóuwstap zelf iets verandert is een andere vraag, en die wordt
+   beantwoord waar hij hoort: tools/gouden-origineel.js draait het
+   gebouwde online/index.html in een echte browser en vergelijkt de DOM
+   en de beeldpunten. Dat vangt precies wat deze knip niet kan zien. */
+const APP = path.join(__dirname, "..", "src", "app.jsx");
 const bron = fs.readFileSync(APP, "utf8");
 const regels = bron.split("\n");
 
 const zoek = (re) => { for (let i = 0; i < regels.length; i++) if (re.test(regels[i])) return i; return -1; };
-const eis = (re, wat) => { const i = zoek(re); if (i < 0) throw new Error(wat + " niet gevonden in online/index.html"); return i; };
+const eis = (re, wat) => { const i = zoek(re); if (i < 0) throw new Error(wat + " niet gevonden in src/app.jsx"); return i; };
 
 /* Eén regel uit de app (de sleutelnaam staat los van het blok) */
 function knipRegel(re, wat) { return regels[eis(re, wat)]; }
@@ -117,7 +135,7 @@ function knipNavRondom(naam) {
   let i = -1;
   for (let k = 0; k < regels.length; k++)
     if (new RegExp("\\b" + naam + "\\b").test(regels[k]) && !def.test(regels[k])) { i = k; break; }
-  if (i < 0) throw new Error(naam + " wordt nergens gebruikt in online/index.html");
+  if (i < 0) throw new Error(naam + " wordt nergens gebruikt in src/app.jsx");
   let a = i; while (a > 0 && !/<nav[ >]/.test(regels[a])) a--;
   let e = i; while (e < regels.length && !/<\/nav>/.test(regels[e])) e++;
   const blok = regels.slice(a, Math.min(e + 1, regels.length));
@@ -149,7 +167,7 @@ try {
 } catch (e) {
   /* Meestal betekent dit: iemand heeft een functie hernoemd of het
      blok verplaatst. Dat is geen kapotte test, dat is de melding. */
-  console.log("\nDe pakketlaag is niet uit online/index.html te knippen:");
+  console.log("\nDe pakketlaag is niet uit src/app.jsx te knippen:");
   console.log("  " + (e && e.message || e));
   console.log("\n0 geslaagd, 1 gefaald");
   process.exit(1);
@@ -161,7 +179,7 @@ try {
 const NAMEN = ["pakketNu", "zetPakket", "magModule", "magPagina", "maxTeams", "magNieuwTeam"];
 const zoek1 = NAMEN.filter((n) => { try { return typeof eval(n) !== "function"; } catch (e) { return true; } });
 if (zoek1.length) {
-  console.log("\nDeze functies staan niet meer in het pakketblok van online/index.html:");
+  console.log("\nDeze functies staan niet meer in het pakketblok van src/app.jsx:");
   zoek1.forEach((n) => console.log("  - " + n + "  (hernoemd? verplaatst?)"));
   console.log("\n0 geslaagd, " + zoek1.length + " gefaald");
   process.exit(1);
@@ -250,7 +268,7 @@ const okAls = (ids, naam, echtFn, verwacht) => {
   if (missen.length) {
     ongemeten++;
     nietTeMeten.push(naam + "   (pakket " + missen.map((m) => '"' + m + '"').join(" en ") +
-                     " staat nog niet in online/index.html)");
+                     " staat nog niet in src/app.jsx)");
     console.log("  n.t.m " + naam);
     return;
   }
@@ -270,9 +288,9 @@ const aanroepen = (naam) => regels
 function draai() {
 
 console.log(FENNA_KLAAR
-  ? "De pakketten in online/index.html staan op free/coach/club. Elk rood\n" +
+  ? "De pakketten in src/app.jsx staan op free/coach/club. Elk rood\n" +
     "dat hieronder [WACHT] heet is vanaf nu een echte bevinding."
-  : "De pakketten in online/index.html staan nog op " +
+  : "De pakketten in src/app.jsx staan nog op " +
     PAKKETTEN.map((p) => p.id).join("/") + " — de oude indeling.\n" +
     "Daarom mogen de [WACHT]-tests rood staan; ze zijn Fenna's lijstje.");
 
@@ -550,7 +568,7 @@ ok("(a4) de onderbalk op de telefoon zeeft ook",
 const GANAAR = (function () {
   const a = regels.findIndex((r) => /^\s+function gaNaar\s*\(/.test(r));
   if (a < 0) {
-    console.log("\n   gaNaar() staat niet meer in online/index.html.");
+    console.log("\n   gaNaar() staat niet meer in src/app.jsx.");
     console.log("   Hernoemd of verplaatst? Zoek hem op en pas deze test aan.");
     return "";
   }
@@ -626,7 +644,7 @@ if (nietTeMeten.length) {
   console.log("\nNiet te meten (" + nietTeMeten.length + ") — geen groen en geen rood.");
   console.log("Deze gedragstests gaan over een pakket dat nog niet in de app staat;");
   console.log("ze zouden max meten in plaats van coach of club. Ze doen vanzelf mee");
-  console.log("zodra PAKKETTEN in online/index.html is bijgewerkt.");
+  console.log("zodra PAKKETTEN in src/app.jsx is bijgewerkt.");
   nietTeMeten.forEach((n) => console.log("  - " + n));
 }
 if (teVroegGroen.length) {
@@ -635,7 +653,7 @@ if (teVroegGroen.length) {
   console.log("\nGOED NIEUWS, EN EEN OPDRACHT — " + teVroegGroen.length +
               " test(s) staan als bewust rood in de kop, maar zijn groen.");
   if (wacht.length)
-    console.log("  " + wacht.length + "x [WACHT]: online/index.html is bijgewerkt. Haal die " +
+    console.log("  " + wacht.length + "x [WACHT]: src/app.jsx is bijgewerkt. Haal die " +
                 "merktekens\n  weg uit dit bestand, anders weet niemand meer wat er nog open staat.");
   if (rood.length)
     console.log("  " + rood.length + "x [ROOD]: er is een slot bijgekomen. Werk de kop bij.");

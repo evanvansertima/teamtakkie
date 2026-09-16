@@ -1,10 +1,10 @@
 /* ══════════════════════════════════════════════════════════════
-   Tests voor de boetepot in online/index.html
+   Tests voor de boetepot in src/app.jsx
    ─────────────────────────────────────────────────────────────
    Draaien:  node tests/boetepot.test.js
 
    Deze test knipt de boetefuncties uit de app zelf en draait ze
-   tegen een vaste vulling. Geen bouwstap, geen testframework, geen
+   tegen een vaste vulling. Geen testframework, geen
    npm install — node en verder niets.
 
    Waarom uit het bestand zelf en niet een kopie: een kopie loopt uit
@@ -51,11 +51,26 @@
 const fs = require("fs");
 const path = require("path");
 
-const APP = path.join(__dirname, "..", "online", "index.html");
+/* Sinds de bouwstap (P1) is src/app.jsx de bron die mensen bewerken en
+   is online/index.html wat esbuild daarvan maakt: zonder commentaar,
+   met de JSX al vertaald en met eenregelige functies over drie regels
+   uitgespreid. Voor déze test telt vooral het commentaar: hieronder
+   staat zonderCommentaar(), dat het commentaar juist wegstreept omdat
+   BoetepotTab in woorden uitlegt wat er níét gebeurt. Op het gebouwde
+   bestand zou die functie niets meer te doen hebben — en dan test hij
+   ook niet meer of die uitleg nog klopt.
+
+   Deze test knipt op tekst en beantwoordt daarmee de vraag "heeft
+   iemand een functie hernoemd of kapotgemaakt" — een vraag over de
+   bron. Of de bóuwstap zelf iets verandert is een andere vraag, en die
+   wordt beantwoord waar hij hoort: tools/gouden-origineel.js draait
+   het gebouwde online/index.html in een echte browser en vergelijkt de
+   DOM en de beeldpunten. */
+const APP = path.join(__dirname, "..", "src", "app.jsx");
 const regels = fs.readFileSync(APP, "utf8").split("\n");
 
 const zoek = (re) => { for (let i = 0; i < regels.length; i++) if (re.test(regels[i])) return i; return -1; };
-const eis = (re, wat) => { const i = zoek(re); if (i < 0) throw new Error(wat + " niet gevonden in online/index.html"); return i; };
+const eis = (re, wat) => { const i = zoek(re); if (i < 0) throw new Error(wat + " niet gevonden in src/app.jsx"); return i; };
 
 /* Eén functie, van de kop tot de eerste accolade in de eerste kolom. */
 function knipFunctie(naam) {
@@ -147,7 +162,7 @@ try {
 } catch (e) {
   /* Meestal betekent dit: iemand heeft een functie hernoemd of
      verplaatst. Dat is geen kapotte test, dat is de melding. */
-  console.log("\nDe boetepot is niet uit online/index.html te knippen:");
+  console.log("\nDe boetepot is niet uit src/app.jsx te knippen:");
   console.log("  " + (e && e.message || e));
   console.log("\n0 geslaagd, 1 gefaald");
   process.exit(1);
@@ -157,7 +172,7 @@ const NAMEN = ["boeteRegels", "boeteRegelsGesplitst", "boeteStand", "boetepotAct
                "laadBoeteTarieven", "centenNaarTekst", "deelBoetepot", "magModule", "trainingTitel"];
 const missen = NAMEN.filter((n) => { try { return typeof eval(n) !== "function"; } catch (e) { return true; } });
 if (missen.length) {
-  console.log("\nDeze functies staan niet meer waar deze test ze zoekt in online/index.html:");
+  console.log("\nDeze functies staan niet meer waar deze test ze zoekt in src/app.jsx:");
   missen.forEach((n) => console.log("  - " + n + "  (hernoemd? verplaatst?)"));
   console.log("\n0 geslaagd, " + missen.length + " gefaald");
   process.exit(1);
@@ -189,7 +204,7 @@ const opPakket = (id) => { kast[LICENTIE_KEY] = JSON.stringify({pakket: id}); };
    pakket, en dan zijn "free" en "club" stilletjes hetzelfde. */
 const ontbreekt = ["free", "club"].filter((i) => !PAKKETTEN.some((p) => p.id === i));
 if (ontbreekt.length) {
-  console.log("\nDeze pakketten staan niet meer in online/index.html: " + ontbreekt.join(", "));
+  console.log("\nDeze pakketten staan niet meer in src/app.jsx: " + ontbreekt.join(", "));
   console.log("Zonder die twee meet deze test twee keer hetzelfde pakket.");
   console.log("\n0 geslaagd, 1 gefaald");
   process.exit(1);

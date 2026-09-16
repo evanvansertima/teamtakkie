@@ -14,11 +14,16 @@ oudere uitrol aanwijzen en op "Publish" klikken. Geen map zoeken meer.
 **Twee dingen die bij dit project horen en die de standaard Netlify-uitleg
 niet vertelt:**
 
-1. **Er is geen bouwstap.** `online/index.html` ís de app; Babel vertaalt
-   de JSX in de browser van elke bezoeker, er wordt niets vooraf
-   "gebouwd". Netlify hoeft dus nooit een bouwcommando uit te voeren — je
-   laat het bouwcommando-veld helemaal leeg en wijst alleen de map
-   `online` aan als wat gepubliceerd moet worden.
+1. **Sinds de P1-bouwstap (16 september 2026) is er wél een bouwstap, maar
+   niet bij Netlify.** `src/app.jsx` is de broncode; `node tools/bouw.js`
+   vertaalt die vooraf, op Evans eigen laptop, naar `online/index.html`.
+   Netlify zelf hoeft nog steeds nooit een bouwcommando uit te voeren — je
+   laat het bouwcommando-veld leeg en wijst de map `online` aan als wat
+   gepubliceerd moet worden, precies zoals hieronder staat. Het enige dat
+   verandert: vóórdat die map naar Netlify gaat (of, na dit plan, vóórdat
+   er naar `main` gepusht wordt), moet `node tools/bouw.js` gedraaid zijn.
+   `python3 tools/check.py` controleert dit zelf en meldt het hard als het
+   is vergeten — zie de regel "online/index.html is actueel" in de uitvoer.
 2. **`online/sw.js` is een service worker** — een stukje code dat de app
    en de zes bibliotheken (React, Babel, jsPDF, Three.js, Font Awesome,
    Google Fonts) bewaart op het apparaat van de gebruiker, zodat de app

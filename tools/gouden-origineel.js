@@ -783,13 +783,22 @@ async function wachtTotRustig(page, watDoen) {
 /* ── 6. Controle: kent het script nog alle schermen? ─────────
    Het gouden origineel is waardeloos als er stilletjes een scherm
    bijkomt dat niemand meet. Daarom wordt de lijst SCHERMEN hierboven
-   uit online/index.html zelf gecontroleerd — uit de router én uit het
-   zijmenu — en niet uit een kopie. */
+   uit de app zelf gecontroleerd — uit de router én uit het zijmenu —
+   en niet uit een kopie.
+
+   Let op het onderscheid met de rest van dit script: de ópnames draaien
+   op het gebouwde online/index.html, want dat is wat de bezoeker krijgt.
+   Déze controle leest src/app.jsx, want het is een vraag over wat er
+   geschreven staat. Dat is sinds de bouwstap (P1) geen haarkloverij
+   meer maar noodzaak: esbuild schrijft {id:"dashboard"} als
+   { id: "dashboard" }, en dan vindt de regex hieronder niets — waarna
+   dit script meldt dat het zijmenu leeg is terwijl er niets aan de hand
+   is. Een controle die afgaat op opmaak hoort naar de bron te kijken. */
 function controleerSchermen() {
-  const bron = fs.readFileSync(path.join(APP_MAP, "index.html"), "utf8");
+  const bron = fs.readFileSync(path.join(APP_MAP, "..", "src", "app.jsx"), "utf8");
 
   const router = bron.match(/function renderPagina\(\)\s*\{[\s\S]*?\n  \}/);
-  if (!router) throw new Error("renderPagina() niet gevonden in online/index.html. " +
+  if (!router) throw new Error("renderPagina() niet gevonden in src/app.jsx. " +
     "Is de router hernoemd of verplaatst? Pas dit script aan.");
   const uitRouter = [];
   const re = /case\s+"([a-z]+)"\s*:/g;
@@ -797,7 +806,7 @@ function controleerSchermen() {
   while ((m = re.exec(router[0]))) uitRouter.push(m[1]);
 
   const menu = bron.match(/const zijGroepen = \[[\s\S]*?\n\];/);
-  if (!menu) throw new Error("zijGroepen niet gevonden in online/index.html.");
+  if (!menu) throw new Error("zijGroepen niet gevonden in src/app.jsx.");
   const uitMenu = [];
   const re2 = /\{id:"([a-z]+)"/g;
   while ((m = re2.exec(menu[0]))) uitMenu.push(m[1]);
@@ -819,19 +828,26 @@ function controleerSchermen() {
    SETS hierboven zegt welke schermen een pakket mag zien. Dat is een
    bewering, en een bewering in een testgereedschap is precies het
    soort ding dat stilletjes achterloopt. Daarom wordt hij nagerekend
-   tegen online/index.html zelf — niet tegen een kopie, niet tegen
-   docs/, en niet tegen server/06-pakketten.sql (dat is een andere
-   vraag, en die stelt tests/pakket.test.js).
+   tegen de app zelf — niet tegen een kopie, niet tegen docs/, en niet
+   tegen server/06-pakketten.sql (dat is een andere vraag, en die stelt
+   tests/pakket.test.js).
 
    Loopt het uit de pas, dan is dat een harde fout. Een opnameset die
    stil van vier naar vijf schermen gaat is geen vangnet meer: je
    vergelijkt dan appels met peren en ziet alleen dat er "iets"
-   veranderd is. */
+   veranderd is.
+
+   Net als bij controleerSchermen() hierboven wordt src/app.jsx gelezen
+   en niet het gebouwde bestand: de regex hieronder is afgestemd op hoe
+   een mens die lijst opschrijft ({id:"free", naam:...}), en esbuild
+   zet daar spaties in ({ id: "free", naam: ... }). Dan leest hij nul
+   pakketten en meldt dit script dat de opmaak veranderd is, terwijl er
+   niets veranderd is behalve de opmaak van het bouwproduct. */
 function leesPakkettenUitApp() {
-  const bron = fs.readFileSync(path.join(APP_MAP, "index.html"), "utf8");
+  const bron = fs.readFileSync(path.join(APP_MAP, "..", "src", "app.jsx"), "utf8");
 
   const blok = bron.match(/const PAKKETTEN = \[[\s\S]*?\n\];/);
-  if (!blok) throw new Error("PAKKETTEN niet gevonden in online/index.html. " +
+  if (!blok) throw new Error("PAKKETTEN niet gevonden in src/app.jsx. " +
     "Is de pakkettenlijst hernoemd of verplaatst? Pas dit script aan.");
   const pakketten = {};
   const re = /\{id:"([a-z]+)",\s+naam:"([^"]*)",\s+teams:([^,]+),\s+modules:\[([^\]]*)\]\}/g;
@@ -849,7 +865,7 @@ function leesPakkettenUitApp() {
       "kijk meteen of SETS nog klopt, want dat is waarom deze controle bestaat.");
 
   const pmBlok = bron.match(/const PAGINA_MODULE = \{[\s\S]*?\n\};/);
-  if (!pmBlok) throw new Error("PAGINA_MODULE niet gevonden in online/index.html.");
+  if (!pmBlok) throw new Error("PAGINA_MODULE niet gevonden in src/app.jsx.");
   const paginaModule = {};
   const re2 = /([a-z]+)\s*:\s*"([a-z]+)"/g;
   while ((m = re2.exec(pmBlok[0]))) paginaModule[m[1]] = m[2];

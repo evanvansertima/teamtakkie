@@ -1,11 +1,11 @@
 /* ══════════════════════════════════════════════════════════════
-   Tests voor de seizoenlogica in online/index.html
+   Tests voor de seizoenlogica in src/app.jsx
    ─────────────────────────────────────────────────────────────
    Draaien:  node tests/seizoen.test.js
 
    Deze test knipt de seizoenfuncties uit de app zelf en draait ze
-   tegen een nagebootste localStorage. Geen bouwstap, geen
-   testframework, geen npm install — node en verder niets.
+   tegen een nagebootste localStorage. Geen testframework, geen
+   npm install — node en verder niets.
 
    Waarom uit het bestand zelf en niet een kopie: een kopie loopt uit
    de pas. Deze test faalt zodra iemand de functies hernoemt, en dat
@@ -15,7 +15,20 @@
 const fs = require("fs");
 const path = require("path");
 
-const APP = path.join(__dirname, "..", "online", "index.html");
+/* Sinds de bouwstap (P1) is src/app.jsx de bron die mensen bewerken en
+   is online/index.html wat esbuild daarvan maakt: zonder commentaar,
+   met de JSX al vertaald en met eenregelige functies over drie regels
+   uitgespreid. Deze test knipt op tekst en beantwoordt daarmee de
+   vraag "heeft iemand een functie hernoemd of kapotgemaakt" — een
+   vraag over de bron. Zou hij het gebouwde bestand lezen, dan werd hij
+   ook rood van een nieuwe esbuild-versie die anders afdrukt: ruis die
+   niets over de app zegt.
+
+   Of de bóuwstap zelf iets verandert is een andere vraag, en die wordt
+   beantwoord waar hij hoort: tools/gouden-origineel.js draait het
+   gebouwde online/index.html in een echte browser en vergelijkt de DOM
+   en de beeldpunten. Dat vangt precies wat deze knip niet kan zien. */
+const APP = path.join(__dirname, "..", "src", "app.jsx");
 const regels = fs.readFileSync(APP, "utf8").split("\n");
 
 /* Het blok van seizoenVanDatum t/m het einde van seizoenVerhuizing */
@@ -23,7 +36,7 @@ function knipBlok() {
   const zoek = (re) => { for (let i = 0; i < regels.length; i++) if (re.test(regels[i])) return i; return -1; };
   const a = zoek(/^function seizoenVanDatum\(d\)/);
   const b = zoek(/^function seizoenVerhuizing\(\)/);
-  if (a < 0 || b < 0) throw new Error("seizoenVanDatum of seizoenVerhuizing niet gevonden in online/index.html");
+  if (a < 0 || b < 0) throw new Error("seizoenVanDatum of seizoenVerhuizing niet gevonden in src/app.jsx");
   let e = b; while (e < regels.length && !/^\}/.test(regels[e])) e++;
   return regels.slice(a, e + 1).join("\n");
 }

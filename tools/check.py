@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Controleert online/index.html voor het wordt opgeleverd:
+"""Controleert src/app.jsx voor het wordt opgeleverd:
    1. balans van accolades, haakjes en blokhaken
    2. JSX-nesting (met JS/JSX-contextwissel, zodat apostrofs in tekst geen vals alarm geven)
    3. strings die niet op dezelfde regel worden gesloten
@@ -13,11 +13,25 @@ Tot 11 september 2026 wees hij naar legacy/fc-harlingen-app.html -- het oude
 prototype van 922 KB, niet naar de app die wordt uitgerold. Wie hem draaide
 kreeg te horen dat alles in orde was, over een bestand dat niemand meer
 uitrolt. Dat is erger dan geen controle: het is een groen vinkje dat niets
-dekt. De audit van 10 september noemde dit met zoveel woorden."""
+dekt. De audit van 10 september noemde dit met zoveel woorden.
+
+WAAROM HIJ NU NAAR src/app.jsx WIJST EN NIET MEER NAAR online/index.html
+Sinds de bouwstap (P1) is src/app.jsx de JSX die mensen schrijven en is
+online/index.html wat esbuild daarvan maakt. Dit script controleert of een
+mens een haakje is vergeten of een string niet heeft gesloten -- een vraag
+over geschreven code. In het gebouwde bestand staat die JSX er niet eens
+meer in: die is vertaald naar React.createElement, dus er valt geen JSX
+meer te controleren. Een JSX-controle op het gebouwde bestand zou altijd
+groen zijn om de verkeerde reden, en dat is exact de fout die hierboven
+staat beschreven -- alleen dan opnieuw.
+
+Of de bouwstap zelf iets kapotmaakt, is een andere vraag. Die beantwoordt
+tools/gouden-origineel.js, dat het gebouwde bestand in een echte browser
+draait."""
 import re, sys, os
 HIER = os.path.dirname(os.path.abspath(__file__))
 BESTAND = (sys.argv[1] if len(sys.argv) > 1
-           else os.path.join(os.path.dirname(HIER), "online", "index.html"))
+           else os.path.join(os.path.dirname(HIER), "src", "app.jsx"))
 if not os.path.exists(BESTAND):
     print("Bestand niet gevonden: " + BESTAND); raise SystemExit(2)
 VOID = {'br','img','input','hr','meta','link','area','base','col','embed','source','track','wbr'}
@@ -200,7 +214,15 @@ def weesControle(code, begin):
 
 html=open(BESTAND,encoding='utf-8').read()
 m=re.search(r'<script type="text/babel">(.*?)</script>',html,re.S)
-code=m.group(1); begin=html[:m.start(1)].count("\n")+1
+if m:
+    # Een HTML-bestand met de JSX er rauw in: zo zag online/index.html
+    # eruit tot de bouwstap, en zo zien de back-ups er nog uit. Blijft
+    # werken, zodat je dit script op een oud bestand kunt loslaten.
+    code=m.group(1); begin=html[:m.start(1)].count("\n")+1
+else:
+    # Sinds de bouwstap is de JSX een bestand op zichzelf: src/app.jsx.
+    # Dan is er niets uit te knippen -- alles is code.
+    code=html; begin=1
 alles=[]
 for o,c,nm in [('{','}','accolades'),('(',')','haakjes'),('[',']','blokhaken')]:
     d=code.count(o)-code.count(c)
@@ -212,13 +234,46 @@ alles += f1
 f2=dubbeleControle(code, begin)
 print(("OK  " if not f2 else "FOUT")+"  dubbele verklaringen")
 alles += f2
+# De CSS staat niet bij de JSX. Sinds de bouwstap zit hij in het
+# sjabloon src/index.html; in een oud bestand in hetzelfde bestand.
+# Allebei blijven werken, want anders zou de css-controle stilletjes
+# wegvallen zodra je hem op de bron loslaat -- en dat is precies het
+# soort verdwenen controle waar dit script voor in het leven is geroepen.
 mc=re.search(r'<style>(.*?)</style>', html, re.S)
-f3=cssControle(mc.group(1), html[:mc.start(1)].count("\n")+1)
+if mc:
+    f3=cssControle(mc.group(1), html[:mc.start(1)].count("\n")+1)
+else:
+    SJABLOON=os.path.join(os.path.dirname(HIER), "src", "index.html")
+    if not os.path.exists(SJABLOON):
+        print("FOUT  css-blokken: geen <style> in %s en geen src/index.html"%BESTAND)
+        sys.exit(1)
+    sjab=open(SJABLOON,encoding='utf-8').read()
+    ms=re.search(r'<style>(.*?)</style>', sjab, re.S)
+    if not ms:
+        print("FOUT  css-blokken: geen <style> gevonden in src/index.html")
+        sys.exit(1)
+    f3=cssControle(ms.group(1), sjab[:ms.start(1)].count("\n")+1)
 print(("OK  " if not f3 else "FOUT")+"  css-blokken")
 alles += f3
 f4=weesControle(code, begin)
 print(("OK  " if not f4 else "FOUT")+"  losse coderesten")
 alles += f4
+# Deze controle op de bron zegt niets over wat er al naar Netlify is
+# gesleept. Staat er een oudere online/index.html dan wat src/app.jsx nu
+# oplevert -- bijvoorbeeld omdat iemand de bron aanpaste en vergat
+# `node tools/bouw.js` te draaien -- dan is dat een uitrolfout die deze
+# syntaxcontrole zelf niet ziet. Alleen zinvol als BESTAND de standaard
+# bron is; wijst iemand check.py bewust naar een ander bestand (een
+# back-up, bijvoorbeeld), dan zegt "verouderd" niets.
+import subprocess
+STANDAARD_BRON = os.path.join(os.path.dirname(HIER), "src", "app.jsx")
+BOUWSCRIPT = os.path.join(HIER, "bouw.js")
+if os.path.abspath(BESTAND) == os.path.abspath(STANDAARD_BRON) and os.path.exists(BOUWSCRIPT):
+    r = subprocess.run(["node", BOUWSCRIPT, "--controleer"], capture_output=True, text=True)
+    for regel in r.stdout.splitlines():
+        print(regel)
+    if r.returncode != 0:
+        alles.append("online/index.html is verouderd t.o.v. src/app.jsx -- draai node tools/bouw.js")
 print()
 if alles:
     for x in alles[:15]: print("  FOUT  "+x)

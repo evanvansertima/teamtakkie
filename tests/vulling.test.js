@@ -3,7 +3,7 @@
    ─────────────────────────────────────────────────────────────
    Draaien:  node tests/vulling.test.js
 
-   Geen bouwstap, geen testframework, geen npm install — node en
+   Geen testframework, geen npm install — node en
    verder niets. (Het opnemen zélf heeft een browser nodig; dat is
    tools/gouden-origineel.js. Deze test niet.)
 
@@ -20,7 +20,7 @@
    hij er precies zo groen uitziet als een opname die alles bevat.
 
    Deze test haalt de vulling door de échte functies uit
-   online/index.html en controleert de uitkomst tegen getallen die
+   src/app.jsx en controleert de uitkomst tegen getallen die
    met de hand zijn uitgerekend. Staat er weer een veld onder de
    verkeerde naam, dan komen daar nullen uit en wordt dit rood —
    zonder dat er een browser aan te pas hoeft te komen.
@@ -29,13 +29,29 @@
 const fs = require("fs");
 const path = require("path");
 
-const APP = path.join(__dirname, "..", "online", "index.html");
+/* Sinds de bouwstap (P1) is src/app.jsx de bron die mensen bewerken en
+   is online/index.html wat esbuild daarvan maakt: zonder commentaar en
+   met de JSX al vertaald naar React.createElement. Voor déze test is
+   dat laatste beslissend — verderop staat
+
+       /\{a\.naam\}/.test(bron)
+
+   en dat is letterlijk JSX. In het gebouwde bestand bestaat die vorm
+   niet meer; a.naam is daar een argument geworden. Die controle kán
+   dus alleen op de bron, en dat is precies waar hij thuishoort: de
+   vraag is of de app de naam uittékent, en dat schrijft een mens op.
+
+   Of de bóuwstap die JSX goed vertaalt is een andere vraag, en die
+   wordt beantwoord waar hij hoort: tools/gouden-origineel.js draait
+   het gebouwde online/index.html in een echte browser en vergelijkt
+   de DOM en de beeldpunten. */
+const APP = path.join(__dirname, "..", "src", "app.jsx");
 const VULLING = path.join(__dirname, "..", "tools", "gouden-origineel", "vulling.js");
 const bron = fs.readFileSync(APP, "utf8");
 const regels = bron.split("\n");
 
 const zoek = (re) => { for (let i = 0; i < regels.length; i++) if (re.test(regels[i])) return i; return -1; };
-const eis = (re, wat) => { const i = zoek(re); if (i < 0) throw new Error(wat + " niet gevonden in online/index.html"); return i; };
+const eis = (re, wat) => { const i = zoek(re); if (i < 0) throw new Error(wat + " niet gevonden in src/app.jsx"); return i; };
 function knipFunctie(naam) {
   const a = eis(new RegExp("^function " + naam + "\\("), "function " + naam);
   let e = a; while (e < regels.length && !/^\}/.test(regels[e])) e++;
@@ -56,7 +72,7 @@ try {
     knipFunctie("berekenSpelerStats")
   );
 } catch (e) {
-  console.log("\nDe statistiekfuncties zijn niet uit online/index.html te knippen:");
+  console.log("\nDe statistiekfuncties zijn niet uit src/app.jsx te knippen:");
   console.log("  " + (e && e.message || e));
   console.log("\n0 geslaagd, 1 gefaald");
   process.exit(1);
