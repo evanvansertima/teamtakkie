@@ -1,11 +1,11 @@
 /* ══════════════════════════════════════════════════════════════
-   Tests voor de seizoenlogica in src/app.jsx
+   Tests voor de seizoenlogica in src/kern/sleutels.js
    ─────────────────────────────────────────────────────────────
    Draaien:  node tests/seizoen.test.js
 
-   Deze test knipt de seizoenfuncties uit de app zelf en draait ze
-   tegen een nagebootste localStorage. Geen testframework, geen
-   npm install — node en verder niets.
+   Deze test knipt de seizoenfuncties uit de kern-module zelf en
+   draait ze tegen een nagebootste localStorage. Geen testframework,
+   geen npm install — node en verder niets.
 
    Waarom uit het bestand zelf en niet een kopie: een kopie loopt uit
    de pas. Deze test faalt zodra iemand de functies hernoemt, en dat
@@ -27,8 +27,16 @@ const path = require("path");
    Of de bóuwstap zelf iets verandert is een andere vraag, en die wordt
    beantwoord waar hij hoort: tools/gouden-origineel.js draait het
    gebouwde online/index.html in een echte browser en vergelijkt de DOM
-   en de beeldpunten. Dat vangt precies wat deze knip niet kan zien. */
-const APP = path.join(__dirname, "..", "src", "app.jsx");
+   en de beeldpunten. Dat vangt precies wat deze knip niet kan zien.
+
+   Sinds P2 (professionaliseringsplan.md, 16 september 2026) is de
+   seizoenfamilie zelf verhuisd naar src/kern/sleutels.js — geknipt,
+   niet herschreven: dezelfde tekst staat nu in dat bestand. Deze test
+   wijst daarom niet meer naar src/app.jsx maar naar de nieuwe module;
+   zou hij naar app.jsx blijven wijzen, dan vond hij seizoenVanDatum en
+   seizoenVerhuizing straks niet meer en faalde hij om de verkeerde
+   reden — "niet gevonden" in plaats van "kapotgemaakt". */
+const APP = path.join(__dirname, "..", "src", "kern", "sleutels.js");
 const regels = fs.readFileSync(APP, "utf8").split("\n");
 
 /* Het blok van seizoenVanDatum t/m het einde van seizoenVerhuizing */

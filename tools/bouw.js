@@ -4,9 +4,11 @@
    Draaien:  node tools/bouw.js
 
    Wat dit doet:
-       src/index.html  (het sjabloon: kop, stijl, body, twee inline
-                        scriptjes die vóór de app moeten draaien)
-     + src/app.jsx     (de hele applicatie, JSX)
+       src/index.html   (het sjabloon: kop, stijl, body, twee inline
+                         scriptjes die vóór de app moeten draaien)
+     + src/kern/*.js    (sinds P2: de kern-modules, in vaste volgorde
+                         — zie KERN_VOLGORDE hieronder)
+     + src/app.jsx      (de rest van de applicatie, JSX)
      ─────────────────────────────────────────────────────────
      = online/index.html
 
@@ -45,6 +47,19 @@ const WORTEL   = path.join(__dirname, "..");
 const SJABLOON = path.join(WORTEL, "src", "index.html");
 const APPBRON  = path.join(WORTEL, "src", "app.jsx");
 const UITVOER  = path.join(WORTEL, "online", "index.html");
+const KERN_MAP = path.join(WORTEL, "src", "kern");
+
+/* Sinds P2 (professionaliseringsplan.md) valt src/app.jsx uiteen in
+   losse "kern"-modules onder src/kern/. Geen import/export: elke
+   module is gewoon top-level function/const, net als de rest van de
+   app, en deze vaste volgorde bepaalt de scope-opbouw vóórdat
+   src/app.jsx zelf begint. De volgorde is bewust: elke latere module
+   mag functies uit een eerdere gebruiken (gedeelde scope, geen
+   import-syntax nodig), dus wie van wie afhangt bepaalt de plek in
+   deze lijst. Een module die nog niet bestaat wordt overgeslagen —
+   zo werkt bouw.js ook halverwege P2, met drie modules wel en twee
+   nog niet geknipt. */
+const KERN_VOLGORDE = ["sleutels.js", "server.js", "rollen.js", "opslag.js", "sync.js"];
 
 /* Het merkteken in src/index.html waar de gebouwde app terechtkomt.
    Bewust een commentaarregel en geen los token: zo blijft het sjabloon
@@ -68,7 +83,20 @@ async function bouwInGeheugen() {
   }
 
   const sjabloonRegels = fs.readFileSync(SJABLOON, "utf8").split("\n");
-  const appBron        = fs.readFileSync(APPBRON, "utf8");
+
+  /* ── De kern-modules vóór app.jsx plakken ──────────────────────
+     Vaste volgorde (KERN_VOLGORDE hierboven), elke module gewoon
+     achter elkaar. Geen bundelaar, geen scheidingsteken nodig: het
+     is allemaal JS in dezelfde scope, alsof het nooit uit elkaar
+     had gelegen. */
+  const kernBestanden = KERN_VOLGORDE
+    .map((naam) => path.join(KERN_MAP, naam))
+    .filter((p) => fs.existsSync(p));
+  const kernBron = kernBestanden.map((p) => fs.readFileSync(p, "utf8")).join("\n");
+  if (kernBestanden.length) {
+    console.log("  · kern-modules meegenomen: " + kernBestanden.map((p) => path.basename(p)).join(", "));
+  }
+  const appBron = kernBron + fs.readFileSync(APPBRON, "utf8");
 
   /* ── Babel eruit ────────────────────────────────────────────── */
   const voor = sjabloonRegels.length;
@@ -78,14 +106,15 @@ async function bouwInGeheugen() {
   else           console.log("  · babel-standalone verwijderd (" + weg + " regel)");
 
   /* ── JSX vertalen ───────────────────────────────────────────── */
-  /* Geen bundle(), maar transform(): er zijn geen import/export-regels
-     in app.jsx, dus er valt niets samen te voegen. Het verschil doet er
-     wél toe — bundle() wikkelt alles in een IIFE en springt daardoor
-     élke regel twee spaties in. Dan staat geen enkele functie meer op
-     kolom 0 en vinden de tests in tests/ ze niet meer terug.
-     Zodra P2 begint en app.jsx uiteenvalt in modules, moet dit alsnog
-     bundle() worden — en dan is dat inspringprobleem een keuze die
-     bewust gemaakt moet worden, geen verrassing. */
+  /* Geen bundle(), maar transform(): ook nu P2 src/app.jsx in kern-
+     modules opsplitst, staat er nergens een import of export-regel —
+     zie de uitleg bij KERN_VOLGORDE hierboven. Er valt dus nog steeds
+     niets "samen te voegen" in de zin die een bundelaar bedoelt, alleen
+     achter elkaar te plakken vóór de vertaling. bundle() zou alles
+     alsnog in een IIFE wikkelen en élke regel twee spaties inspringen;
+     dan staat geen enkele functie meer op kolom 0 en vinden de tests in
+     tests/ ze niet meer terug. Dat risico is met het aaneenplakken
+     hierboven bewust vermeden, niet toevallig ontweken. */
   const uit = await esbuild.transform(appBron, {
     loader: "jsx",
     jsx: "transform",           /* JSX → React.createElement, net als babel deed */

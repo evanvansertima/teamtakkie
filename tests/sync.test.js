@@ -40,18 +40,30 @@ const path = require("path");
 const APP = path.join(__dirname, "..", "src", "app.jsx");
 const regels = fs.readFileSync(APP, "utf8").split("\n");
 
-/* Eén functie uit de app, van zijn kop tot de eerste } op kolom 1 */
-function knip(naam) {
+/* heeftLaag() hoort van oudsher bij de seizoenfamilie (het bepaalt of
+   een sleutel al een ::seizoen-laag heeft) en niet bij synchroniseren
+   zelf — maar syncTeamGegevens gebruikt hem wel, dus deze test knipte
+   hem al mee. Sinds P2 (professionaliseringsplan.md, stap 1) is die
+   hele seizoenfamilie verplaatst naar src/kern/sleutels.js, terwijl
+   syncTeamGegevens zelf voorlopig nog in src/app.jsx staat (die
+   verplaatsing is stap 5). Vandaar twee bronnen voor deze ene knip. */
+const SLEUTELS = path.join(__dirname, "..", "src", "kern", "sleutels.js");
+const regelsSleutels = fs.readFileSync(SLEUTELS, "utf8").split("\n");
+
+/* Eén functie, van zijn kop tot de eerste } op kolom 1 — uit de
+   opgegeven regelset, zodat dezelfde knipper voor beide bronnen werkt. */
+function knipUit(bronRegels, bronNaam, naam) {
   const kop = new RegExp("^function " + naam + "\\(");
   let a = -1;
-  for (let i = 0; i < regels.length; i++) if (kop.test(regels[i])) { a = i; break; }
-  if (a < 0) throw new Error(naam + " niet gevonden in src/app.jsx");
-  let e = a; while (e < regels.length && !/^\}/.test(regels[e])) e++;
-  return regels.slice(a, e + 1).join("\n");
+  for (let i = 0; i < bronRegels.length; i++) if (kop.test(bronRegels[i])) { a = i; break; }
+  if (a < 0) throw new Error(naam + " niet gevonden in " + bronNaam);
+  let e = a; while (e < bronRegels.length && !/^\}/.test(bronRegels[e])) e++;
+  return bronRegels.slice(a, e + 1).join("\n");
 }
+function knip(naam) { return knipUit(regels, "src/app.jsx", naam); }
 function knipBlok() {
-  return ["heeftLaag", "teamSleutelsVan", "opEenRij", "syncTeamGegevens"]
-    .map(knip).join("\n");
+  return knipUit(regelsSleutels, "src/kern/sleutels.js", "heeftLaag") + "\n" +
+    ["teamSleutelsVan", "opEenRij", "syncTeamGegevens"].map(knip).join("\n");
 }
 
 /* ── nagebootste browseropslag ─────────────────────────────── */

@@ -72,6 +72,18 @@ const regels = fs.readFileSync(APP, "utf8").split("\n");
 const zoek = (re) => { for (let i = 0; i < regels.length; i++) if (re.test(regels[i])) return i; return -1; };
 const eis = (re, wat) => { const i = zoek(re); if (i < 0) throw new Error(wat + " niet gevonden in src/app.jsx"); return i; };
 
+/* LICENTIE_KEY zelf is sinds P2 verhuisd naar src/kern/sleutels.js —
+   het pakket-blok errond (MODULES, PAKKETTEN, de pakketfuncties)
+   bleef in app.jsx staan. Vandaar deze ene aparte knip, uit een
+   andere bron dan de rest van dit bestand. */
+const SLEUTELS = path.join(__dirname, "..", "src", "kern", "sleutels.js");
+const regelsSleutels = fs.readFileSync(SLEUTELS, "utf8").split("\n");
+const licentieKeyRegel = (() => {
+  const re = /^const LICENTIE_KEY\b/;
+  for (const r of regelsSleutels) if (re.test(r)) return r;
+  throw new Error("const LICENTIE_KEY niet gevonden in src/kern/sleutels.js");
+})();
+
 /* Eén functie, van de kop tot de eerste accolade in de eerste kolom. */
 function knipFunctie(naam) {
   const a = eis(new RegExp("^function " + naam + "\\("), "function " + naam);
@@ -141,7 +153,7 @@ const ONTWERPER = { regel: "— TEAMTAKKIE" };
 
 try {
   eval(
-    knipRegel(/^const LICENTIE_KEY\b/, "const LICENTIE_KEY") + "\n" +
+    licentieKeyRegel + "\n" +
     knipPakketBlok() + "\n" +
     knipRegel(/^const BOETETARIEF_KEY\b/, "const BOETETARIEF_KEY") + "\n" +
     knipConst("BOETE_REDENEN") + "\n" +

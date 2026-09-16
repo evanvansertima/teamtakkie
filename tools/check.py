@@ -8,6 +8,10 @@
 Draai met:  python3 tools/check.py
 Of op een ander bestand:  python3 tools/check.py pad/naar/bestand.html
 
+Sinds P2 (docs/professionaliseringsplan.md) draaien dezelfde vier
+controles ook automatisch over elk bestand in src/kern/ -- zodra die
+map bestaat, geen aparte aanroep nodig.
+
 WAAROM DIT BESTAND HIER STAAT EN NIET MEER IN legacy/
 Tot 11 september 2026 wees hij naar legacy/fc-harlingen-app.html -- het oude
 prototype van 922 KB, niet naar de app die wordt uitgerold. Wie hem draaide
@@ -212,6 +216,34 @@ def weesControle(code, begin):
         d += (r.count("{")-r.count("}")) + (r.count("[")-r.count("]")) + (r.count("(")-r.count(")"))
     return fouten
 
+def basisControles(code, begin, label):
+    """De eerste vier controles (haakjesbalans, JSX/strings, dubbele
+       verklaringen -- weesControle komt er later apart bij, want die
+       loopt pas ná de CSS-controle in de oorspronkelijke volgorde).
+       Genomen uit de hoofdstroom hieronder zodat dezelfde vier
+       controles ook op elk bestand in src/kern/ kunnen draaien --
+       sinds P2 (professionaliseringsplan.md) valt src/app.jsx daar
+       voor een deel uiteen in, en een haakje dat daar wegvalt is
+       even erg als een haakje dat in app.jsx wegvalt. jsxControle
+       werkt gewoon door op een bestand zonder JSX: die vindt dan
+       simpelweg niets, geen vals alarm."""
+    fouten=[]
+    voorvoegsel = (label+": ") if label else ""
+    for o,c,nm in [('{','}','accolades'),('(',')','haakjes'),('[',']','blokhaken')]:
+        d=code.count(o)-code.count(c)
+        print(("OK  " if d==0 else "FOUT")+"  "+voorvoegsel+"%s: %+d"%(nm,d))
+        if d: fouten.append("%s%s uit balans: %+d"%(voorvoegsel,nm,d))
+    f1=jsxControle(code)
+    print(("OK  " if not f1 else "FOUT")+"  "+voorvoegsel+"JSX en strings (%d regels)"%code.count("\n"))
+    fouten += [voorvoegsel+x for x in f1]
+    f2=dubbeleControle(code, begin)
+    print(("OK  " if not f2 else "FOUT")+"  "+voorvoegsel+"dubbele verklaringen")
+    fouten += [voorvoegsel+x for x in f2]
+    f4=weesControle(code, begin)
+    print(("OK  " if not f4 else "FOUT")+"  "+voorvoegsel+"losse coderesten")
+    fouten += [voorvoegsel+x for x in f4]
+    return fouten
+
 html=open(BESTAND,encoding='utf-8').read()
 m=re.search(r'<script type="text/babel">(.*?)</script>',html,re.S)
 if m:
@@ -224,16 +256,7 @@ else:
     # Dan is er niets uit te knippen -- alles is code.
     code=html; begin=1
 alles=[]
-for o,c,nm in [('{','}','accolades'),('(',')','haakjes'),('[',']','blokhaken')]:
-    d=code.count(o)-code.count(c)
-    print(("OK  " if d==0 else "FOUT")+"  %s: %+d"%(nm,d))
-    if d: alles.append("%s uit balans: %+d"%(nm,d))
-f1=jsxControle(code)
-print(("OK  " if not f1 else "FOUT")+"  JSX en strings (%d regels)"%code.count("\n"))
-alles += f1
-f2=dubbeleControle(code, begin)
-print(("OK  " if not f2 else "FOUT")+"  dubbele verklaringen")
-alles += f2
+alles += basisControles(code, begin, "")
 # De CSS staat niet bij de JSX. Sinds de bouwstap zit hij in het
 # sjabloon src/index.html; in een oud bestand in hetzelfde bestand.
 # Allebei blijven werken, want anders zou de css-controle stilletjes
@@ -255,9 +278,23 @@ else:
     f3=cssControle(ms.group(1), sjab[:ms.start(1)].count("\n")+1)
 print(("OK  " if not f3 else "FOUT")+"  css-blokken")
 alles += f3
-f4=weesControle(code, begin)
-print(("OK  " if not f4 else "FOUT")+"  losse coderesten")
-alles += f4
+
+# ── src/kern/*.js ────────────────────────────────────────────────
+# Sinds P2 (professionaliseringsplan.md, 16 september 2026) trekt
+# app.jsx zijn "kern"-modules naar losse bestanden onder src/kern/.
+# Die zijn top-level function/const, precies als de rest van de app
+# (geen import/export -- tools/bouw.js plakt ze aaneen), dus dezelfde
+# vier controles gelden. Deze lus draait alleen als de map bestaat:
+# halverwege P2 zijn dat er twee of drie, aan het eind vijf, en vóór
+# P2 helemaal geen -- in alle gevallen zonder valse meldingen.
+KERN_MAP = os.path.join(os.path.dirname(HIER), "src", "kern")
+if os.path.isdir(KERN_MAP):
+    for naam in sorted(os.listdir(KERN_MAP)):
+        if not naam.endswith(".js"): continue
+        pad = os.path.join(KERN_MAP, naam)
+        kerncode = open(pad, encoding='utf-8').read()
+        alles += basisControles(kerncode, 1, "src/kern/"+naam)
+
 # Deze controle op de bron zegt niets over wat er al naar Netlify is
 # gesleept. Staat er een oudere online/index.html dan wat src/app.jsx nu
 # oplevert -- bijvoorbeeld omdat iemand de bron aanpaste en vergat

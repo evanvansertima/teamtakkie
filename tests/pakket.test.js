@@ -100,6 +100,18 @@ const regels = bron.split("\n");
 const zoek = (re) => { for (let i = 0; i < regels.length; i++) if (re.test(regels[i])) return i; return -1; };
 const eis = (re, wat) => { const i = zoek(re); if (i < 0) throw new Error(wat + " niet gevonden in src/app.jsx"); return i; };
 
+/* LICENTIE_KEY zelf is sinds P2 verhuisd naar src/kern/sleutels.js —
+   het pakket-blok errond (MODULES, PAKKETTEN, de pakketfuncties)
+   bleef in app.jsx staan. Vandaar deze ene aparte knip, uit een
+   andere bron dan de rest van dit bestand. */
+const SLEUTELS = path.join(__dirname, "..", "src", "kern", "sleutels.js");
+const regelsSleutels = fs.readFileSync(SLEUTELS, "utf8").split("\n");
+const licentieKeyRegel = (() => {
+  const re = /^const LICENTIE_KEY\b/;
+  for (const r of regelsSleutels) if (re.test(r)) return r;
+  throw new Error("const LICENTIE_KEY niet gevonden in src/kern/sleutels.js");
+})();
+
 /* Eén regel uit de app (de sleutelnaam staat los van het blok) */
 function knipRegel(re, wat) { return regels[eis(re, wat)]; }
 
@@ -153,14 +165,18 @@ global.localStorage = {
   removeItem: (k) => { delete kast[k]; },
 };
 
-/* magNieuwTeam leest de teamlijst van het apparaat */
+/* magNieuwTeam leest de teamlijst van het apparaat via teams() — sinds
+   P2 een accessor uit src/kern/sleutels.js, niet meer rechtstreeks
+   _teams.length. Deze test knipt het pakket-blok, niet sleutels.js,
+   dus moet hij die accessor zelf namaken. */
 var _teams = [];
+function teams() { return _teams; }
 
 /* const in een eval lekt niet naar buiten; de functies eronder zien
    hem wel. Daarom wordt hij er aan het eind uitdrukkelijk uitgereikt. */
 try {
   eval(
-    knipRegel(/^const LICENTIE_KEY\b/, "const LICENTIE_KEY") + "\n" +
+    licentieKeyRegel + "\n" +
     knipBlok() + "\n" +
     ";Object.assign(global, {MODULES, PAKKETTEN, PAGINA_MODULE, LICENTIE_KEY});"
   );
