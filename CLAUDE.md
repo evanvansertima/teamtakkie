@@ -18,7 +18,10 @@ vaktermen uit in gewone taal, de eerste keer dat je ze gebruikt. Zeg nooit
 
 | Pad | Wat het is |
 |---|---|
-| `online/index.html` | **De echte app.** 33.919 regels. Dit is wat live staat. |
+| `src/app.jsx` | **De bron van de app.** De JSX die je bewerkt. Commentaar staat alleen hier. |
+| `src/index.html` | Sjabloon: kop, stijl, de twee scriptjes vóór de app |
+| `tools/bouw.js` | Vertaalt `src/` naar `online/index.html`. Draai dit vóór elke uitrol — `python3 tools/check.py` waarschuwt hard als je dat vergeet. |
+| `online/index.html` | **Het bouwproduct. Dit is wat live staat**, en dus ook wat je naar Netlify sleept. Niet meer rechtstreeks bewerken sinds de bouwstap (16 september 2026) — wijzigingen gaan via `src/app.jsx`. |
 | `online/sw.js` | Service worker (offline gebruik) |
 | `server/*.sql` | Het Supabase-schema: tabellen, RLS-policies, beheerfuncties |
 | `tests/` | Tests die met kale `node` draaien, geen framework |
@@ -32,12 +35,15 @@ eerste team, de app heet TEAMTAKKIE.
 
 ## Hoe het technisch in elkaar zit
 
-Eén HTML-bestand. React 18 en Babel worden vanaf een CDN geladen; **Babel
-vertaalt alle JSX in de browser van elke bezoeker**, er is geen bouwstap.
-Verder Three.js (3D-sportpark) en jsPDF (exports). Data staat in Supabase
-(Postgres), met Row Level Security als enige toegangscontrole.
+React 18 vanaf een CDN. Sinds 16 september 2026 vertaalt `esbuild` de JSX
+vooraf (`node tools/bouw.js`, van `src/app.jsx` naar `online/index.html`) —
+niet meer Babel in de browser van elke bezoeker; dat scheelde 2,2 seconden
+laadtijd en 2,8 MB download. Verder Three.js (3D-sportpark) en jsPDF
+(exports). Data staat in Supabase (Postgres), met Row Level Security als
+enige toegangscontrole.
 
-Uitrollen gaat met de hand: map naar Netlify slepen.
+Uitrollen gaat met de hand: `node tools/bouw.js` draaien, dan de map
+`online/` naar Netlify slepen.
 
 ## Harde regels
 
@@ -62,19 +68,30 @@ Uitrollen gaat met de hand: map naar Netlify slepen.
    app" was een aanname die het hele verkoopmodel onderuit haalde. Een gat
    invullen kost hem meer dan een vraag beantwoorden.
 
-## De twee dingen die nu het meest kosten
+## Wat er stond, en wat er nu staat
 
-Uit `docs/technische-beoordeling.md` (10 september 2026):
+`docs/technische-beoordeling.md` (10 september 2026) noemde twee dingen die
+het meest kostten. Beide zijn intussen opgelost (16 september 2026):
 
-1. **Het abonnement schermt niets af.** `magPagina()` staat in het bestand,
-   maar wordt nergens aangeroepen. `pakketNu()` begint met `var id = "max"`.
-   Iedereen krijgt vandaag alles. Zolang dit zo is kun je er geen geld voor vragen.
-2. **Van geen enkele versie is aan te tonen dat hij werkt.** De 28 testbestanden
-   uit de V34-notities zijn nergens te vinden. `legacy/controle/check.py` wijst
-   naar het verkeerde bestand en meldt daarom altijd dat alles in orde is.
+1. ~~Het abonnement schermt niets af.~~ `magPagina()` wordt nu op negen
+   plekken echt aangeroepen (menu, tabbladen, snelkoppelingen). `pakketNu()`
+   begint bij het goedkoopste pakket, niet meer bij "max", en het pakket komt
+   via `syncPakket()` rechtstreeks van de server (tabel `abonnementen`) — de
+   database is de enige bron van waarheid, een geopende slot in de browser
+   verandert niets aan wat `06-pakketten.sql` op de server toestaat.
+2. ~~Van geen enkele versie is aan te tonen dat hij werkt.~~ Er zijn nu 269
+   tests in `tests/` (kaal `node`, geen framework), `tools/check.py` (nu
+   gericht op de echte bron) en een gouden origineel met 19 vaste opnames
+   (`tools/gouden-origineel.js`) die elke wijziging pixel voor pixel toetsen.
 
-Daaronder: het datamodel zet alles als JSON-blob in één kolom (niets is
-afdwingbaar), en er is geen foutrapportage of bewaking.
+Wat nog wél openstaat: het datamodel zet alles als JSON-blob in één kolom
+(niets is afdwingbaar op databaseniveau), en er is geen foutrapportage of
+bewaking van de live app.
+
+Sinds 16 september 2026 is er ook een bouwstap (`node tools/bouw.js`,
+zie `docs/professionaliseringsplan.md` P1): `src/app.jsx` is de bron,
+`online/index.html` is het bouwproduct. Zie [het team](#het-team) hieronder
+voor wie welk stuk hiervan onderhoudt.
 
 ## Het team
 
