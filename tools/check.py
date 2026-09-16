@@ -279,21 +279,30 @@ else:
 print(("OK  " if not f3 else "FOUT")+"  css-blokken")
 alles += f3
 
-# ── src/kern/*.js ────────────────────────────────────────────────
+# ── elke map onder src/ ─────────────────────────────────────────
 # Sinds P2 (professionaliseringsplan.md, 16 september 2026) trekt
-# app.jsx zijn "kern"-modules naar losse bestanden onder src/kern/.
-# Die zijn top-level function/const, precies als de rest van de app
-# (geen import/export -- tools/bouw.js plakt ze aaneen), dus dezelfde
-# vier controles gelden. Deze lus draait alleen als de map bestaat:
-# halverwege P2 zijn dat er twee of drie, aan het eind vijf, en vóór
-# P2 helemaal geen -- in alle gevallen zonder valse meldingen.
-KERN_MAP = os.path.join(os.path.dirname(HIER), "src", "kern")
-if os.path.isdir(KERN_MAP):
-    for naam in sorted(os.listdir(KERN_MAP)):
-        if not naam.endswith(".js"): continue
-        pad = os.path.join(KERN_MAP, naam)
-        kerncode = open(pad, encoding='utf-8').read()
-        alles += basisControles(kerncode, 1, "src/kern/"+naam)
+# app.jsx zijn "kern"-modules naar losse bestanden onder src/kern/,
+# en sinds P3 komt daar src/domein/ bij. Allebei top-level
+# function/const, precies als de rest van de app (geen import/export
+# -- tools/bouw.js plakt ze aaneen), dus dezelfde vier controles
+# gelden. In plaats van één vaste mapnaam op te noemen loopt dit over
+# élke map direct onder src/ -- dan hoeft een volgende map (P4 zal er
+# ongetwijfeld eentje brengen) hier niet apart bijgeschreven te
+# worden, en is vergeten dat bij te werken geen manier meer om een
+# nieuwe module buiten deze controle te houden. src/app.jsx en
+# src/index.html zelf zijn losse bestanden, geen mappen, en vallen
+# dus vanzelf buiten deze lus -- die worden hierboven al apart
+# gecontroleerd.
+SRC_MAP = os.path.join(os.path.dirname(HIER), "src")
+if os.path.isdir(SRC_MAP):
+    for submap in sorted(os.listdir(SRC_MAP)):
+        subpad = os.path.join(SRC_MAP, submap)
+        if not os.path.isdir(subpad): continue
+        for naam in sorted(os.listdir(subpad)):
+            if not naam.endswith(".js"): continue
+            pad = os.path.join(subpad, naam)
+            modulecode = open(pad, encoding='utf-8').read()
+            alles += basisControles(modulecode, 1, "src/"+submap+"/"+naam)
 
 # Deze controle op de bron zegt niets over wat er al naar Netlify is
 # gesleept. Staat er een oudere online/index.html dan wat src/app.jsx nu
