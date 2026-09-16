@@ -1,10 +1,10 @@
 /* ══════════════════════════════════════════════════════════════
-   Tests voor syncTeamGegevens in src/app.jsx
+   Tests voor syncTeamGegevens in src/kern/sync.js
    ─────────────────────────────────────────────────────────────
    Draaien:  node tests/sync.test.js
 
-   Deze test knipt de synchronisatiefuncties uit de app zelf en draait
-   ze tegen een nagebootste localStorage en een nagebootste
+   Deze test knipt de synchronisatiefuncties uit de kern-module zelf
+   en draait ze tegen een nagebootste localStorage en een nagebootste
    serverVraag(). Geen testframework, geen npm install — node en
    verder niets.
 
@@ -36,17 +36,16 @@ const path = require("path");
    Of de bóuwstap zelf iets verandert is een andere vraag, en die wordt
    beantwoord waar hij hoort: tools/gouden-origineel.js draait het
    gebouwde online/index.html in een echte browser en vergelijkt de DOM
-   en de beeldpunten. Dat vangt precies wat deze knip niet kan zien. */
-const APP = path.join(__dirname, "..", "src", "app.jsx");
-const regels = fs.readFileSync(APP, "utf8").split("\n");
+   en de beeldpunten. Dat vangt precies wat deze knip niet kan zien.
 
-/* heeftLaag() hoort van oudsher bij de seizoenfamilie (het bepaalt of
-   een sleutel al een ::seizoen-laag heeft) en niet bij synchroniseren
-   zelf — maar syncTeamGegevens gebruikt hem wel, dus deze test knipte
-   hem al mee. Sinds P2 (professionaliseringsplan.md, stap 1) is die
-   hele seizoenfamilie verplaatst naar src/kern/sleutels.js, terwijl
-   syncTeamGegevens zelf voorlopig nog in src/app.jsx staat (die
-   verplaatsing is stap 5). Vandaar twee bronnen voor deze ene knip. */
+   Sinds P2 (professionaliseringsplan.md) is de synchronisatielaag
+   verhuisd naar src/kern/sync.js (stap 5, de laatste), en heeftLaag()
+   naar src/kern/sleutels.js (stap 1) — hij hoort van oudsher bij de
+   seizoenfamilie (bepaalt of een sleutel al een ::seizoen-laag heeft),
+   niet bij synchroniseren zelf, maar syncTeamGegevens gebruikt hem
+   wel. Vandaar twee bronnen voor deze ene knip. */
+const SYNC = path.join(__dirname, "..", "src", "kern", "sync.js");
+const regels = fs.readFileSync(SYNC, "utf8").split("\n");
 const SLEUTELS = path.join(__dirname, "..", "src", "kern", "sleutels.js");
 const regelsSleutels = fs.readFileSync(SLEUTELS, "utf8").split("\n");
 
@@ -60,7 +59,7 @@ function knipUit(bronRegels, bronNaam, naam) {
   let e = a; while (e < bronRegels.length && !/^\}/.test(bronRegels[e])) e++;
   return bronRegels.slice(a, e + 1).join("\n");
 }
-function knip(naam) { return knipUit(regels, "src/app.jsx", naam); }
+function knip(naam) { return knipUit(regels, "src/kern/sync.js", naam); }
 function knipBlok() {
   return knipUit(regelsSleutels, "src/kern/sleutels.js", "heeftLaag") + "\n" +
     ["teamSleutelsVan", "opEenRij", "syncTeamGegevens"].map(knip).join("\n");

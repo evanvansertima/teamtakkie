@@ -4219,169 +4219,6 @@ function importeerAlleData(bestand, klaar) {
   };
   lezer.readAsText(bestand);
 }
-const { useState, useEffect, useRef } = React;
-const initialen = (naam) => naam ? naam.trim().split(" ").map((d) => d[0]).slice(0, 2).join("").toUpperCase() : "?";
-function scoreVolgorde(thuis, eigenNaam, tegenNaam) {
-  var eigen = { kant: "fch", naam: eigenNaam || "Wij", eigenTeam: true };
-  var tegen = { kant: "teg", naam: tegenNaam || "Tegenstander", eigenTeam: false };
-  return thuis === false ? [tegen, eigen] : [eigen, tegen];
-}
-function teamKort(naam) {
-  var kaal = String(naam || "").trim();
-  if (!kaal) return "?";
-  var woorden = kaal.split(/\s+/);
-  if (woorden.length === 1) return woorden[0].slice(0, 4).toUpperCase();
-  return initialen(kaal);
-}
-const positieKort = (pos) => ({ Keeper: "K", Verdediger: "V", Middenvelder: "M", Aanvaller: "A" })[pos] || "";
-const positieKlasse = (pos) => ({ Keeper: "positie-K", Verdediger: "positie-V", Middenvelder: "positie-M", Aanvaller: "positie-A" })[pos] || "";
-const leeftijdUitDatum = (d) => {
-  if (!d) return null;
-  const g = new Date(d), n = /* @__PURE__ */ new Date();
-  let l = n.getFullYear() - g.getFullYear();
-  if (n.getMonth() - g.getMonth() < 0 || n.getMonth() - g.getMonth() === 0 && n.getDate() < g.getDate()) l--;
-  return l;
-};
-const formateerDatum = (d) => {
-  if (!d) return "-";
-  return new Date(d).toLocaleDateString("nl-NL", { day: "numeric", month: "long", year: "numeric" });
-};
-const formateerDatumKort = (d) => {
-  if (!d) return "-";
-  return new Date(d).toLocaleDateString("nl-NL", { day: "numeric", month: "short" });
-};
-const SPELERS_KEY = "fch_spelers_v1";
-const WEDSTRIJDEN_KEY = "fch_wedstrijden_v1";
-const MODULES = ["basis", "trainingen", "ontwikkeling", "analyse", "clubhuis"];
-const PAKKETTEN = [
-  {
-    id: "free",
-    naam: "Free",
-    teams: 1,
-    modules: ["basis"]
-  },
-  {
-    id: "coach",
-    naam: "Coach",
-    teams: 1,
-    modules: ["basis", "trainingen", "ontwikkeling", "analyse", "clubhuis"]
-  },
-  /* In pakket_grenzen staat club op teams = null, want SQL kent geen
-     oneindig. Dat één op één overnemen gaat hier mis: magNieuwTeam
-     rekent met _teams.length < maxTeams, en "iets < null" is altijd
-     onwaar. Club zou dan geen enkel team meer mogen aanmaken —
-     precies het omgekeerde van onbeperkt. Infinity is hetzelfde
-     besluit in een taal die het wél kan opschrijven. */
-  {
-    id: "club",
-    naam: "Club",
-    teams: Infinity,
-    modules: ["basis", "trainingen", "ontwikkeling", "analyse", "clubhuis"]
-  }
-];
-const PAKKET_PRIJS = {
-  free: { maand: "Gratis", jaar: null },
-  coach: { maand: "\u20AC 6,99", jaar: "\u20AC 69,90" },
-  club: { maand: "\u20AC 49,00", jaar: "\u20AC 490,00" }
-};
-const PAGINA_MODULE = {
-  trainingen: "trainingen",
-  statistieken: "analyse",
-  live: "analyse",
-  clubhuis: "clubhuis"
-};
-function pakketNu() {
-  var id = PAKKETTEN[0].id;
-  try {
-    var r = localStorage.getItem(LICENTIE_KEY);
-    if (r) {
-      var o = JSON.parse(r);
-      if (o && o.pakket) id = o.pakket;
-    }
-  } catch (e) {
-  }
-  for (var i = 0; i < PAKKETTEN.length; i++) if (PAKKETTEN[i].id === id) return PAKKETTEN[i];
-  return PAKKETTEN[0];
-}
-function zetPakket(id) {
-  try {
-    localStorage.setItem(LICENTIE_KEY, JSON.stringify({ pakket: id }));
-  } catch (e) {
-  }
-  return pakketNu();
-}
-function magModule(module) {
-  if (!module || module === "basis") return true;
-  return pakketNu().modules.indexOf(module) >= 0;
-}
-function magPagina(pagina) {
-  return magModule(PAGINA_MODULE[pagina]);
-}
-function maxTeams() {
-  return pakketNu().teams;
-}
-function magNieuwTeam() {
-  return teams().length < maxTeams();
-}
-function pakketVoorModule(module) {
-  if (!module) return null;
-  for (var i = 0; i < PAKKETTEN.length; i++)
-    if (PAKKETTEN[i].modules.indexOf(module) >= 0) return PAKKETTEN[i];
-  return null;
-}
-const SLOT_ZIN = {
-  trainingen: function(p) {
-    return "Trainingen horen bij " + p + ".";
-  },
-  ontwikkeling: function(p) {
-    return "Beoordelingen en ontwikkeling horen bij " + p + ".";
-  },
-  analyse: function(p) {
-    return "Statistieken en live-analyse horen bij " + p + ".";
-  },
-  clubhuis: function(p) {
-    return "Het clubhuis hoort bij " + p + ".";
-  }
-};
-function slotZin(module) {
-  var p = pakketVoorModule(module);
-  var naam = p ? p.naam : "een groter pakket";
-  var maak = SLOT_ZIN[module];
-  return maak ? maak(naam) : "Dit onderdeel hoort bij " + naam + ".";
-}
-var _pakkettenOpener = null;
-function slotMelding(module) {
-  var p = pakketVoorModule(module);
-  return toon(slotZin(module), {
-    soort: "info",
-    actieLabel: "Bekijk pakketten",
-    actie: function() {
-      if (_pakkettenOpener) _pakkettenOpener(p ? p.id : null);
-    }
-  });
-}
-function SlotJe({ badge }) {
-  return /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-lock " + (badge ? "slot-badge" : "slotje"), "aria-hidden": "true" });
-}
-function SlotKnop({ naam, module }) {
-  return /* @__PURE__ */ React.createElement(
-    "button",
-    {
-      type: "button",
-      className: "slot-knop",
-      "aria-label": slotLabel(naam, module),
-      onClick: function(e) {
-        e.stopPropagation();
-        slotMelding(module);
-      }
-    },
-    /* @__PURE__ */ React.createElement(SlotJe, null)
-  );
-}
-function slotLabel(naam, module) {
-  var p = pakketVoorModule(module);
-  return naam + " \u2014 hoort bij " + (p ? p.naam : "een groter pakket");
-}
 const SYNC_STAAT_KEY = "tt_syncstaat_v1";
 function _leesSyncStaat() {
   try {
@@ -4734,89 +4571,6 @@ function terugOmvang(waarde) {
   if (waarde && typeof waarde === "object") return Object.keys(waarde).length;
   return null;
 }
-function zorgVoorClub() {
-  var bekend = clubIdNu();
-  return serverVraag("/rest/v1/leden?select=club_id,rol&order=gemaakt_op.asc").then(function(r) {
-    if (!r.ok) return r;
-    var lijst = Array.isArray(r.gegevens) ? r.gegevens : [];
-    if (!lijst.length) {
-      zetClubId(null);
-      return { ok: true, gegevens: null };
-    }
-    var kies = lijst.filter(function(l) {
-      return l.club_id === bekend;
-    })[0] || lijst[0];
-    zetClubId(kies.club_id);
-    zetRol(kies.rol);
-    return { ok: true, gegevens: kies.club_id };
-  });
-}
-function maakClub(naam, logo) {
-  return serverVraag("/rest/v1/rpc/nieuwe_club", {
-    methode: "POST",
-    lichaam: { club_naam: (naam || "").trim(), mijn_naam: null }
-  }).then(function(r) {
-    if (!r.ok) return r;
-    var id = typeof r.gegevens === "string" ? r.gegevens : r.gegevens && r.gegevens.id;
-    if (!id) return serverFout("server", "De club kon niet worden aangemaakt.");
-    zetClubId(id);
-    if (logo) return zetClubGegevens({ naam, logo }).then(function() {
-      return { ok: true, gegevens: id };
-    });
-    return { ok: true, gegevens: id };
-  });
-}
-function haalClubGegevens() {
-  var id = clubIdNu();
-  if (!id) return Promise.resolve({ ok: true, gegevens: null });
-  return serverVraag("/rest/v1/clubs?select=naam,logo&id=eq." + id).then(function(r) {
-    if (!r.ok) return r;
-    var club = Array.isArray(r.gegevens) ? r.gegevens[0] : null;
-    if (club) zetInstellingen({ clubNaam: club.naam || "", logo: club.logo || null });
-    return { ok: true, gegevens: club };
-  });
-}
-function zetClubGegevens(wijziging) {
-  var id = clubIdNu();
-  if (!id) return Promise.resolve(serverFout("geen-club", "Er is nog geen club."));
-  var lichaam = {};
-  if (wijziging.naam !== void 0) lichaam.naam = wijziging.naam;
-  if (wijziging.logo !== void 0) lichaam.logo = wijziging.logo;
-  return serverVraag("/rest/v1/clubs?id=eq." + id, {
-    methode: "PATCH",
-    lichaam,
-    koppen: { "Prefer": "return=minimal" }
-  });
-}
-function hefClubOp() {
-  var id = clubIdNu();
-  if (!id) return Promise.resolve(serverFout("geen-club", "Er is geen vereniging om op te heffen."));
-  return serverVraag("/rest/v1/clubs?id=eq." + encodeURIComponent(id), {
-    methode: "DELETE",
-    koppen: { "Prefer": "return=representation" }
-  }).then(function(r) {
-    if (!r.ok) return r;
-    var weg = Array.isArray(r.gegevens) ? r.gegevens : [];
-    if (!weg.length) return serverFout(
-      "geweigerd",
-      "De vereniging is niet verwijderd \u2014 controleer of je de eigenaar bent."
-    );
-    var aanmelding = sessieNu();
-    wisAllesLokaal();
-    zetSessie(aanmelding);
-    herlaadInstellingen();
-    return { ok: true, gegevens: weg[0] };
-  });
-}
-function bewaarClubGegeven(wijziging) {
-  zetInstellingen(wijziging);
-  if (!clubIdNu() || !ingelogd()) return Promise.resolve({ ok: true });
-  var omhoog = {};
-  if (wijziging.clubNaam !== void 0) omhoog.naam = wijziging.clubNaam;
-  if (wijziging.logo !== void 0) omhoog.logo = wijziging.logo;
-  if (!Object.keys(omhoog).length) return Promise.resolve({ ok: true });
-  return zetClubGegevens(omhoog);
-}
 function duwTeamsWeg() {
   var lijst = teamsWeg();
   if (!lijst.length) return Promise.resolve({ ok: true });
@@ -4992,7 +4746,8 @@ function syncTeamGegevens(team, uitslag) {
   });
 }
 function syncPersoonlijk(uitslag) {
-  var uid = _sessie && _sessie.gebruikerId;
+  var gebruiker = gebruikerNu();
+  var uid = gebruiker && gebruiker.id;
   if (!uid) return Promise.resolve({ ok: true });
   return serverVraag("/rest/v1/persoonlijk?select=sleutel,waarde,bijgewerkt_op,apparaat").then(function(r) {
     if (!r.ok) return r;
@@ -5066,6 +4821,252 @@ function synchroniseer() {
     var tekst = fout && (fout.message || fout.tekst) || "onbekende oorzaak";
     return serverFout("onbekend", "Het synchroniseren liep vast: " + tekst);
   });
+}
+const { useState, useEffect, useRef } = React;
+const initialen = (naam) => naam ? naam.trim().split(" ").map((d) => d[0]).slice(0, 2).join("").toUpperCase() : "?";
+function scoreVolgorde(thuis, eigenNaam, tegenNaam) {
+  var eigen = { kant: "fch", naam: eigenNaam || "Wij", eigenTeam: true };
+  var tegen = { kant: "teg", naam: tegenNaam || "Tegenstander", eigenTeam: false };
+  return thuis === false ? [tegen, eigen] : [eigen, tegen];
+}
+function teamKort(naam) {
+  var kaal = String(naam || "").trim();
+  if (!kaal) return "?";
+  var woorden = kaal.split(/\s+/);
+  if (woorden.length === 1) return woorden[0].slice(0, 4).toUpperCase();
+  return initialen(kaal);
+}
+const positieKort = (pos) => ({ Keeper: "K", Verdediger: "V", Middenvelder: "M", Aanvaller: "A" })[pos] || "";
+const positieKlasse = (pos) => ({ Keeper: "positie-K", Verdediger: "positie-V", Middenvelder: "positie-M", Aanvaller: "positie-A" })[pos] || "";
+const leeftijdUitDatum = (d) => {
+  if (!d) return null;
+  const g = new Date(d), n = /* @__PURE__ */ new Date();
+  let l = n.getFullYear() - g.getFullYear();
+  if (n.getMonth() - g.getMonth() < 0 || n.getMonth() - g.getMonth() === 0 && n.getDate() < g.getDate()) l--;
+  return l;
+};
+const formateerDatum = (d) => {
+  if (!d) return "-";
+  return new Date(d).toLocaleDateString("nl-NL", { day: "numeric", month: "long", year: "numeric" });
+};
+const formateerDatumKort = (d) => {
+  if (!d) return "-";
+  return new Date(d).toLocaleDateString("nl-NL", { day: "numeric", month: "short" });
+};
+const SPELERS_KEY = "fch_spelers_v1";
+const WEDSTRIJDEN_KEY = "fch_wedstrijden_v1";
+const MODULES = ["basis", "trainingen", "ontwikkeling", "analyse", "clubhuis"];
+const PAKKETTEN = [
+  {
+    id: "free",
+    naam: "Free",
+    teams: 1,
+    modules: ["basis"]
+  },
+  {
+    id: "coach",
+    naam: "Coach",
+    teams: 1,
+    modules: ["basis", "trainingen", "ontwikkeling", "analyse", "clubhuis"]
+  },
+  /* In pakket_grenzen staat club op teams = null, want SQL kent geen
+     oneindig. Dat één op één overnemen gaat hier mis: magNieuwTeam
+     rekent met _teams.length < maxTeams, en "iets < null" is altijd
+     onwaar. Club zou dan geen enkel team meer mogen aanmaken —
+     precies het omgekeerde van onbeperkt. Infinity is hetzelfde
+     besluit in een taal die het wél kan opschrijven. */
+  {
+    id: "club",
+    naam: "Club",
+    teams: Infinity,
+    modules: ["basis", "trainingen", "ontwikkeling", "analyse", "clubhuis"]
+  }
+];
+const PAKKET_PRIJS = {
+  free: { maand: "Gratis", jaar: null },
+  coach: { maand: "\u20AC 6,99", jaar: "\u20AC 69,90" },
+  club: { maand: "\u20AC 49,00", jaar: "\u20AC 490,00" }
+};
+const PAGINA_MODULE = {
+  trainingen: "trainingen",
+  statistieken: "analyse",
+  live: "analyse",
+  clubhuis: "clubhuis"
+};
+function pakketNu() {
+  var id = PAKKETTEN[0].id;
+  try {
+    var r = localStorage.getItem(LICENTIE_KEY);
+    if (r) {
+      var o = JSON.parse(r);
+      if (o && o.pakket) id = o.pakket;
+    }
+  } catch (e) {
+  }
+  for (var i = 0; i < PAKKETTEN.length; i++) if (PAKKETTEN[i].id === id) return PAKKETTEN[i];
+  return PAKKETTEN[0];
+}
+function zetPakket(id) {
+  try {
+    localStorage.setItem(LICENTIE_KEY, JSON.stringify({ pakket: id }));
+  } catch (e) {
+  }
+  return pakketNu();
+}
+function magModule(module) {
+  if (!module || module === "basis") return true;
+  return pakketNu().modules.indexOf(module) >= 0;
+}
+function magPagina(pagina) {
+  return magModule(PAGINA_MODULE[pagina]);
+}
+function maxTeams() {
+  return pakketNu().teams;
+}
+function magNieuwTeam() {
+  return teams().length < maxTeams();
+}
+function pakketVoorModule(module) {
+  if (!module) return null;
+  for (var i = 0; i < PAKKETTEN.length; i++)
+    if (PAKKETTEN[i].modules.indexOf(module) >= 0) return PAKKETTEN[i];
+  return null;
+}
+const SLOT_ZIN = {
+  trainingen: function(p) {
+    return "Trainingen horen bij " + p + ".";
+  },
+  ontwikkeling: function(p) {
+    return "Beoordelingen en ontwikkeling horen bij " + p + ".";
+  },
+  analyse: function(p) {
+    return "Statistieken en live-analyse horen bij " + p + ".";
+  },
+  clubhuis: function(p) {
+    return "Het clubhuis hoort bij " + p + ".";
+  }
+};
+function slotZin(module) {
+  var p = pakketVoorModule(module);
+  var naam = p ? p.naam : "een groter pakket";
+  var maak = SLOT_ZIN[module];
+  return maak ? maak(naam) : "Dit onderdeel hoort bij " + naam + ".";
+}
+var _pakkettenOpener = null;
+function slotMelding(module) {
+  var p = pakketVoorModule(module);
+  return toon(slotZin(module), {
+    soort: "info",
+    actieLabel: "Bekijk pakketten",
+    actie: function() {
+      if (_pakkettenOpener) _pakkettenOpener(p ? p.id : null);
+    }
+  });
+}
+function SlotJe({ badge }) {
+  return /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-lock " + (badge ? "slot-badge" : "slotje"), "aria-hidden": "true" });
+}
+function SlotKnop({ naam, module }) {
+  return /* @__PURE__ */ React.createElement(
+    "button",
+    {
+      type: "button",
+      className: "slot-knop",
+      "aria-label": slotLabel(naam, module),
+      onClick: function(e) {
+        e.stopPropagation();
+        slotMelding(module);
+      }
+    },
+    /* @__PURE__ */ React.createElement(SlotJe, null)
+  );
+}
+function slotLabel(naam, module) {
+  var p = pakketVoorModule(module);
+  return naam + " \u2014 hoort bij " + (p ? p.naam : "een groter pakket");
+}
+function zorgVoorClub() {
+  var bekend = clubIdNu();
+  return serverVraag("/rest/v1/leden?select=club_id,rol&order=gemaakt_op.asc").then(function(r) {
+    if (!r.ok) return r;
+    var lijst = Array.isArray(r.gegevens) ? r.gegevens : [];
+    if (!lijst.length) {
+      zetClubId(null);
+      return { ok: true, gegevens: null };
+    }
+    var kies = lijst.filter(function(l) {
+      return l.club_id === bekend;
+    })[0] || lijst[0];
+    zetClubId(kies.club_id);
+    zetRol(kies.rol);
+    return { ok: true, gegevens: kies.club_id };
+  });
+}
+function maakClub(naam, logo) {
+  return serverVraag("/rest/v1/rpc/nieuwe_club", {
+    methode: "POST",
+    lichaam: { club_naam: (naam || "").trim(), mijn_naam: null }
+  }).then(function(r) {
+    if (!r.ok) return r;
+    var id = typeof r.gegevens === "string" ? r.gegevens : r.gegevens && r.gegevens.id;
+    if (!id) return serverFout("server", "De club kon niet worden aangemaakt.");
+    zetClubId(id);
+    if (logo) return zetClubGegevens({ naam, logo }).then(function() {
+      return { ok: true, gegevens: id };
+    });
+    return { ok: true, gegevens: id };
+  });
+}
+function haalClubGegevens() {
+  var id = clubIdNu();
+  if (!id) return Promise.resolve({ ok: true, gegevens: null });
+  return serverVraag("/rest/v1/clubs?select=naam,logo&id=eq." + id).then(function(r) {
+    if (!r.ok) return r;
+    var club = Array.isArray(r.gegevens) ? r.gegevens[0] : null;
+    if (club) zetInstellingen({ clubNaam: club.naam || "", logo: club.logo || null });
+    return { ok: true, gegevens: club };
+  });
+}
+function zetClubGegevens(wijziging) {
+  var id = clubIdNu();
+  if (!id) return Promise.resolve(serverFout("geen-club", "Er is nog geen club."));
+  var lichaam = {};
+  if (wijziging.naam !== void 0) lichaam.naam = wijziging.naam;
+  if (wijziging.logo !== void 0) lichaam.logo = wijziging.logo;
+  return serverVraag("/rest/v1/clubs?id=eq." + id, {
+    methode: "PATCH",
+    lichaam,
+    koppen: { "Prefer": "return=minimal" }
+  });
+}
+function hefClubOp() {
+  var id = clubIdNu();
+  if (!id) return Promise.resolve(serverFout("geen-club", "Er is geen vereniging om op te heffen."));
+  return serverVraag("/rest/v1/clubs?id=eq." + encodeURIComponent(id), {
+    methode: "DELETE",
+    koppen: { "Prefer": "return=representation" }
+  }).then(function(r) {
+    if (!r.ok) return r;
+    var weg = Array.isArray(r.gegevens) ? r.gegevens : [];
+    if (!weg.length) return serverFout(
+      "geweigerd",
+      "De vereniging is niet verwijderd \u2014 controleer of je de eigenaar bent."
+    );
+    var aanmelding = sessieNu();
+    wisAllesLokaal();
+    zetSessie(aanmelding);
+    herlaadInstellingen();
+    return { ok: true, gegevens: weg[0] };
+  });
+}
+function bewaarClubGegeven(wijziging) {
+  zetInstellingen(wijziging);
+  if (!clubIdNu() || !ingelogd()) return Promise.resolve({ ok: true });
+  var omhoog = {};
+  if (wijziging.clubNaam !== void 0) omhoog.naam = wijziging.clubNaam;
+  if (wijziging.logo !== void 0) omhoog.logo = wijziging.logo;
+  if (!Object.keys(omhoog).length) return Promise.resolve({ ok: true });
+  return zetClubGegevens(omhoog);
 }
 const TEAMINST_KEY = "fch_teaminstellingen_v1";
 seizoenVerhuizing();
