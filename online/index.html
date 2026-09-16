@@ -3863,6 +3863,112 @@ function gebruikSessie() {
   }, []);
   return waarde;
 }
+const ROL_KEY = "tt_rol_v1";
+const ROLLEN = [
+  {
+    id: "eigenaar",
+    label: "Eigenaar",
+    icoon: "fa-solid fa-key",
+    uitleg: "Beheert de vereniging: teams, seizoenen, clubgegevens en het abonnement.",
+    mag: ["kijken", "wedstrijd", "selectie", "team", "club"]
+  },
+  {
+    id: "trainer",
+    label: "Trainer",
+    icoon: "fa-solid fa-clipboard-user",
+    uitleg: "Beheert zijn eigen team: selectie, tactiek, wedstrijden en cijfers.",
+    mag: ["kijken", "wedstrijd", "selectie"]
+  },
+  {
+    id: "kijker",
+    label: "Kijker",
+    icoon: "fa-solid fa-eye",
+    uitleg: "Kijkt mee en wijzigt niets.",
+    mag: ["kijken"]
+  }
+];
+function rolInfoVan(id) {
+  return ROLLEN.filter(function(r) {
+    return r.id === id;
+  })[0] || null;
+}
+function rolNu() {
+  if (typeof ingelogd === "function" && !ingelogd()) return "eigenaar";
+  try {
+    var r = localStorage.getItem(ROL_KEY);
+    if (r && rolInfoVan(r)) return r;
+  } catch (e) {
+  }
+  return "eigenaar";
+}
+function zetRol(id) {
+  try {
+    if (rolInfoVan(id)) localStorage.setItem(ROL_KEY, id);
+    else localStorage.removeItem(ROL_KEY);
+  } catch (e) {
+  }
+  return rolNu();
+}
+function magRol(recht) {
+  var r = rolInfoVan(rolNu());
+  return !!r && r.mag.indexOf(recht) >= 0;
+}
+function alleenKijken() {
+  return rolNu() === "kijker";
+}
+const BEHEER_KEY = "tt_beheerder_v1";
+function beheerderNu() {
+  try {
+    return localStorage.getItem(BEHEER_KEY) === "ja";
+  } catch (e) {
+    return false;
+  }
+}
+function zetBeheerder(ja) {
+  try {
+    if (ja) localStorage.setItem(BEHEER_KEY, "ja");
+    else localStorage.removeItem(BEHEER_KEY);
+  } catch (e) {
+  }
+}
+function haalBeheerder() {
+  if (!ingelogd()) {
+    zetBeheerder(false);
+    return Promise.resolve(false);
+  }
+  return serverVraag("/rest/v1/beheerders?select=gebruiker_id").then(function(r) {
+    var ja = !!(r.ok && Array.isArray(r.gegevens) && r.gegevens.length);
+    zetBeheerder(ja);
+    return ja;
+  }).catch(function() {
+    return beheerderNu();
+  });
+}
+function alleGebruikers() {
+  return serverVraag("/rest/v1/rpc/alle_gebruikers", { methode: "POST", lichaam: {} }).then(function(r) {
+    if (!r.ok) return r;
+    return { ok: true, gegevens: Array.isArray(r.gegevens) ? r.gegevens : [] };
+  });
+}
+function zetPakketVan(clubId, pakket, tot) {
+  if (!clubId) return Promise.resolve(serverFout("geen-club", "Dit account hoort nog bij geen enkele vereniging."));
+  if (PAKKETTEN.filter(function(p) {
+    return p.id === pakket;
+  }).length === 0) {
+    return Promise.resolve(serverFout("pakket", "Onbekend pakket: " + pakket));
+  }
+  return serverVraag("/rest/v1/rpc/zet_pakket", {
+    methode: "POST",
+    lichaam: { doel: clubId, nieuw: pakket, tot: tot || null }
+  });
+}
+function verwijderAccount(gebruikerId) {
+  if (!gebruikerId) return Promise.resolve(serverFout("account", "Geen account opgegeven."));
+  return serverVraag("/rest/v1/rpc/verwijder_account", {
+    methode: "POST",
+    lichaam: { doel: gebruikerId }
+  });
+}
 const { useState, useEffect, useRef } = React;
 const initialen = (naam) => naam ? naam.trim().split(" ").map((d) => d[0]).slice(0, 2).join("").toUpperCase() : "?";
 function scoreVolgorde(thuis, eigenNaam, tegenNaam) {
@@ -4450,112 +4556,6 @@ function hefClubOp() {
     zetSessie(aanmelding);
     herlaadInstellingen();
     return { ok: true, gegevens: weg[0] };
-  });
-}
-const ROL_KEY = "tt_rol_v1";
-const ROLLEN = [
-  {
-    id: "eigenaar",
-    label: "Eigenaar",
-    icoon: "fa-solid fa-key",
-    uitleg: "Beheert de vereniging: teams, seizoenen, clubgegevens en het abonnement.",
-    mag: ["kijken", "wedstrijd", "selectie", "team", "club"]
-  },
-  {
-    id: "trainer",
-    label: "Trainer",
-    icoon: "fa-solid fa-clipboard-user",
-    uitleg: "Beheert zijn eigen team: selectie, tactiek, wedstrijden en cijfers.",
-    mag: ["kijken", "wedstrijd", "selectie"]
-  },
-  {
-    id: "kijker",
-    label: "Kijker",
-    icoon: "fa-solid fa-eye",
-    uitleg: "Kijkt mee en wijzigt niets.",
-    mag: ["kijken"]
-  }
-];
-function rolInfoVan(id) {
-  return ROLLEN.filter(function(r) {
-    return r.id === id;
-  })[0] || null;
-}
-function rolNu() {
-  if (typeof ingelogd === "function" && !ingelogd()) return "eigenaar";
-  try {
-    var r = localStorage.getItem(ROL_KEY);
-    if (r && rolInfoVan(r)) return r;
-  } catch (e) {
-  }
-  return "eigenaar";
-}
-function zetRol(id) {
-  try {
-    if (rolInfoVan(id)) localStorage.setItem(ROL_KEY, id);
-    else localStorage.removeItem(ROL_KEY);
-  } catch (e) {
-  }
-  return rolNu();
-}
-function magRol(recht) {
-  var r = rolInfoVan(rolNu());
-  return !!r && r.mag.indexOf(recht) >= 0;
-}
-function alleenKijken() {
-  return rolNu() === "kijker";
-}
-const BEHEER_KEY = "tt_beheerder_v1";
-function beheerderNu() {
-  try {
-    return localStorage.getItem(BEHEER_KEY) === "ja";
-  } catch (e) {
-    return false;
-  }
-}
-function zetBeheerder(ja) {
-  try {
-    if (ja) localStorage.setItem(BEHEER_KEY, "ja");
-    else localStorage.removeItem(BEHEER_KEY);
-  } catch (e) {
-  }
-}
-function haalBeheerder() {
-  if (!ingelogd()) {
-    zetBeheerder(false);
-    return Promise.resolve(false);
-  }
-  return serverVraag("/rest/v1/beheerders?select=gebruiker_id").then(function(r) {
-    var ja = !!(r.ok && Array.isArray(r.gegevens) && r.gegevens.length);
-    zetBeheerder(ja);
-    return ja;
-  }).catch(function() {
-    return beheerderNu();
-  });
-}
-function alleGebruikers() {
-  return serverVraag("/rest/v1/rpc/alle_gebruikers", { methode: "POST", lichaam: {} }).then(function(r) {
-    if (!r.ok) return r;
-    return { ok: true, gegevens: Array.isArray(r.gegevens) ? r.gegevens : [] };
-  });
-}
-function zetPakketVan(clubId, pakket, tot) {
-  if (!clubId) return Promise.resolve(serverFout("geen-club", "Dit account hoort nog bij geen enkele vereniging."));
-  if (PAKKETTEN.filter(function(p) {
-    return p.id === pakket;
-  }).length === 0) {
-    return Promise.resolve(serverFout("pakket", "Onbekend pakket: " + pakket));
-  }
-  return serverVraag("/rest/v1/rpc/zet_pakket", {
-    methode: "POST",
-    lichaam: { doel: clubId, nieuw: pakket, tot: tot || null }
-  });
-}
-function verwijderAccount(gebruikerId) {
-  if (!gebruikerId) return Promise.resolve(serverFout("account", "Geen account opgegeven."));
-  return serverVraag("/rest/v1/rpc/verwijder_account", {
-    methode: "POST",
-    lichaam: { doel: gebruikerId }
   });
 }
 function bewaarClubGegeven(wijziging) {
