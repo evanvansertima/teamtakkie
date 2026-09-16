@@ -1,5 +1,5 @@
 /* ══════════════════════════════════════════════════════════════
-   Tests voor de boetepot in src/app.jsx
+   Tests voor de boetepot in src/domein/boetepot.js
    ─────────────────────────────────────────────────────────────
    Draaien:  node tests/boetepot.test.js
 
@@ -69,8 +69,22 @@ const path = require("path");
 const APP = path.join(__dirname, "..", "src", "app.jsx");
 const regels = fs.readFileSync(APP, "utf8").split("\n");
 
-const zoek = (re) => { for (let i = 0; i < regels.length; i++) if (re.test(regels[i])) return i; return -1; };
-const eis = (re, wat) => { const i = zoek(re); if (i < 0) throw new Error(wat + " niet gevonden in src/app.jsx"); return i; };
+/* Sinds P3 (professionaliseringsplan.md, 17 september 2026) zijn de
+   boetefuncties zelf verhuisd naar src/domein/boetepot.js. Wat in
+   app.jsx bleef staan (het pakketblok, parseerDatum, datumCijfers,
+   trainingTitel, en het React-component BoetepotTab) wordt nog uit
+   `regels` geknipt; de rest uit deze tweede bron. */
+const DOMEIN = path.join(__dirname, "..", "src", "domein", "boetepot.js");
+const regelsDomein = fs.readFileSync(DOMEIN, "utf8").split("\n");
+
+const zoekIn = (bronRegels, re) => { for (let i = 0; i < bronRegels.length; i++) if (re.test(bronRegels[i])) return i; return -1; };
+const eisIn = (bronRegels, bronNaam, re, wat) => {
+  const i = zoekIn(bronRegels, re);
+  if (i < 0) throw new Error(wat + " niet gevonden in " + bronNaam);
+  return i;
+};
+const zoek = (re) => zoekIn(regels, re);
+const eis = (re, wat) => eisIn(regels, "src/app.jsx", re, wat);
 
 /* LICENTIE_KEY zelf is sinds P2 verhuisd naar src/kern/sleutels.js —
    het pakket-blok errond (MODULES, PAKKETTEN, de pakketfuncties)
@@ -85,18 +99,23 @@ const licentieKeyRegel = (() => {
 })();
 
 /* Eén functie, van de kop tot de eerste accolade in de eerste kolom. */
-function knipFunctie(naam) {
-  const a = eis(new RegExp("^function " + naam + "\\("), "function " + naam);
-  let e = a; while (e < regels.length && !/^\}/.test(regels[e])) e++;
-  return regels.slice(a, e + 1).join("\n");
+function knipFunctieUit(bronRegels, bronNaam, naam) {
+  const a = eisIn(bronRegels, bronNaam, new RegExp("^function " + naam + "\\("), "function " + naam);
+  let e = a; while (e < bronRegels.length && !/^\}/.test(bronRegels[e])) e++;
+  return bronRegels.slice(a, e + 1).join("\n");
 }
+function knipFunctie(naam) { return knipFunctieUit(regels, "src/app.jsx", naam); }
+function knipFunctieDomein(naam) { return knipFunctieUit(regelsDomein, "src/domein/boetepot.js", naam); }
 /* Eén const-blok, van de kop tot de regel die met ]; begint. */
-function knipConst(naam) {
-  const a = eis(new RegExp("^const " + naam + " = \\["), "const " + naam);
-  let e = a; while (e < regels.length && !/^\];/.test(regels[e])) e++;
-  return regels.slice(a, e + 1).join("\n");
+function knipConstUit(bronRegels, bronNaam, naam) {
+  const a = eisIn(bronRegels, bronNaam, new RegExp("^const " + naam + " = \\["), "const " + naam);
+  let e = a; while (e < bronRegels.length && !/^\];/.test(bronRegels[e])) e++;
+  return bronRegels.slice(a, e + 1).join("\n");
 }
-function knipRegel(re, wat) { return regels[eis(re, wat)]; }
+function knipConstDomein(naam) { return knipConstUit(regelsDomein, "src/domein/boetepot.js", naam); }
+function knipRegelUit(bronRegels, bronNaam, re, wat) { return bronRegels[eisIn(bronRegels, bronNaam, re, wat)]; }
+function knipRegel(re, wat) { return knipRegelUit(regels, "src/app.jsx", re, wat); }
+function knipRegelDomein(re, wat) { return knipRegelUit(regelsDomein, "src/domein/boetepot.js", re, wat); }
 
 /* Het pakketblok, zodat magModule() het échte antwoord geeft en niet
    een nagebouwd antwoord. Hetzelfde blok als in pakket.test.js. */
@@ -155,26 +174,26 @@ try {
   eval(
     licentieKeyRegel + "\n" +
     knipPakketBlok() + "\n" +
-    knipRegel(/^const BOETETARIEF_KEY\b/, "const BOETETARIEF_KEY") + "\n" +
-    knipConst("BOETE_REDENEN") + "\n" +
-    knipFunctie("boeteReden") + "\n" +
-    knipFunctie("laadBoeteTarieven") + "\n" +
-    knipFunctie("boetepotActief") + "\n" +
-    knipFunctie("centenNaarTekst") + "\n" +
-    knipFunctie("tekstNaarCenten") + "\n" +
     knipFunctie("parseerDatum") + "\n" +
     knipFunctie("datumCijfers") + "\n" +
     knipFunctie("trainingTitel") + "\n" +
-    knipFunctie("boeteRegels") + "\n" +
-    knipFunctie("boeteRegelsGesplitst") + "\n" +
-    knipFunctie("boeteStand") + "\n" +
-    knipFunctie("deelBoetepot") + "\n" +
+    knipRegelDomein(/^const BOETETARIEF_KEY\b/, "const BOETETARIEF_KEY") + "\n" +
+    knipConstDomein("BOETE_REDENEN") + "\n" +
+    knipFunctieDomein("boeteReden") + "\n" +
+    knipFunctieDomein("laadBoeteTarieven") + "\n" +
+    knipFunctieDomein("boetepotActief") + "\n" +
+    knipFunctieDomein("centenNaarTekst") + "\n" +
+    knipFunctieDomein("tekstNaarCenten") + "\n" +
+    knipFunctieDomein("boeteRegels") + "\n" +
+    knipFunctieDomein("boeteRegelsGesplitst") + "\n" +
+    knipFunctieDomein("boeteStand") + "\n" +
+    knipFunctieDomein("deelBoetepot") + "\n" +
     ";Object.assign(global, {BOETE_REDENEN, LICENTIE_KEY, PAKKETTEN});"
   );
 } catch (e) {
   /* Meestal betekent dit: iemand heeft een functie hernoemd of
      verplaatst. Dat is geen kapotte test, dat is de melding. */
-  console.log("\nDe boetepot is niet uit src/app.jsx te knippen:");
+  console.log("\nDe boetepot is niet uit src/app.jsx of src/domein/boetepot.js te knippen:");
   console.log("  " + (e && e.message || e));
   console.log("\n0 geslaagd, 1 gefaald");
   process.exit(1);
@@ -184,7 +203,7 @@ const NAMEN = ["boeteRegels", "boeteRegelsGesplitst", "boeteStand", "boetepotAct
                "laadBoeteTarieven", "centenNaarTekst", "deelBoetepot", "magModule", "trainingTitel"];
 const missen = NAMEN.filter((n) => { try { return typeof eval(n) !== "function"; } catch (e) { return true; } });
 if (missen.length) {
-  console.log("\nDeze functies staan niet meer waar deze test ze zoekt in src/app.jsx:");
+  console.log("\nDeze functies staan niet meer waar deze test ze zoekt (src/app.jsx of src/domein/boetepot.js):");
   missen.forEach((n) => console.log("  - " + n + "  (hernoemd? verplaatst?)"));
   console.log("\n0 geslaagd, " + missen.length + " gefaald");
   process.exit(1);
@@ -420,9 +439,9 @@ ok("en de vergrendelde regel leest verborgen en verborgenBedrag",
    [/lijst\.verborgen\b/.test(TAB), /lijst\.verborgenBedrag/.test(TAB)], [true, true]);
 
 groep("Wie stelt de pakketvraag — en wie niet");
-const BRON_REGELS    = zonderCommentaar(knipFunctie("boeteRegels"));
-const BRON_GESPLITST = zonderCommentaar(knipFunctie("boeteRegelsGesplitst"));
-const BRON_STAND     = zonderCommentaar(knipFunctie("boeteStand"));
+const BRON_REGELS    = zonderCommentaar(knipFunctieDomein("boeteRegels"));
+const BRON_GESPLITST = zonderCommentaar(knipFunctieDomein("boeteRegelsGesplitst"));
+const BRON_STAND     = zonderCommentaar(knipFunctieDomein("boeteStand"));
 ok("boeteRegels() vraagt zelf niet naar het pakket",
    /magModule|magPagina|pakketNu/.test(BRON_REGELS), false);
 ok("boeteStand() ook niet",

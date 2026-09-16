@@ -8,6 +8,8 @@
                          scriptjes die vóór de app moeten draaien)
      + src/kern/*.js    (sinds P2: de kern-modules, in vaste volgorde
                          — zie KERN_VOLGORDE hieronder)
+     + src/domein/*.js  (sinds P3: de domeinlogica, in vaste volgorde
+                         — zie DOMEIN_VOLGORDE hieronder)
      + src/app.jsx      (de rest van de applicatie, JSX)
      ─────────────────────────────────────────────────────────
      = online/index.html
@@ -47,7 +49,8 @@ const WORTEL   = path.join(__dirname, "..");
 const SJABLOON = path.join(WORTEL, "src", "index.html");
 const APPBRON  = path.join(WORTEL, "src", "app.jsx");
 const UITVOER  = path.join(WORTEL, "online", "index.html");
-const KERN_MAP = path.join(WORTEL, "src", "kern");
+const KERN_MAP   = path.join(WORTEL, "src", "kern");
+const DOMEIN_MAP = path.join(WORTEL, "src", "domein");
 
 /* Sinds P2 (professionaliseringsplan.md) valt src/app.jsx uiteen in
    losse "kern"-modules onder src/kern/. Geen import/export: elke
@@ -60,6 +63,16 @@ const KERN_MAP = path.join(WORTEL, "src", "kern");
    zo werkt bouw.js ook halverwege P2, met drie modules wel en twee
    nog niet geknipt. */
 const KERN_VOLGORDE = ["sleutels.js", "server.js", "rollen.js", "opslag.js", "sync.js"];
+
+/* Sinds P3 (professionaliseringsplan.md) komt daar een tweede laag
+   bovenop: de domeinlogica onder src/domein/ — berekeningen en
+   statussen, geen opslag, geen DOM. Dezelfde regel als bij
+   KERN_VOLGORDE: geen import/export, gedeelde scope, en de volgorde
+   bepaalt wie van wie mag gebruikmaken. Deze modules komen ná de
+   kern (boetepot.js gebruikt sleutelVoor() uit src/kern/sleutels.js)
+   en vóór src/app.jsx zelf. Een module die nog niet bestaat wordt
+   net als bij de kern overgeslagen. */
+const DOMEIN_VOLGORDE = ["boetepot.js", "wedstrijden.js", "statistieken.js", "opkomst.js"];
 
 /* Het merkteken in src/index.html waar de gebouwde app terechtkomt.
    Bewust een commentaarregel en geen los token: zo blijft het sjabloon
@@ -96,7 +109,18 @@ async function bouwInGeheugen() {
   if (kernBestanden.length) {
     console.log("  · kern-modules meegenomen: " + kernBestanden.map((p) => path.basename(p)).join(", "));
   }
-  const appBron = kernBron + fs.readFileSync(APPBRON, "utf8");
+
+  /* Zelfde plaktruc, nu voor de domeinlogica — ná de kern, vóór
+     src/app.jsx, om dezelfde reden als hierboven staat uitgelegd. */
+  const domeinBestanden = DOMEIN_VOLGORDE
+    .map((naam) => path.join(DOMEIN_MAP, naam))
+    .filter((p) => fs.existsSync(p));
+  const domeinBron = domeinBestanden.map((p) => fs.readFileSync(p, "utf8")).join("\n");
+  if (domeinBestanden.length) {
+    console.log("  · domein-modules meegenomen: " + domeinBestanden.map((p) => path.basename(p)).join(", "));
+  }
+
+  const appBron = kernBron + domeinBron + fs.readFileSync(APPBRON, "utf8");
 
   /* ── Babel eruit ────────────────────────────────────────────── */
   const voor = sjabloonRegels.length;
