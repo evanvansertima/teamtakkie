@@ -175,7 +175,7 @@
                 "Assists"
             <div class="stat-mini">
               <div class="stat-mini-getal">
-                "75"
+                "100"
                 "%"
               <div class="stat-mini-label">
                 "Aanwezig"
@@ -238,7 +238,7 @@
                   "Minuten"
               <div class="stat-pill">
                 <div class="stat-pill-getal">
-                  "75"
+                  "100"
                   "%"
                 <div class="stat-pill-label">
                   "Trainings­opk."

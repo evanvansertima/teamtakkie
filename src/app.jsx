@@ -24677,6 +24677,7 @@ function IndividuStatistieken() {
   const spelers = laadSpelers();
   const wedstrijden = laadWedstrijden();
   const trainingen = laadTrainingen();
+  const afwezigheden = laadAfwezigheden();
   const [gekozen, setGekozen] = useState(spelers.length>0 ? spelers[0].id : null);
   const [subtab, setSubtab] = useState("overzicht");
   if (spelers.length===0) return (
@@ -24695,8 +24696,13 @@ function IndividuStatistieken() {
   const inOps = st.wedstrijden;
   const assists = st.assists;
   const minuten = st.speelMinuten;
-  const trainAanw = trainingen.filter(function(t){return (t.aanwezigheid||[]).some(function(a){return a.spelerId===sp.id&&teltAlsAanwezig(a.status);});}).length;
-  const trainPct  = trainingen.length>0 ? Math.round(trainAanw/trainingen.length*100) : 0;
+  const opkomstPerTrainingSp = trainingen.map(function(t){
+    return opkomstVan({datum: t.datum, aanwezigheid:
+      (t.aanwezigheid||[]).filter(function(a){ return a.spelerId===sp.id; })}, afwezigheden);
+  }).filter(function(o){ return o !== null; });
+  const trainAanw = opkomstPerTrainingSp.reduce(function(s,o){ return s+o.aanwezig; }, 0);
+  const trainMee  = opkomstPerTrainingSp.length;
+  const trainPct  = trainMee>0 ? Math.round(trainAanw/trainMee*100) : 0;
   const motmAantal = telMotm(sp.id, wedstrijden);
   const cijfer = gemiddeldCijfer(sp.id, wedstrijden);
   const chrono = gespeeld.slice().sort(function(a,b){ return new Date(a.datum)-new Date(b.datum); }).slice(-10);
@@ -24814,7 +24820,7 @@ function IndividuStatistieken() {
         <div className="kaart">
           <div className="kaart-titel">❤️ Betrokkenheid</div>
           <div className="stat-raster">
-            <div className="stat-pill"><div className="stat-pill-getal">{trainAanw+"/"+trainingen.length}</div><div className="stat-pill-label">Trainingen aanwezig</div></div>
+            <div className="stat-pill"><div className="stat-pill-getal">{trainAanw+"/"+trainMee}</div><div className="stat-pill-label">Trainingen aanwezig</div></div>
             <div className="stat-pill"><div className="stat-pill-getal">{trainPct}%</div><div className="stat-pill-label">Opkomst %</div></div>
           </div>
           <div className="stat-raster">

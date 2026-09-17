@@ -163,15 +163,19 @@ try {
     ";Object.assign(global, {AANWEZIG_KEUZES, AFWEZIGHEID_SOORTEN});"
   );
 
-  /* trainPct — twee losse regels, inline in IndividuStatistieken
-     (src/app.jsx). Ongewijzigd overgenomen en verpakt in een functie
-     die dezelfde `sp` en `trainingen` als parameter neemt, zodat de
-     rekenregels zelf letterlijk hetzelfde blijven als in de app. */
-  const TRAINPCT_AANW = knipRegel(/^\s*const trainAanw = trainingen\.filter/, "de trainAanw-regel van trainPct");
-  const TRAINPCT_PCT  = knipRegel(/^\s*const trainPct\s*=\s*trainingen\.length>0/, "de trainPct-regel van trainPct");
+  /* trainPct — inline in IndividuStatistieken (src/app.jsx). Sinds de
+     samenvoeging (stap E, 17 sep. 2026) rekent dit via opkomstVan, net
+     als de andere vier varianten — de wrapper krijgt er daarom een
+     `afwezigheden`-parameter bij. Geknipt van de opkomstPerTrainingSp-
+     regel tot en met de trainPct-regel, zodat de rekenregels zelf
+     letterlijk hetzelfde blijven als in de app. */
+  const TRAINPCT_BLOK = knipVanTot(
+    /^\s*const opkomstPerTrainingSp = trainingen\.map\(function\(t\)\{\s*$/,
+    /^\s*const trainPct\s*=\s*trainMee>0/,
+    "de trainPct-berekening in IndividuStatistieken");
   eval(
-    "global.trainPctBerekening = function(trainingen, sp) {\n" +
-    TRAINPCT_AANW + "\n" + TRAINPCT_PCT + "\n" +
+    "global.trainPctBerekening = function(trainingen, sp, afwezigheden) {\n" +
+    TRAINPCT_BLOK + "\n" +
     "return trainPct;\n};"
   );
 
@@ -334,13 +338,18 @@ okAnders("presentieTabel (3 gebeurtenissen) en opkomstVan (1 training) meten dus
    rijS02.meegedaan, OPKOMST_C.totaal);
 
 /* ══════════════════════════════════════════════════════════════
-   (d) trainPct (IndividuStatistieken, app.jsx) telt een training
-       zonder ingevulde presentielijst gewoon mee in de noemer;
-       opkomstVan negeert zo'n training (geeft er null voor).
+   (d) trainPct (IndividuStatistieken, app.jsx) vs. opkomstVan
+   Vóór de samenvoeging (stap E, 17 sep. 2026) telde trainPct een
+   training zonder ingevulde presentielijst gewoon mee in de noemer
+   (trainingen.length), waar opkomstVan zo'n training negeerde (geeft
+   er null voor) — twee verschillende antwoorden op dezelfde vulling.
+   Sinds stap E rekent trainPct zelf ook via opkomstVan, dus die twee
+   horen nu HETZELFDE antwoord te geven: dat is precies het bewijs dat
+   de samenvoeging hier gelukt is.
    Dezelfde speler, dezelfde vier trainingen — d3 heeft geen enkele
    presentieregel (niemand is voor die avond ingevuld).
    ══════════════════════════════════════════════════════════════ */
-groep("(d) trainPct vs. opkomstVan — een training zonder presentielijst telt bij trainPct wél mee in de noemer");
+groep("(d) trainPct vs. opkomstVan — na de samenvoeging geeft trainPct hetzelfde antwoord");
 
 const SP_D = {id: "s01"};
 const TRAININGEN_D = [
@@ -353,11 +362,11 @@ const TRAININGEN_D = [
 ok("opkomstVan geeft null voor d3, de training zonder presentielijst",
    opkomstVan(TRAININGEN_D[2], []), null);
 
-/* trainPct in de app rekent over trainingen.length — inclusief d3,
-   ook al zegt d3 niets over deze speler. */
-const TRAINPCT_D = trainPctBerekening(TRAININGEN_D, SP_D);
-ok("trainPct telt d3 mee in de noemer: 3 van de 4 trainingen bijgewoond, dus 75%",
-   TRAINPCT_D, 75);
+/* trainPct rekent sinds stap E ook via opkomstVan, dus d3 (geen
+   presentielijst) valt nu ook bij trainPct buiten de noemer. */
+const TRAINPCT_D = trainPctBerekening(TRAININGEN_D, SP_D, []);
+ok("trainPct sluit d3 nu ook uit: 3 van de 3 meetellende trainingen bijgewoond, dus 100%",
+   TRAINPCT_D, 100);
 
 /* Het opkomstVan-equivalent van "hoe vaak was hij er": som alleen de
    trainingen op waar opkomstVan iets over kan zeggen (d1, d2, d4) —
@@ -368,14 +377,15 @@ const TOTAAL_D = NIET_NULL_D.reduce((s, r) => s + r.totaal, 0);
 const OPKOMSTVAN_PCT_D = Math.round(AANWEZIG_D / TOTAAL_D * 100);
 ok("opkomstVan-gebaseerd (d3 buiten beschouwing): 3 van de 3 meetellende trainingen, dus 100%",
    OPKOMSTVAN_PCT_D, 100);
-okAnders("trainPct (75%, noemer 4) en de opkomstVan-optelling (100%, noemer 3) geven dus een ander percentage",
+ok("trainPct en de opkomstVan-optelling geven nu hetzelfde percentage — de samenvoeging werkt",
    TRAINPCT_D, OPKOMSTVAN_PCT_D);
 
-/* ── bonus: de vierde variant (spelerInzichten) trekt hier dezelfde
-   conclusie als opkomstVan, niet dezelfde als trainPct — nóg een
-   concreet verschil tussen de vijf, met een eigen dataset omdat de
-   app pas vanaf vier "geraakte" trainingen iets teruggeeft. ── */
-groep("(d, vervolg) de statistieken.js-variant (spelerInzichten) sluit een lege training ook uit — net als opkomstVan, anders dan trainPct");
+/* ── bonus: de vierde variant (spelerInzichten) trok hier altijd al
+   dezelfde conclusie als opkomstVan; sinds stap E trekt trainPct die
+   ook, dus alle drie geven nu hetzelfde antwoord — met een eigen
+   dataset omdat de app pas vanaf vier "geraakte" trainingen iets
+   teruggeeft. ── */
+groep("(d, vervolg) spelerInzichten, opkomstVan en trainPct sluiten een lege training nu alle drie uit");
 
 const SPELER_E = {id: "s01", naam: "Speler Een"};
 const TRAININGEN_E = [
@@ -390,10 +400,10 @@ ok("spelerInzichten telt e5 niet mee: metOpkomst bevat 4 trainingen, niet 5",
    INZICHT_E.metOpkomst.length, 4);
 ok("en komt daarmee op 100%, want alle 4 meetellende trainingen zijn bijgewoond",
    INZICHT_E.pct, 100);
-const TRAINPCT_E = trainPctBerekening(TRAININGEN_E, SP_D);
-ok("trainPct op dezelfde vulling telt e5 wél mee in de noemer: 4 van de 5, dus 80%",
-   TRAINPCT_E, 80);
-okAnders("spelerInzichten (100%) en trainPct (80%) verschillen dus ook hier",
+const TRAINPCT_E = trainPctBerekening(TRAININGEN_E, SP_D, []);
+ok("trainPct sluit e5 sinds stap E ook uit: 4 van de 4 meetellende trainingen, dus ook 100%",
+   TRAINPCT_E, 100);
+ok("spelerInzichten en trainPct geven hier dus hetzelfde antwoord",
    INZICHT_E.pct, TRAINPCT_E);
 
 /* ══════════════════════════════════════════════════════════════
@@ -496,6 +506,34 @@ ok("zonder afwezigheidsperiode telt g5 gewoon mee als gemist: metOpkomst bevat 5
    INZICHT_G_ZONDER.metOpkomst.length, 5);
 ok("... en het percentage zakt naar 80",
    INZICHT_G_ZONDER.pct, 80);
+
+/* ══════════════════════════════════════════════════════════════
+   (h) trainPct (IndividuStatistieken) — na de samenvoeging (stap E)
+       sluit een niet-meetellende afwezigheidsperiode voor déze speler
+       een training uit van teller én noemer, net als opkomstVan.
+   Vier trainingen: h4 valt in een periode "ziekte" (noemer:false) op
+   die datum. Met de hand: h1..h3 blijven meetellen (allemaal
+   "aanwezig"), h4 valt weg. Dus trainMee = 3, trainAanw = 3, dus 100%
+   en de breuk "3/3" — zonder de afwezigheidsperiode zou h4 gewoon als
+   gemist meetellen: trainMee 4, trainAanw 3, dus 75% en "3/4".
+   ══════════════════════════════════════════════════════════════ */
+groep("(h) trainPct — een niet-meetellende afwezigheidsperiode van déze speler sluit een training uit");
+
+const SP_H = {id: "s01"};
+const TRAININGEN_H = [
+  {id: "h1", datum: "2026-09-01", aanwezigheid: [{spelerId: "s01", status: "aanwezig"}]},
+  {id: "h2", datum: "2026-09-08", aanwezigheid: [{spelerId: "s01", status: "aanwezig"}]},
+  {id: "h3", datum: "2026-09-15", aanwezigheid: [{spelerId: "s01", status: "aanwezig"}]},
+  {id: "h4", datum: "2026-09-22", aanwezigheid: [{spelerId: "s01", status: "geenbericht"}]}
+];
+const AFWEZIGHEDEN_H = [
+  {id: 1, spelerId: "s01", soort: "ziekte", vanaf: "2026-09-20", tot: "2026-09-25"}
+];
+
+ok("trainPct sluit h4 (ziekte, telt niet mee) uit: 100 procent over de 3 overgebleven trainingen",
+   trainPctBerekening(TRAININGEN_H, SP_H, AFWEZIGHEDEN_H), 100);
+ok("zonder de afwezigheidsperiode telt h4 gewoon als gemist mee: 3 van de 4, dus 75 procent",
+   trainPctBerekening(TRAININGEN_H, SP_H, []), 75);
 
 /* ── uitslag ────────────────────────────────────────────────── */
 console.log("\n" + goed + " geslaagd, " + fout + " gefaald");
