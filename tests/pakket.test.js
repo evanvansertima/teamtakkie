@@ -124,6 +124,15 @@ const ONBOARDING = path.join(__dirname, "..", "src", "schermen", "onboarding.jsx
 const bronOnboarding = fs.readFileSync(ONBOARDING, "utf8");
 const regelsOnboarding = bronOnboarding.split("\n");
 
+/* Zelfde soort verhuizing, nu door P4 stap 2 (docs/p4-stappenplan.md):
+   TeamSheet — en daarmee de andere twee van de drie aanroepen van
+   magNieuwTeam() — verhuisde op 17 september 2026 van app.jsx naar
+   src/schermen/instellingen.jsx. Na deze stap staat geen van de drie
+   aanroepen meer in app.jsx zelf; vandaar deze derde aparte bron. */
+const INSTELLINGEN = path.join(__dirname, "..", "src", "schermen", "instellingen.jsx");
+const bronInstellingen = fs.readFileSync(INSTELLINGEN, "utf8");
+const regelsInstellingen = bronInstellingen.split("\n");
+
 /* Eén regel uit de app (de sleutelnaam staat los van het blok) */
 function knipRegel(re, wat) { return regels[eis(re, wat)]; }
 
@@ -527,17 +536,23 @@ ok("zonder teams op het apparaat mag je beginnen", magNieuwTeam(), true);
 
 groep("magNieuwTeam wordt ook echt gebruikt — de drie plekken uit het plan");
 /* Sinds P4 stap 1 zit één van de drie ("het aanmaakscherm") in
-   TeamScherm, dat naar src/schermen/onboarding.jsx is verhuisd — zie
-   de aparte bron hierboven. De andere twee staan nog in app.jsx. */
+   TeamScherm, dat naar src/schermen/onboarding.jsx is verhuisd. Sinds
+   P4 stap 2 zitten de andere twee (de knop en de uitleg in TeamSheet)
+   in src/schermen/instellingen.jsx — geen van de drie staat nu nog in
+   app.jsx zelf, vandaar dat die teller hieronder gewoon meetelt (en op
+   nul kan uitkomen zonder dat dat een fout is). */
 const nieuwTeamPlekkenApp = aanroepen("magNieuwTeam");
 const nieuwTeamPlekkenOnboarding = aanroepen("magNieuwTeam", regelsOnboarding);
-ok("er zijn drie aanroepen", nieuwTeamPlekkenApp.length + nieuwTeamPlekkenOnboarding.length, 3);
+const nieuwTeamPlekkenInstellingen = aanroepen("magNieuwTeam", regelsInstellingen);
+ok("er zijn drie aanroepen",
+   nieuwTeamPlekkenApp.length + nieuwTeamPlekkenOnboarding.length + nieuwTeamPlekkenInstellingen.length, 3);
 console.log("        regels in app.jsx: " + nieuwTeamPlekkenApp.join(", ") +
-            "  —  in onboarding.jsx: " + nieuwTeamPlekkenOnboarding.join(", "));
+            "  —  in onboarding.jsx: " + nieuwTeamPlekkenOnboarding.join(", ") +
+            "  —  in instellingen.jsx: " + nieuwTeamPlekkenInstellingen.join(", "));
 ok("de knop 'team toevoegen' vraagt het na",
-   /if \(!magNieuwTeam\(\)\) return;/.test(bron), true);
+   /if \(!magNieuwTeam\(\)\) return;/.test(bronInstellingen), true);
 ok("het scherm verbergt de knop als het niet mag",
-   /\{magNieuwTeam\(\) \? \(/.test(bron), true);
+   /\{magNieuwTeam\(\) \? \(/.test(bronInstellingen), true);
 ok("en het aanmaakscherm legt uit waaróm het niet mag",
    /if \(!eerste && !magNieuwTeam\(\)\)/.test(bronOnboarding), true);
 

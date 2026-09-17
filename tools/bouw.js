@@ -98,8 +98,14 @@ const DOMEIN_VOLGORDE = ["boetepot.js", "wedstrijden.js", "statistieken.js", "op
    "onboarding.jsx" (P4 stap 1, 17 september 2026) is de tweede
    toevoeging: de kleinste en meest geïsoleerde van de acht
    schermmodules (OnboardingSchil, ServerScherm, AanmeldScherm,
-   ClubScherm, TeamScherm) — zie docs/p4-stappenplan.md §1. */
-const SCHERM_VOLGORDE = ["gedeeld.jsx", "onboarding.jsx"];
+   ClubScherm, TeamScherm) — zie docs/p4-stappenplan.md §1.
+
+   "instellingen.jsx" (P4 stap 2, zelfde dag) is de derde toevoeging:
+   isolatie hoog, geen bekende cross-module afhankelijkheid (TeamSheet,
+   NieuwSeizoenKaart, PakkettenSheet, TerugSheet, SyncLampje,
+   NieuwsBalk, BeheerSheet, AccountSheet, InstellingenSheet) — zie
+   docs/p4-stappenplan.md §1, stap 2. */
+const SCHERM_VOLGORDE = ["gedeeld.jsx", "onboarding.jsx", "instellingen.jsx"];
 
 /* Het merkteken in src/index.html waar de gebouwde app terechtkomt.
    Bewust een commentaarregel en geen los token: zo blijft het sjabloon

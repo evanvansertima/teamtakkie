@@ -7784,6 +7784,1143 @@ function TeamScherm({ opKlaar, eerste }) {
     }
   );
 }
+function TeamSheet({ onSluiten, onGewisseld }) {
+  const [lijst, setLijst] = useState(function() {
+    return teams();
+  });
+  const [nu, setNu] = useState(function() {
+    return teamId();
+  });
+  const [nieuw, setNieuw] = useState("");
+  const [hernoemt, setHernoemt] = useState(null);
+  const [naam, setNaam] = useState("");
+  const [weg, setWeg] = useState(null);
+  const [seizoenen, setSeizoenen] = useState(function() {
+    return seizoenenVan(teamId());
+  });
+  const [seizoenNuId, setSeizoenNuId] = useState(function() {
+    return seizoenNu();
+  });
+  const [nieuwSeizoen, setNieuwSeizoen] = useState(null);
+  const p = pakketNu();
+  const ruimte = maxTeams();
+  function ververs() {
+    setLijst(teams().slice());
+    setNu(teamId());
+    setSeizoenen(seizoenenVan(teamId()));
+    setSeizoenNuId(seizoenNu());
+  }
+  function naarSeizoen(id) {
+    if (id === seizoenNu()) {
+      onSluiten();
+      return;
+    }
+    kiesSeizoen(id);
+    herlaadInstellingen();
+    ververs();
+    onGewisseld();
+    onSluiten();
+  }
+  function wissel(id) {
+    if (id === teamId()) {
+      onSluiten();
+      return;
+    }
+    kiesTeam(id);
+    ververs();
+    onGewisseld();
+    onSluiten();
+  }
+  function voegToe() {
+    var n = nieuw.trim();
+    if (!n) return;
+    if (!magNieuwTeam()) return;
+    var team = maakTeam(n, inst().clubNaam);
+    setNieuw("");
+    kiesTeam(team.id);
+    ververs();
+    onGewisseld();
+    onSluiten();
+    meldGoed(n + " aangemaakt");
+  }
+  function bewaarNaam() {
+    if (!hernoemt) return;
+    hernoemTeam(hernoemt, naam);
+    setHernoemt(null);
+    ververs();
+    onGewisseld();
+  }
+  function gooiWeg() {
+    var id = weg.id;
+    setWeg(null);
+    wisTeam(id);
+    ververs();
+    onGewisseld();
+    meldGoed("Team verwijderd");
+  }
+  return /* @__PURE__ */ React.createElement("div", { className: "formatie-overlay", onClick: function(e) {
+    if (e.target === e.currentTarget) onSluiten();
+  } }, /* @__PURE__ */ React.createElement("div", { className: "formatie-sheet", onClick: function(e) {
+    e.stopPropagation();
+  } }, /* @__PURE__ */ React.createElement("div", { className: "formatie-sheet-header" }, /* @__PURE__ */ React.createElement("span", { className: "formatie-sheet-titel" }, "Mijn teams"), /* @__PURE__ */ React.createElement(
+    "button",
+    {
+      style: { background: "none", border: "none", fontSize: 20, cursor: "pointer", color: "var(--grijs-donker)", padding: "0 4px" },
+      onClick: onSluiten
+    },
+    "\u2715"
+  )), /* @__PURE__ */ React.createElement("div", { className: "team-lijst" }, lijst.map(function(team) {
+    const actief = team.id === nu;
+    if (hernoemt === team.id) return /* @__PURE__ */ React.createElement("div", { className: "team-rij", key: team.id }, /* @__PURE__ */ React.createElement(
+      "input",
+      {
+        autoFocus: true,
+        value: naam,
+        style: { margin: 0, flex: 1 },
+        onChange: function(e) {
+          setNaam(e.target.value);
+        },
+        onKeyDown: function(e) {
+          if (e.key === "Enter") bewaarNaam();
+          if (e.key === "Escape") setHernoemt(null);
+        }
+      }
+    ), /* @__PURE__ */ React.createElement("button", { className: "knop klein", onClick: bewaarNaam }, "Bewaren"), /* @__PURE__ */ React.createElement("button", { className: "knop lijn klein", onClick: function() {
+      setHernoemt(null);
+    } }, "\u2715"));
+    return /* @__PURE__ */ React.createElement("div", { className: "team-rij" + (actief ? " actief" : ""), key: team.id }, /* @__PURE__ */ React.createElement("button", { className: "team-kies", onClick: function() {
+      wissel(team.id);
+    } }, /* @__PURE__ */ React.createElement("span", { className: "team-wapen" }, teamKort(team.naam)), /* @__PURE__ */ React.createElement("span", { className: "team-namen" }, /* @__PURE__ */ React.createElement("b", null, team.naam), /* @__PURE__ */ React.createElement("em", null, actief ? "Nu geopend" : team.club || inst().clubNaam || "")), actief && /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-check" })), magRol("team") && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement(
+      "button",
+      {
+        className: "team-knop",
+        title: "Naam wijzigen",
+        onClick: function() {
+          setHernoemt(team.id);
+          setNaam(team.naam);
+        }
+      },
+      /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-pen" })
+    ), /* @__PURE__ */ React.createElement(
+      "button",
+      {
+        className: "team-knop weg",
+        title: "Team verwijderen",
+        disabled: lijst.length <= 1,
+        onClick: function() {
+          setWeg(team);
+        }
+      },
+      /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-trash" })
+    )));
+  })), /* @__PURE__ */ React.createElement("div", { className: "kaart", style: { marginTop: 12 } }, /* @__PURE__ */ React.createElement("div", { className: "kaart-titel" }, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-calendar-days" }), " Seizoenen"), /* @__PURE__ */ React.createElement("div", { className: "seizoen-lijst" }, (seizoenen.indexOf(seizoenNuId) < 0 ? [seizoenNuId].concat(seizoenen) : seizoenen).map(function(s) {
+    const open = s === seizoenNuId;
+    return /* @__PURE__ */ React.createElement(
+      "button",
+      {
+        key: s,
+        className: "seizoen-rij" + (open ? " actief" : ""),
+        onClick: function() {
+          naarSeizoen(s);
+        }
+      },
+      /* @__PURE__ */ React.createElement("span", { className: "seizoen-naam" }, seizoenLabel(s)),
+      /* @__PURE__ */ React.createElement("span", { className: "seizoen-bij" }, open ? "Nu geopend" : "Bekijken"),
+      open && /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-check" })
+    );
+  })), magRol("team") && /* @__PURE__ */ React.createElement(
+    "button",
+    {
+      className: "knop lijn klein",
+      style: { marginTop: 10, width: "100%" },
+      onClick: function() {
+        setNieuwSeizoen(seizoenVolgend(seizoenNuId));
+      }
+    },
+    /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-forward" }),
+    " Nieuw seizoen starten"
+  )), magRol("team") && /* @__PURE__ */ React.createElement("div", { className: "kaart", style: { marginTop: 12 } }, /* @__PURE__ */ React.createElement("div", { className: "kaart-titel" }, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-plus" }), " Nieuw team"), magNieuwTeam() ? /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 8 } }, /* @__PURE__ */ React.createElement(
+    "input",
+    {
+      value: nieuw,
+      placeholder: "Bijvoorbeeld JO13-1",
+      style: { margin: 0, flex: 1 },
+      onChange: function(e) {
+        setNieuw(e.target.value);
+      },
+      onKeyDown: function(e) {
+        if (e.key === "Enter") voegToe();
+      }
+    }
+  ), /* @__PURE__ */ React.createElement("button", { className: "knop klein", disabled: !nieuw.trim(), onClick: voegToe }, "Aanmaken")) : /* @__PURE__ */ React.createElement("p", { style: { fontSize: 12.5, color: "var(--grijs-donker)", fontWeight: 400, margin: 0, lineHeight: 1.6 } }, "Met ", p.naam, " kun je ", ruimte === Infinity ? "onbeperkt" : ruimte, " ", ruimte === 1 ? "team" : "teams", " beheren, en die ", ruimte === 1 ? "heb" : "heb", " je al. Met een groter pakket kun je er meer aanmaken."), /* @__PURE__ */ React.createElement("p", { style: { fontSize: 11.5, color: "var(--grijs-donker)", fontWeight: 400, margin: "9px 0 0", lineHeight: 1.6 } }, "Elk team heeft zijn eigen spelers, wedstrijden, trainingen en tenues. Je clublogo, je taal en je oefeningen deel je over al je teams heen.")), nieuwSeizoen && /* @__PURE__ */ React.createElement(
+    NieuwSeizoenKaart,
+    {
+      van: seizoenNuId,
+      naar: nieuwSeizoen,
+      onNaar: setNieuwSeizoen,
+      onAnnuleer: function() {
+        setNieuwSeizoen(null);
+      },
+      onKlaar: function() {
+        setNieuwSeizoen(null);
+        ververs();
+        onGewisseld();
+        onSluiten();
+      }
+    }
+  ), weg && /* @__PURE__ */ React.createElement("div", { className: "bevestig-overlay" }, /* @__PURE__ */ React.createElement("div", { className: "bevestig-kaart" }, /* @__PURE__ */ React.createElement("h3", null, "\u201C", weg.naam, "\u201D verwijderen?"), /* @__PURE__ */ React.createElement("p", null, "Alles van dit team gaat weg: spelers, wedstrijden, trainingen, beoordelingen en tenues. Dit kan niet ongedaan gemaakt worden. Maak eerst een back-up als je het nog wilt kunnen terughalen."), /* @__PURE__ */ React.createElement("div", { className: "bevestig-knoppen" }, /* @__PURE__ */ React.createElement("button", { className: "knop lijn", onClick: function() {
+    setWeg(null);
+  } }, "Annuleren"), /* @__PURE__ */ React.createElement("button", { className: "knop gevaar", onClick: gooiWeg }, "Verwijderen"))))));
+}
+function NieuwSeizoenKaart({ van, naar, onNaar, onAnnuleer, onKlaar }) {
+  const [mee, setMee] = useState(function() {
+    return SEIZOEN_MEE.map(function(m) {
+      return m.id;
+    });
+  });
+  function wissel(id) {
+    setMee(mee.indexOf(id) >= 0 ? mee.filter(function(x) {
+      return x !== id;
+    }) : mee.concat([id]));
+  }
+  function begin() {
+    const r = startSeizoen(naar, mee);
+    if (r) meldGoed("Seizoen " + seizoenLabel(naar) + " gestart");
+    onKlaar();
+  }
+  return /* @__PURE__ */ React.createElement("div", { className: "bevestig-overlay" }, /* @__PURE__ */ React.createElement("div", { className: "bevestig-kaart breed" }, /* @__PURE__ */ React.createElement("h3", null, "Nieuw seizoen starten"), /* @__PURE__ */ React.createElement("div", { className: "seizoen-pijl" }, /* @__PURE__ */ React.createElement("span", { className: "seizoen-vak" }, seizoenLabel(van)), /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-arrow-right" }), /* @__PURE__ */ React.createElement("span", { className: "seizoen-vak nieuw" }, seizoenLabel(naar)), /* @__PURE__ */ React.createElement(
+    "button",
+    {
+      className: "knop lijn klein",
+      title: "Een jaar verder",
+      onClick: function() {
+        onNaar(seizoenVolgend(naar));
+      }
+    },
+    /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-plus" })
+  )), /* @__PURE__ */ React.createElement("p", { className: "seizoen-uitleg" }, "Wat gaat er mee naar het nieuwe seizoen?"), /* @__PURE__ */ React.createElement("div", { className: "seizoen-mee" }, SEIZOEN_MEE.map(function(m) {
+    const aan = mee.indexOf(m.id) >= 0;
+    return /* @__PURE__ */ React.createElement(
+      "button",
+      {
+        key: m.id,
+        className: "seizoen-optie" + (aan ? " aan" : ""),
+        onClick: function() {
+          wissel(m.id);
+        }
+      },
+      /* @__PURE__ */ React.createElement("i", { className: aan ? "fa-solid fa-square-check" : "fa-regular fa-square" }),
+      /* @__PURE__ */ React.createElement("span", null, /* @__PURE__ */ React.createElement("b", null, m.label), /* @__PURE__ */ React.createElement("em", null, m.uitleg))
+    );
+  })), /* @__PURE__ */ React.createElement("p", { className: "seizoen-blijft" }, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-box-archive" }), " ", "Wedstrijden, trainingen, aanwezigheid, doelpunten, kaarten en de stand blijven staan onder ", seizoenLabel(van), ". Je kunt ze altijd terugkijken, maar ze tellen niet mee in ", seizoenLabel(naar), "."), /* @__PURE__ */ React.createElement("div", { className: "bevestig-knoppen" }, /* @__PURE__ */ React.createElement("button", { className: "knop lijn", onClick: onAnnuleer }, "Annuleren"), /* @__PURE__ */ React.createElement("button", { className: "knop", onClick: begin }, "Seizoen starten"))));
+}
+const MODULE_LABEL = {
+  basis: "Team, spelers, wedstrijden en agenda",
+  trainingen: "Trainingen en aanwezigheid",
+  ontwikkeling: "Beoordelingen en ontwikkeling",
+  analyse: "Statistieken en live-analyse",
+  clubhuis: "Clubhuis, sportpark en tenues"
+};
+function PakkettenSheet({ onSluiten, nadruk }) {
+  const nu = pakketNu();
+  return /* @__PURE__ */ React.createElement("div", { className: "formatie-overlay", onClick: function(e) {
+    if (e.target === e.currentTarget) onSluiten();
+  } }, /* @__PURE__ */ React.createElement("div", { className: "formatie-sheet", onClick: function(e) {
+    e.stopPropagation();
+  } }, /* @__PURE__ */ React.createElement("div", { className: "formatie-sheet-header" }, /* @__PURE__ */ React.createElement("span", { className: "formatie-sheet-titel" }, "Pakketten"), /* @__PURE__ */ React.createElement(
+    "button",
+    {
+      style: { background: "none", border: "none", fontSize: 20, cursor: "pointer", color: "var(--grijs-donker)", padding: "0 4px" },
+      onClick: onSluiten
+    },
+    "\u2715"
+  )), /* @__PURE__ */ React.createElement("div", { className: "pakket-raster" }, PAKKETTEN.map(function(p) {
+    const dit = p.id === nu.id;
+    const prijs = PAKKET_PRIJS[p.id] || {};
+    return /* @__PURE__ */ React.createElement("div", { key: p.id, className: "pakket-kaart" + (dit ? " nu" : "") + (p.id === nadruk ? " nadruk" : "") }, dit && /* @__PURE__ */ React.createElement("span", { className: "pakket-vlag" }, "Jouw pakket"), /* @__PURE__ */ React.createElement("div", { className: "pakket-kop" }, /* @__PURE__ */ React.createElement("span", { className: "pakket-merk" }, "TEAMTAKKIE"), /* @__PURE__ */ React.createElement("span", { className: "pakket-naam" }, p.naam)), prijs.maand && /* @__PURE__ */ React.createElement("div", { className: "pakket-prijs" }, /* @__PURE__ */ React.createElement("div", { className: "pakket-prijs-rij" }, /* @__PURE__ */ React.createElement("span", { className: "pakket-prijs-bedrag" }, prijs.maand), prijs.jaar && /* @__PURE__ */ React.createElement("span", { className: "pakket-prijs-per" }, "per maand")), prijs.jaar && /* @__PURE__ */ React.createElement("div", { className: "pakket-prijs-jaar" }, "of " + prijs.jaar + " per jaar \u2014 twee maanden korting")), /* @__PURE__ */ React.createElement("div", { className: "pakket-teams" }, p.teams === Infinity ? "Onbeperkt teams" : p.teams + (p.teams === 1 ? " team" : " teams")), /* @__PURE__ */ React.createElement("ul", { className: "pakket-lijst" }, MODULES.map(function(m) {
+      const aan = p.modules.indexOf(m) >= 0;
+      return /* @__PURE__ */ React.createElement("li", { key: m, className: aan ? "aan" : "uit" }, /* @__PURE__ */ React.createElement("i", { className: aan ? "fa-solid fa-check" : "fa-solid fa-minus" }), MODULE_LABEL[m] || m);
+    })), !dit && /* @__PURE__ */ React.createElement(
+      "button",
+      {
+        className: "knop lijn klein",
+        style: { width: "100%", justifyContent: "center" },
+        onClick: function() {
+          meldGoed("Overstappen kan zodra de betaling klaarstaat.");
+        }
+      },
+      "Overstappen"
+    ));
+  }))));
+}
+function TerugSheet({ onSluiten, onGewisseld }) {
+  const [lijst, setLijst] = useState(function() {
+    return terugLijst();
+  });
+  const [bezig, setBezig] = useState(null);
+  const [melding, setMelding] = useState(null);
+  const [kijk, setKijk] = useState(null);
+  function haalTerug(r) {
+    setBezig(r.id);
+    var gelukt = zetTerug(r.id);
+    setLijst(terugLijst());
+    setBezig(null);
+    setKijk(null);
+    setMelding(gelukt ? terugNaam(r.sleutel) + " is teruggezet. Het gaat vanzelf naar de server." : "Dat lukte niet.");
+    if (gelukt && onGewisseld) onGewisseld();
+  }
+  function wanneer(t2) {
+    const d = new Date(t2);
+    return d.toLocaleString("nl-NL", {
+      weekday: "short",
+      day: "numeric",
+      month: "short",
+      hour: "2-digit",
+      minute: "2-digit"
+    });
+  }
+  return /* @__PURE__ */ React.createElement("div", { className: "formatie-overlay", onClick: function(e) {
+    if (e.target === e.currentTarget) onSluiten();
+  } }, /* @__PURE__ */ React.createElement("div", { className: "formatie-sheet", onClick: function(e) {
+    e.stopPropagation();
+  } }, /* @__PURE__ */ React.createElement("div", { className: "formatie-sheet-header" }, /* @__PURE__ */ React.createElement("span", { className: "formatie-sheet-titel" }, "Terughalen"), /* @__PURE__ */ React.createElement(
+    "button",
+    {
+      style: { background: "none", border: "none", fontSize: 20, cursor: "pointer", color: "var(--grijs-donker)", padding: "0 4px" },
+      onClick: onSluiten
+    },
+    "\u2715"
+  )), melding && /* @__PURE__ */ React.createElement("div", { className: "melding" }, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-circle-info" }), " ", melding), /* @__PURE__ */ React.createElement("p", { style: { fontSize: 12.5, color: "var(--grijs-donker)", fontWeight: 400, margin: "0 0 14px", lineHeight: 1.65 } }, "Als het uitwisselen iets van dit apparaat vervangt, wordt bewaard wat er stond. Hier zie je dat terug. De laatste ", TERUG_MAX, " keer, tot ", TERUG_DAGEN, " dagen oud."), !lijst.length && /* @__PURE__ */ React.createElement("p", { className: "beheer-leeg" }, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-shield-halved" }), " Er is nog nooit iets vervangen."), lijst.map(function(r) {
+    const n = terugOmvang(r.waarde);
+    const team = terugTeam(r.sleutel);
+    return /* @__PURE__ */ React.createElement("div", { className: "kaart terug-rij", key: r.id }, /* @__PURE__ */ React.createElement("div", { className: "terug-kop" }, /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("b", null, terugNaam(r.sleutel)), team && /* @__PURE__ */ React.createElement("span", { className: "terug-team" }, team), terugSeizoen(r.sleutel) && /* @__PURE__ */ React.createElement("span", { className: "terug-team" }, terugSeizoen(r.sleutel)), /* @__PURE__ */ React.createElement("div", { className: "terug-onder" }, wanneer(r.tijd), " \xB7 ", r.reden, n !== null && (n === 1 ? " \xB7 1 regel" : " \xB7 " + n + " regels"))), /* @__PURE__ */ React.createElement(
+      "button",
+      {
+        className: "knop lijn klein",
+        disabled: bezig === r.id,
+        onClick: function() {
+          setKijk(kijk === r.id ? null : r.id);
+        }
+      },
+      kijk === r.id ? "Sluiten" : "Bekijken"
+    )), kijk === r.id && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("pre", { className: "terug-kijk" }, JSON.stringify(r.waarde, null, 1).slice(0, 1400)), /* @__PURE__ */ React.createElement(
+      "button",
+      {
+        className: "knop",
+        style: { width: "100%", justifyContent: "center", marginTop: 8 },
+        onClick: function() {
+          haalTerug(r);
+        }
+      },
+      /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-rotate-left" }),
+      " Dit terugzetten"
+    )));
+  }), lijst.length > 0 && /* @__PURE__ */ React.createElement(
+    "button",
+    {
+      className: "knop lijn klein",
+      style: { width: "100%", justifyContent: "center", marginTop: 10 },
+      onClick: function() {
+        wisTerug();
+        setLijst([]);
+        setMelding("Lijst leeggemaakt.");
+      }
+    },
+    "Lijst leegmaken"
+  )));
+}
+function SyncLampje({ opKlik }) {
+  const [stand, setStand] = useState(function() {
+    return syncStand();
+  });
+  useEffect(function() {
+    setStand(syncStand());
+    return volgSyncStand(function(s) {
+      setStand(s);
+    });
+  }, []);
+  if (!kanSynchroniseren()) return null;
+  const wat = {
+    rustig: { icoon: "fa-solid fa-circle-check", tekst: "Alles opgeslagen" },
+    open: { icoon: "fa-solid fa-cloud-arrow-up", tekst: "Nog niet verstuurd" },
+    bezig: { icoon: "fa-solid fa-rotate fa-spin", tekst: "Bezig\u2026" },
+    mislukt: { icoon: "fa-solid fa-triangle-exclamation", tekst: "Geen verbinding" }
+  }[stand] || { icoon: "fa-solid fa-cloud", tekst: "" };
+  return /* @__PURE__ */ React.createElement(
+    "button",
+    {
+      className: "sync-lampje " + stand,
+      onClick: opKlik,
+      title: stand === "mislukt" ? "Er staat iets klaar dat nog niet verstuurd is. Zodra er weer bereik is gaat het vanzelf." : wat.tekst
+    },
+    /* @__PURE__ */ React.createElement("i", { className: wat.icoon }),
+    /* @__PURE__ */ React.createElement("span", null, wat.tekst)
+  );
+}
+function NieuwsBalk({ opVerversen }) {
+  const [tel, setTel] = useState(function() {
+    return syncBinnenTeller();
+  });
+  const [gezien, setGezien] = useState(function() {
+    return syncBinnenTeller();
+  });
+  useEffect(function() {
+    return volgSyncStand(function() {
+      setTel(syncBinnenTeller());
+    });
+  }, []);
+  if (tel === gezien) return null;
+  return /* @__PURE__ */ React.createElement("div", { className: "nieuws-balk" }, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-arrow-down-long" }), /* @__PURE__ */ React.createElement("span", null, "Er zijn wijzigingen van een ander apparaat binnengekomen."), /* @__PURE__ */ React.createElement("button", { onClick: function() {
+    setGezien(tel);
+    opVerversen();
+  } }, "Bijwerken"), /* @__PURE__ */ React.createElement(
+    "button",
+    {
+      className: "weg",
+      onClick: function() {
+        setGezien(tel);
+      },
+      title: "Verbergen"
+    },
+    "\u2715"
+  ));
+}
+function BeheerSheet({ onSluiten }) {
+  const [lijst, setLijst] = useState(null);
+  const [bezig, setBezig] = useState(true);
+  const [fout, setFout] = useState(null);
+  const [zoek, setZoek] = useState("");
+  const [weg, setWeg] = useState(null);
+  const [bevestiging, setBevestiging] = useState("");
+  const [melding, setMelding] = useState(null);
+  function ophalen() {
+    setBezig(true);
+    setFout(null);
+    alleGebruikers().then(function(r) {
+      setBezig(false);
+      if (!r.ok) {
+        setFout(r.fout ? r.fout.tekst : "Er ging iets mis.");
+        return;
+      }
+      setLijst(r.gegevens);
+    });
+  }
+  useEffect(ophalen, []);
+  function wijzigPakket(rij, pakket) {
+    setMelding(null);
+    setFout(null);
+    zetPakketVan(rij.club_id, pakket).then(function(r) {
+      if (!r.ok) {
+        setFout(r.fout ? r.fout.tekst : "Het pakket kon niet worden gewijzigd.");
+        return;
+      }
+      setLijst(function(oud) {
+        return (oud || []).map(function(g) {
+          return g.club_id === rij.club_id ? Object.assign({}, g, { pakket }) : g;
+        });
+      });
+      setMelding("Pakket van " + (rij.club_naam || "deze vereniging") + " staat nu op " + pakket + ".");
+    });
+  }
+  function gooiWeg() {
+    var doel = weg;
+    setWeg(null);
+    setBevestiging("");
+    setMelding(null);
+    setFout(null);
+    verwijderAccount(doel.gebruiker_id).then(function(r) {
+      if (!r.ok) {
+        setFout(r.fout ? r.fout.tekst : "Het account kon niet worden verwijderd.");
+        return;
+      }
+      setLijst(function(oud) {
+        return (oud || []).filter(function(g) {
+          return g.gebruiker_id !== doel.gebruiker_id;
+        });
+      });
+      setMelding(doel.email + " is verwijderd.");
+    });
+  }
+  const zoekterm = zoek.trim().toLowerCase();
+  const zichtbaar = (lijst || []).filter(function(g) {
+    if (!zoekterm) return true;
+    return ((g.email || "") + " " + (g.club_naam || "")).toLowerCase().indexOf(zoekterm) >= 0;
+  });
+  function datum(d) {
+    if (!d) return "\u2013";
+    return new Date(d).toLocaleDateString("nl-NL", { day: "numeric", month: "short", year: "numeric" });
+  }
+  return /* @__PURE__ */ React.createElement("div", { className: "formatie-overlay", onClick: function(e) {
+    if (e.target === e.currentTarget) onSluiten();
+  } }, /* @__PURE__ */ React.createElement("div", { className: "formatie-sheet", onClick: function(e) {
+    e.stopPropagation();
+  } }, /* @__PURE__ */ React.createElement("div", { className: "formatie-sheet-header" }, /* @__PURE__ */ React.createElement("span", { className: "formatie-sheet-titel" }, "De achterkant"), /* @__PURE__ */ React.createElement(
+    "button",
+    {
+      style: { background: "none", border: "none", fontSize: 20, cursor: "pointer", color: "var(--grijs-donker)", padding: "0 4px" },
+      onClick: onSluiten
+    },
+    "\u2715"
+  )), fout && /* @__PURE__ */ React.createElement("div", { className: "melding fout" }, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-triangle-exclamation" }), " ", fout), melding && /* @__PURE__ */ React.createElement("div", { className: "melding" }, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-circle-info" }), " ", melding), /* @__PURE__ */ React.createElement("div", { className: "beheer-balk" }, /* @__PURE__ */ React.createElement(
+    "input",
+    {
+      type: "search",
+      placeholder: "Zoek op e-mailadres of vereniging",
+      value: zoek,
+      onChange: function(e) {
+        setZoek(e.target.value);
+      }
+    }
+  ), /* @__PURE__ */ React.createElement("button", { className: "knop lijn klein", onClick: ophalen, disabled: bezig }, /* @__PURE__ */ React.createElement("i", { className: bezig ? "fa-solid fa-hourglass-half" : "fa-solid fa-rotate" }), " Verversen")), bezig && !lijst && /* @__PURE__ */ React.createElement("p", { className: "beheer-leeg" }, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-circle-notch fa-spin" }), " Even ophalen\u2026"), lijst && !zichtbaar.length && /* @__PURE__ */ React.createElement("p", { className: "beheer-leeg" }, zoekterm ? "Niemand gevonden die daarop lijkt." : "Er zijn nog geen accounts."), zichtbaar.map(function(g) {
+    return /* @__PURE__ */ React.createElement("div", { className: "kaart beheer-rij", key: g.gebruiker_id }, /* @__PURE__ */ React.createElement("div", { className: "beheer-kop" }, /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("b", null, g.email), !g.bevestigd && /* @__PURE__ */ React.createElement("span", { className: "beheer-vlag" }, "nog niet bevestigd"), /* @__PURE__ */ React.createElement("div", { className: "beheer-onder" }, g.club_naam ? g.club_naam + " \xB7 " + (g.rol || "lid") + " \xB7 " + g.teams + (g.teams === 1 ? " team" : " teams") : "hoort nog bij geen vereniging")), /* @__PURE__ */ React.createElement("button", { className: "knop gevaar klein", onClick: function() {
+      setWeg(g);
+      setBevestiging("");
+    } }, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-trash" }))), /* @__PURE__ */ React.createElement("div", { className: "beheer-feiten" }, /* @__PURE__ */ React.createElement("span", null, "Aangemeld ", datum(g.aangemaakt)), /* @__PURE__ */ React.createElement("span", null, "Laatst gezien ", datum(g.laatst_gezien)), g.geldig_tot && /* @__PURE__ */ React.createElement("span", null, "Loopt af ", datum(g.geldig_tot))), /* @__PURE__ */ React.createElement("div", { className: "beheer-pakketten" }, PAKKETTEN.map(function(pk) {
+      var aan = (g.pakket || "free") === pk.id;
+      return /* @__PURE__ */ React.createElement(
+        "button",
+        {
+          key: pk.id,
+          className: "knop klein" + (aan ? "" : " lijn"),
+          disabled: !g.club_id,
+          title: g.club_id ? "" : "Dit account hoort nog bij geen vereniging",
+          onClick: function() {
+            if (!aan) wijzigPakket(g, pk.id);
+          }
+        },
+        pk.naam
+      );
+    })));
+  }), weg && /* @__PURE__ */ React.createElement("div", { className: "bevestig-overlay" }, /* @__PURE__ */ React.createElement("div", { className: "bevestig-kaart" }, /* @__PURE__ */ React.createElement("h3", null, "Account verwijderen?"), /* @__PURE__ */ React.createElement("p", null, "Alles van ", /* @__PURE__ */ React.createElement("b", null, weg.email), " gaat definitief weg. Was hij de enige van ", weg.club_naam ? "\u201C" + weg.club_naam + "\u201D" : "zijn vereniging", ", dan verdwijnt die vereniging met alle teams en gegevens erbij. Dit kan niet ongedaan worden gemaakt."), /* @__PURE__ */ React.createElement("p", { style: { fontSize: 12.5, fontWeight: 600, margin: "0 0 6px" } }, "Typ het e-mailadres over om te bevestigen:"), /* @__PURE__ */ React.createElement(
+    "input",
+    {
+      type: "text",
+      autoComplete: "off",
+      value: bevestiging,
+      autoFocus: true,
+      onChange: function(e) {
+        setBevestiging(e.target.value);
+      }
+    }
+  ), /* @__PURE__ */ React.createElement("div", { className: "bevestig-knoppen" }, /* @__PURE__ */ React.createElement("button", { className: "knop lijn", onClick: function() {
+    setWeg(null);
+    setBevestiging("");
+  } }, "Annuleren"), /* @__PURE__ */ React.createElement("button", { className: "knop gevaar", disabled: bevestiging.trim() !== weg.email, onClick: gooiWeg }, "Verwijderen"))))));
+}
+function AccountSheet({ onSluiten, onGewisseld }) {
+  const s = gebruikSessie();
+  const [adres, setAdres] = useState(function() {
+    return serverInst().url;
+  });
+  const [sleutel, setSleutel] = useState(function() {
+    return serverInst().sleutel;
+  });
+  const [email, setEmail] = useState("");
+  const [wachtwoord, setWachtwoord] = useState("");
+  const [nieuw, setNieuw] = useState(false);
+  const [bezig, setBezig] = useState(false);
+  const [fout, setFout] = useState(null);
+  const [melding, setMelding] = useState(null);
+  const [uitslag, setUitslag] = useState(null);
+  const [laatst, setLaatst] = useState(function() {
+    return laatstGesynct();
+  });
+  const [test, setTest] = useState(null);
+  const [beheerder, setBeheerder] = useState(function() {
+    return beheerderNu();
+  });
+  const [beheerOpen, setBeheerOpen] = useState(false);
+  useEffect(function() {
+    if (!s) {
+      setBeheerder(false);
+      return;
+    }
+    haalBeheerder().then(setBeheerder);
+  }, [s && s.token]);
+  function bewaarServer() {
+    zetServerInst({ url: adres, sleutel });
+    setFout(null);
+    setMelding(serverAan() ? "Server ingesteld. Je kunt nu inloggen." : "Vul allebei de velden in.");
+  }
+  function meldFoutUit(r) {
+    setBezig(false);
+    setMelding(null);
+    setFout(r.fout ? r.fout.tekst : "Er ging iets mis.");
+  }
+  function aanmelden() {
+    setBezig(true);
+    setFout(null);
+    setMelding(null);
+    var doe = nieuw ? serverRegistreren : serverAanmelden;
+    doe(email, wachtwoord).then(function(r) {
+      setWachtwoord("");
+      if (!r.ok) return meldFoutUit(r);
+      setBezig(false);
+      if (r.bevestigen) {
+        setMelding("Bijna klaar: open de e-mail die we hebben gestuurd en klik op de link. Log daarna hier in.");
+        return;
+      }
+      setMelding("Ingelogd. Even geduld, ik haal je gegevens op\u2026");
+      nuSynchroniseren();
+    });
+  }
+  function nuSynchroniseren() {
+    setBezig(true);
+    setFout(null);
+    setUitslag(null);
+    synchroniseer().then(function(r) {
+      setBezig(false);
+      if (!r.ok) return meldFoutUit(r);
+      setUitslag(r.gegevens);
+      setLaatst(laatstGesynct());
+      setMelding(null);
+      if (onGewisseld) onGewisseld();
+    });
+  }
+  function doeTest() {
+    setBezig(true);
+    setTest(null);
+    setFout(null);
+    setMelding(null);
+    serverTest().then(function(r) {
+      setBezig(false);
+      setTest(r);
+    });
+  }
+  function afmelden() {
+    serverAfmelden().then(function() {
+      setMelding("Uitgelogd. Je gegevens staan nog gewoon op dit apparaat.");
+      setUitslag(null);
+      setBeheerder(false);
+      setBeheerOpen(false);
+      if (onGewisseld) onGewisseld();
+    });
+  }
+  const wanneer = laatst ? new Date(laatst).toLocaleString("nl-NL", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : null;
+  return /* @__PURE__ */ React.createElement("div", { className: "formatie-overlay", onClick: function(e) {
+    if (e.target === e.currentTarget) onSluiten();
+  } }, /* @__PURE__ */ React.createElement("div", { className: "formatie-sheet", onClick: function(e) {
+    e.stopPropagation();
+  } }, /* @__PURE__ */ React.createElement("div", { className: "formatie-sheet-header" }, /* @__PURE__ */ React.createElement("span", { className: "formatie-sheet-titel" }, "Account"), /* @__PURE__ */ React.createElement(
+    "button",
+    {
+      style: { background: "none", border: "none", fontSize: 20, cursor: "pointer", color: "var(--grijs-donker)", padding: "0 4px" },
+      onClick: onSluiten
+    },
+    "\u2715"
+  )), fout && /* @__PURE__ */ React.createElement("div", { className: "melding fout" }, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-triangle-exclamation" }), " ", fout), melding && /* @__PURE__ */ React.createElement("div", { className: "melding" }, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-circle-info" }), " ", melding), !serverAan() && /* @__PURE__ */ React.createElement("div", { className: "kaart" }, /* @__PURE__ */ React.createElement("div", { className: "kaart-titel" }, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-server" }), " Server instellen"), /* @__PURE__ */ React.createElement("p", { style: { fontSize: 12.5, color: "var(--grijs-donker)", fontWeight: 400, margin: "0 0 10px", lineHeight: 1.65 } }, "Zonder server werkt de app gewoon, maar staan je gegevens alleen op dit apparaat. Met een server blijven ze bewaard en staan ze op al je apparaten. Je vindt deze twee gegevens in je Supabase-project onder Project Settings, API."), /* @__PURE__ */ React.createElement("label", { className: "formulier-label" }, "Adres van het project"), /* @__PURE__ */ React.createElement(
+    "input",
+    {
+      value: adres,
+      placeholder: "https://xxxx.supabase.co",
+      onChange: function(e) {
+        setAdres(e.target.value);
+      }
+    }
+  ), /* @__PURE__ */ React.createElement("label", { className: "formulier-label" }, "Publieke sleutel (anon key)"), /* @__PURE__ */ React.createElement(
+    "input",
+    {
+      value: sleutel,
+      placeholder: "eyJhbGciOi\u2026",
+      onChange: function(e) {
+        setSleutel(e.target.value);
+      }
+    }
+  ), /* @__PURE__ */ React.createElement(
+    "button",
+    {
+      className: "knop",
+      style: { width: "100%", justifyContent: "center", marginTop: 8 },
+      onClick: bewaarServer
+    },
+    /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-check" }),
+    " Bewaren"
+  )), serverAan() && !s && /* @__PURE__ */ React.createElement("div", { className: "kaart" }, /* @__PURE__ */ React.createElement("div", { className: "kaart-titel" }, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-right-to-bracket" }), " ", nieuw ? "Account aanmaken" : "Inloggen"), /* @__PURE__ */ React.createElement("label", { className: "formulier-label" }, "E-mailadres"), /* @__PURE__ */ React.createElement(
+    "input",
+    {
+      type: "email",
+      autoComplete: "email",
+      value: email,
+      onChange: function(e) {
+        setEmail(e.target.value);
+      }
+    }
+  ), /* @__PURE__ */ React.createElement("label", { className: "formulier-label" }, "Wachtwoord"), /* @__PURE__ */ React.createElement(
+    "input",
+    {
+      type: "password",
+      value: wachtwoord,
+      autoComplete: nieuw ? "new-password" : "current-password",
+      onChange: function(e) {
+        setWachtwoord(e.target.value);
+      },
+      onKeyDown: function(e) {
+        if (e.key === "Enter") aanmelden();
+      }
+    }
+  ), /* @__PURE__ */ React.createElement(
+    "button",
+    {
+      className: "knop",
+      disabled: bezig || !email || !wachtwoord,
+      style: { width: "100%", justifyContent: "center", marginTop: 8 },
+      onClick: aanmelden
+    },
+    /* @__PURE__ */ React.createElement("i", { className: bezig ? "fa-solid fa-hourglass-half" : "fa-solid fa-right-to-bracket" }),
+    nieuw ? " Account aanmaken" : " Inloggen"
+  ), /* @__PURE__ */ React.createElement(
+    "button",
+    {
+      className: "knop lijn klein",
+      style: { width: "100%", justifyContent: "center", marginTop: 8 },
+      onClick: function() {
+        setNieuw(!nieuw);
+        setFout(null);
+      }
+    },
+    nieuw ? "Ik heb al een account" : "Nog geen account? Maak er een aan"
+  )), serverAan() && s && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("div", { className: "kaart" }, /* @__PURE__ */ React.createElement("div", { className: "kaart-titel" }, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-cloud" }), " Ingelogd"), /* @__PURE__ */ React.createElement("div", { className: "account-rij" }, /* @__PURE__ */ React.createElement("span", null, "E-mailadres"), /* @__PURE__ */ React.createElement("b", null, s.email || "\u2013")), /* @__PURE__ */ React.createElement("div", { className: "account-rij" }, /* @__PURE__ */ React.createElement("span", null, "Pakket"), /* @__PURE__ */ React.createElement("b", null, pakketNu().naam)), /* @__PURE__ */ React.createElement(
+    "button",
+    {
+      className: "knop lijn klein",
+      style: { width: "100%", justifyContent: "center", marginTop: 10 },
+      onClick: afmelden
+    },
+    /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-right-from-bracket" }),
+    " Uitloggen"
+  ), beheerder && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("div", { className: "account-rij", style: { marginTop: 10 } }, /* @__PURE__ */ React.createElement("span", null, "Laatst uitgewisseld"), /* @__PURE__ */ React.createElement("b", null, wanneer || "nog niet")), /* @__PURE__ */ React.createElement(
+    "button",
+    {
+      className: "knop lijn klein",
+      disabled: bezig,
+      style: { width: "100%", justifyContent: "center", marginTop: 8 },
+      onClick: nuSynchroniseren
+    },
+    /* @__PURE__ */ React.createElement("i", { className: bezig ? "fa-solid fa-hourglass-half" : "fa-solid fa-rotate" }),
+    bezig ? " Bezig\u2026" : " Nu synchroniseren"
+  ), /* @__PURE__ */ React.createElement(
+    "button",
+    {
+      className: "knop lijn klein",
+      style: { width: "100%", justifyContent: "center", marginTop: 8 },
+      onClick: function() {
+        setBeheerOpen(true);
+      }
+    },
+    /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-user-shield" }),
+    " De achterkant"
+  ))), uitslag && /* @__PURE__ */ React.createElement("div", { className: "kaart" }, /* @__PURE__ */ React.createElement("div", { className: "kaart-titel" }, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-list-check" }), " Wat er is uitgewisseld"), /* @__PURE__ */ React.createElement("div", { className: "account-rij" }, /* @__PURE__ */ React.createElement("span", null, "Omhoog gestuurd"), /* @__PURE__ */ React.createElement("b", null, uitslag.geduwd)), /* @__PURE__ */ React.createElement("div", { className: "account-rij" }, /* @__PURE__ */ React.createElement("span", null, "Opgehaald"), /* @__PURE__ */ React.createElement("b", null, uitslag.gehaald)), /* @__PURE__ */ React.createElement("div", { className: "account-rij" }, /* @__PURE__ */ React.createElement("span", null, "Samengevoegd"), /* @__PURE__ */ React.createElement("b", null, uitslag.samengevoegd)), uitslag.botsingen.length > 0 && /* @__PURE__ */ React.createElement("div", { style: { marginTop: 10 } }, /* @__PURE__ */ React.createElement("p", { style: { fontSize: 12.5, fontWeight: 700, margin: "0 0 6px" } }, "Aan beide kanten was er iets veranderd:"), uitslag.botsingen.map(function(b, i) {
+    return /* @__PURE__ */ React.createElement("p", { key: i, style: { fontSize: 12, color: "var(--grijs-donker)", fontWeight: 400, margin: "0 0 4px", lineHeight: 1.6 } }, /* @__PURE__ */ React.createElement("b", null, b.sleutel.replace(/^fch_|_v1$/g, "").replace(/_/g, " ")), " ", b.samengevoegd ? "\u2014 samengevoegd" + (b.erbij ? ", er kwamen er " + b.erbij + " bij van het andere apparaat." : ", er ging niets verloren.") : "\u2014 hier kon niets samengevoegd worden, dus deze versie is gehouden.");
+  }), /* @__PURE__ */ React.createElement("p", { style: { fontSize: 11.5, color: "var(--grijs-donker)", fontWeight: 400, margin: "8px 0 0", lineHeight: 1.65 } }, "Bij het samenvoegen gaat er niets verloren. Wel kan iets wat je op het ene apparaat hebt weggehaald terugkomen als je het op het andere tegelijk bewerkte. Kijk het even na.")), uitslag.fouten.length > 0 && /* @__PURE__ */ React.createElement("p", { style: { fontSize: 12, color: "var(--gevaar)", fontWeight: 600, margin: "8px 0 0" } }, "Niet gelukt: ", uitslag.fouten.join(", "), ". Probeer het straks nog eens."))), test && /* @__PURE__ */ React.createElement("div", { className: "kaart" }, /* @__PURE__ */ React.createElement("div", { className: "kaart-titel" }, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-stethoscope" }), " Verbinding doorgelicht"), test.map(function(r, i) {
+    return /* @__PURE__ */ React.createElement("div", { key: i, className: "test-rij" + (r.goed ? " goed" : " mis") }, /* @__PURE__ */ React.createElement("i", { className: r.goed ? "fa-solid fa-check" : "fa-solid fa-xmark" }), /* @__PURE__ */ React.createElement("span", null, /* @__PURE__ */ React.createElement("b", null, r.wat), r.tekst ? " \u2014 " + r.tekst : ""));
+  })), serverAan() && beheerder && /* @__PURE__ */ React.createElement(
+    "button",
+    {
+      className: "knop lijn",
+      disabled: bezig,
+      style: { width: "100%", justifyContent: "center", marginTop: 4 },
+      onClick: doeTest
+    },
+    /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-stethoscope" }),
+    " Verbinding testen"
+  ), serverAan() && beheerder && /* @__PURE__ */ React.createElement(
+    "button",
+    {
+      className: "knop lijn klein",
+      style: { width: "100%", justifyContent: "center", marginTop: 8 },
+      onClick: function() {
+        zetServerInst({ url: "", sleutel: "" });
+        setAdres("");
+        setSleutel("");
+        setTest(null);
+      }
+    },
+    "Serverinstellingen wissen"
+  ), beheerOpen && /* @__PURE__ */ React.createElement(BeheerSheet, { onSluiten: function() {
+    setBeheerOpen(false);
+  } })));
+}
+function InstellingenSheet({ onSluiten, onGewisseld, onTeams }) {
+  const i = gebruikInstellingen();
+  const [accountOpen, setAccountOpen] = useState(false);
+  const [pakkettenOpen, setPakkettenOpen] = useState(false);
+  const [terugOpen, setTerugOpen] = useState(false);
+  const [melding, setMelding] = useState(null);
+  const [fout, setFout] = useState(null);
+  const [bevestigImport, setBevestigImport] = useState(null);
+  const [opheffenOpen, setOpheffenOpen] = useState(false);
+  const [opheffenTekst, setOpheffenTekst] = useState("");
+  const [opheffenBezig, setOpheffenBezig] = useState(false);
+  const bestandRef = useRef(null);
+  const logoRef = useRef(null);
+  function kiesLogo(e) {
+    var bestand = e.target.files && e.target.files[0];
+    e.target.value = "";
+    if (!bestand) return;
+    verwerkLogoBestand(bestand, function(err, dataUrl) {
+      if (err) {
+        meldFout(err);
+        return;
+      }
+      bewaarClubGegeven({ logo: dataUrl });
+      meldGoed("Logo ingesteld");
+    });
+  }
+  const aantalSpelers = laadSpelers().length;
+  const aantalWedstrijden = laadWedstrijden().length;
+  const aantalTrainingen = laadTrainingen().length;
+  function exporteer() {
+    exporteerAlleData();
+    setFout(null);
+    setMelding("Back-up gedownload. Bewaar dit bestand op een veilige plek.");
+    setTimeout(function() {
+      setMelding(null);
+    }, 5e3);
+  }
+  function kiesBestand(e) {
+    var bestand = e.target.files && e.target.files[0];
+    if (bestand) setBevestigImport(bestand);
+    e.target.value = "";
+  }
+  const opheffenNaam = (i.clubNaam || "").trim() || "OPHEFFEN";
+  function voerOpheffenUit() {
+    setOpheffenBezig(true);
+    setFout(null);
+    setMelding(null);
+    hefClubOp().then(function(r) {
+      setOpheffenBezig(false);
+      setOpheffenOpen(false);
+      setOpheffenTekst("");
+      if (!r.ok) {
+        setFout(r.fout && r.fout.tekst || "De vereniging kon niet worden opgeheven.");
+        return;
+      }
+      setMelding("De vereniging is opgeheven. De app wordt opnieuw geladen\u2026");
+      setTimeout(function() {
+        window.location.reload();
+      }, 1400);
+    });
+  }
+  function voerImportUit() {
+    var bestand = bevestigImport;
+    setBevestigImport(null);
+    importeerAlleData(bestand, function(err, aantal) {
+      if (err) {
+        setMelding(null);
+        setFout(err);
+        return;
+      }
+      setFout(null);
+      setMelding(aantal + " items hersteld. De app wordt opnieuw geladen\u2026");
+      setTimeout(function() {
+        window.location.reload();
+      }, 1400);
+    });
+  }
+  return /* @__PURE__ */ React.createElement("div", { className: "formatie-overlay", onClick: function(e) {
+    if (e.target === e.currentTarget) onSluiten();
+  } }, /* @__PURE__ */ React.createElement("div", { className: "formatie-sheet", onClick: function(e) {
+    e.stopPropagation();
+  } }, terugOpen && /* @__PURE__ */ React.createElement(
+    TerugSheet,
+    {
+      onSluiten: function() {
+        setTerugOpen(false);
+      },
+      onGewisseld
+    }
+  ), accountOpen && /* @__PURE__ */ React.createElement(
+    AccountSheet,
+    {
+      onSluiten: function() {
+        setAccountOpen(false);
+      },
+      onGewisseld
+    }
+  ), pakkettenOpen && /* @__PURE__ */ React.createElement(PakkettenSheet, { onSluiten: function() {
+    setPakkettenOpen(false);
+  } }), /* @__PURE__ */ React.createElement("div", { className: "formatie-sheet-header" }, /* @__PURE__ */ React.createElement("span", { className: "formatie-sheet-titel" }, "Instellingen"), /* @__PURE__ */ React.createElement(
+    "button",
+    {
+      style: { background: "none", border: "none", fontSize: 20, cursor: "pointer", color: "var(--grijs-donker)", padding: "0 4px" },
+      onClick: onSluiten
+    },
+    "\u2715"
+  )), ingelogd() && rolInfoVan(rolNu()) && /* @__PURE__ */ React.createElement("div", { className: "rol-balk" + (alleenKijken() ? " kijker" : "") }, /* @__PURE__ */ React.createElement("i", { className: rolInfoVan(rolNu()).icoon }), /* @__PURE__ */ React.createElement("span", null, /* @__PURE__ */ React.createElement("b", null, rolInfoVan(rolNu()).label), /* @__PURE__ */ React.createElement("em", null, rolInfoVan(rolNu()).uitleg))), /* @__PURE__ */ React.createElement("div", { className: "inst-groep" }, "Account"), /* @__PURE__ */ React.createElement("div", { className: "kaart" }, /* @__PURE__ */ React.createElement("div", { className: "kaart-titel" }, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-user" }), " Account"), ingelogd() ? /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("div", { className: "account-rij" }, /* @__PURE__ */ React.createElement("span", null, "E-mailadres"), /* @__PURE__ */ React.createElement("b", null, (gebruikerNu() || {}).email || "\u2013")), /* @__PURE__ */ React.createElement(
+    "button",
+    {
+      className: "knop lijn",
+      style: { width: "100%", justifyContent: "center", marginTop: 10 },
+      onClick: function() {
+        setAccountOpen(true);
+      }
+    },
+    /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-gear" }),
+    " Accountinstellingen"
+  )) : /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("p", { style: { fontSize: 12.5, color: "var(--grijs-donker)", fontWeight: 400, margin: "0 0 10px", lineHeight: 1.65 } }, "Met een account staan je gegevens ook op je andere apparaten."), /* @__PURE__ */ React.createElement(
+    "button",
+    {
+      className: "knop",
+      style: { width: "100%", justifyContent: "center" },
+      onClick: function() {
+        setAccountOpen(true);
+      }
+    },
+    /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-right-to-bracket" }),
+    " Inloggen"
+  ))), /* @__PURE__ */ React.createElement("div", { className: "kaart" }, /* @__PURE__ */ React.createElement("div", { className: "kaart-titel" }, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-crown" }), " Abonnement"), /* @__PURE__ */ React.createElement("div", { className: "pakket-nu" }, /* @__PURE__ */ React.createElement("span", { className: "pakket-merk" }, "TEAMTAKKIE"), /* @__PURE__ */ React.createElement("span", { className: "pakket-naam" }, pakketNu().naam)), /* @__PURE__ */ React.createElement("p", { style: { fontSize: 12.5, color: "var(--grijs-donker)", fontWeight: 400, margin: "10px 0", lineHeight: 1.65 } }, maxTeams() === Infinity ? "Onbeperkt teams, alle onderdelen." : maxTeams() + (maxTeams() === 1 ? " team" : " teams") + ", " + pakketNu().modules.length + " van de " + MODULES.length + " onderdelen."), /* @__PURE__ */ React.createElement(
+    "button",
+    {
+      className: "knop lijn",
+      style: { width: "100%", justifyContent: "center" },
+      onClick: function() {
+        setPakkettenOpen(true);
+      }
+    },
+    /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-layer-group" }),
+    " Bekijk pakketten"
+  )), magRol("club") && /* @__PURE__ */ React.createElement("div", { className: "inst-groep" }, "Team"), magRol("club") && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("div", { className: "kaart", style: { marginTop: 4 } }, /* @__PURE__ */ React.createElement("div", { className: "kaart-titel" }, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-image" }), " Clublogo"), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 16 } }, /* @__PURE__ */ React.createElement("div", { style: { width: 66, height: 66, borderRadius: 16, background: "var(--grijs-licht)", border: "1px solid var(--grijs)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, overflow: "hidden" } }, /* @__PURE__ */ React.createElement("img", { src: logoKopbalk(false), alt: "logo", style: { width: "100%", height: "100%", objectFit: "contain", padding: 4 } })), /* @__PURE__ */ React.createElement("div", { style: { flex: 1 } }, /* @__PURE__ */ React.createElement(
+    "button",
+    {
+      className: "knop lijn klein",
+      style: { width: "100%", justifyContent: "center", marginBottom: 6 },
+      onClick: function() {
+        if (logoRef.current) logoRef.current.click();
+      }
+    },
+    /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-upload" }),
+    i.logo ? " Logo vervangen" : " Logo kiezen"
+  ), i.logo && /* @__PURE__ */ React.createElement(
+    "button",
+    {
+      className: "knop lijn klein",
+      style: { width: "100%", justifyContent: "center" },
+      onClick: function() {
+        bewaarClubGegeven({ logo: null });
+        meldGoed("Terug naar het ingebouwde wapen");
+      }
+    },
+    /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-rotate-left" }),
+    " Terug naar clublogo"
+  ))), /* @__PURE__ */ React.createElement("input", { ref: logoRef, type: "file", accept: "image/*", style: { display: "none" }, onChange: kiesLogo }), /* @__PURE__ */ React.createElement("p", { style: { fontSize: 12, color: "var(--grijs-donker)", fontWeight: 400, lineHeight: 1.5, marginTop: 10 } }, "Er zit een wapen ingebouwd. Kies je eigen afbeelding voor jouw club. Verschijnt bovenaan, op je gedeelde opstelling en in de PDF\u2019s.")), /* @__PURE__ */ React.createElement("div", { className: "kaart" }, /* @__PURE__ */ React.createElement("div", { className: "kaart-titel" }, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-shield-halved" }), " Team"), /* @__PURE__ */ React.createElement("div", { className: "formulier-rij" }, /* @__PURE__ */ React.createElement("div", { className: "formulier-groep" }, /* @__PURE__ */ React.createElement("label", { className: "formulier-label" }, "Club"), /* @__PURE__ */ React.createElement(
+    "input",
+    {
+      className: "formulier-input",
+      value: i.clubNaam,
+      onChange: function(e) {
+        zetInstellingen({ clubNaam: e.target.value });
+      },
+      onBlur: function(e) {
+        bewaarClubGegeven({ clubNaam: e.target.value });
+      },
+      placeholder: "Bijvoorbeeld SV Voorbeeld"
+    }
+  )), /* @__PURE__ */ React.createElement("div", { className: "formulier-groep" }, /* @__PURE__ */ React.createElement("label", { className: "formulier-label" }, "Team"), /* @__PURE__ */ React.createElement(
+    "input",
+    {
+      className: "formulier-input",
+      value: i.teamNaam,
+      onChange: function(e) {
+        zetInstellingen({ teamNaam: e.target.value });
+      },
+      placeholder: "JO19-2"
+    }
+  ))), /* @__PURE__ */ React.createElement("div", { className: "formulier-rij" }, /* @__PURE__ */ React.createElement("div", { className: "formulier-groep" }, /* @__PURE__ */ React.createElement("label", { className: "formulier-label" }, "Seizoen"), /* @__PURE__ */ React.createElement(
+    "button",
+    {
+      className: "knop lijn",
+      style: { width: "100%", justifyContent: "space-between", height: 42 },
+      onClick: function() {
+        if (onTeams) onTeams();
+      }
+    },
+    /* @__PURE__ */ React.createElement("span", null, huidigSeizoen()),
+    /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-chevron-right", style: { fontSize: 11, opacity: 0.6 } })
+  )), /* @__PURE__ */ React.createElement("div", { className: "formulier-groep" }, /* @__PURE__ */ React.createElement("label", { className: "formulier-label" }, "Speelduur (min)"), /* @__PURE__ */ React.createElement(
+    GetalVeld,
+    {
+      className: "formulier-input",
+      min: 20,
+      max: 120,
+      leeg: 90,
+      waarde: i.speelduur,
+      opWaarde: function(n) {
+        zetInstellingen({ speelduur: n });
+      }
+    }
+  ))), /* @__PURE__ */ React.createElement("div", { className: "formulier-groep" }, /* @__PURE__ */ React.createElement("label", { className: "formulier-label" }, "Vaste thuislocatie"), /* @__PURE__ */ React.createElement(
+    "input",
+    {
+      className: "formulier-input",
+      value: i.locatie,
+      onChange: function(e) {
+        zetInstellingen({ locatie: e.target.value });
+      },
+      placeholder: "Sportpark De Zeehoek"
+    }
+  )))), /* @__PURE__ */ React.createElement("div", { className: "inst-groep" }, "App"), /* @__PURE__ */ React.createElement("div", { className: "kaart" }, /* @__PURE__ */ React.createElement("div", { className: "kaart-titel" }, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-circle-half-stroke" }), " Weergave"), /* @__PURE__ */ React.createElement("div", { className: "thema-rij" }, [
+    { id: "licht", label: "Licht", ic: "fa-solid fa-sun" },
+    { id: "donker", label: "Donker", ic: "fa-solid fa-moon" },
+    { id: "systeem", label: "Systeem", ic: "fa-solid fa-circle-half-stroke" }
+  ].map(function(t2) {
+    var aan = (i.thema || "systeem") === t2.id;
+    return /* @__PURE__ */ React.createElement(
+      "button",
+      {
+        key: t2.id,
+        className: "thema-optie",
+        style: { borderColor: aan ? "var(--blauw)" : "var(--grijs)", background: aan ? "var(--blauw)" : "var(--wit)", color: aan ? "#fff" : "var(--grijs-donker)" },
+        onClick: function() {
+          zetInstellingen({ thema: t2.id });
+        }
+      },
+      /* @__PURE__ */ React.createElement("i", { className: t2.ic, style: { fontSize: 15 } }),
+      /* @__PURE__ */ React.createElement("span", null, t2.label)
+    );
+  })), /* @__PURE__ */ React.createElement("p", { style: { fontSize: 12, color: "var(--grijs-donker)", fontWeight: 400, lineHeight: 1.5, marginTop: 9 } }, "Systeem volgt de instelling van je telefoon. Donker is prettiger bij avondwedstrijden."), /* @__PURE__ */ React.createElement("div", { className: "kaart-titel", style: { marginTop: 16 } }, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-palette" }), " Accentkleur"), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 8, flexWrap: "wrap" } }, ACCENTEN.map(function(a) {
+    var aan = (i.accent || "club") === a.id;
+    return /* @__PURE__ */ React.createElement(
+      "button",
+      {
+        key: a.id,
+        title: a.label,
+        style: {
+          flex: "1 1 60px",
+          minWidth: 60,
+          border: "2px solid",
+          borderRadius: 12,
+          padding: "9px 6px",
+          cursor: "pointer",
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          gap: 6,
+          borderColor: aan ? a.l[0] : "var(--grijs)",
+          background: aan ? "var(--grijs-licht)" : "var(--wit)",
+          fontFamily: "'Helvetica Neue',Arial,sans-serif",
+          fontSize: 10,
+          fontWeight: 700,
+          color: aan ? a.l[0] : "var(--grijs-donker)"
+        },
+        onClick: function() {
+          zetInstellingen({ accent: a.id });
+        }
+      },
+      /* @__PURE__ */ React.createElement("span", { style: {
+        width: 26,
+        height: 26,
+        borderRadius: "50%",
+        background: "linear-gradient(135deg," + a.l[0] + "," + a.l[1] + ")",
+        border: aan ? "2px solid var(--wit)" : "none",
+        boxShadow: aan ? "0 0 0 2px " + a.l[0] : "none"
+      } }),
+      /* @__PURE__ */ React.createElement("span", null, a.label)
+    );
+  })), /* @__PURE__ */ React.createElement("p", { style: { fontSize: 12, color: "var(--grijs-donker)", fontWeight: 400, lineHeight: 1.5, marginTop: 9 } }, "De accentkleur kleurt knoppen, tabbladen en grafieken. Het clublogo en de tenuekleuren blijven ongemoeid.")), /* @__PURE__ */ React.createElement("div", { className: "kaart" }, /* @__PURE__ */ React.createElement("div", { className: "kaart-titel" }, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-language" }), " ", t("taal.titel")), /* @__PURE__ */ React.createElement("p", { style: { fontSize: 12, color: "var(--grijs-donker)", lineHeight: 1.55, margin: "0 0 10px" } }, t("taal.onder")), /* @__PURE__ */ React.createElement("div", { className: "tenue-patroon-rij" }, TALEN.map(function(taal) {
+    var aan = (i.taal || "") === taal.id;
+    var dekking = Math.round(taalDekking(taal.id) * 100);
+    return /* @__PURE__ */ React.createElement(
+      "button",
+      {
+        key: taal.id,
+        className: "tenue-patroon",
+        style: {
+          borderColor: aan ? "var(--blauw)" : "var(--grijs)",
+          background: aan ? "rgba(0,74,173,.07)" : "var(--wit)",
+          color: aan ? "var(--blauw)" : "var(--grijs-donker)"
+        },
+        onClick: function() {
+          zetInstellingen({ taal: taal.id });
+        }
+      },
+      /* @__PURE__ */ React.createElement("span", { style: { fontSize: 15, fontWeight: 800 } }, taal.kort),
+      /* @__PURE__ */ React.createElement("span", null, taal.label),
+      dekking < 100 && /* @__PURE__ */ React.createElement("span", { style: { fontSize: 9, opacity: 0.7 } }, dekking + "%")
+    );
+  })), /* @__PURE__ */ React.createElement(
+    "button",
+    {
+      className: "knop lijn klein",
+      style: { width: "100%", justifyContent: "center", marginTop: 8 },
+      onClick: function() {
+        zetInstellingen({ taal: "" });
+      }
+    },
+    /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-mobile-screen" }),
+    " ",
+    t("taal.apparaat")
+  )), beheerderNu() && /* @__PURE__ */ React.createElement("div", { className: "inst-groep" }, "Beheer"), beheerderNu() && /* @__PURE__ */ React.createElement("div", { className: "kaart" }, /* @__PURE__ */ React.createElement("div", { className: "kaart-titel" }, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-database" }), " Jouw gegevens"), /* @__PURE__ */ React.createElement("div", { className: "stat-raster-3" }, /* @__PURE__ */ React.createElement("div", { className: "stat-pill" }, /* @__PURE__ */ React.createElement("div", { className: "stat-pill-getal" }, aantalSpelers), /* @__PURE__ */ React.createElement("div", { className: "stat-pill-label" }, "Spelers")), /* @__PURE__ */ React.createElement("div", { className: "stat-pill" }, /* @__PURE__ */ React.createElement("div", { className: "stat-pill-getal" }, aantalWedstrijden), /* @__PURE__ */ React.createElement("div", { className: "stat-pill-label" }, "Wedstrijden")), /* @__PURE__ */ React.createElement("div", { className: "stat-pill" }, /* @__PURE__ */ React.createElement("div", { className: "stat-pill-getal" }, aantalTrainingen), /* @__PURE__ */ React.createElement("div", { className: "stat-pill-label" }, "Trainingen"))), /* @__PURE__ */ React.createElement("p", { style: { fontSize: 12, color: "var(--grijs-donker)", fontWeight: 400, lineHeight: 1.5, marginTop: 4 } }, "Wat er in dit seizoen van dit team staat.")), beheerderNu() && /* @__PURE__ */ React.createElement("div", { className: "kaart" }, /* @__PURE__ */ React.createElement("div", { className: "kaart-titel" }, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-screwdriver-wrench" }), " Beheer"), /* @__PURE__ */ React.createElement("button", { className: "knop", style: { width: "100%", justifyContent: "center", marginBottom: 8 }, onClick: exporteer }, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-download" }), " Back-up downloaden"), /* @__PURE__ */ React.createElement(
+    "button",
+    {
+      className: "knop lijn",
+      style: { width: "100%", justifyContent: "center" },
+      onClick: function() {
+        if (bestandRef.current) bestandRef.current.click();
+      }
+    },
+    /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-upload" }),
+    " Back-up terugzetten"
+  ), /* @__PURE__ */ React.createElement("input", { ref: bestandRef, type: "file", accept: "application/json,.json", style: { display: "none" }, onChange: kiesBestand }), ingelogd() && /* @__PURE__ */ React.createElement(
+    "button",
+    {
+      className: "knop lijn",
+      style: { width: "100%", justifyContent: "center", marginTop: 8 },
+      onClick: function() {
+        setTerugOpen(true);
+      }
+    },
+    /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-rotate-left" }),
+    " Terughalen wat het uitwisselen verving",
+    terugLijst().length > 0 && /* @__PURE__ */ React.createElement("span", { className: "terug-teller" }, terugLijst().length)
+  )), serverAan() && ingelogd() && clubIdNu() && magRol("club") && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("div", { className: "inst-groep" }, "Vereniging"), /* @__PURE__ */ React.createElement("div", { className: "kaart" }, /* @__PURE__ */ React.createElement("div", { className: "kaart-titel" }, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-triangle-exclamation" }), " Vereniging opheffen"), /* @__PURE__ */ React.createElement("p", { style: { fontSize: 12.5, color: "var(--grijs-donker)", fontWeight: 400, margin: "0 0 10px", lineHeight: 1.65 } }, "Hiermee verdwijnt ", i.clubNaam ? "\u201C" + i.clubNaam + "\u201D" : "je vereniging", " met alles wat eronder hangt: alle teams, alle spelers, wedstrijden, trainingen, opstellingen, tactieken, boetes en het sportpark. Er is geen prullenbak en geen ongedaan maken."), /* @__PURE__ */ React.createElement(
+    "button",
+    {
+      className: "knop gevaar",
+      style: { width: "100%", justifyContent: "center" },
+      onClick: function() {
+        setOpheffenTekst("");
+        setOpheffenOpen(true);
+      }
+    },
+    /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-trash" }),
+    " Vereniging opheffen"
+  ))), melding && /* @__PURE__ */ React.createElement("div", { className: "kaart", style: { background: "var(--vlak-succes)", borderLeft: "4px solid var(--succes)", color: "var(--op-succesvlak)" } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13, fontWeight: 600, lineHeight: 1.5 } }, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-circle-check" }), " " + melding)), fout && /* @__PURE__ */ React.createElement("div", { className: "kaart", style: { background: "var(--vlak-gevaar)", borderLeft: "4px solid var(--gevaar)", color: "var(--op-gevaarvlak)" } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13, fontWeight: 600, lineHeight: 1.5 } }, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-triangle-exclamation" }), " " + fout)), /* @__PURE__ */ React.createElement("div", { className: "kaart over-kaart" }, /* @__PURE__ */ React.createElement("div", { className: "over-logo" }, /* @__PURE__ */ React.createElement(Logo, null)), /* @__PURE__ */ React.createElement("div", { className: "over-titel" }, teamNaamVol()), /* @__PURE__ */ React.createElement("div", { className: "over-sub" }, "Teammanager"), /* @__PURE__ */ React.createElement("div", { className: "over-lijn" }), /* @__PURE__ */ React.createElement("div", { className: "over-studio" }, ONTWERPER.studio), /* @__PURE__ */ React.createElement("div", { className: "over-naam" }, "Ontwerp en bouw \xB7 ", ONTWERPER.naam)), bevestigImport && /* @__PURE__ */ React.createElement("div", { className: "bevestig-overlay", onClick: function(e) {
+    if (e.target === e.currentTarget) setBevestigImport(null);
+  } }, /* @__PURE__ */ React.createElement("div", { className: "bevestig-kaart" }, /* @__PURE__ */ React.createElement("h3", null, "Back-up terugzetten?"), /* @__PURE__ */ React.createElement("p", null, "Alle huidige spelers, wedstrijden, trainingen en tactieken worden vervangen door de inhoud van het back-upbestand. Dit kan niet ongedaan gemaakt worden."), /* @__PURE__ */ React.createElement("div", { className: "bevestig-knoppen" }, /* @__PURE__ */ React.createElement("button", { className: "knop lijn", onClick: function() {
+    setBevestigImport(null);
+  } }, "Annuleren"), /* @__PURE__ */ React.createElement("button", { className: "knop gevaar", onClick: voerImportUit }, "Terugzetten")))), opheffenOpen && /* @__PURE__ */ React.createElement("div", { className: "bevestig-overlay" }, /* @__PURE__ */ React.createElement("div", { className: "bevestig-kaart" }, /* @__PURE__ */ React.createElement("h3", null, "Vereniging opheffen?"), /* @__PURE__ */ React.createElement("p", null, "Alles van ", i.clubNaam ? "\u201C" + i.clubNaam + "\u201D" : "je vereniging", " gaat definitief weg: de vereniging zelf met naam en logo, alle leden, en alle teams \u2014 ook de teams die al in de prullenbak stonden. Met die teams verdwijnen hun spelers, wedstrijden, trainingen, opstellingen, tactieken, boetes en het sportpark, en ook het abonnement van de vereniging."), /* @__PURE__ */ React.createElement("p", null, "De accounts van de andere leden blijven gewoon bestaan; alleen hun plek in d\xE9ze vereniging niet. Dit kan niet ongedaan worden gemaakt."), /* @__PURE__ */ React.createElement("p", { style: { fontSize: 12.5, fontWeight: 600, margin: "0 0 6px" } }, "Typ ", "\u201C" + opheffenNaam + "\u201D", " over om te bevestigen:"), /* @__PURE__ */ React.createElement(
+    "input",
+    {
+      type: "text",
+      autoComplete: "off",
+      value: opheffenTekst,
+      autoFocus: true,
+      onChange: function(e) {
+        setOpheffenTekst(e.target.value);
+      }
+    }
+  ), /* @__PURE__ */ React.createElement("div", { className: "bevestig-knoppen" }, /* @__PURE__ */ React.createElement(
+    "button",
+    {
+      className: "knop lijn",
+      disabled: opheffenBezig,
+      onClick: function() {
+        setOpheffenOpen(false);
+        setOpheffenTekst("");
+      }
+    },
+    "Annuleren"
+  ), /* @__PURE__ */ React.createElement(
+    "button",
+    {
+      className: "knop gevaar",
+      disabled: opheffenBezig || opheffenTekst.trim() !== opheffenNaam,
+      style: opheffenBezig || opheffenTekst.trim() !== opheffenNaam ? { opacity: 0.45, cursor: "default" } : null,
+      onClick: voerOpheffenUit
+    },
+    opheffenBezig ? "Bezig\u2026" : "Opheffen"
+  ))))));
+}
 const { useState, useEffect, useRef } = React;
 const initialen = (naam) => naam ? naam.trim().split(" ").map((d) => d[0]).slice(0, 2).join("").toUpperCase() : "?";
 function teamKort(naam) {
@@ -33488,1143 +34625,6 @@ function GrafiekLegenda({ items }) {
   return /* @__PURE__ */ React.createElement("div", { className: "grafiek-legenda" }, items.map(function(it) {
     return /* @__PURE__ */ React.createElement("div", { key: it.label, className: "grafiek-legenda-item" }, /* @__PURE__ */ React.createElement("span", { className: "grafiek-legenda-blok", style: { background: it.kleur } }), /* @__PURE__ */ React.createElement("span", null, it.label));
   }));
-}
-function TeamSheet({ onSluiten, onGewisseld }) {
-  const [lijst, setLijst] = useState(function() {
-    return teams();
-  });
-  const [nu, setNu] = useState(function() {
-    return teamId();
-  });
-  const [nieuw, setNieuw] = useState("");
-  const [hernoemt, setHernoemt] = useState(null);
-  const [naam, setNaam] = useState("");
-  const [weg, setWeg] = useState(null);
-  const [seizoenen, setSeizoenen] = useState(function() {
-    return seizoenenVan(teamId());
-  });
-  const [seizoenNuId, setSeizoenNuId] = useState(function() {
-    return seizoenNu();
-  });
-  const [nieuwSeizoen, setNieuwSeizoen] = useState(null);
-  const p = pakketNu();
-  const ruimte = maxTeams();
-  function ververs() {
-    setLijst(teams().slice());
-    setNu(teamId());
-    setSeizoenen(seizoenenVan(teamId()));
-    setSeizoenNuId(seizoenNu());
-  }
-  function naarSeizoen(id) {
-    if (id === seizoenNu()) {
-      onSluiten();
-      return;
-    }
-    kiesSeizoen(id);
-    herlaadInstellingen();
-    ververs();
-    onGewisseld();
-    onSluiten();
-  }
-  function wissel(id) {
-    if (id === teamId()) {
-      onSluiten();
-      return;
-    }
-    kiesTeam(id);
-    ververs();
-    onGewisseld();
-    onSluiten();
-  }
-  function voegToe() {
-    var n = nieuw.trim();
-    if (!n) return;
-    if (!magNieuwTeam()) return;
-    var team = maakTeam(n, inst().clubNaam);
-    setNieuw("");
-    kiesTeam(team.id);
-    ververs();
-    onGewisseld();
-    onSluiten();
-    meldGoed(n + " aangemaakt");
-  }
-  function bewaarNaam() {
-    if (!hernoemt) return;
-    hernoemTeam(hernoemt, naam);
-    setHernoemt(null);
-    ververs();
-    onGewisseld();
-  }
-  function gooiWeg() {
-    var id = weg.id;
-    setWeg(null);
-    wisTeam(id);
-    ververs();
-    onGewisseld();
-    meldGoed("Team verwijderd");
-  }
-  return /* @__PURE__ */ React.createElement("div", { className: "formatie-overlay", onClick: function(e) {
-    if (e.target === e.currentTarget) onSluiten();
-  } }, /* @__PURE__ */ React.createElement("div", { className: "formatie-sheet", onClick: function(e) {
-    e.stopPropagation();
-  } }, /* @__PURE__ */ React.createElement("div", { className: "formatie-sheet-header" }, /* @__PURE__ */ React.createElement("span", { className: "formatie-sheet-titel" }, "Mijn teams"), /* @__PURE__ */ React.createElement(
-    "button",
-    {
-      style: { background: "none", border: "none", fontSize: 20, cursor: "pointer", color: "var(--grijs-donker)", padding: "0 4px" },
-      onClick: onSluiten
-    },
-    "\u2715"
-  )), /* @__PURE__ */ React.createElement("div", { className: "team-lijst" }, lijst.map(function(team) {
-    const actief = team.id === nu;
-    if (hernoemt === team.id) return /* @__PURE__ */ React.createElement("div", { className: "team-rij", key: team.id }, /* @__PURE__ */ React.createElement(
-      "input",
-      {
-        autoFocus: true,
-        value: naam,
-        style: { margin: 0, flex: 1 },
-        onChange: function(e) {
-          setNaam(e.target.value);
-        },
-        onKeyDown: function(e) {
-          if (e.key === "Enter") bewaarNaam();
-          if (e.key === "Escape") setHernoemt(null);
-        }
-      }
-    ), /* @__PURE__ */ React.createElement("button", { className: "knop klein", onClick: bewaarNaam }, "Bewaren"), /* @__PURE__ */ React.createElement("button", { className: "knop lijn klein", onClick: function() {
-      setHernoemt(null);
-    } }, "\u2715"));
-    return /* @__PURE__ */ React.createElement("div", { className: "team-rij" + (actief ? " actief" : ""), key: team.id }, /* @__PURE__ */ React.createElement("button", { className: "team-kies", onClick: function() {
-      wissel(team.id);
-    } }, /* @__PURE__ */ React.createElement("span", { className: "team-wapen" }, teamKort(team.naam)), /* @__PURE__ */ React.createElement("span", { className: "team-namen" }, /* @__PURE__ */ React.createElement("b", null, team.naam), /* @__PURE__ */ React.createElement("em", null, actief ? "Nu geopend" : team.club || inst().clubNaam || "")), actief && /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-check" })), magRol("team") && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement(
-      "button",
-      {
-        className: "team-knop",
-        title: "Naam wijzigen",
-        onClick: function() {
-          setHernoemt(team.id);
-          setNaam(team.naam);
-        }
-      },
-      /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-pen" })
-    ), /* @__PURE__ */ React.createElement(
-      "button",
-      {
-        className: "team-knop weg",
-        title: "Team verwijderen",
-        disabled: lijst.length <= 1,
-        onClick: function() {
-          setWeg(team);
-        }
-      },
-      /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-trash" })
-    )));
-  })), /* @__PURE__ */ React.createElement("div", { className: "kaart", style: { marginTop: 12 } }, /* @__PURE__ */ React.createElement("div", { className: "kaart-titel" }, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-calendar-days" }), " Seizoenen"), /* @__PURE__ */ React.createElement("div", { className: "seizoen-lijst" }, (seizoenen.indexOf(seizoenNuId) < 0 ? [seizoenNuId].concat(seizoenen) : seizoenen).map(function(s) {
-    const open = s === seizoenNuId;
-    return /* @__PURE__ */ React.createElement(
-      "button",
-      {
-        key: s,
-        className: "seizoen-rij" + (open ? " actief" : ""),
-        onClick: function() {
-          naarSeizoen(s);
-        }
-      },
-      /* @__PURE__ */ React.createElement("span", { className: "seizoen-naam" }, seizoenLabel(s)),
-      /* @__PURE__ */ React.createElement("span", { className: "seizoen-bij" }, open ? "Nu geopend" : "Bekijken"),
-      open && /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-check" })
-    );
-  })), magRol("team") && /* @__PURE__ */ React.createElement(
-    "button",
-    {
-      className: "knop lijn klein",
-      style: { marginTop: 10, width: "100%" },
-      onClick: function() {
-        setNieuwSeizoen(seizoenVolgend(seizoenNuId));
-      }
-    },
-    /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-forward" }),
-    " Nieuw seizoen starten"
-  )), magRol("team") && /* @__PURE__ */ React.createElement("div", { className: "kaart", style: { marginTop: 12 } }, /* @__PURE__ */ React.createElement("div", { className: "kaart-titel" }, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-plus" }), " Nieuw team"), magNieuwTeam() ? /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 8 } }, /* @__PURE__ */ React.createElement(
-    "input",
-    {
-      value: nieuw,
-      placeholder: "Bijvoorbeeld JO13-1",
-      style: { margin: 0, flex: 1 },
-      onChange: function(e) {
-        setNieuw(e.target.value);
-      },
-      onKeyDown: function(e) {
-        if (e.key === "Enter") voegToe();
-      }
-    }
-  ), /* @__PURE__ */ React.createElement("button", { className: "knop klein", disabled: !nieuw.trim(), onClick: voegToe }, "Aanmaken")) : /* @__PURE__ */ React.createElement("p", { style: { fontSize: 12.5, color: "var(--grijs-donker)", fontWeight: 400, margin: 0, lineHeight: 1.6 } }, "Met ", p.naam, " kun je ", ruimte === Infinity ? "onbeperkt" : ruimte, " ", ruimte === 1 ? "team" : "teams", " beheren, en die ", ruimte === 1 ? "heb" : "heb", " je al. Met een groter pakket kun je er meer aanmaken."), /* @__PURE__ */ React.createElement("p", { style: { fontSize: 11.5, color: "var(--grijs-donker)", fontWeight: 400, margin: "9px 0 0", lineHeight: 1.6 } }, "Elk team heeft zijn eigen spelers, wedstrijden, trainingen en tenues. Je clublogo, je taal en je oefeningen deel je over al je teams heen.")), nieuwSeizoen && /* @__PURE__ */ React.createElement(
-    NieuwSeizoenKaart,
-    {
-      van: seizoenNuId,
-      naar: nieuwSeizoen,
-      onNaar: setNieuwSeizoen,
-      onAnnuleer: function() {
-        setNieuwSeizoen(null);
-      },
-      onKlaar: function() {
-        setNieuwSeizoen(null);
-        ververs();
-        onGewisseld();
-        onSluiten();
-      }
-    }
-  ), weg && /* @__PURE__ */ React.createElement("div", { className: "bevestig-overlay" }, /* @__PURE__ */ React.createElement("div", { className: "bevestig-kaart" }, /* @__PURE__ */ React.createElement("h3", null, "\u201C", weg.naam, "\u201D verwijderen?"), /* @__PURE__ */ React.createElement("p", null, "Alles van dit team gaat weg: spelers, wedstrijden, trainingen, beoordelingen en tenues. Dit kan niet ongedaan gemaakt worden. Maak eerst een back-up als je het nog wilt kunnen terughalen."), /* @__PURE__ */ React.createElement("div", { className: "bevestig-knoppen" }, /* @__PURE__ */ React.createElement("button", { className: "knop lijn", onClick: function() {
-    setWeg(null);
-  } }, "Annuleren"), /* @__PURE__ */ React.createElement("button", { className: "knop gevaar", onClick: gooiWeg }, "Verwijderen"))))));
-}
-function NieuwSeizoenKaart({ van, naar, onNaar, onAnnuleer, onKlaar }) {
-  const [mee, setMee] = useState(function() {
-    return SEIZOEN_MEE.map(function(m) {
-      return m.id;
-    });
-  });
-  function wissel(id) {
-    setMee(mee.indexOf(id) >= 0 ? mee.filter(function(x) {
-      return x !== id;
-    }) : mee.concat([id]));
-  }
-  function begin() {
-    const r = startSeizoen(naar, mee);
-    if (r) meldGoed("Seizoen " + seizoenLabel(naar) + " gestart");
-    onKlaar();
-  }
-  return /* @__PURE__ */ React.createElement("div", { className: "bevestig-overlay" }, /* @__PURE__ */ React.createElement("div", { className: "bevestig-kaart breed" }, /* @__PURE__ */ React.createElement("h3", null, "Nieuw seizoen starten"), /* @__PURE__ */ React.createElement("div", { className: "seizoen-pijl" }, /* @__PURE__ */ React.createElement("span", { className: "seizoen-vak" }, seizoenLabel(van)), /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-arrow-right" }), /* @__PURE__ */ React.createElement("span", { className: "seizoen-vak nieuw" }, seizoenLabel(naar)), /* @__PURE__ */ React.createElement(
-    "button",
-    {
-      className: "knop lijn klein",
-      title: "Een jaar verder",
-      onClick: function() {
-        onNaar(seizoenVolgend(naar));
-      }
-    },
-    /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-plus" })
-  )), /* @__PURE__ */ React.createElement("p", { className: "seizoen-uitleg" }, "Wat gaat er mee naar het nieuwe seizoen?"), /* @__PURE__ */ React.createElement("div", { className: "seizoen-mee" }, SEIZOEN_MEE.map(function(m) {
-    const aan = mee.indexOf(m.id) >= 0;
-    return /* @__PURE__ */ React.createElement(
-      "button",
-      {
-        key: m.id,
-        className: "seizoen-optie" + (aan ? " aan" : ""),
-        onClick: function() {
-          wissel(m.id);
-        }
-      },
-      /* @__PURE__ */ React.createElement("i", { className: aan ? "fa-solid fa-square-check" : "fa-regular fa-square" }),
-      /* @__PURE__ */ React.createElement("span", null, /* @__PURE__ */ React.createElement("b", null, m.label), /* @__PURE__ */ React.createElement("em", null, m.uitleg))
-    );
-  })), /* @__PURE__ */ React.createElement("p", { className: "seizoen-blijft" }, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-box-archive" }), " ", "Wedstrijden, trainingen, aanwezigheid, doelpunten, kaarten en de stand blijven staan onder ", seizoenLabel(van), ". Je kunt ze altijd terugkijken, maar ze tellen niet mee in ", seizoenLabel(naar), "."), /* @__PURE__ */ React.createElement("div", { className: "bevestig-knoppen" }, /* @__PURE__ */ React.createElement("button", { className: "knop lijn", onClick: onAnnuleer }, "Annuleren"), /* @__PURE__ */ React.createElement("button", { className: "knop", onClick: begin }, "Seizoen starten"))));
-}
-const MODULE_LABEL = {
-  basis: "Team, spelers, wedstrijden en agenda",
-  trainingen: "Trainingen en aanwezigheid",
-  ontwikkeling: "Beoordelingen en ontwikkeling",
-  analyse: "Statistieken en live-analyse",
-  clubhuis: "Clubhuis, sportpark en tenues"
-};
-function PakkettenSheet({ onSluiten, nadruk }) {
-  const nu = pakketNu();
-  return /* @__PURE__ */ React.createElement("div", { className: "formatie-overlay", onClick: function(e) {
-    if (e.target === e.currentTarget) onSluiten();
-  } }, /* @__PURE__ */ React.createElement("div", { className: "formatie-sheet", onClick: function(e) {
-    e.stopPropagation();
-  } }, /* @__PURE__ */ React.createElement("div", { className: "formatie-sheet-header" }, /* @__PURE__ */ React.createElement("span", { className: "formatie-sheet-titel" }, "Pakketten"), /* @__PURE__ */ React.createElement(
-    "button",
-    {
-      style: { background: "none", border: "none", fontSize: 20, cursor: "pointer", color: "var(--grijs-donker)", padding: "0 4px" },
-      onClick: onSluiten
-    },
-    "\u2715"
-  )), /* @__PURE__ */ React.createElement("div", { className: "pakket-raster" }, PAKKETTEN.map(function(p) {
-    const dit = p.id === nu.id;
-    const prijs = PAKKET_PRIJS[p.id] || {};
-    return /* @__PURE__ */ React.createElement("div", { key: p.id, className: "pakket-kaart" + (dit ? " nu" : "") + (p.id === nadruk ? " nadruk" : "") }, dit && /* @__PURE__ */ React.createElement("span", { className: "pakket-vlag" }, "Jouw pakket"), /* @__PURE__ */ React.createElement("div", { className: "pakket-kop" }, /* @__PURE__ */ React.createElement("span", { className: "pakket-merk" }, "TEAMTAKKIE"), /* @__PURE__ */ React.createElement("span", { className: "pakket-naam" }, p.naam)), prijs.maand && /* @__PURE__ */ React.createElement("div", { className: "pakket-prijs" }, /* @__PURE__ */ React.createElement("div", { className: "pakket-prijs-rij" }, /* @__PURE__ */ React.createElement("span", { className: "pakket-prijs-bedrag" }, prijs.maand), prijs.jaar && /* @__PURE__ */ React.createElement("span", { className: "pakket-prijs-per" }, "per maand")), prijs.jaar && /* @__PURE__ */ React.createElement("div", { className: "pakket-prijs-jaar" }, "of " + prijs.jaar + " per jaar \u2014 twee maanden korting")), /* @__PURE__ */ React.createElement("div", { className: "pakket-teams" }, p.teams === Infinity ? "Onbeperkt teams" : p.teams + (p.teams === 1 ? " team" : " teams")), /* @__PURE__ */ React.createElement("ul", { className: "pakket-lijst" }, MODULES.map(function(m) {
-      const aan = p.modules.indexOf(m) >= 0;
-      return /* @__PURE__ */ React.createElement("li", { key: m, className: aan ? "aan" : "uit" }, /* @__PURE__ */ React.createElement("i", { className: aan ? "fa-solid fa-check" : "fa-solid fa-minus" }), MODULE_LABEL[m] || m);
-    })), !dit && /* @__PURE__ */ React.createElement(
-      "button",
-      {
-        className: "knop lijn klein",
-        style: { width: "100%", justifyContent: "center" },
-        onClick: function() {
-          meldGoed("Overstappen kan zodra de betaling klaarstaat.");
-        }
-      },
-      "Overstappen"
-    ));
-  }))));
-}
-function TerugSheet({ onSluiten, onGewisseld }) {
-  const [lijst, setLijst] = useState(function() {
-    return terugLijst();
-  });
-  const [bezig, setBezig] = useState(null);
-  const [melding, setMelding] = useState(null);
-  const [kijk, setKijk] = useState(null);
-  function haalTerug(r) {
-    setBezig(r.id);
-    var gelukt = zetTerug(r.id);
-    setLijst(terugLijst());
-    setBezig(null);
-    setKijk(null);
-    setMelding(gelukt ? terugNaam(r.sleutel) + " is teruggezet. Het gaat vanzelf naar de server." : "Dat lukte niet.");
-    if (gelukt && onGewisseld) onGewisseld();
-  }
-  function wanneer(t2) {
-    const d = new Date(t2);
-    return d.toLocaleString("nl-NL", {
-      weekday: "short",
-      day: "numeric",
-      month: "short",
-      hour: "2-digit",
-      minute: "2-digit"
-    });
-  }
-  return /* @__PURE__ */ React.createElement("div", { className: "formatie-overlay", onClick: function(e) {
-    if (e.target === e.currentTarget) onSluiten();
-  } }, /* @__PURE__ */ React.createElement("div", { className: "formatie-sheet", onClick: function(e) {
-    e.stopPropagation();
-  } }, /* @__PURE__ */ React.createElement("div", { className: "formatie-sheet-header" }, /* @__PURE__ */ React.createElement("span", { className: "formatie-sheet-titel" }, "Terughalen"), /* @__PURE__ */ React.createElement(
-    "button",
-    {
-      style: { background: "none", border: "none", fontSize: 20, cursor: "pointer", color: "var(--grijs-donker)", padding: "0 4px" },
-      onClick: onSluiten
-    },
-    "\u2715"
-  )), melding && /* @__PURE__ */ React.createElement("div", { className: "melding" }, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-circle-info" }), " ", melding), /* @__PURE__ */ React.createElement("p", { style: { fontSize: 12.5, color: "var(--grijs-donker)", fontWeight: 400, margin: "0 0 14px", lineHeight: 1.65 } }, "Als het uitwisselen iets van dit apparaat vervangt, wordt bewaard wat er stond. Hier zie je dat terug. De laatste ", TERUG_MAX, " keer, tot ", TERUG_DAGEN, " dagen oud."), !lijst.length && /* @__PURE__ */ React.createElement("p", { className: "beheer-leeg" }, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-shield-halved" }), " Er is nog nooit iets vervangen."), lijst.map(function(r) {
-    const n = terugOmvang(r.waarde);
-    const team = terugTeam(r.sleutel);
-    return /* @__PURE__ */ React.createElement("div", { className: "kaart terug-rij", key: r.id }, /* @__PURE__ */ React.createElement("div", { className: "terug-kop" }, /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("b", null, terugNaam(r.sleutel)), team && /* @__PURE__ */ React.createElement("span", { className: "terug-team" }, team), terugSeizoen(r.sleutel) && /* @__PURE__ */ React.createElement("span", { className: "terug-team" }, terugSeizoen(r.sleutel)), /* @__PURE__ */ React.createElement("div", { className: "terug-onder" }, wanneer(r.tijd), " \xB7 ", r.reden, n !== null && (n === 1 ? " \xB7 1 regel" : " \xB7 " + n + " regels"))), /* @__PURE__ */ React.createElement(
-      "button",
-      {
-        className: "knop lijn klein",
-        disabled: bezig === r.id,
-        onClick: function() {
-          setKijk(kijk === r.id ? null : r.id);
-        }
-      },
-      kijk === r.id ? "Sluiten" : "Bekijken"
-    )), kijk === r.id && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("pre", { className: "terug-kijk" }, JSON.stringify(r.waarde, null, 1).slice(0, 1400)), /* @__PURE__ */ React.createElement(
-      "button",
-      {
-        className: "knop",
-        style: { width: "100%", justifyContent: "center", marginTop: 8 },
-        onClick: function() {
-          haalTerug(r);
-        }
-      },
-      /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-rotate-left" }),
-      " Dit terugzetten"
-    )));
-  }), lijst.length > 0 && /* @__PURE__ */ React.createElement(
-    "button",
-    {
-      className: "knop lijn klein",
-      style: { width: "100%", justifyContent: "center", marginTop: 10 },
-      onClick: function() {
-        wisTerug();
-        setLijst([]);
-        setMelding("Lijst leeggemaakt.");
-      }
-    },
-    "Lijst leegmaken"
-  )));
-}
-function SyncLampje({ opKlik }) {
-  const [stand, setStand] = useState(function() {
-    return syncStand();
-  });
-  useEffect(function() {
-    setStand(syncStand());
-    return volgSyncStand(function(s) {
-      setStand(s);
-    });
-  }, []);
-  if (!kanSynchroniseren()) return null;
-  const wat = {
-    rustig: { icoon: "fa-solid fa-circle-check", tekst: "Alles opgeslagen" },
-    open: { icoon: "fa-solid fa-cloud-arrow-up", tekst: "Nog niet verstuurd" },
-    bezig: { icoon: "fa-solid fa-rotate fa-spin", tekst: "Bezig\u2026" },
-    mislukt: { icoon: "fa-solid fa-triangle-exclamation", tekst: "Geen verbinding" }
-  }[stand] || { icoon: "fa-solid fa-cloud", tekst: "" };
-  return /* @__PURE__ */ React.createElement(
-    "button",
-    {
-      className: "sync-lampje " + stand,
-      onClick: opKlik,
-      title: stand === "mislukt" ? "Er staat iets klaar dat nog niet verstuurd is. Zodra er weer bereik is gaat het vanzelf." : wat.tekst
-    },
-    /* @__PURE__ */ React.createElement("i", { className: wat.icoon }),
-    /* @__PURE__ */ React.createElement("span", null, wat.tekst)
-  );
-}
-function NieuwsBalk({ opVerversen }) {
-  const [tel, setTel] = useState(function() {
-    return syncBinnenTeller();
-  });
-  const [gezien, setGezien] = useState(function() {
-    return syncBinnenTeller();
-  });
-  useEffect(function() {
-    return volgSyncStand(function() {
-      setTel(syncBinnenTeller());
-    });
-  }, []);
-  if (tel === gezien) return null;
-  return /* @__PURE__ */ React.createElement("div", { className: "nieuws-balk" }, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-arrow-down-long" }), /* @__PURE__ */ React.createElement("span", null, "Er zijn wijzigingen van een ander apparaat binnengekomen."), /* @__PURE__ */ React.createElement("button", { onClick: function() {
-    setGezien(tel);
-    opVerversen();
-  } }, "Bijwerken"), /* @__PURE__ */ React.createElement(
-    "button",
-    {
-      className: "weg",
-      onClick: function() {
-        setGezien(tel);
-      },
-      title: "Verbergen"
-    },
-    "\u2715"
-  ));
-}
-function BeheerSheet({ onSluiten }) {
-  const [lijst, setLijst] = useState(null);
-  const [bezig, setBezig] = useState(true);
-  const [fout, setFout] = useState(null);
-  const [zoek, setZoek] = useState("");
-  const [weg, setWeg] = useState(null);
-  const [bevestiging, setBevestiging] = useState("");
-  const [melding, setMelding] = useState(null);
-  function ophalen() {
-    setBezig(true);
-    setFout(null);
-    alleGebruikers().then(function(r) {
-      setBezig(false);
-      if (!r.ok) {
-        setFout(r.fout ? r.fout.tekst : "Er ging iets mis.");
-        return;
-      }
-      setLijst(r.gegevens);
-    });
-  }
-  useEffect(ophalen, []);
-  function wijzigPakket(rij, pakket) {
-    setMelding(null);
-    setFout(null);
-    zetPakketVan(rij.club_id, pakket).then(function(r) {
-      if (!r.ok) {
-        setFout(r.fout ? r.fout.tekst : "Het pakket kon niet worden gewijzigd.");
-        return;
-      }
-      setLijst(function(oud) {
-        return (oud || []).map(function(g) {
-          return g.club_id === rij.club_id ? Object.assign({}, g, { pakket }) : g;
-        });
-      });
-      setMelding("Pakket van " + (rij.club_naam || "deze vereniging") + " staat nu op " + pakket + ".");
-    });
-  }
-  function gooiWeg() {
-    var doel = weg;
-    setWeg(null);
-    setBevestiging("");
-    setMelding(null);
-    setFout(null);
-    verwijderAccount(doel.gebruiker_id).then(function(r) {
-      if (!r.ok) {
-        setFout(r.fout ? r.fout.tekst : "Het account kon niet worden verwijderd.");
-        return;
-      }
-      setLijst(function(oud) {
-        return (oud || []).filter(function(g) {
-          return g.gebruiker_id !== doel.gebruiker_id;
-        });
-      });
-      setMelding(doel.email + " is verwijderd.");
-    });
-  }
-  const zoekterm = zoek.trim().toLowerCase();
-  const zichtbaar = (lijst || []).filter(function(g) {
-    if (!zoekterm) return true;
-    return ((g.email || "") + " " + (g.club_naam || "")).toLowerCase().indexOf(zoekterm) >= 0;
-  });
-  function datum(d) {
-    if (!d) return "\u2013";
-    return new Date(d).toLocaleDateString("nl-NL", { day: "numeric", month: "short", year: "numeric" });
-  }
-  return /* @__PURE__ */ React.createElement("div", { className: "formatie-overlay", onClick: function(e) {
-    if (e.target === e.currentTarget) onSluiten();
-  } }, /* @__PURE__ */ React.createElement("div", { className: "formatie-sheet", onClick: function(e) {
-    e.stopPropagation();
-  } }, /* @__PURE__ */ React.createElement("div", { className: "formatie-sheet-header" }, /* @__PURE__ */ React.createElement("span", { className: "formatie-sheet-titel" }, "De achterkant"), /* @__PURE__ */ React.createElement(
-    "button",
-    {
-      style: { background: "none", border: "none", fontSize: 20, cursor: "pointer", color: "var(--grijs-donker)", padding: "0 4px" },
-      onClick: onSluiten
-    },
-    "\u2715"
-  )), fout && /* @__PURE__ */ React.createElement("div", { className: "melding fout" }, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-triangle-exclamation" }), " ", fout), melding && /* @__PURE__ */ React.createElement("div", { className: "melding" }, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-circle-info" }), " ", melding), /* @__PURE__ */ React.createElement("div", { className: "beheer-balk" }, /* @__PURE__ */ React.createElement(
-    "input",
-    {
-      type: "search",
-      placeholder: "Zoek op e-mailadres of vereniging",
-      value: zoek,
-      onChange: function(e) {
-        setZoek(e.target.value);
-      }
-    }
-  ), /* @__PURE__ */ React.createElement("button", { className: "knop lijn klein", onClick: ophalen, disabled: bezig }, /* @__PURE__ */ React.createElement("i", { className: bezig ? "fa-solid fa-hourglass-half" : "fa-solid fa-rotate" }), " Verversen")), bezig && !lijst && /* @__PURE__ */ React.createElement("p", { className: "beheer-leeg" }, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-circle-notch fa-spin" }), " Even ophalen\u2026"), lijst && !zichtbaar.length && /* @__PURE__ */ React.createElement("p", { className: "beheer-leeg" }, zoekterm ? "Niemand gevonden die daarop lijkt." : "Er zijn nog geen accounts."), zichtbaar.map(function(g) {
-    return /* @__PURE__ */ React.createElement("div", { className: "kaart beheer-rij", key: g.gebruiker_id }, /* @__PURE__ */ React.createElement("div", { className: "beheer-kop" }, /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("b", null, g.email), !g.bevestigd && /* @__PURE__ */ React.createElement("span", { className: "beheer-vlag" }, "nog niet bevestigd"), /* @__PURE__ */ React.createElement("div", { className: "beheer-onder" }, g.club_naam ? g.club_naam + " \xB7 " + (g.rol || "lid") + " \xB7 " + g.teams + (g.teams === 1 ? " team" : " teams") : "hoort nog bij geen vereniging")), /* @__PURE__ */ React.createElement("button", { className: "knop gevaar klein", onClick: function() {
-      setWeg(g);
-      setBevestiging("");
-    } }, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-trash" }))), /* @__PURE__ */ React.createElement("div", { className: "beheer-feiten" }, /* @__PURE__ */ React.createElement("span", null, "Aangemeld ", datum(g.aangemaakt)), /* @__PURE__ */ React.createElement("span", null, "Laatst gezien ", datum(g.laatst_gezien)), g.geldig_tot && /* @__PURE__ */ React.createElement("span", null, "Loopt af ", datum(g.geldig_tot))), /* @__PURE__ */ React.createElement("div", { className: "beheer-pakketten" }, PAKKETTEN.map(function(pk) {
-      var aan = (g.pakket || "free") === pk.id;
-      return /* @__PURE__ */ React.createElement(
-        "button",
-        {
-          key: pk.id,
-          className: "knop klein" + (aan ? "" : " lijn"),
-          disabled: !g.club_id,
-          title: g.club_id ? "" : "Dit account hoort nog bij geen vereniging",
-          onClick: function() {
-            if (!aan) wijzigPakket(g, pk.id);
-          }
-        },
-        pk.naam
-      );
-    })));
-  }), weg && /* @__PURE__ */ React.createElement("div", { className: "bevestig-overlay" }, /* @__PURE__ */ React.createElement("div", { className: "bevestig-kaart" }, /* @__PURE__ */ React.createElement("h3", null, "Account verwijderen?"), /* @__PURE__ */ React.createElement("p", null, "Alles van ", /* @__PURE__ */ React.createElement("b", null, weg.email), " gaat definitief weg. Was hij de enige van ", weg.club_naam ? "\u201C" + weg.club_naam + "\u201D" : "zijn vereniging", ", dan verdwijnt die vereniging met alle teams en gegevens erbij. Dit kan niet ongedaan worden gemaakt."), /* @__PURE__ */ React.createElement("p", { style: { fontSize: 12.5, fontWeight: 600, margin: "0 0 6px" } }, "Typ het e-mailadres over om te bevestigen:"), /* @__PURE__ */ React.createElement(
-    "input",
-    {
-      type: "text",
-      autoComplete: "off",
-      value: bevestiging,
-      autoFocus: true,
-      onChange: function(e) {
-        setBevestiging(e.target.value);
-      }
-    }
-  ), /* @__PURE__ */ React.createElement("div", { className: "bevestig-knoppen" }, /* @__PURE__ */ React.createElement("button", { className: "knop lijn", onClick: function() {
-    setWeg(null);
-    setBevestiging("");
-  } }, "Annuleren"), /* @__PURE__ */ React.createElement("button", { className: "knop gevaar", disabled: bevestiging.trim() !== weg.email, onClick: gooiWeg }, "Verwijderen"))))));
-}
-function AccountSheet({ onSluiten, onGewisseld }) {
-  const s = gebruikSessie();
-  const [adres, setAdres] = useState(function() {
-    return serverInst().url;
-  });
-  const [sleutel, setSleutel] = useState(function() {
-    return serverInst().sleutel;
-  });
-  const [email, setEmail] = useState("");
-  const [wachtwoord, setWachtwoord] = useState("");
-  const [nieuw, setNieuw] = useState(false);
-  const [bezig, setBezig] = useState(false);
-  const [fout, setFout] = useState(null);
-  const [melding, setMelding] = useState(null);
-  const [uitslag, setUitslag] = useState(null);
-  const [laatst, setLaatst] = useState(function() {
-    return laatstGesynct();
-  });
-  const [test, setTest] = useState(null);
-  const [beheerder, setBeheerder] = useState(function() {
-    return beheerderNu();
-  });
-  const [beheerOpen, setBeheerOpen] = useState(false);
-  useEffect(function() {
-    if (!s) {
-      setBeheerder(false);
-      return;
-    }
-    haalBeheerder().then(setBeheerder);
-  }, [s && s.token]);
-  function bewaarServer() {
-    zetServerInst({ url: adres, sleutel });
-    setFout(null);
-    setMelding(serverAan() ? "Server ingesteld. Je kunt nu inloggen." : "Vul allebei de velden in.");
-  }
-  function meldFoutUit(r) {
-    setBezig(false);
-    setMelding(null);
-    setFout(r.fout ? r.fout.tekst : "Er ging iets mis.");
-  }
-  function aanmelden() {
-    setBezig(true);
-    setFout(null);
-    setMelding(null);
-    var doe = nieuw ? serverRegistreren : serverAanmelden;
-    doe(email, wachtwoord).then(function(r) {
-      setWachtwoord("");
-      if (!r.ok) return meldFoutUit(r);
-      setBezig(false);
-      if (r.bevestigen) {
-        setMelding("Bijna klaar: open de e-mail die we hebben gestuurd en klik op de link. Log daarna hier in.");
-        return;
-      }
-      setMelding("Ingelogd. Even geduld, ik haal je gegevens op\u2026");
-      nuSynchroniseren();
-    });
-  }
-  function nuSynchroniseren() {
-    setBezig(true);
-    setFout(null);
-    setUitslag(null);
-    synchroniseer().then(function(r) {
-      setBezig(false);
-      if (!r.ok) return meldFoutUit(r);
-      setUitslag(r.gegevens);
-      setLaatst(laatstGesynct());
-      setMelding(null);
-      if (onGewisseld) onGewisseld();
-    });
-  }
-  function doeTest() {
-    setBezig(true);
-    setTest(null);
-    setFout(null);
-    setMelding(null);
-    serverTest().then(function(r) {
-      setBezig(false);
-      setTest(r);
-    });
-  }
-  function afmelden() {
-    serverAfmelden().then(function() {
-      setMelding("Uitgelogd. Je gegevens staan nog gewoon op dit apparaat.");
-      setUitslag(null);
-      setBeheerder(false);
-      setBeheerOpen(false);
-      if (onGewisseld) onGewisseld();
-    });
-  }
-  const wanneer = laatst ? new Date(laatst).toLocaleString("nl-NL", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : null;
-  return /* @__PURE__ */ React.createElement("div", { className: "formatie-overlay", onClick: function(e) {
-    if (e.target === e.currentTarget) onSluiten();
-  } }, /* @__PURE__ */ React.createElement("div", { className: "formatie-sheet", onClick: function(e) {
-    e.stopPropagation();
-  } }, /* @__PURE__ */ React.createElement("div", { className: "formatie-sheet-header" }, /* @__PURE__ */ React.createElement("span", { className: "formatie-sheet-titel" }, "Account"), /* @__PURE__ */ React.createElement(
-    "button",
-    {
-      style: { background: "none", border: "none", fontSize: 20, cursor: "pointer", color: "var(--grijs-donker)", padding: "0 4px" },
-      onClick: onSluiten
-    },
-    "\u2715"
-  )), fout && /* @__PURE__ */ React.createElement("div", { className: "melding fout" }, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-triangle-exclamation" }), " ", fout), melding && /* @__PURE__ */ React.createElement("div", { className: "melding" }, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-circle-info" }), " ", melding), !serverAan() && /* @__PURE__ */ React.createElement("div", { className: "kaart" }, /* @__PURE__ */ React.createElement("div", { className: "kaart-titel" }, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-server" }), " Server instellen"), /* @__PURE__ */ React.createElement("p", { style: { fontSize: 12.5, color: "var(--grijs-donker)", fontWeight: 400, margin: "0 0 10px", lineHeight: 1.65 } }, "Zonder server werkt de app gewoon, maar staan je gegevens alleen op dit apparaat. Met een server blijven ze bewaard en staan ze op al je apparaten. Je vindt deze twee gegevens in je Supabase-project onder Project Settings, API."), /* @__PURE__ */ React.createElement("label", { className: "formulier-label" }, "Adres van het project"), /* @__PURE__ */ React.createElement(
-    "input",
-    {
-      value: adres,
-      placeholder: "https://xxxx.supabase.co",
-      onChange: function(e) {
-        setAdres(e.target.value);
-      }
-    }
-  ), /* @__PURE__ */ React.createElement("label", { className: "formulier-label" }, "Publieke sleutel (anon key)"), /* @__PURE__ */ React.createElement(
-    "input",
-    {
-      value: sleutel,
-      placeholder: "eyJhbGciOi\u2026",
-      onChange: function(e) {
-        setSleutel(e.target.value);
-      }
-    }
-  ), /* @__PURE__ */ React.createElement(
-    "button",
-    {
-      className: "knop",
-      style: { width: "100%", justifyContent: "center", marginTop: 8 },
-      onClick: bewaarServer
-    },
-    /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-check" }),
-    " Bewaren"
-  )), serverAan() && !s && /* @__PURE__ */ React.createElement("div", { className: "kaart" }, /* @__PURE__ */ React.createElement("div", { className: "kaart-titel" }, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-right-to-bracket" }), " ", nieuw ? "Account aanmaken" : "Inloggen"), /* @__PURE__ */ React.createElement("label", { className: "formulier-label" }, "E-mailadres"), /* @__PURE__ */ React.createElement(
-    "input",
-    {
-      type: "email",
-      autoComplete: "email",
-      value: email,
-      onChange: function(e) {
-        setEmail(e.target.value);
-      }
-    }
-  ), /* @__PURE__ */ React.createElement("label", { className: "formulier-label" }, "Wachtwoord"), /* @__PURE__ */ React.createElement(
-    "input",
-    {
-      type: "password",
-      value: wachtwoord,
-      autoComplete: nieuw ? "new-password" : "current-password",
-      onChange: function(e) {
-        setWachtwoord(e.target.value);
-      },
-      onKeyDown: function(e) {
-        if (e.key === "Enter") aanmelden();
-      }
-    }
-  ), /* @__PURE__ */ React.createElement(
-    "button",
-    {
-      className: "knop",
-      disabled: bezig || !email || !wachtwoord,
-      style: { width: "100%", justifyContent: "center", marginTop: 8 },
-      onClick: aanmelden
-    },
-    /* @__PURE__ */ React.createElement("i", { className: bezig ? "fa-solid fa-hourglass-half" : "fa-solid fa-right-to-bracket" }),
-    nieuw ? " Account aanmaken" : " Inloggen"
-  ), /* @__PURE__ */ React.createElement(
-    "button",
-    {
-      className: "knop lijn klein",
-      style: { width: "100%", justifyContent: "center", marginTop: 8 },
-      onClick: function() {
-        setNieuw(!nieuw);
-        setFout(null);
-      }
-    },
-    nieuw ? "Ik heb al een account" : "Nog geen account? Maak er een aan"
-  )), serverAan() && s && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("div", { className: "kaart" }, /* @__PURE__ */ React.createElement("div", { className: "kaart-titel" }, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-cloud" }), " Ingelogd"), /* @__PURE__ */ React.createElement("div", { className: "account-rij" }, /* @__PURE__ */ React.createElement("span", null, "E-mailadres"), /* @__PURE__ */ React.createElement("b", null, s.email || "\u2013")), /* @__PURE__ */ React.createElement("div", { className: "account-rij" }, /* @__PURE__ */ React.createElement("span", null, "Pakket"), /* @__PURE__ */ React.createElement("b", null, pakketNu().naam)), /* @__PURE__ */ React.createElement(
-    "button",
-    {
-      className: "knop lijn klein",
-      style: { width: "100%", justifyContent: "center", marginTop: 10 },
-      onClick: afmelden
-    },
-    /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-right-from-bracket" }),
-    " Uitloggen"
-  ), beheerder && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("div", { className: "account-rij", style: { marginTop: 10 } }, /* @__PURE__ */ React.createElement("span", null, "Laatst uitgewisseld"), /* @__PURE__ */ React.createElement("b", null, wanneer || "nog niet")), /* @__PURE__ */ React.createElement(
-    "button",
-    {
-      className: "knop lijn klein",
-      disabled: bezig,
-      style: { width: "100%", justifyContent: "center", marginTop: 8 },
-      onClick: nuSynchroniseren
-    },
-    /* @__PURE__ */ React.createElement("i", { className: bezig ? "fa-solid fa-hourglass-half" : "fa-solid fa-rotate" }),
-    bezig ? " Bezig\u2026" : " Nu synchroniseren"
-  ), /* @__PURE__ */ React.createElement(
-    "button",
-    {
-      className: "knop lijn klein",
-      style: { width: "100%", justifyContent: "center", marginTop: 8 },
-      onClick: function() {
-        setBeheerOpen(true);
-      }
-    },
-    /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-user-shield" }),
-    " De achterkant"
-  ))), uitslag && /* @__PURE__ */ React.createElement("div", { className: "kaart" }, /* @__PURE__ */ React.createElement("div", { className: "kaart-titel" }, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-list-check" }), " Wat er is uitgewisseld"), /* @__PURE__ */ React.createElement("div", { className: "account-rij" }, /* @__PURE__ */ React.createElement("span", null, "Omhoog gestuurd"), /* @__PURE__ */ React.createElement("b", null, uitslag.geduwd)), /* @__PURE__ */ React.createElement("div", { className: "account-rij" }, /* @__PURE__ */ React.createElement("span", null, "Opgehaald"), /* @__PURE__ */ React.createElement("b", null, uitslag.gehaald)), /* @__PURE__ */ React.createElement("div", { className: "account-rij" }, /* @__PURE__ */ React.createElement("span", null, "Samengevoegd"), /* @__PURE__ */ React.createElement("b", null, uitslag.samengevoegd)), uitslag.botsingen.length > 0 && /* @__PURE__ */ React.createElement("div", { style: { marginTop: 10 } }, /* @__PURE__ */ React.createElement("p", { style: { fontSize: 12.5, fontWeight: 700, margin: "0 0 6px" } }, "Aan beide kanten was er iets veranderd:"), uitslag.botsingen.map(function(b, i) {
-    return /* @__PURE__ */ React.createElement("p", { key: i, style: { fontSize: 12, color: "var(--grijs-donker)", fontWeight: 400, margin: "0 0 4px", lineHeight: 1.6 } }, /* @__PURE__ */ React.createElement("b", null, b.sleutel.replace(/^fch_|_v1$/g, "").replace(/_/g, " ")), " ", b.samengevoegd ? "\u2014 samengevoegd" + (b.erbij ? ", er kwamen er " + b.erbij + " bij van het andere apparaat." : ", er ging niets verloren.") : "\u2014 hier kon niets samengevoegd worden, dus deze versie is gehouden.");
-  }), /* @__PURE__ */ React.createElement("p", { style: { fontSize: 11.5, color: "var(--grijs-donker)", fontWeight: 400, margin: "8px 0 0", lineHeight: 1.65 } }, "Bij het samenvoegen gaat er niets verloren. Wel kan iets wat je op het ene apparaat hebt weggehaald terugkomen als je het op het andere tegelijk bewerkte. Kijk het even na.")), uitslag.fouten.length > 0 && /* @__PURE__ */ React.createElement("p", { style: { fontSize: 12, color: "var(--gevaar)", fontWeight: 600, margin: "8px 0 0" } }, "Niet gelukt: ", uitslag.fouten.join(", "), ". Probeer het straks nog eens."))), test && /* @__PURE__ */ React.createElement("div", { className: "kaart" }, /* @__PURE__ */ React.createElement("div", { className: "kaart-titel" }, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-stethoscope" }), " Verbinding doorgelicht"), test.map(function(r, i) {
-    return /* @__PURE__ */ React.createElement("div", { key: i, className: "test-rij" + (r.goed ? " goed" : " mis") }, /* @__PURE__ */ React.createElement("i", { className: r.goed ? "fa-solid fa-check" : "fa-solid fa-xmark" }), /* @__PURE__ */ React.createElement("span", null, /* @__PURE__ */ React.createElement("b", null, r.wat), r.tekst ? " \u2014 " + r.tekst : ""));
-  })), serverAan() && beheerder && /* @__PURE__ */ React.createElement(
-    "button",
-    {
-      className: "knop lijn",
-      disabled: bezig,
-      style: { width: "100%", justifyContent: "center", marginTop: 4 },
-      onClick: doeTest
-    },
-    /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-stethoscope" }),
-    " Verbinding testen"
-  ), serverAan() && beheerder && /* @__PURE__ */ React.createElement(
-    "button",
-    {
-      className: "knop lijn klein",
-      style: { width: "100%", justifyContent: "center", marginTop: 8 },
-      onClick: function() {
-        zetServerInst({ url: "", sleutel: "" });
-        setAdres("");
-        setSleutel("");
-        setTest(null);
-      }
-    },
-    "Serverinstellingen wissen"
-  ), beheerOpen && /* @__PURE__ */ React.createElement(BeheerSheet, { onSluiten: function() {
-    setBeheerOpen(false);
-  } })));
-}
-function InstellingenSheet({ onSluiten, onGewisseld, onTeams }) {
-  const i = gebruikInstellingen();
-  const [accountOpen, setAccountOpen] = useState(false);
-  const [pakkettenOpen, setPakkettenOpen] = useState(false);
-  const [terugOpen, setTerugOpen] = useState(false);
-  const [melding, setMelding] = useState(null);
-  const [fout, setFout] = useState(null);
-  const [bevestigImport, setBevestigImport] = useState(null);
-  const [opheffenOpen, setOpheffenOpen] = useState(false);
-  const [opheffenTekst, setOpheffenTekst] = useState("");
-  const [opheffenBezig, setOpheffenBezig] = useState(false);
-  const bestandRef = useRef(null);
-  const logoRef = useRef(null);
-  function kiesLogo(e) {
-    var bestand = e.target.files && e.target.files[0];
-    e.target.value = "";
-    if (!bestand) return;
-    verwerkLogoBestand(bestand, function(err, dataUrl) {
-      if (err) {
-        meldFout(err);
-        return;
-      }
-      bewaarClubGegeven({ logo: dataUrl });
-      meldGoed("Logo ingesteld");
-    });
-  }
-  const aantalSpelers = laadSpelers().length;
-  const aantalWedstrijden = laadWedstrijden().length;
-  const aantalTrainingen = laadTrainingen().length;
-  function exporteer() {
-    exporteerAlleData();
-    setFout(null);
-    setMelding("Back-up gedownload. Bewaar dit bestand op een veilige plek.");
-    setTimeout(function() {
-      setMelding(null);
-    }, 5e3);
-  }
-  function kiesBestand(e) {
-    var bestand = e.target.files && e.target.files[0];
-    if (bestand) setBevestigImport(bestand);
-    e.target.value = "";
-  }
-  const opheffenNaam = (i.clubNaam || "").trim() || "OPHEFFEN";
-  function voerOpheffenUit() {
-    setOpheffenBezig(true);
-    setFout(null);
-    setMelding(null);
-    hefClubOp().then(function(r) {
-      setOpheffenBezig(false);
-      setOpheffenOpen(false);
-      setOpheffenTekst("");
-      if (!r.ok) {
-        setFout(r.fout && r.fout.tekst || "De vereniging kon niet worden opgeheven.");
-        return;
-      }
-      setMelding("De vereniging is opgeheven. De app wordt opnieuw geladen\u2026");
-      setTimeout(function() {
-        window.location.reload();
-      }, 1400);
-    });
-  }
-  function voerImportUit() {
-    var bestand = bevestigImport;
-    setBevestigImport(null);
-    importeerAlleData(bestand, function(err, aantal) {
-      if (err) {
-        setMelding(null);
-        setFout(err);
-        return;
-      }
-      setFout(null);
-      setMelding(aantal + " items hersteld. De app wordt opnieuw geladen\u2026");
-      setTimeout(function() {
-        window.location.reload();
-      }, 1400);
-    });
-  }
-  return /* @__PURE__ */ React.createElement("div", { className: "formatie-overlay", onClick: function(e) {
-    if (e.target === e.currentTarget) onSluiten();
-  } }, /* @__PURE__ */ React.createElement("div", { className: "formatie-sheet", onClick: function(e) {
-    e.stopPropagation();
-  } }, terugOpen && /* @__PURE__ */ React.createElement(
-    TerugSheet,
-    {
-      onSluiten: function() {
-        setTerugOpen(false);
-      },
-      onGewisseld
-    }
-  ), accountOpen && /* @__PURE__ */ React.createElement(
-    AccountSheet,
-    {
-      onSluiten: function() {
-        setAccountOpen(false);
-      },
-      onGewisseld
-    }
-  ), pakkettenOpen && /* @__PURE__ */ React.createElement(PakkettenSheet, { onSluiten: function() {
-    setPakkettenOpen(false);
-  } }), /* @__PURE__ */ React.createElement("div", { className: "formatie-sheet-header" }, /* @__PURE__ */ React.createElement("span", { className: "formatie-sheet-titel" }, "Instellingen"), /* @__PURE__ */ React.createElement(
-    "button",
-    {
-      style: { background: "none", border: "none", fontSize: 20, cursor: "pointer", color: "var(--grijs-donker)", padding: "0 4px" },
-      onClick: onSluiten
-    },
-    "\u2715"
-  )), ingelogd() && rolInfoVan(rolNu()) && /* @__PURE__ */ React.createElement("div", { className: "rol-balk" + (alleenKijken() ? " kijker" : "") }, /* @__PURE__ */ React.createElement("i", { className: rolInfoVan(rolNu()).icoon }), /* @__PURE__ */ React.createElement("span", null, /* @__PURE__ */ React.createElement("b", null, rolInfoVan(rolNu()).label), /* @__PURE__ */ React.createElement("em", null, rolInfoVan(rolNu()).uitleg))), /* @__PURE__ */ React.createElement("div", { className: "inst-groep" }, "Account"), /* @__PURE__ */ React.createElement("div", { className: "kaart" }, /* @__PURE__ */ React.createElement("div", { className: "kaart-titel" }, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-user" }), " Account"), ingelogd() ? /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("div", { className: "account-rij" }, /* @__PURE__ */ React.createElement("span", null, "E-mailadres"), /* @__PURE__ */ React.createElement("b", null, (gebruikerNu() || {}).email || "\u2013")), /* @__PURE__ */ React.createElement(
-    "button",
-    {
-      className: "knop lijn",
-      style: { width: "100%", justifyContent: "center", marginTop: 10 },
-      onClick: function() {
-        setAccountOpen(true);
-      }
-    },
-    /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-gear" }),
-    " Accountinstellingen"
-  )) : /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("p", { style: { fontSize: 12.5, color: "var(--grijs-donker)", fontWeight: 400, margin: "0 0 10px", lineHeight: 1.65 } }, "Met een account staan je gegevens ook op je andere apparaten."), /* @__PURE__ */ React.createElement(
-    "button",
-    {
-      className: "knop",
-      style: { width: "100%", justifyContent: "center" },
-      onClick: function() {
-        setAccountOpen(true);
-      }
-    },
-    /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-right-to-bracket" }),
-    " Inloggen"
-  ))), /* @__PURE__ */ React.createElement("div", { className: "kaart" }, /* @__PURE__ */ React.createElement("div", { className: "kaart-titel" }, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-crown" }), " Abonnement"), /* @__PURE__ */ React.createElement("div", { className: "pakket-nu" }, /* @__PURE__ */ React.createElement("span", { className: "pakket-merk" }, "TEAMTAKKIE"), /* @__PURE__ */ React.createElement("span", { className: "pakket-naam" }, pakketNu().naam)), /* @__PURE__ */ React.createElement("p", { style: { fontSize: 12.5, color: "var(--grijs-donker)", fontWeight: 400, margin: "10px 0", lineHeight: 1.65 } }, maxTeams() === Infinity ? "Onbeperkt teams, alle onderdelen." : maxTeams() + (maxTeams() === 1 ? " team" : " teams") + ", " + pakketNu().modules.length + " van de " + MODULES.length + " onderdelen."), /* @__PURE__ */ React.createElement(
-    "button",
-    {
-      className: "knop lijn",
-      style: { width: "100%", justifyContent: "center" },
-      onClick: function() {
-        setPakkettenOpen(true);
-      }
-    },
-    /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-layer-group" }),
-    " Bekijk pakketten"
-  )), magRol("club") && /* @__PURE__ */ React.createElement("div", { className: "inst-groep" }, "Team"), magRol("club") && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("div", { className: "kaart", style: { marginTop: 4 } }, /* @__PURE__ */ React.createElement("div", { className: "kaart-titel" }, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-image" }), " Clublogo"), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 16 } }, /* @__PURE__ */ React.createElement("div", { style: { width: 66, height: 66, borderRadius: 16, background: "var(--grijs-licht)", border: "1px solid var(--grijs)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, overflow: "hidden" } }, /* @__PURE__ */ React.createElement("img", { src: logoKopbalk(false), alt: "logo", style: { width: "100%", height: "100%", objectFit: "contain", padding: 4 } })), /* @__PURE__ */ React.createElement("div", { style: { flex: 1 } }, /* @__PURE__ */ React.createElement(
-    "button",
-    {
-      className: "knop lijn klein",
-      style: { width: "100%", justifyContent: "center", marginBottom: 6 },
-      onClick: function() {
-        if (logoRef.current) logoRef.current.click();
-      }
-    },
-    /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-upload" }),
-    i.logo ? " Logo vervangen" : " Logo kiezen"
-  ), i.logo && /* @__PURE__ */ React.createElement(
-    "button",
-    {
-      className: "knop lijn klein",
-      style: { width: "100%", justifyContent: "center" },
-      onClick: function() {
-        bewaarClubGegeven({ logo: null });
-        meldGoed("Terug naar het ingebouwde wapen");
-      }
-    },
-    /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-rotate-left" }),
-    " Terug naar clublogo"
-  ))), /* @__PURE__ */ React.createElement("input", { ref: logoRef, type: "file", accept: "image/*", style: { display: "none" }, onChange: kiesLogo }), /* @__PURE__ */ React.createElement("p", { style: { fontSize: 12, color: "var(--grijs-donker)", fontWeight: 400, lineHeight: 1.5, marginTop: 10 } }, "Er zit een wapen ingebouwd. Kies je eigen afbeelding voor jouw club. Verschijnt bovenaan, op je gedeelde opstelling en in de PDF\u2019s.")), /* @__PURE__ */ React.createElement("div", { className: "kaart" }, /* @__PURE__ */ React.createElement("div", { className: "kaart-titel" }, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-shield-halved" }), " Team"), /* @__PURE__ */ React.createElement("div", { className: "formulier-rij" }, /* @__PURE__ */ React.createElement("div", { className: "formulier-groep" }, /* @__PURE__ */ React.createElement("label", { className: "formulier-label" }, "Club"), /* @__PURE__ */ React.createElement(
-    "input",
-    {
-      className: "formulier-input",
-      value: i.clubNaam,
-      onChange: function(e) {
-        zetInstellingen({ clubNaam: e.target.value });
-      },
-      onBlur: function(e) {
-        bewaarClubGegeven({ clubNaam: e.target.value });
-      },
-      placeholder: "Bijvoorbeeld SV Voorbeeld"
-    }
-  )), /* @__PURE__ */ React.createElement("div", { className: "formulier-groep" }, /* @__PURE__ */ React.createElement("label", { className: "formulier-label" }, "Team"), /* @__PURE__ */ React.createElement(
-    "input",
-    {
-      className: "formulier-input",
-      value: i.teamNaam,
-      onChange: function(e) {
-        zetInstellingen({ teamNaam: e.target.value });
-      },
-      placeholder: "JO19-2"
-    }
-  ))), /* @__PURE__ */ React.createElement("div", { className: "formulier-rij" }, /* @__PURE__ */ React.createElement("div", { className: "formulier-groep" }, /* @__PURE__ */ React.createElement("label", { className: "formulier-label" }, "Seizoen"), /* @__PURE__ */ React.createElement(
-    "button",
-    {
-      className: "knop lijn",
-      style: { width: "100%", justifyContent: "space-between", height: 42 },
-      onClick: function() {
-        if (onTeams) onTeams();
-      }
-    },
-    /* @__PURE__ */ React.createElement("span", null, huidigSeizoen()),
-    /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-chevron-right", style: { fontSize: 11, opacity: 0.6 } })
-  )), /* @__PURE__ */ React.createElement("div", { className: "formulier-groep" }, /* @__PURE__ */ React.createElement("label", { className: "formulier-label" }, "Speelduur (min)"), /* @__PURE__ */ React.createElement(
-    GetalVeld,
-    {
-      className: "formulier-input",
-      min: 20,
-      max: 120,
-      leeg: 90,
-      waarde: i.speelduur,
-      opWaarde: function(n) {
-        zetInstellingen({ speelduur: n });
-      }
-    }
-  ))), /* @__PURE__ */ React.createElement("div", { className: "formulier-groep" }, /* @__PURE__ */ React.createElement("label", { className: "formulier-label" }, "Vaste thuislocatie"), /* @__PURE__ */ React.createElement(
-    "input",
-    {
-      className: "formulier-input",
-      value: i.locatie,
-      onChange: function(e) {
-        zetInstellingen({ locatie: e.target.value });
-      },
-      placeholder: "Sportpark De Zeehoek"
-    }
-  )))), /* @__PURE__ */ React.createElement("div", { className: "inst-groep" }, "App"), /* @__PURE__ */ React.createElement("div", { className: "kaart" }, /* @__PURE__ */ React.createElement("div", { className: "kaart-titel" }, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-circle-half-stroke" }), " Weergave"), /* @__PURE__ */ React.createElement("div", { className: "thema-rij" }, [
-    { id: "licht", label: "Licht", ic: "fa-solid fa-sun" },
-    { id: "donker", label: "Donker", ic: "fa-solid fa-moon" },
-    { id: "systeem", label: "Systeem", ic: "fa-solid fa-circle-half-stroke" }
-  ].map(function(t2) {
-    var aan = (i.thema || "systeem") === t2.id;
-    return /* @__PURE__ */ React.createElement(
-      "button",
-      {
-        key: t2.id,
-        className: "thema-optie",
-        style: { borderColor: aan ? "var(--blauw)" : "var(--grijs)", background: aan ? "var(--blauw)" : "var(--wit)", color: aan ? "#fff" : "var(--grijs-donker)" },
-        onClick: function() {
-          zetInstellingen({ thema: t2.id });
-        }
-      },
-      /* @__PURE__ */ React.createElement("i", { className: t2.ic, style: { fontSize: 15 } }),
-      /* @__PURE__ */ React.createElement("span", null, t2.label)
-    );
-  })), /* @__PURE__ */ React.createElement("p", { style: { fontSize: 12, color: "var(--grijs-donker)", fontWeight: 400, lineHeight: 1.5, marginTop: 9 } }, "Systeem volgt de instelling van je telefoon. Donker is prettiger bij avondwedstrijden."), /* @__PURE__ */ React.createElement("div", { className: "kaart-titel", style: { marginTop: 16 } }, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-palette" }), " Accentkleur"), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 8, flexWrap: "wrap" } }, ACCENTEN.map(function(a) {
-    var aan = (i.accent || "club") === a.id;
-    return /* @__PURE__ */ React.createElement(
-      "button",
-      {
-        key: a.id,
-        title: a.label,
-        style: {
-          flex: "1 1 60px",
-          minWidth: 60,
-          border: "2px solid",
-          borderRadius: 12,
-          padding: "9px 6px",
-          cursor: "pointer",
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          gap: 6,
-          borderColor: aan ? a.l[0] : "var(--grijs)",
-          background: aan ? "var(--grijs-licht)" : "var(--wit)",
-          fontFamily: "'Helvetica Neue',Arial,sans-serif",
-          fontSize: 10,
-          fontWeight: 700,
-          color: aan ? a.l[0] : "var(--grijs-donker)"
-        },
-        onClick: function() {
-          zetInstellingen({ accent: a.id });
-        }
-      },
-      /* @__PURE__ */ React.createElement("span", { style: {
-        width: 26,
-        height: 26,
-        borderRadius: "50%",
-        background: "linear-gradient(135deg," + a.l[0] + "," + a.l[1] + ")",
-        border: aan ? "2px solid var(--wit)" : "none",
-        boxShadow: aan ? "0 0 0 2px " + a.l[0] : "none"
-      } }),
-      /* @__PURE__ */ React.createElement("span", null, a.label)
-    );
-  })), /* @__PURE__ */ React.createElement("p", { style: { fontSize: 12, color: "var(--grijs-donker)", fontWeight: 400, lineHeight: 1.5, marginTop: 9 } }, "De accentkleur kleurt knoppen, tabbladen en grafieken. Het clublogo en de tenuekleuren blijven ongemoeid.")), /* @__PURE__ */ React.createElement("div", { className: "kaart" }, /* @__PURE__ */ React.createElement("div", { className: "kaart-titel" }, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-language" }), " ", t("taal.titel")), /* @__PURE__ */ React.createElement("p", { style: { fontSize: 12, color: "var(--grijs-donker)", lineHeight: 1.55, margin: "0 0 10px" } }, t("taal.onder")), /* @__PURE__ */ React.createElement("div", { className: "tenue-patroon-rij" }, TALEN.map(function(taal) {
-    var aan = (i.taal || "") === taal.id;
-    var dekking = Math.round(taalDekking(taal.id) * 100);
-    return /* @__PURE__ */ React.createElement(
-      "button",
-      {
-        key: taal.id,
-        className: "tenue-patroon",
-        style: {
-          borderColor: aan ? "var(--blauw)" : "var(--grijs)",
-          background: aan ? "rgba(0,74,173,.07)" : "var(--wit)",
-          color: aan ? "var(--blauw)" : "var(--grijs-donker)"
-        },
-        onClick: function() {
-          zetInstellingen({ taal: taal.id });
-        }
-      },
-      /* @__PURE__ */ React.createElement("span", { style: { fontSize: 15, fontWeight: 800 } }, taal.kort),
-      /* @__PURE__ */ React.createElement("span", null, taal.label),
-      dekking < 100 && /* @__PURE__ */ React.createElement("span", { style: { fontSize: 9, opacity: 0.7 } }, dekking + "%")
-    );
-  })), /* @__PURE__ */ React.createElement(
-    "button",
-    {
-      className: "knop lijn klein",
-      style: { width: "100%", justifyContent: "center", marginTop: 8 },
-      onClick: function() {
-        zetInstellingen({ taal: "" });
-      }
-    },
-    /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-mobile-screen" }),
-    " ",
-    t("taal.apparaat")
-  )), beheerderNu() && /* @__PURE__ */ React.createElement("div", { className: "inst-groep" }, "Beheer"), beheerderNu() && /* @__PURE__ */ React.createElement("div", { className: "kaart" }, /* @__PURE__ */ React.createElement("div", { className: "kaart-titel" }, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-database" }), " Jouw gegevens"), /* @__PURE__ */ React.createElement("div", { className: "stat-raster-3" }, /* @__PURE__ */ React.createElement("div", { className: "stat-pill" }, /* @__PURE__ */ React.createElement("div", { className: "stat-pill-getal" }, aantalSpelers), /* @__PURE__ */ React.createElement("div", { className: "stat-pill-label" }, "Spelers")), /* @__PURE__ */ React.createElement("div", { className: "stat-pill" }, /* @__PURE__ */ React.createElement("div", { className: "stat-pill-getal" }, aantalWedstrijden), /* @__PURE__ */ React.createElement("div", { className: "stat-pill-label" }, "Wedstrijden")), /* @__PURE__ */ React.createElement("div", { className: "stat-pill" }, /* @__PURE__ */ React.createElement("div", { className: "stat-pill-getal" }, aantalTrainingen), /* @__PURE__ */ React.createElement("div", { className: "stat-pill-label" }, "Trainingen"))), /* @__PURE__ */ React.createElement("p", { style: { fontSize: 12, color: "var(--grijs-donker)", fontWeight: 400, lineHeight: 1.5, marginTop: 4 } }, "Wat er in dit seizoen van dit team staat.")), beheerderNu() && /* @__PURE__ */ React.createElement("div", { className: "kaart" }, /* @__PURE__ */ React.createElement("div", { className: "kaart-titel" }, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-screwdriver-wrench" }), " Beheer"), /* @__PURE__ */ React.createElement("button", { className: "knop", style: { width: "100%", justifyContent: "center", marginBottom: 8 }, onClick: exporteer }, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-download" }), " Back-up downloaden"), /* @__PURE__ */ React.createElement(
-    "button",
-    {
-      className: "knop lijn",
-      style: { width: "100%", justifyContent: "center" },
-      onClick: function() {
-        if (bestandRef.current) bestandRef.current.click();
-      }
-    },
-    /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-upload" }),
-    " Back-up terugzetten"
-  ), /* @__PURE__ */ React.createElement("input", { ref: bestandRef, type: "file", accept: "application/json,.json", style: { display: "none" }, onChange: kiesBestand }), ingelogd() && /* @__PURE__ */ React.createElement(
-    "button",
-    {
-      className: "knop lijn",
-      style: { width: "100%", justifyContent: "center", marginTop: 8 },
-      onClick: function() {
-        setTerugOpen(true);
-      }
-    },
-    /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-rotate-left" }),
-    " Terughalen wat het uitwisselen verving",
-    terugLijst().length > 0 && /* @__PURE__ */ React.createElement("span", { className: "terug-teller" }, terugLijst().length)
-  )), serverAan() && ingelogd() && clubIdNu() && magRol("club") && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("div", { className: "inst-groep" }, "Vereniging"), /* @__PURE__ */ React.createElement("div", { className: "kaart" }, /* @__PURE__ */ React.createElement("div", { className: "kaart-titel" }, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-triangle-exclamation" }), " Vereniging opheffen"), /* @__PURE__ */ React.createElement("p", { style: { fontSize: 12.5, color: "var(--grijs-donker)", fontWeight: 400, margin: "0 0 10px", lineHeight: 1.65 } }, "Hiermee verdwijnt ", i.clubNaam ? "\u201C" + i.clubNaam + "\u201D" : "je vereniging", " met alles wat eronder hangt: alle teams, alle spelers, wedstrijden, trainingen, opstellingen, tactieken, boetes en het sportpark. Er is geen prullenbak en geen ongedaan maken."), /* @__PURE__ */ React.createElement(
-    "button",
-    {
-      className: "knop gevaar",
-      style: { width: "100%", justifyContent: "center" },
-      onClick: function() {
-        setOpheffenTekst("");
-        setOpheffenOpen(true);
-      }
-    },
-    /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-trash" }),
-    " Vereniging opheffen"
-  ))), melding && /* @__PURE__ */ React.createElement("div", { className: "kaart", style: { background: "var(--vlak-succes)", borderLeft: "4px solid var(--succes)", color: "var(--op-succesvlak)" } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13, fontWeight: 600, lineHeight: 1.5 } }, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-circle-check" }), " " + melding)), fout && /* @__PURE__ */ React.createElement("div", { className: "kaart", style: { background: "var(--vlak-gevaar)", borderLeft: "4px solid var(--gevaar)", color: "var(--op-gevaarvlak)" } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13, fontWeight: 600, lineHeight: 1.5 } }, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-triangle-exclamation" }), " " + fout)), /* @__PURE__ */ React.createElement("div", { className: "kaart over-kaart" }, /* @__PURE__ */ React.createElement("div", { className: "over-logo" }, /* @__PURE__ */ React.createElement(Logo, null)), /* @__PURE__ */ React.createElement("div", { className: "over-titel" }, teamNaamVol()), /* @__PURE__ */ React.createElement("div", { className: "over-sub" }, "Teammanager"), /* @__PURE__ */ React.createElement("div", { className: "over-lijn" }), /* @__PURE__ */ React.createElement("div", { className: "over-studio" }, ONTWERPER.studio), /* @__PURE__ */ React.createElement("div", { className: "over-naam" }, "Ontwerp en bouw \xB7 ", ONTWERPER.naam)), bevestigImport && /* @__PURE__ */ React.createElement("div", { className: "bevestig-overlay", onClick: function(e) {
-    if (e.target === e.currentTarget) setBevestigImport(null);
-  } }, /* @__PURE__ */ React.createElement("div", { className: "bevestig-kaart" }, /* @__PURE__ */ React.createElement("h3", null, "Back-up terugzetten?"), /* @__PURE__ */ React.createElement("p", null, "Alle huidige spelers, wedstrijden, trainingen en tactieken worden vervangen door de inhoud van het back-upbestand. Dit kan niet ongedaan gemaakt worden."), /* @__PURE__ */ React.createElement("div", { className: "bevestig-knoppen" }, /* @__PURE__ */ React.createElement("button", { className: "knop lijn", onClick: function() {
-    setBevestigImport(null);
-  } }, "Annuleren"), /* @__PURE__ */ React.createElement("button", { className: "knop gevaar", onClick: voerImportUit }, "Terugzetten")))), opheffenOpen && /* @__PURE__ */ React.createElement("div", { className: "bevestig-overlay" }, /* @__PURE__ */ React.createElement("div", { className: "bevestig-kaart" }, /* @__PURE__ */ React.createElement("h3", null, "Vereniging opheffen?"), /* @__PURE__ */ React.createElement("p", null, "Alles van ", i.clubNaam ? "\u201C" + i.clubNaam + "\u201D" : "je vereniging", " gaat definitief weg: de vereniging zelf met naam en logo, alle leden, en alle teams \u2014 ook de teams die al in de prullenbak stonden. Met die teams verdwijnen hun spelers, wedstrijden, trainingen, opstellingen, tactieken, boetes en het sportpark, en ook het abonnement van de vereniging."), /* @__PURE__ */ React.createElement("p", null, "De accounts van de andere leden blijven gewoon bestaan; alleen hun plek in d\xE9ze vereniging niet. Dit kan niet ongedaan worden gemaakt."), /* @__PURE__ */ React.createElement("p", { style: { fontSize: 12.5, fontWeight: 600, margin: "0 0 6px" } }, "Typ ", "\u201C" + opheffenNaam + "\u201D", " over om te bevestigen:"), /* @__PURE__ */ React.createElement(
-    "input",
-    {
-      type: "text",
-      autoComplete: "off",
-      value: opheffenTekst,
-      autoFocus: true,
-      onChange: function(e) {
-        setOpheffenTekst(e.target.value);
-      }
-    }
-  ), /* @__PURE__ */ React.createElement("div", { className: "bevestig-knoppen" }, /* @__PURE__ */ React.createElement(
-    "button",
-    {
-      className: "knop lijn",
-      disabled: opheffenBezig,
-      onClick: function() {
-        setOpheffenOpen(false);
-        setOpheffenTekst("");
-      }
-    },
-    "Annuleren"
-  ), /* @__PURE__ */ React.createElement(
-    "button",
-    {
-      className: "knop gevaar",
-      disabled: opheffenBezig || opheffenTekst.trim() !== opheffenNaam,
-      style: opheffenBezig || opheffenTekst.trim() !== opheffenNaam ? { opacity: 0.45, cursor: "default" } : null,
-      onClick: voerOpheffenUit
-    },
-    opheffenBezig ? "Bezig\u2026" : "Opheffen"
-  ))))));
 }
 const navItems = [
   { id: "dashboard", tekstSleutel: "nav.kort.dashboard", icoon: "fa-solid fa-house" },
