@@ -114,7 +114,7 @@ const DOMEIN_VOLGORDE = ["boetepot.js", "wedstrijden.js", "statistieken.js", "op
    opkomstVan() uit src/domein/opkomst.js) was al vóór deze stap gedaan;
    die aanroep blijft werken omdat DOMEIN_VOLGORDE hieronder
    src/domein/opkomst.js altijd vóór de schermmodules plakt. */
-const SCHERM_VOLGORDE = ["gedeeld.jsx", "onboarding.jsx", "instellingen.jsx", "statistieken.jsx"];
+const SCHERM_VOLGORDE = ["gedeeld.jsx", "onboarding.jsx", "instellingen.jsx", "statistieken.jsx", "trainingen.jsx"];
 
 /* Het merkteken in src/index.html waar de gebouwde app terechtkomt.
    Bewust een commentaarregel en geen los token: zo blijft het sjabloon

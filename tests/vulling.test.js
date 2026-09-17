@@ -50,6 +50,17 @@ const VULLING = path.join(__dirname, "..", "tools", "gouden-origineel", "vulling
 const bron = fs.readFileSync(APP, "utf8");
 const regels = bron.split("\n");
 
+/* De presentielijst (TrainingDetail, met {a.naam}) zat tot en met P4
+   stap 3 in src/app.jsx; op 17 september 2026 (P4 stap 4,
+   docs/p4-stappenplan.md §1) is TrainingDetail verhuisd naar
+   src/schermen/trainingen.jsx. Zelfde reden als bij de andere
+   met-naam-genoemde bronnen in deze reeks tests: een aparte bron,
+   zodat een hernoemen of opnieuw verplaatsen deze test rood maakt in
+   plaats van hem stilletjes tegen de oude, niet meer bestaande plek in
+   app.jsx te laten testen. */
+const TRAININGEN_SCHERM = path.join(__dirname, "..", "src", "schermen", "trainingen.jsx");
+const bronTrainingenScherm = fs.readFileSync(TRAININGEN_SCHERM, "utf8");
+
 /* Sinds P3 stap 2 (professionaliseringsplan.md, 17 september 2026)
    staan WEDSTRIJD_SOORTEN/wedstrijdSoort/wedstrijdTelt/tellendeWedstrijden
    niet meer in src/app.jsx maar in src/domein/wedstrijden.js. Sinds
@@ -176,7 +187,7 @@ ok("en die naam hoort bij die speler",
      return !s || s.naam !== a.naam;
    }).length, 0);
 ok("de app tekent die naam ook echt (a.naam in de presentielijst)",
-   /\{a\.naam\}/.test(bron), true);
+   /\{a\.naam\}/.test(bronTrainingenScherm), true);
 
 /* ══════════════════════════════════════════════════════════════
    4. EEN OPEN VRAAG, VASTGELEGD ALS TEST
