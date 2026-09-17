@@ -133,6 +133,16 @@ const INSTELLINGEN = path.join(__dirname, "..", "src", "schermen", "instellingen
 const bronInstellingen = fs.readFileSync(INSTELLINGEN, "utf8");
 const regelsInstellingen = bronInstellingen.split("\n");
 
+/* Zelfde soort verhuizing, nu door P4 stap 5 (docs/p4-stappenplan.md):
+   SelectiePagina, SpelerProfiel en OntwikkelingTab verhuisden op 17
+   september 2026 van app.jsx naar src/schermen/spelers.jsx. De groep
+   "waar het tabblad Ontwikkeling staat" hieronder knipt tekst uit
+   precies die drie, en moet dus uit deze nieuwe bron lezen — anders
+   test hij stilletjes tegen een plek in app.jsx die niet meer bestaat. */
+const SPELERS_SCHERM = path.join(__dirname, "..", "src", "schermen", "spelers.jsx");
+const bronSpelers = fs.readFileSync(SPELERS_SCHERM, "utf8");
+const regelsSpelersScherm = bronSpelers.split("\n");
+
 /* Eén regel uit de app (de sleutelnaam staat los van het blok) */
 function knipRegel(re, wat) { return regels[eis(re, wat)]; }
 
@@ -156,6 +166,17 @@ function knipGebied(startRe, eindRe, wat) {
   const a = eis(startRe, wat);
   let e = a + 1; while (e < regels.length && !eindRe.test(regels[e])) e++;
   return regels.slice(a, Math.min(e + 1, regels.length)).join("\n");
+}
+
+/* Dezelfde twee knippen, maar dan tegen src/schermen/spelers.jsx —
+   nodig voor SELECTIE_TABS en SPELERPROFIEL hieronder, sinds P4 stap 5. */
+const zoekSpelers = (re) => { for (let i = 0; i < regelsSpelersScherm.length; i++) if (re.test(regelsSpelersScherm[i])) return i; return -1; };
+const eisSpelers = (re, wat) => { const i = zoekSpelers(re); if (i < 0) throw new Error(wat + " niet gevonden in src/schermen/spelers.jsx"); return i; };
+function knipRegelSpelers(re, wat) { return regelsSpelersScherm[eisSpelers(re, wat)]; }
+function knipGebiedSpelers(startRe, eindRe, wat) {
+  const a = eisSpelers(startRe, wat);
+  let e = a + 1; while (e < regelsSpelersScherm.length && !eindRe.test(regelsSpelersScherm[e])) e++;
+  return regelsSpelersScherm.slice(a, Math.min(e + 1, regelsSpelersScherm.length)).join("\n");
 }
 
 /* Het <nav>-blok waarin een menu daadwerkelijk wordt uitgetekend,
@@ -562,8 +583,11 @@ ok("en het aanmaakscherm legt uit waaróm het niet mag",
    weten voor ze een slot gaat zetten. Deze tests leggen vast wat er
    écht staat, zodat het opvalt als het verschuift. */
 groep("het tabblad Ontwikkeling — waar het écht staat");
-const SELECTIE_TABS = knipRegel(/\{id:"spelers",\s*ic:/, "de tabbalk van SelectiePagina");
-const SPELERPROFIEL = knipGebied(/^function SpelerProfiel\(/, /^\}\s*$/, "function SpelerProfiel");
+/* SelectiePagina en SpelerProfiel verhuisden op 17 september 2026 (P4
+   stap 5) van app.jsx naar src/schermen/spelers.jsx — vandaar de
+   Spelers-varianten van knipRegel/knipGebied hier. */
+const SELECTIE_TABS = knipRegelSpelers(/\{id:"spelers",\s*ic:/, "de tabbalk van SelectiePagina");
+const SPELERPROFIEL = knipGebiedSpelers(/^function SpelerProfiel\(/, /^\}\s*$/, "function SpelerProfiel");
 ok("de tabbalk van Selectie heeft vijf tabbladen",
    (SELECTIE_TABS.match(/\{id:"/g) || []).length, 5);
 ok("en dat zijn deze",
@@ -579,7 +603,7 @@ ok("het spelerprofiel heeft twee tabbladen: Profiel en Ontwikkeling",
 ok("en de component die erachter hangt heet OntwikkelingTab",
    /<OntwikkelingTab speler=/.test(SPELERPROFIEL), true);
 ok("die component bestaat ook echt",
-   /^function OntwikkelingTab\(/m.test(bron), true);
+   /^function OntwikkelingTab\(/m.test(bronSpelers), true);
 
 /* ══════════════════════════════════════════════════════════════
    (a) HET SLOT — vandaag ROOD, en dat hoort zo
@@ -666,16 +690,21 @@ if (pakketNu().id === ruimste) {
 groep("(c) het slot op het tabblad Ontwikkeling");
 /* magPagina() kan hier niets: Ontwikkeling is geen scherm en staat
    dus niet in PAGINA_MODULE. De enige functie die er iets over kan
-   zeggen is magModule("ontwikkeling"). Vandaag wordt magModule alleen
-   door magPagina aangeroepen, dus wordt die vraag nergens gesteld.
-   Deze test schrijft niet voor hóé het slot eruitziet — alleen dat de
-   vraag ergens gesteld wordt. */
-const moduleVraag = regels
+   zeggen is magModule("ontwikkeling"). Deze test schrijft niet voor
+   hóé het slot eruitziet — alleen dat de vraag ergens gesteld wordt.
+   Sinds P4 stap 5 (17 september 2026) zit SpelerProfiel — waar deze
+   vraag wordt gesteld — in src/schermen/spelers.jsx, niet meer in
+   app.jsx; vandaar dat hier over beide bronnen wordt gezocht. */
+const moduleVraagIn = (bronRegels) => bronRegels
   .map((r, i) => ({nr: i + 1, tekst: r}))
   .filter((r) => /magModule\s*\(\s*["']ontwikkeling["']\s*\)/.test(r.tekst))
   .map((r) => r.nr);
+const moduleVraagApp = moduleVraagIn(regels);
+const moduleVraagSpelers = moduleVraagIn(regelsSpelersScherm);
+const moduleVraag = moduleVraagApp.concat(moduleVraagSpelers);
 console.log("        magModule(\"ontwikkeling\") staat op regel(s): " +
-            (moduleVraag.join(", ") || "nergens"));
+            (moduleVraagApp.join(", ") || "geen") + " (app.jsx)  —  " +
+            (moduleVraagSpelers.join(", ") || "geen") + " (spelers.jsx)");
 ok("(c1) ergens in de app wordt magModule(\"ontwikkeling\") gevraagd",
    moduleVraag.length > 0, true);
 

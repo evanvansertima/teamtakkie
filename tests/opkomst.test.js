@@ -27,8 +27,9 @@
         src/domein/statistieken.js. Telt alleen trainingen mee waar
         deze speler ÜBERHAUPT een presentieregel heeft (aanwezig of
         niet), ongeacht ingevulde-lijst-lengte van de héle training.
-     5. het inline opkomst-blokje in het Dashboard — src/app.jsx,
-        niet hier getest (geen losse functie om te knippen; het
+     5. het inline opkomst-blokje in het Dashboard — sinds P4 stap 5
+        (17 sep. 2026) in src/schermen/spelers.jsx, niet meer in
+        src/app.jsx (geen losse functie om te knippen; het
         dashboardblokje rekent inline in de component zelf).
 
    Dat is geen bug die je hier stilletjes repareert: het is de
@@ -75,6 +76,14 @@ const regelsStatistieken = fs.readFileSync(STATISTIEKEN, "utf8").split("\n");
    tegen de oude, niet meer bestaande plek in app.jsx te laten testen. */
 const STATISTIEKEN_SCHERM = path.join(__dirname, "..", "src", "schermen", "statistieken.jsx");
 const regelsStatistiekenScherm = fs.readFileSync(STATISTIEKEN_SCHERM, "utf8").split("\n");
+
+/* Het Dashboard-opkomstblokje zat tot en met P4 stap 4 in src/app.jsx;
+   op 17 september 2026 (P4 stap 5, docs/p4-stappenplan.md §1) is
+   Dashboard verhuisd naar src/schermen/spelers.jsx. Zelfde reden als
+   bij regelsStatistiekenScherm hierboven: een aparte, met naam
+   genoemde bron. */
+const SPELERS_SCHERM = path.join(__dirname, "..", "src", "schermen", "spelers.jsx");
+const regelsSpelersScherm = fs.readFileSync(SPELERS_SCHERM, "utf8").split("\n");
 
 const zoekIn = (bronRegels, re) => { for (let i = 0; i < bronRegels.length; i++) if (re.test(bronRegels[i])) return i; return -1; };
 const eisIn = (bronRegels, bronNaam, re, wat) => {
@@ -208,15 +217,16 @@ try {
     "return aanwPct;\n};"
   );
 
-  /* Het Dashboard-opkomstblokje (src/app.jsx). Sinds de samenvoeging
-     (stap B, 17 sep. 2026) rekent het via opkomstVan, net als aanwPct.
-     Het commentaarblok "── Opkomst op de training ──" erboven is de
-     vaste marker die dit stukje in de component aanwijst; geknipt
-     wordt vanaf de metOpkomst-regel eronder, met dezelfde
+  /* Het Dashboard-opkomstblokje (sinds P4 stap 5, 17 sep. 2026, in
+     src/schermen/spelers.jsx, niet meer in src/app.jsx). Sinds de
+     samenvoeging (stap B, 17 sep. 2026) rekent het via opkomstVan, net
+     als aanwPct. Het commentaarblok "── Opkomst op de training ──"
+     erboven is de vaste marker die dit stukje in de component aanwijst;
+     geknipt wordt vanaf de metOpkomst-regel eronder, met dezelfde
      knipBlokUit-truc als bij het trainingsopkomst-blokje van
      spelerInzichten hierboven (tot en met de sluitende "  }" van het
      if-blok). */
-  const DASHBOARD_OPKOMST_BLOK = knipBlokUit(regels, "src/app.jsx",
+  const DASHBOARD_OPKOMST_BLOK = knipBlokUit(regelsSpelersScherm, "src/schermen/spelers.jsx",
     /^\s*const metOpkomst = trainingen\.filter\(function\(t\)\{ return \(t\.aanwezigheid\|\|\[\]\)\.length; \}\);\s*$/,
     "het opkomst-blokje in Dashboard");
   eval(

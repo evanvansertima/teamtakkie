@@ -98,6 +98,13 @@ const licentieKeyRegel = (() => {
   throw new Error("const LICENTIE_KEY niet gevonden in src/kern/sleutels.js");
 })();
 
+/* BoetepotTab verhuisde op 17 september 2026 (P4 stap 5,
+   docs/p4-stappenplan.md) van app.jsx naar src/schermen/spelers.jsx.
+   De bedradingstest hieronder (groep 7) knipt de component daarom uit
+   deze aparte bron — zelfde patroon als bij de andere P4-stappen. */
+const SPELERS_SCHERM = path.join(__dirname, "..", "src", "schermen", "spelers.jsx");
+const regelsSpelersScherm = fs.readFileSync(SPELERS_SCHERM, "utf8").split("\n");
+
 /* Eén functie, van de kop tot de eerste accolade in de eerste kolom. */
 function knipFunctieUit(bronRegels, bronNaam, naam) {
   const a = eisIn(bronRegels, bronNaam, new RegExp("^function " + naam + "\\("), "function " + naam);
@@ -127,11 +134,13 @@ function knipPakketBlok() {
 }
 /* De broncode van een React-component, voor de bedradingstests.
    Loopt van de kop tot de eerste accolade in de eerste kolom. */
-function knipComponent(naam) {
-  const a = eis(new RegExp("^function " + naam + "\\("), "component " + naam);
-  let e = a + 1; while (e < regels.length && !/^\}/.test(regels[e])) e++;
-  return regels.slice(a, e + 1).join("\n");
+function knipComponentUit(bronRegels, bronNaam, naam) {
+  const a = eisIn(bronRegels, bronNaam, new RegExp("^function " + naam + "\\("), "component " + naam);
+  let e = a + 1; while (e < bronRegels.length && !/^\}/.test(bronRegels[e])) e++;
+  return bronRegels.slice(a, e + 1).join("\n");
 }
+function knipComponent(naam) { return knipComponentUit(regels, "src/app.jsx", naam); }
+function knipComponentSpelers(naam) { return knipComponentUit(regelsSpelersScherm, "src/schermen/spelers.jsx", naam); }
 
 /* Dezelfde code zonder het commentaar erin. Nodig omdat het
    commentaar in BoetepotTab uitlegt wat er NIET gebeurt — er staat
@@ -424,7 +433,7 @@ ok("{soort:'geel'} levert niets op — die kaart bestaat niet", metSoort.length,
    hernoeming moet iemand hier kijken.
    ══════════════════════════════════════════════════════════════ */
 groep("De bedrading in BoetepotTab — de berekening loopt over álle trainingen");
-const TAB = zonderCommentaar(knipComponent("BoetepotTab"));
+const TAB = zonderCommentaar(knipComponentSpelers("BoetepotTab"));
 ok("BoetepotTab geeft laadTrainingen() door aan boeteRegels()",
    /laadTrainingen\(\)/.test(aanroep(TAB, "boeteRegels")), true);
 ok("en roept zichtbareTrainingen() nergens aan",

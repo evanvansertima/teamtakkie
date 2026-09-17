@@ -113,8 +113,22 @@ const DOMEIN_VOLGORDE = ["boetepot.js", "wedstrijden.js", "statistieken.js", "op
    opkomst-samenvoeging in IndividuStatistieken (trainPct via
    opkomstVan() uit src/domein/opkomst.js) was al vóór deze stap gedaan;
    die aanroep blijft werken omdat DOMEIN_VOLGORDE hieronder
-   src/domein/opkomst.js altijd vóór de schermmodules plakt. */
-const SCHERM_VOLGORDE = ["gedeeld.jsx", "onboarding.jsx", "instellingen.jsx", "statistieken.jsx", "trainingen.jsx"];
+   src/domein/opkomst.js altijd vóór de schermmodules plakt.
+
+   "spelers.jsx" (P4 stap 5, 17 september 2026) is de zesde toevoeging:
+   isolatie middel, de grootste van de drie nieuwe modules (StatInvoer,
+   SpelerFormulier, RapportTab, SpelerProfiel, DoelFormulier,
+   ReviewFormulier, OntwikkelingTab, SpelersLijst, AfwezigheidFormulier,
+   BlessuresTab, BoetepotTab, EigenBoeteToevoegen, BoeteFormulier,
+   SelectiePagina, Dashboard, VoetIcoon) — zie docs/p4-stappenplan.md §1,
+   stap 5. Twee kruisverwijzingen naar de schil (src/app.jsx) blijven
+   werken via gedeelde scope: SelectiePagina roept OpstellingenTab en
+   TactiekenTab aan (blijven in app.jsx tot stap 7), en renderPagina()
+   in app.jsx roept Dashboard en SelectiePagina hier aan (`case
+   "dashboard"`/`case "selectie"`). Geen van beide is een const-
+   afhankelijkheid (zie §3 van het stappenplan), dus de bestandsvolgorde
+   maakt geen technisch verschil. */
+const SCHERM_VOLGORDE = ["gedeeld.jsx", "onboarding.jsx", "instellingen.jsx", "statistieken.jsx", "trainingen.jsx", "spelers.jsx"];
 
 /* Het merkteken in src/index.html waar de gebouwde app terechtkomt.
    Bewust een commentaarregel en geen los token: zo blijft het sjabloon
