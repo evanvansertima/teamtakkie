@@ -127,8 +127,26 @@ const DOMEIN_VOLGORDE = ["boetepot.js", "wedstrijden.js", "statistieken.js", "op
    in app.jsx roept Dashboard en SelectiePagina hier aan (`case
    "dashboard"`/`case "selectie"`). Geen van beide is een const-
    afhankelijkheid (zie §3 van het stappenplan), dus de bestandsvolgorde
-   maakt geen technisch verschil. */
-const SCHERM_VOLGORDE = ["gedeeld.jsx", "onboarding.jsx", "instellingen.jsx", "statistieken.jsx", "trainingen.jsx", "spelers.jsx"];
+   maakt geen technisch verschil.
+
+   "clubhuis.jsx" (P4 stap 6, zelfde dag) is de zevende toevoeging:
+   sportpark, tenue-ontwerper en spelregelquiz (ParkVorm, Spelerkaart,
+   HTKBewerken, SpelerkaartTab, QuizTekenveld, SpelregelquizTab,
+   TenueVormKnop, TenueOntwerperTab, ClubhuisModule, SportparkDrieD,
+   EigenVeldVenster, ParkBewaarPopup, SportparkTab) — zie
+   docs/p4-stappenplan.md §1, stap 6. Groter dan die 13 namen: er bleek
+   ~3.900 regels exclusief-door-clubhuis-gebruikte hulpcode (het
+   spelregelquiz-domein, de sportpark-3D-motor, en de rest van de
+   tenue-ontwerpgegevens) tussen en rond die componenten te staan,
+   niet met naam genoemd in het stappenplan — zie de bestandskop van
+   clubhuis.jsx zelf voor de volledige lijst. Bij dat narekenen bleek
+   ook dat gedeeld.jsx (stap 0) al langer op zo'n twintig tenue-
+   hulpfuncties leunde die toen niet meeverhuisd waren; die zijn bij
+   deze stap alsnog naar gedeeld.jsx verplaatst (zie de bestandskop
+   van gedeeld.jsx, onderaan). TenueOntwerperTab roept TenueBeeld drie
+   keer aan (blijft in gedeeld.jsx, laadt hiervóór) — werkt via
+   gedeelde scope. */
+const SCHERM_VOLGORDE = ["gedeeld.jsx", "onboarding.jsx", "instellingen.jsx", "statistieken.jsx", "trainingen.jsx", "spelers.jsx", "clubhuis.jsx"];
 
 /* Het merkteken in src/index.html waar de gebouwde app terechtkomt.
    Bewust een commentaarregel en geen los token: zo blijft het sjabloon

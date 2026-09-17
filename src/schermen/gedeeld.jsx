@@ -27,8 +27,15 @@
    (TENUE_PATRONEN, TENUE_BEGIN, TENUE_GROEPEN, TENUE_VORMEN,
    TENUE_DELEN, TENUE_FONTS, TENUE_GREPEN, de zoom- en
    historiewaarden) — dat is eigen ontwerpgereedschap van de
-   tenue-ontwerper (module clubhuis, latere stap) en wordt door niets
-   anders gebruikt. Ook `tenueTeller` (de teller voor unieke
+   tenue-ontwerper en is bij P4 stap 6 (17 september 2026) naar
+   src/schermen/clubhuis.jsx verplaatst. CORRECTIE: "wordt door niets
+   anders gebruikt" bleek niet te kloppen voor TENUE_GREPEN, die wordt
+   hieronder door TenueKader zelf gebruikt — werkt gewoon via gedeelde
+   scope (clubhuis.jsx laadt ná dit bestand), zie de toelichting onderin
+   dit bestand bij "TOEGEVOEGD BIJ P4 STAP 6" voor de volledige uitleg,
+   inclusief een aantal tenue-hulpfuncties die toen óók hier hadden
+   moeten staan en nu alsnog zijn toegevoegd. Ook `tenueTeller` (de
+   teller voor unieke
    SVG-id's, gebruikt door TenueBeeld) blijft in src/app.jsx staan:
    hij stond niet met naam in het stappenplan en verhuist daarom niet
    mee in deze stap. Dat is functioneel geen probleem — het is een
@@ -665,4 +672,309 @@ function SpelerBeeld({ speler, shirt, vlak, tenueSet: tset }) {
       style={{width:"100%",height:"100%",objectFit:"cover",borderRadius:"50%",display:"block"}}/>;
   }
   return <SpelerPop naam={(speler&&speler.naam)||"?"} shirt={shirt} vlak={vlak} tenueSet={tset} />;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   TOEGEVOEGD BIJ P4 STAP 6 (17 september 2026) — een gat uit stap 0
+   ─────────────────────────────────────────────────────────────
+   Bij het verplaatsen van clubhuis (docs/p4-stappenplan.md stap 6)
+   bleek dat TenueBeeld/TenueKader hierboven (stap 0) al veel meer
+   tenue-hulpfuncties nodig hadden dan toen meeverhuisd is. Ze werkten
+   tot nu toe alleen omdat elk gebruik binnen een renderfunctie zit
+   die pas draait ná het laden van alle scripts (zie de uitleg in de
+   bestandskop hierboven en docs/p4-stappenplan.md §3) — met clubhuis
+   als nieuw bestand ná gedeeld.jsx in SCHERM_VOLGORDE was dat langer
+   houdbaar geweest, maar dan zou gedeeld.jsx voor zijn eigen tekenwerk
+   blijven leunen op een later ladend, domeinspecifiek bestand. Vandaar
+   deze correctie: alles hieronder staat er nu waar het al die tijd
+   hoorde te staan. Zelfde categorie fout als getalKlem()/getalTyp()/
+   getalKlaar()/aanraakScherm() (ook hieronder, apart blok): allemaal
+   functies die TenueKader/GetalVeld hierboven aanroepen maar die
+   fysiek in src/app.jsx waren blijven staan.
+
+   CORRECTIE OP DE "NIET HIERHEEN VERPLAATST"-CLAIM HIERBOVEN
+   TENUE_GREPEN bleek, anders dan de bestandskop hierboven claimde,
+   wél door iets anders gebruikt te worden: TenueKader (verderop in
+   dit bestand) gebruikt hem rechtstreeks. TENUE_GREPEN zelf is bij
+   stap 6 toch naar clubhuis.jsx verplaatst (samen met zijn naamgenoten
+   TENUE_PATRONEN/TENUE_BEGIN/TENUE_GROEPEN/TENUE_VORMEN/TENUE_DELEN/
+   TENUE_FONTS/TENUE_ZOOMS/TENUE_HISTORIE_MAX/TENUE_GROEP_MS) — dat
+   werkt gewoon via gedeelde scope, clubhuis.jsx laadt vóór src/app.jsx
+   en ná dit bestand, en TenueKader leest TENUE_GREPEN pas in zijn
+   renderfunctie. Zie de bestandskop hierboven voor de rest van die
+   lijst; de claim "wordt door niets anders gebruikt" gold dus niet
+   voor TENUE_GREPEN, en is hiermee rechtgezet.
+═══════════════════════════════════════════════════════════ */
+
+/* ── TENUE ── */
+const STANDAARD_TENUE = { shirt:"#004aad", shirt2:"#ffffff", tekst:"#ffffff", patroon:"effen", keeper:"#28a745", keuze:"thuis" };
+/* ── De tenue-ontwerper ─────────────────────────────────────
+   Vijf tenues, elk met een shirt, een broek en sokken. De losse
+   velden shirt/shirt2/tekst/patroon/keeper blijven bestaan omdat het
+   opstellingsscherm en de spelerskaart die gebruiken; ze worden
+   afgeleid uit het thuistenue, zodat er één waarheid is. */
+const STANDAARD_SET = {
+  shirt:"#004aad", shirt2:"#ffffff", mouw:"", kraag:"#ffffff",
+  broek:"#ffffff", sokken:"#004aad", tekst:"#ffffff",
+  patroon:"effen", embleem:false, sponsor:"", lagen:[]
+};
+function tenueSet(tenue, id) {
+  var s = ((tenue || {}).sets || {})[id];
+  var uit = Object.assign({}, STANDAARD_SET, TENUE_BEGIN[id] || {}, s || {});
+  /* De lagen worden hier losgetrokken en nagelopen. Zonder die eigen
+     kopie zouden twee tenues dezelfde lijst delen, en dan verandert
+     het uitshirt mee zodra je iets op het thuisshirt legt. */
+  uit.lagen = (Array.isArray(uit.lagen) ? uit.lagen : []).map(tenueLaagVernieuw);
+  return uit;
+}
+/* Een tenue van vóór de ontwerper heeft alleen losse velden. Die
+   worden het thuistenue en het keeperstenue; de rest begint blanco.
+   Andersom: de losse velden volgen daarna altijd uit de sets, zodat
+   er geen twee versies van dezelfde kleur kunnen ontstaan. */
+function tenueVernieuw(t) {
+  var n = Object.assign({}, STANDAARD_TENUE, t || {});
+  n.sets = Object.assign({}, n.sets);
+  if (!n.sets.thuis) n.sets.thuis = Object.assign({}, TENUE_BEGIN.thuis,
+    {shirt:n.shirt, shirt2:n.shirt2, tekst:n.tekst, patroon:n.patroon, sokken:n.shirt});
+  if (!n.sets.keeperT) n.sets.keeperT = Object.assign({}, TENUE_BEGIN.keeperT,
+    {shirt:n.keeper, shirt2:n.keeper, sokken:n.keeper, patroon:"effen"});
+  /* Alleen een veldtenue kun je aantrekken; de keeper krijgt daar
+     vanzelf het bijbehorende keeperstenue bij. */
+  if (["thuis","uit","derde"].indexOf(n.keuze) < 0) n.keuze = "thuis";
+  var thuis = tenueSet(n, "thuis"), kt = tenueSet(n, "keeperT");
+  n.shirt = thuis.shirt; n.shirt2 = thuis.shirt2; n.tekst = thuis.tekst;
+  n.patroon = thuis.patroon; n.keeper = kt.shirt;
+  return n;
+}
+function tenueVorm(id) {
+  for (var i = 0; i < TENUE_VORMEN.length; i++)
+    if (TENUE_VORMEN[i].id === id) return TENUE_VORMEN[i];
+  return null;
+}
+/* Waar een vorm uit bestaat: één pad, of de losse vlakken van een
+   patroon. Beide komen er in dezelfde vorm uit, zodat de tekening en
+   de test maar één soort ding hoeven te kennen. */
+function tenueVormDelen(id) {
+  var v = tenueVorm(id);
+  if (!v) return [];
+  if (v.maak) return v.maak();
+  return v.d ? [{d:v.d}] : [];
+}
+/* Wat er bovenop het shirt komt te liggen. Alles blijft binnen het
+   vel: het shirt zelf knipt de randen weg, maar een patroon dat
+   helemaal naast het shirt valt is gewoon een fout. */
+function tenuePatroonDelen(set) {
+  var s = Object.assign({}, STANDAARD_SET, set || {});
+  var k = s.shirt2, uit = [], i;
+  if (s.patroon === "strepen") {
+    for (i = 6; i < 112; i += 18) uit.push({vorm:"rect", x:i, y:8, b:9, h:82, kleur:k});
+  } else if (s.patroon === "banden") {
+    for (i = 16; i < 88; i += 17) uit.push({vorm:"rect", x:6, y:i, b:108, h:8, kleur:k});
+  } else if (s.patroon === "halven") {
+    uit.push({vorm:"rect", x:60, y:8, b:54, h:82, kleur:k});
+  } else if (s.patroon === "diagonaal") {
+    uit.push({vorm:"pad", d:"M6 90 L114 8 L114 90 Z", kleur:k});
+  } else if (s.patroon === "keper") {
+    uit.push({vorm:"pad", d:"M6 90 L84 8 L106 8 L28 90 Z", kleur:k});
+  } else if (s.patroon === "mouwen") {
+    uit.push({vorm:"rect", x:6, y:8, b:27, h:52, kleur:k});
+    uit.push({vorm:"rect", x:87, y:8, b:27, h:52, kleur:k});
+  }
+  /* Een eigen mouwkleur gaat er altijd overheen, ook bij een patroon */
+  if (s.mouw) {
+    uit.push({vorm:"rect", x:6,  y:8, b:27, h:52, kleur:s.mouw});
+    uit.push({vorm:"rect", x:87, y:8, b:27, h:52, kleur:s.mouw});
+  }
+  return uit;
+}
+/* Het vak waarin de lagen van een kledingstuk vallen, in het
+   tenuevel. Eén plek, zodat de tekening en de bediening niet uit
+   elkaar kunnen lopen. */
+function tenueVak(stuk) {
+  if (stuk === "broek") return {x:33, y:92,  b:54,  h:40};
+  if (stuk === "sok")   return {x:38, y:134, b:44,  h:22};
+  return {x:6, y:8, b:108, h:82};
+}
+/* De opmaak van een tekstlaag op één plek, zodat de tekening en de
+   test naar hetzelfde kijken. Stond dit in de tekening zelf, dan kon
+   een vergeten letterafstand ongemerkt wegvallen. */
+function tenueLetterStijl(fontId, groot) {
+  var f = TENUE_FONTS.filter(function(x){ return x.id === fontId; })[0] || TENUE_FONTS[0];
+  return {fontFamily: f.css, fontWeight: f.vet,
+          fontSize: (groot || 64) + "px",
+          letterSpacing: (f.spatie || 0) + "px"};
+}
+function tenueLaagTekst(laag, nummer, naam) {
+  var l = laag || {};
+  if (l.bron === "nummer") return String(nummer == null ? 10 : nummer);
+  if (l.bron === "naam")   return String(naam == null ? "Speler" : naam).toUpperCase();
+  return l.tekst || "";
+}
+/* Een laag netjes maken. Alles wat er raar in staat wordt hier
+   rechtgetrokken, zodat de rest van de app nooit hoeft te twijfelen. */
+function tenueLaagVernieuw(laag) {
+  var l = Object.assign({}, STANDAARD_LAAG, laag || {});
+  if (!tenueDeelBestaat(l.deel)) l.deel = "shirtVoor";
+  var soort = tenueLaagSoort(l);
+  if (soort === "vorm" && !tenueVorm(l.vorm)) l.vorm = "cirkel";
+  l.x = tenueGetal(l.x, -20, 120, 50);
+  l.y = tenueGetal(l.y, -20, 120, 50);
+  /* Breedte en hoogte staan los van elkaar, zodat je een vorm ook
+     kunt uitrekken. Een laag van vóór die splitsing heeft alleen een
+     maat; die wordt dan allebei. */
+  if (l.maat !== undefined && (laag || {}).breed === undefined) {
+    l.breed = l.maat; l.hoog = l.maat;
+  }
+  l.breed = tenueGetal(l.breed, 4, 200, 40);
+  l.hoog  = tenueGetal(l.hoog,  4, 200, 40);
+  delete l.maat;
+  l.lijnDik = tenueGetal(l.lijnDik, 0, 7, 0);
+  if (!/^#[0-9a-fA-F]{6}$/.test(String(l.lijn))) l.lijn = "#000000";
+  l.hoek = ((tenueGetal(l.hoek, -3600, 3600, 0) % 360) + 360) % 360;
+  l.doorzicht = tenueGetal(l.doorzicht, 0.1, 1, 1);
+  l.boog = tenueGetal(l.boog, -100, 100, 0);
+  l.spiegel = !!l.spiegel; l.spiegelV = !!l.spiegelV;
+  l.tekst = String(l.tekst == null ? "" : l.tekst).slice(0, 14);
+  if (!TENUE_FONTS.some(function(f){ return f.id === l.font; })) l.font = "blok";
+  if (!TENUE_BRONNEN.some(function(b){ return b.id === l.bron; })) l.bron = "";
+  if (!l.id) l.id = "l" + Math.random().toString(36).slice(2, 9);
+  return l;
+}
+/* Wat voor laag is dit: een vorm uit de bibliotheek, losse tekst, of
+   een eigen afbeelding. */
+function tenueLaagSoort(laag) {
+  if (laag && laag.beeld) return "beeld";
+  if (laag && (laag.vorm === "tekst" || laag.vorm === "cijfer")) return "tekst";
+  return "vorm";
+}
+function tenueLagen(set, deelId) {
+  var alles = ((set || {}).lagen || []).map(tenueLaagVernieuw);
+  return alles.filter(function(l){ return l.deel === deelId; });
+}
+/* Waar een laag terechtkomt op het tenuevel. Een patroon vult het
+   hele kledingstuk; al het andere staat als losse vorm op zijn plek. */
+function tenueLaagPlaats(laag, stuk) {
+  var l = tenueLaagVernieuw(laag);
+  var vak = tenueVak(stuk);
+  var v = tenueVorm(l.vorm);
+  if (v && v.vul) {
+    return {vullend:true,
+            transform:"translate(" + vak.x + "," + vak.y + ") scale(" +
+                      (vak.b / 100) + "," + (vak.h / 100) + ")"};
+  }
+  var cx = vak.x + l.x / 100 * vak.b;
+  var cy = vak.y + l.y / 100 * vak.h;
+  /* De kleinste kant van het vak is de maatstaf voor allebei: anders
+     zou dezelfde vorm op de sok breder uitpakken dan op het shirt. */
+  var eenheid = Math.min(vak.b, vak.h);
+  var bb = l.breed / 100 * eenheid, hh = l.hoog / 100 * eenheid;
+  var fx = bb / 100, fy = hh / 100;
+  return {vullend:false, cx:cx, cy:cy, breed:bb, hoog:hh,
+          kader:{x:cx - bb/2, y:cy - hh/2, b:bb, h:hh, hoek:l.hoek},
+          transform:"translate(" + cx + "," + cy + ") rotate(" + l.hoek + ") scale(" +
+                    (fx * (l.spiegel ? -1 : 1)) + "," + (fy * (l.spiegelV ? -1 : 1)) +
+                    ") translate(-50,-50)"};
+}
+/* Het middelpunt en de halve maten van een laag op het tenuevel */
+function tenueLaagMaat(laag, stuk) {
+  var l = tenueLaagVernieuw(laag), vak = tenueVak(stuk);
+  var eenheid = Math.min(vak.b, vak.h);
+  return {vak:vak, eenheid:eenheid,
+          cx: vak.x + l.x / 100 * vak.b,
+          cy: vak.y + l.y / 100 * vak.h,
+          hw: l.breed / 100 * eenheid / 2,
+          hh: l.hoog  / 100 * eenheid / 2,
+          hoek: l.hoek};
+}
+/* Hoe groot het kader en de handvatten op het tenuevel moeten zijn om
+   op het scherm altijd even groot te blijven. Zonder deze omrekening
+   groeien de bolletjes mee met de zoom, en dekken ze bij vierhonderd
+   procent precies af waar je aan het werk bent.
+   breedOpScherm is hoe breed de tekening in beeldpunten staat. */
+const TENUE_GREEP_PX = 4.5;      /* straal van een zichtbaar bolletje */
+const TENUE_RAAK_PX = 11;        /* onzichtbare rand eromheen, voor de muis */
+const TENUE_KNOP_PX = 14;        /* hoe ver het draaiknopje boven de vorm hangt */
+/* Een vingertop dekt ongeveer vierenveertig beeldpunten en een
+   muispunt één. Op een aanraakscherm wordt de onzichtbare rand om een
+   handvat daarom ruim twee keer zo breed, en het bolletje zelf iets
+   groter zodat je ziet waar je moet zijn. Het bolletje groeit minder
+   hard dan de rand: het mag je vorm niet gaan afdekken. */
+const TENUE_RAAK_VINGER_PX = 21;
+const TENUE_GREEP_VINGER_PX = 6.5;
+function tenueKaderMaten(breedOpScherm, vinger) {
+  var b = Number(breedOpScherm);
+  var perPunt = (isFinite(b) && b > 0) ? TENUE_VEL.b / b : 1;
+  return {perPunt: perPunt,
+          greep: (vinger ? TENUE_GREEP_VINGER_PX : TENUE_GREEP_PX) * perPunt,
+          raak: (vinger ? TENUE_RAAK_VINGER_PX : TENUE_RAAK_PX) * perPunt,
+          knop: TENUE_KNOP_PX * perPunt,
+          lijn: 1.6 * perPunt,
+          dunneLijn: 0.7 * perPunt,
+          streep: (4 * perPunt) + " " + (3 * perPunt)};
+}
+/* Waar het draaiknopje hangt: recht boven de vorm, meegedraaid. De
+   afstand is in beeldpunten, zodat het knopje bij inzoomen niet
+   wegvliegt. */
+function tenueDraaiKnop(laag, stuk, breedOpScherm) {
+  var m = tenueLaagMaat(laag, stuk);
+  var afstand = m.hh + tenueKaderMaten(breedOpScherm).knop;
+  var r = m.hoek * Math.PI / 180;
+  return {x: m.cx + Math.sin(r) * afstand, y: m.cy - Math.cos(r) * afstand,
+          vanX: m.cx + Math.sin(r) * m.hh,  vanY: m.cy - Math.cos(r) * m.hh};
+}
+/* Welke lagen meegaan naar een klein beeld, zoals de bol op het
+   opstellingsveld of de poppetjes. Daar is een letter niet meer te
+   lezen en wordt een eigen logo een vlek, dus daar blijven alleen de
+   vlakken over. Eén lijst, zodat het veld en de gedeelde afbeelding
+   niet elk iets anders laten zien. */
+function tenueKleineLagen(set) {
+  return tenueLagen(set, "shirtVoor").filter(function(l){
+    return tenueLaagSoort(l) === "vorm";
+  });
+}
+
+/* Ligt er een aanraakscherm onder? Dan moeten de handvatten groter:
+   een muispunt is een punt, een vingertop dekt er ongeveer vierenveertig.
+   Alleen gebruiken waar de maat in het rekenwerk zit; wat in CSS staat
+   gaat via (pointer: coarse), want dat blijft ook kloppen als je een
+   muis aansluit. */
+function aanraakScherm() {
+  if (typeof window === "undefined") return false;
+  if (window.matchMedia && window.matchMedia("(pointer: coarse)").matches) return true;
+  return (typeof navigator !== "undefined" && (navigator.maxTouchPoints || 0) > 0);
+}
+/* ── Getalvelden die je leeg kunt maken ─────────────────────
+   Een gewoon getalveld met value={getal} en Number(e.target.value)
+   laat zich niet leegmaken: zodra je de laatste cijfer weghaalt is de
+   waarde nul, en zet de app er meteen weer een 0 in. Met backspace
+   gebeurt er dan schijnbaar niets.
+
+   Dit veld houdt daarom vast wát je typt, ook als dat even niets is,
+   en geeft pas een getal door zodra er iets staat. Bij het verlaten
+   van het veld wordt er opgeruimd en teruggevallen op de echte
+   waarde. */
+function getalKlem(n, min, max) {
+  var g = Number(n);
+  if (!isFinite(g)) return null;
+  if (min !== undefined && min !== null && g < Number(min)) g = Number(min);
+  if (max !== undefined && max !== null && g > Number(max)) g = Number(max);
+  return g;
+}
+/* Wat er moet gebeuren als iemand iets typt. Geeft terug wat er in
+   het veld hoort te staan en welke waarde de app moet onthouden.
+   Tijdens het typen wordt er niet geklemd: bij een minimum van tien
+   zou "1" op weg naar "15" anders meteen naar 10 springen. */
+function getalTyp(tekst, leeg) {
+  var t = String(tekst === null || tekst === undefined ? "" : tekst);
+  if (t === "" || t === "-") return {toon:t, waarde:leeg, leeg:true};
+  var n = Number(t);
+  if (!isFinite(n)) return {toon:t, waarde:leeg, leeg:true};
+  return {toon:t, waarde:n, leeg:false};
+}
+/* En wat er gebeurt als je het veld verlaat: nu pas klemmen. */
+function getalKlaar(tekst, leeg, min, max) {
+  var g = getalTyp(tekst, leeg);
+  if (g.leeg) return leeg;
+  var k = getalKlem(g.waarde, min, max);
+  return k === null ? leeg : k;
 }
