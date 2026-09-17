@@ -104,8 +104,17 @@ const DOMEIN_VOLGORDE = ["boetepot.js", "wedstrijden.js", "statistieken.js", "op
    isolatie hoog, geen bekende cross-module afhankelijkheid (TeamSheet,
    NieuwSeizoenKaart, PakkettenSheet, TerugSheet, SyncLampje,
    NieuwsBalk, BeheerSheet, AccountSheet, InstellingenSheet) — zie
-   docs/p4-stappenplan.md §1, stap 2. */
-const SCHERM_VOLGORDE = ["gedeeld.jsx", "onboarding.jsx", "instellingen.jsx"];
+   docs/p4-stappenplan.md §1, stap 2.
+
+   "statistieken.jsx" (P4 stap 3, zelfde dag) is de vierde toevoeging:
+   isolatie hoog (TeamStatistieken, IndividuStatistieken, LiveAnalyse,
+   StandTab, StatistiekenModule, StaafGrafiek, LijnGrafiek, RadarGrafiek,
+   GrafiekLegenda) — zie docs/p4-stappenplan.md §1, stap 3. De
+   opkomst-samenvoeging in IndividuStatistieken (trainPct via
+   opkomstVan() uit src/domein/opkomst.js) was al vóór deze stap gedaan;
+   die aanroep blijft werken omdat DOMEIN_VOLGORDE hieronder
+   src/domein/opkomst.js altijd vóór de schermmodules plakt. */
+const SCHERM_VOLGORDE = ["gedeeld.jsx", "onboarding.jsx", "instellingen.jsx", "statistieken.jsx"];
 
 /* Het merkteken in src/index.html waar de gebouwde app terechtkomt.
    Bewust een commentaarregel en geen los token: zo blijft het sjabloon

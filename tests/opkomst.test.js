@@ -19,9 +19,10 @@
         presentielijst levert null op en telt nergens in mee.
      2. presentieTabel      — src/domein/opkomst.js (deze verhuizing)
         Kijkt over trainingen, wedstrijden én activiteiten heen.
-     3. trainPct            — inline in IndividuStatistieken,
-        src/app.jsx. Telt een training zonder ingevulde presentie-
-        lijst gewoon mee in de noemer (trainingen.length).
+     3. trainPct            — inline in IndividuStatistieken, sinds
+        P4 stap 3 (17 sep. 2026) in src/schermen/statistieken.jsx, niet
+        meer in src/app.jsx. Telt een training zonder ingevulde
+        presentielijst gewoon mee in de noemer (trainingen.length).
      4. de inline berekening in spelerInzichten — sinds P3 stap 3 in
         src/domein/statistieken.js. Telt alleen trainingen mee waar
         deze speler ÜBERHAUPT een presentieregel heeft (aanwezig of
@@ -64,6 +65,16 @@ const regelsOpkomst = fs.readFileSync(OPKOMST, "utf8").split("\n");
    src/domein/statistieken.js. */
 const STATISTIEKEN = path.join(__dirname, "..", "src", "domein", "statistieken.js");
 const regelsStatistieken = fs.readFileSync(STATISTIEKEN, "utf8").split("\n");
+
+/* trainPct (IndividuStatistieken) en aanwPct (TeamStatistieken) zaten
+   tot en met P4 stap 2 in src/app.jsx; op 17 september 2026 (P4 stap 3,
+   docs/p4-stappenplan.md §1) zijn beide componenten verhuisd naar
+   src/schermen/statistieken.jsx. Zelfde reden als bij regelsOpkomst
+   hierboven: een aparte, met naam genoemde bron, zodat een hernoemen of
+   opnieuw verplaatsen deze test rood maakt in plaats van hem stilletjes
+   tegen de oude, niet meer bestaande plek in app.jsx te laten testen. */
+const STATISTIEKEN_SCHERM = path.join(__dirname, "..", "src", "schermen", "statistieken.jsx");
+const regelsStatistiekenScherm = fs.readFileSync(STATISTIEKEN_SCHERM, "utf8").split("\n");
 
 const zoekIn = (bronRegels, re) => { for (let i = 0; i < bronRegels.length; i++) if (re.test(bronRegels[i])) return i; return -1; };
 const eisIn = (bronRegels, bronNaam, re, wat) => {
@@ -163,13 +174,15 @@ try {
     ";Object.assign(global, {AANWEZIG_KEUZES, AFWEZIGHEID_SOORTEN});"
   );
 
-  /* trainPct — inline in IndividuStatistieken (src/app.jsx). Sinds de
-     samenvoeging (stap E, 17 sep. 2026) rekent dit via opkomstVan, net
-     als de andere vier varianten — de wrapper krijgt er daarom een
-     `afwezigheden`-parameter bij. Geknipt van de opkomstPerTrainingSp-
-     regel tot en met de trainPct-regel, zodat de rekenregels zelf
-     letterlijk hetzelfde blijven als in de app. */
-  const TRAINPCT_BLOK = knipVanTot(
+  /* trainPct — inline in IndividuStatistieken, sinds P4 stap 3
+     (17 sep. 2026) in src/schermen/statistieken.jsx, niet meer in
+     src/app.jsx. Sinds de eerdere samenvoeging (stap E, zelfde dag)
+     rekent dit via opkomstVan, net als de andere vier varianten — de
+     wrapper krijgt er daarom een `afwezigheden`-parameter bij. Geknipt
+     van de opkomstPerTrainingSp-regel tot en met de trainPct-regel,
+     zodat de rekenregels zelf letterlijk hetzelfde blijven als in de
+     app. */
+  const TRAINPCT_BLOK = knipVanTotUit(regelsStatistiekenScherm, "src/schermen/statistieken.jsx",
     /^\s*const opkomstPerTrainingSp = trainingen\.map\(function\(t\)\{\s*$/,
     /^\s*const trainPct\s*=\s*trainMee>0/,
     "de trainPct-berekening in IndividuStatistieken");
@@ -179,12 +192,13 @@ try {
     "return trainPct;\n};"
   );
 
-  /* aanwPct — TeamStatistieken (src/app.jsx). Sinds de samenvoeging
-     (stap C, 17 sep. 2026) gewogen: alle aanwezig/totaal van
-     opkomstVan eerst bij elkaar optellen, dan pas delen. Ongewijzigd
-     overgenomen, verpakt in een functie die dezelfde `trainingen` en
-     `afwezigheden` als parameter neemt. */
-  const AANWPCT_BLOK = knipVanTot(
+  /* aanwPct — TeamStatistieken, sinds P4 stap 3 (17 sep. 2026) in
+     src/schermen/statistieken.jsx, niet meer in src/app.jsx. Sinds de
+     eerdere samenvoeging (stap C, zelfde dag) gewogen: alle
+     aanwezig/totaal van opkomstVan eerst bij elkaar optellen, dan pas
+     delen. Ongewijzigd overgenomen, verpakt in een functie die
+     dezelfde `trainingen` en `afwezigheden` als parameter neemt. */
+  const AANWPCT_BLOK = knipVanTotUit(regelsStatistiekenScherm, "src/schermen/statistieken.jsx",
     /^\s*let totAanwT = 0, totTotT = 0;\s*$/,
     /^\s*const aanwPct = totTotT \? Math\.round/,
     "de aanwPct-berekening in TeamStatistieken");
@@ -338,7 +352,7 @@ okAnders("presentieTabel (3 gebeurtenissen) en opkomstVan (1 training) meten dus
    rijS02.meegedaan, OPKOMST_C.totaal);
 
 /* ══════════════════════════════════════════════════════════════
-   (d) trainPct (IndividuStatistieken, app.jsx) vs. opkomstVan
+   (d) trainPct (IndividuStatistieken, src/schermen/statistieken.jsx) vs. opkomstVan
    Vóór de samenvoeging (stap E, 17 sep. 2026) telde trainPct een
    training zonder ingevulde presentielijst gewoon mee in de noemer
    (trainingen.length), waar opkomstVan zo'n training negeerde (geeft
@@ -407,7 +421,7 @@ ok("spelerInzichten en trainPct geven hier dus hetzelfde antwoord",
    INZICHT_E.pct, TRAINPCT_E);
 
 /* ══════════════════════════════════════════════════════════════
-   (e) aanwPct (TeamStatistieken, src/app.jsx) — na de samenvoeging
+   (e) aanwPct (TeamStatistieken, src/schermen/statistieken.jsx) — na de samenvoeging
        (stap C) gewogen: alle meetellende aanwezig/totaal eerst bij
        elkaar optellen, dan pas delen. Dat is een ANDER getal dan het
        gemiddelde van de losse trainingspercentages, en dat verschil
@@ -508,7 +522,7 @@ ok("... en het percentage zakt naar 80",
    INZICHT_G_ZONDER.pct, 80);
 
 /* ══════════════════════════════════════════════════════════════
-   (h) trainPct (IndividuStatistieken) — na de samenvoeging (stap E)
+   (h) trainPct (IndividuStatistieken, src/schermen/statistieken.jsx) — na de samenvoeging (stap E)
        sluit een niet-meetellende afwezigheidsperiode voor déze speler
        een training uit van teller én noemer, net als opkomstVan.
    Vier trainingen: h4 valt in een periode "ziekte" (noemer:false) op
