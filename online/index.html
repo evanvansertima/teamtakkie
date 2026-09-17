@@ -6506,6 +6506,384 @@ function kaartCompleet(speler) {
     return x.waarde !== null;
   }).length + "/" + w.length;
 }
+const PRESENTIE_SOORTEN = [
+  { id: "alles", label: "Alles", icoon: "fa-solid fa-layer-group" },
+  { id: "training", label: "Trainingen", icoon: "fa-solid fa-person-running", kleur: "var(--blauw-licht)" },
+  { id: "wedstrijd", label: "Wedstrijden", icoon: "fa-solid fa-futbol", kleur: "var(--blauw)" },
+  { id: "activiteit", label: "Activiteiten", icoon: "fa-solid fa-calendar-day", kleur: "#8b5cf6" }
+];
+function presentieUitOpstelling(wedstrijd) {
+  return (wedstrijd.opstelling || []).map(function(r) {
+    var st = r.spelStatus || "basis";
+    return {
+      spelerId: r.spelerId,
+      naam: r.naam,
+      status: st === "afwezig" ? "afwezig" : "aanwezig"
+    };
+  });
+}
+function presentieGebeurtenissen(wedstrijden, trainingen, activiteiten) {
+  var uit = [];
+  (trainingen || []).forEach(function(t2) {
+    if (!(t2.aanwezigheid || []).length) return;
+    uit.push({
+      id: "t" + t2.id,
+      soort: "training",
+      datum: t2.datum,
+      titel: trainingTitel(t2),
+      sub: t2.locatie || "",
+      lijst: t2.aanwezigheid
+    });
+  });
+  (wedstrijden || []).forEach(function(w) {
+    if (w.status !== "gespeeld") return;
+    var lijst = (w.aanwezigheid || []).length ? w.aanwezigheid : presentieUitOpstelling(w);
+    if (!lijst.length) return;
+    uit.push({
+      id: "w" + w.id,
+      soort: "wedstrijd",
+      datum: w.datum,
+      titel: "vs. " + (w.tegenstander || "tegenstander"),
+      sub: w.thuis ? "Thuis" : "Uit",
+      lijst,
+      afgeleid: !(w.aanwezigheid || []).length
+    });
+  });
+  (activiteiten || []).forEach(function(a) {
+    if (!(a.aanwezigheid || []).length) return;
+    uit.push({
+      id: "a" + a.id,
+      soort: "activiteit",
+      datum: a.datum,
+      titel: a.titel,
+      sub: activiteitSoort(a.soort).label,
+      lijst: a.aanwezigheid
+    });
+  });
+  return uit.sort(function(x, y) {
+    return new Date(x.datum) - new Date(y.datum);
+  });
+}
+function presentieTabel(spelers, gebeurtenissen, afwezigheden) {
+  var rijen = sorteerOpLinie((spelers || []).slice()).map(function(s) {
+    var cellen = gebeurtenissen.map(function(g) {
+      var r = g.lijst.filter(function(a) {
+        return a.spelerId === s.id;
+      })[0];
+      var hand = r ? aanwezigInfo(r.status) : null;
+      if (hand && hand.telt) return Object.assign({}, hand, { meetelt: true, periode: null });
+      var per = afwezigheidOp(afwezigheden, s.id, g.datum);
+      if (per) {
+        return Object.assign(
+          {},
+          afwezigheidSoort(per.soort),
+          { telt: false, periode: per, meetelt: afwezigheidTeltMee(per) }
+        );
+      }
+      return hand ? Object.assign({}, hand, { meetelt: true, periode: null }) : null;
+    });
+    var mee = cellen.filter(function(c) {
+      return c && c.meetelt;
+    }).length;
+    var aanw = cellen.filter(function(c) {
+      return c && c.telt;
+    }).length;
+    var buiten = cellen.filter(function(c) {
+      return c && !c.meetelt;
+    }).length;
+    return {
+      speler: s,
+      cellen,
+      aanw,
+      meegedaan: mee,
+      buiten,
+      pct: mee ? Math.round(aanw / mee * 100) : null
+    };
+  }).filter(function(r) {
+    return r.meegedaan > 0 || r.buiten > 0;
+  });
+  var maxMee = rijen.reduce(function(m, r) {
+    return Math.max(m, r.meegedaan);
+  }, 0);
+  var drempel = Math.max(2, Math.ceil(maxMee / 2));
+  rijen.forEach(function(r) {
+    r.weinigBasis = r.meegedaan < drempel;
+  });
+  rijen.sort(function(a, b) {
+    if (a.weinigBasis !== b.weinigBasis) return a.weinigBasis ? 1 : -1;
+    var pa = a.pct === null ? -1 : a.pct, pb = b.pct === null ? -1 : b.pct;
+    if (pb !== pa) return pb - pa;
+    return b.meegedaan - a.meegedaan;
+  });
+  var perKolom = gebeurtenissen.map(function(g, i) {
+    var aanw = 0, tot = 0;
+    rijen.forEach(function(r) {
+      var c = r.cellen[i];
+      if (!c || !c.meetelt) return;
+      tot++;
+      if (c.telt) aanw++;
+    });
+    return { aanwezig: aanw, totaal: tot, pct: tot ? Math.round(aanw / tot * 100) : null };
+  });
+  var totaalAanw = rijen.reduce(function(s, r) {
+    return s + r.aanw;
+  }, 0);
+  var totaalMee = rijen.reduce(function(s, r) {
+    return s + r.meegedaan;
+  }, 0);
+  var totaalBuiten = rijen.reduce(function(s, r) {
+    return s + r.buiten;
+  }, 0);
+  return {
+    rijen,
+    perKolom,
+    buiten: totaalBuiten,
+    gemiddelde: totaalMee ? Math.round(totaalAanw / totaalMee * 100) : null
+  };
+}
+const AANWEZIG_KEUZES = [
+  {
+    id: "aanwezig",
+    label: "Aanwezig",
+    letter: "P",
+    kort: "Aanw.",
+    telt: true,
+    kleur: "#16a34a",
+    op: "#0b2f16",
+    vlak: "#dcfce7",
+    icoon: "fa-solid fa-check",
+    snel: true
+  },
+  {
+    id: "telaat",
+    label: "Te laat",
+    letter: "TL",
+    kort: "Te laat",
+    telt: true,
+    kleur: "#84cc16",
+    op: "#1f3007",
+    vlak: "#ecfccb",
+    icoon: "fa-solid fa-clock"
+  },
+  {
+    id: "afwezig",
+    label: "Afgemeld",
+    letter: "A+",
+    kort: "Afgem.",
+    kleur: "#e08a0b",
+    op: "#3d2402",
+    vlak: "#fef3c7",
+    icoon: "fa-solid fa-comment-dots"
+  },
+  {
+    id: "geenbericht",
+    label: "Niet afgemeld",
+    letter: "A\u2212",
+    kort: "Geen ber.",
+    kleur: "#991b1b",
+    op: "#ffffff",
+    vlak: "#fee2e2",
+    icoon: "fa-solid fa-xmark"
+  },
+  {
+    id: "ziek",
+    label: "Ziek",
+    letter: "Z",
+    kort: "Ziek",
+    kleur: "#eab308",
+    op: "#3b2c05",
+    vlak: "#fef9c3",
+    icoon: "fa-solid fa-head-side-cough"
+  },
+  {
+    id: "geblesseerd",
+    label: "Blessure",
+    letter: "B",
+    kort: "Blessu.",
+    kleur: "#6b7280",
+    op: "#ffffff",
+    vlak: "#f1f3f5",
+    icoon: "fa-solid fa-hospital-symbol"
+  },
+  {
+    id: "werk",
+    label: "Werk",
+    letter: "W",
+    kort: "Werk",
+    kleur: "#2563eb",
+    op: "#ffffff",
+    vlak: "#dbeafe",
+    icoon: "fa-solid fa-briefcase"
+  },
+  /* telt:true — zie de uitleg bij OPGAVE_KEUZES. Wie voor een ander
+     elftal van de club speelt of traint, is niet afwezig. */
+  {
+    id: "uitgeleend",
+    label: "Uitgeleend",
+    letter: "U",
+    kort: "Uitgel.",
+    telt: true,
+    kleur: "#7c3aed",
+    op: "#ffffff",
+    vlak: "#f3e8ff",
+    icoon: "fa-solid fa-right-left"
+  }
+];
+function aanwezigInfo(id) {
+  return AANWEZIG_KEUZES.filter(function(k) {
+    return k.id === id;
+  })[0] || AANWEZIG_KEUZES[0];
+}
+function teltAlsAanwezig(status) {
+  var k = AANWEZIG_KEUZES.filter(function(x) {
+    return x.id === status;
+  })[0];
+  return !!(k && k.telt);
+}
+function opkomstVan(training, afwezigheden) {
+  var lijst = training && training.aanwezigheid || [];
+  if (!lijst.length) return null;
+  var aanw = 0, tot = 0;
+  lijst.forEach(function(a) {
+    var erbij = teltAlsAanwezig(a.status);
+    if (!erbij) {
+      var per = afwezigheidOp(afwezigheden, a.spelerId, training.datum);
+      if (per && !afwezigheidTeltMee(per)) return;
+    }
+    tot++;
+    if (erbij) aanw++;
+  });
+  if (!tot) return null;
+  return { aanwezig: aanw, totaal: tot, pct: Math.round(aanw / tot * 100) };
+}
+const AFWEZIGHEID_SOORTEN = [
+  {
+    id: "blessure",
+    label: "Blessure",
+    letter: "B",
+    noemer: false,
+    icoon: "fa-solid fa-hospital-symbol",
+    kleur: "#6b7280",
+    op: "#ffffff",
+    vlak: "#f1f3f5"
+  },
+  {
+    id: "ziekte",
+    label: "Langdurig ziek",
+    letter: "Z",
+    noemer: false,
+    icoon: "fa-solid fa-head-side-cough",
+    kleur: "#a16207",
+    op: "#ffffff",
+    vlak: "#fef9c3"
+  },
+  {
+    id: "schorsing",
+    label: "Schorsing",
+    letter: "S",
+    noemer: false,
+    icoon: "fa-solid fa-gavel",
+    kleur: "#7f1d1d",
+    op: "#ffffff",
+    vlak: "#fee2e2"
+  },
+  {
+    id: "vakantie",
+    label: "Vakantie",
+    letter: "V",
+    noemer: true,
+    icoon: "fa-solid fa-umbrella-beach",
+    kleur: "#b45309",
+    op: "#ffffff",
+    vlak: "#fef3c7"
+  },
+  {
+    id: "werk",
+    label: "Werk",
+    letter: "W",
+    noemer: true,
+    icoon: "fa-solid fa-briefcase",
+    kleur: "#2563eb",
+    op: "#ffffff",
+    vlak: "#dbeafe"
+  },
+  {
+    id: "school",
+    label: "School of stage",
+    letter: "St",
+    noemer: true,
+    icoon: "fa-solid fa-graduation-cap",
+    kleur: "#6d28d9",
+    op: "#ffffff",
+    vlak: "#ede9fe"
+  },
+  {
+    id: "overig",
+    label: "Overig",
+    letter: "O",
+    noemer: true,
+    icoon: "fa-solid fa-circle-info",
+    kleur: "#475569",
+    op: "#ffffff",
+    vlak: "#f1f5f9"
+  }
+];
+const LEEG_AFWEZIGHEID = { id: null, spelerId: null, soort: "blessure", vanaf: "", tot: "", reden: "", teltMee: null };
+function afwezigheidSoort(id) {
+  return AFWEZIGHEID_SOORTEN.filter(function(s) {
+    return s.id === id;
+  })[0] || AFWEZIGHEID_SOORTEN[0];
+}
+function afwezigheidTeltMee(rec) {
+  if (rec && (rec.teltMee === true || rec.teltMee === false)) return rec.teltMee;
+  return afwezigheidSoort(rec && rec.soort).noemer;
+}
+function inAfwezigheid(rec, datum) {
+  if (!rec) return false;
+  var d = parseerDatum(datum);
+  if (!d) return false;
+  var van = parseerDatum(rec.vanaf);
+  if (!van) return false;
+  var tot = rec.tot ? parseerDatum(rec.tot) : null;
+  if (d < van) return false;
+  if (tot && d > tot) return false;
+  return true;
+}
+function afwezigheidOp(afwezigheden, spelerId, datum) {
+  var raak = (afwezigheden || []).filter(function(r) {
+    return r.spelerId === spelerId && inAfwezigheid(r, datum);
+  });
+  if (!raak.length) return null;
+  raak.sort(function(a, b) {
+    return (afwezigheidTeltMee(a) ? 1 : 0) - (afwezigheidTeltMee(b) ? 1 : 0);
+  });
+  return raak[0];
+}
+function afwezigheidFase(rec, vandaag) {
+  var nu = vandaag || vandaagISO();
+  if (inAfwezigheid(rec, nu)) return "nu";
+  var van = parseerDatum(rec.vanaf), d = parseerDatum(nu);
+  if (van && d && d < van) return "komt";
+  return "voorbij";
+}
+function afwezigheidDagen(rec) {
+  var van = parseerDatum(rec.vanaf), tot = rec.tot ? parseerDatum(rec.tot) : null;
+  if (!van || !tot) return null;
+  return Math.round((tot - van) / 864e5) + 1;
+}
+function afwezigheidResterend(rec, vandaag) {
+  var tot = rec.tot ? parseerDatum(rec.tot) : null;
+  if (!tot) return null;
+  var d = parseerDatum(vandaag || vandaagISO());
+  if (!d) return null;
+  return Math.max(0, Math.round((tot - d) / 864e5));
+}
+function afwezigheidPeriodeTekst(rec) {
+  if (!rec || !rec.vanaf) return "";
+  var van = formateerDatum(rec.vanaf);
+  if (!rec.tot) return "vanaf " + van;
+  return van + " \u2013 " + formateerDatum(rec.tot);
+}
 const { useState, useEffect, useRef } = React;
 const initialen = (naam) => naam ? naam.trim().split(" ").map((d) => d[0]).slice(0, 2).join("").toUpperCase() : "?";
 function teamKort(naam) {
@@ -30096,141 +30474,6 @@ function OnderdeelFormulier({ onderdeel, onOpslaan, onSluiten }) {
     setBewaarInBieb(!bewaarInBieb);
   } }, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-check" })), /* @__PURE__ */ React.createElement("span", { style: { fontSize: 13, fontWeight: 600, fontFamily: "'Helvetica Neue',Arial" } }, "Ook bewaren in mijn oefeningenbibliotheek")), /* @__PURE__ */ React.createElement("div", { className: "modal-voet" }, /* @__PURE__ */ React.createElement("button", { className: "knop lijn", style: { flex: 1, justifyContent: "center" }, onClick: onSluiten }, "Annuleren"), /* @__PURE__ */ React.createElement("button", { className: "knop", style: { flex: 2, justifyContent: "center" }, onClick: opslaan }, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-check" }), " Onderdeel opslaan"))));
 }
-const PRESENTIE_SOORTEN = [
-  { id: "alles", label: "Alles", icoon: "fa-solid fa-layer-group" },
-  { id: "training", label: "Trainingen", icoon: "fa-solid fa-person-running", kleur: "var(--blauw-licht)" },
-  { id: "wedstrijd", label: "Wedstrijden", icoon: "fa-solid fa-futbol", kleur: "var(--blauw)" },
-  { id: "activiteit", label: "Activiteiten", icoon: "fa-solid fa-calendar-day", kleur: "#8b5cf6" }
-];
-function presentieUitOpstelling(wedstrijd) {
-  return (wedstrijd.opstelling || []).map(function(r) {
-    var st = r.spelStatus || "basis";
-    return {
-      spelerId: r.spelerId,
-      naam: r.naam,
-      status: st === "afwezig" ? "afwezig" : "aanwezig"
-    };
-  });
-}
-function presentieGebeurtenissen(wedstrijden, trainingen, activiteiten) {
-  var uit = [];
-  (trainingen || []).forEach(function(t2) {
-    if (!(t2.aanwezigheid || []).length) return;
-    uit.push({
-      id: "t" + t2.id,
-      soort: "training",
-      datum: t2.datum,
-      titel: trainingTitel(t2),
-      sub: t2.locatie || "",
-      lijst: t2.aanwezigheid
-    });
-  });
-  (wedstrijden || []).forEach(function(w) {
-    if (w.status !== "gespeeld") return;
-    var lijst = (w.aanwezigheid || []).length ? w.aanwezigheid : presentieUitOpstelling(w);
-    if (!lijst.length) return;
-    uit.push({
-      id: "w" + w.id,
-      soort: "wedstrijd",
-      datum: w.datum,
-      titel: "vs. " + (w.tegenstander || "tegenstander"),
-      sub: w.thuis ? "Thuis" : "Uit",
-      lijst,
-      afgeleid: !(w.aanwezigheid || []).length
-    });
-  });
-  (activiteiten || []).forEach(function(a) {
-    if (!(a.aanwezigheid || []).length) return;
-    uit.push({
-      id: "a" + a.id,
-      soort: "activiteit",
-      datum: a.datum,
-      titel: a.titel,
-      sub: activiteitSoort(a.soort).label,
-      lijst: a.aanwezigheid
-    });
-  });
-  return uit.sort(function(x, y) {
-    return new Date(x.datum) - new Date(y.datum);
-  });
-}
-function presentieTabel(spelers, gebeurtenissen, afwezigheden) {
-  var rijen = sorteerOpLinie((spelers || []).slice()).map(function(s) {
-    var cellen = gebeurtenissen.map(function(g) {
-      var r = g.lijst.filter(function(a) {
-        return a.spelerId === s.id;
-      })[0];
-      var hand = r ? aanwezigInfo(r.status) : null;
-      if (hand && hand.telt) return Object.assign({}, hand, { meetelt: true, periode: null });
-      var per = afwezigheidOp(afwezigheden, s.id, g.datum);
-      if (per) {
-        return Object.assign(
-          {},
-          afwezigheidSoort(per.soort),
-          { telt: false, periode: per, meetelt: afwezigheidTeltMee(per) }
-        );
-      }
-      return hand ? Object.assign({}, hand, { meetelt: true, periode: null }) : null;
-    });
-    var mee = cellen.filter(function(c) {
-      return c && c.meetelt;
-    }).length;
-    var aanw = cellen.filter(function(c) {
-      return c && c.telt;
-    }).length;
-    var buiten = cellen.filter(function(c) {
-      return c && !c.meetelt;
-    }).length;
-    return {
-      speler: s,
-      cellen,
-      aanw,
-      meegedaan: mee,
-      buiten,
-      pct: mee ? Math.round(aanw / mee * 100) : null
-    };
-  }).filter(function(r) {
-    return r.meegedaan > 0 || r.buiten > 0;
-  });
-  var maxMee = rijen.reduce(function(m, r) {
-    return Math.max(m, r.meegedaan);
-  }, 0);
-  var drempel = Math.max(2, Math.ceil(maxMee / 2));
-  rijen.forEach(function(r) {
-    r.weinigBasis = r.meegedaan < drempel;
-  });
-  rijen.sort(function(a, b) {
-    if (a.weinigBasis !== b.weinigBasis) return a.weinigBasis ? 1 : -1;
-    var pa = a.pct === null ? -1 : a.pct, pb = b.pct === null ? -1 : b.pct;
-    if (pb !== pa) return pb - pa;
-    return b.meegedaan - a.meegedaan;
-  });
-  var perKolom = gebeurtenissen.map(function(g, i) {
-    var aanw = 0, tot = 0;
-    rijen.forEach(function(r) {
-      var c = r.cellen[i];
-      if (!c || !c.meetelt) return;
-      tot++;
-      if (c.telt) aanw++;
-    });
-    return { aanwezig: aanw, totaal: tot, pct: tot ? Math.round(aanw / tot * 100) : null };
-  });
-  var totaalAanw = rijen.reduce(function(s, r) {
-    return s + r.aanw;
-  }, 0);
-  var totaalMee = rijen.reduce(function(s, r) {
-    return s + r.meegedaan;
-  }, 0);
-  var totaalBuiten = rijen.reduce(function(s, r) {
-    return s + r.buiten;
-  }, 0);
-  return {
-    rijen,
-    perKolom,
-    buiten: totaalBuiten,
-    gemiddelde: totaalMee ? Math.round(totaalAanw / totaalMee * 100) : null
-  };
-}
 function exporteerPresentiePDF(gebeurtenissen, tabel, filterLabel) {
   if (!window.jspdf) {
     meldFout("PDF-bibliotheek nog niet geladen. Probeer het zo nog eens.");
@@ -30531,252 +30774,9 @@ const OPGAVE_KEUZES = [
   { id: "uitgeleend", label: "Uitgeleend", kort: "Uitgel.", kleur: "#7c3aed", vlak: "#f3e8ff", icoon: "fa-solid fa-right-left" },
   { id: "onbekend", label: "Onbekend", kort: "Geen", kleur: null, vlak: null, icoon: "fa-regular fa-circle" }
 ];
-const AANWEZIG_KEUZES = [
-  {
-    id: "aanwezig",
-    label: "Aanwezig",
-    letter: "P",
-    kort: "Aanw.",
-    telt: true,
-    kleur: "#16a34a",
-    op: "#0b2f16",
-    vlak: "#dcfce7",
-    icoon: "fa-solid fa-check",
-    snel: true
-  },
-  {
-    id: "telaat",
-    label: "Te laat",
-    letter: "TL",
-    kort: "Te laat",
-    telt: true,
-    kleur: "#84cc16",
-    op: "#1f3007",
-    vlak: "#ecfccb",
-    icoon: "fa-solid fa-clock"
-  },
-  {
-    id: "afwezig",
-    label: "Afgemeld",
-    letter: "A+",
-    kort: "Afgem.",
-    kleur: "#e08a0b",
-    op: "#3d2402",
-    vlak: "#fef3c7",
-    icoon: "fa-solid fa-comment-dots"
-  },
-  {
-    id: "geenbericht",
-    label: "Niet afgemeld",
-    letter: "A\u2212",
-    kort: "Geen ber.",
-    kleur: "#991b1b",
-    op: "#ffffff",
-    vlak: "#fee2e2",
-    icoon: "fa-solid fa-xmark"
-  },
-  {
-    id: "ziek",
-    label: "Ziek",
-    letter: "Z",
-    kort: "Ziek",
-    kleur: "#eab308",
-    op: "#3b2c05",
-    vlak: "#fef9c3",
-    icoon: "fa-solid fa-head-side-cough"
-  },
-  {
-    id: "geblesseerd",
-    label: "Blessure",
-    letter: "B",
-    kort: "Blessu.",
-    kleur: "#6b7280",
-    op: "#ffffff",
-    vlak: "#f1f3f5",
-    icoon: "fa-solid fa-hospital-symbol"
-  },
-  {
-    id: "werk",
-    label: "Werk",
-    letter: "W",
-    kort: "Werk",
-    kleur: "#2563eb",
-    op: "#ffffff",
-    vlak: "#dbeafe",
-    icoon: "fa-solid fa-briefcase"
-  },
-  /* telt:true — zie de uitleg bij OPGAVE_KEUZES. Wie voor een ander
-     elftal van de club speelt of traint, is niet afwezig. */
-  {
-    id: "uitgeleend",
-    label: "Uitgeleend",
-    letter: "U",
-    kort: "Uitgel.",
-    telt: true,
-    kleur: "#7c3aed",
-    op: "#ffffff",
-    vlak: "#f3e8ff",
-    icoon: "fa-solid fa-right-left"
-  }
-];
-function aanwezigInfo(id) {
-  return AANWEZIG_KEUZES.filter(function(k) {
-    return k.id === id;
-  })[0] || AANWEZIG_KEUZES[0];
-}
-function teltAlsAanwezig(status) {
-  var k = AANWEZIG_KEUZES.filter(function(x) {
-    return x.id === status;
-  })[0];
-  return !!(k && k.telt);
-}
-function opkomstVan(training, afwezigheden) {
-  var lijst = training && training.aanwezigheid || [];
-  if (!lijst.length) return null;
-  var aanw = 0, tot = 0;
-  lijst.forEach(function(a) {
-    var erbij = teltAlsAanwezig(a.status);
-    if (!erbij) {
-      var per = afwezigheidOp(afwezigheden, a.spelerId, training.datum);
-      if (per && !afwezigheidTeltMee(per)) return;
-    }
-    tot++;
-    if (erbij) aanw++;
-  });
-  if (!tot) return null;
-  return { aanwezig: aanw, totaal: tot, pct: Math.round(aanw / tot * 100) };
-}
-const AFWEZIGHEID_SOORTEN = [
-  {
-    id: "blessure",
-    label: "Blessure",
-    letter: "B",
-    noemer: false,
-    icoon: "fa-solid fa-hospital-symbol",
-    kleur: "#6b7280",
-    op: "#ffffff",
-    vlak: "#f1f3f5"
-  },
-  {
-    id: "ziekte",
-    label: "Langdurig ziek",
-    letter: "Z",
-    noemer: false,
-    icoon: "fa-solid fa-head-side-cough",
-    kleur: "#a16207",
-    op: "#ffffff",
-    vlak: "#fef9c3"
-  },
-  {
-    id: "schorsing",
-    label: "Schorsing",
-    letter: "S",
-    noemer: false,
-    icoon: "fa-solid fa-gavel",
-    kleur: "#7f1d1d",
-    op: "#ffffff",
-    vlak: "#fee2e2"
-  },
-  {
-    id: "vakantie",
-    label: "Vakantie",
-    letter: "V",
-    noemer: true,
-    icoon: "fa-solid fa-umbrella-beach",
-    kleur: "#b45309",
-    op: "#ffffff",
-    vlak: "#fef3c7"
-  },
-  {
-    id: "werk",
-    label: "Werk",
-    letter: "W",
-    noemer: true,
-    icoon: "fa-solid fa-briefcase",
-    kleur: "#2563eb",
-    op: "#ffffff",
-    vlak: "#dbeafe"
-  },
-  {
-    id: "school",
-    label: "School of stage",
-    letter: "St",
-    noemer: true,
-    icoon: "fa-solid fa-graduation-cap",
-    kleur: "#6d28d9",
-    op: "#ffffff",
-    vlak: "#ede9fe"
-  },
-  {
-    id: "overig",
-    label: "Overig",
-    letter: "O",
-    noemer: true,
-    icoon: "fa-solid fa-circle-info",
-    kleur: "#475569",
-    op: "#ffffff",
-    vlak: "#f1f5f9"
-  }
-];
-const LEEG_AFWEZIGHEID = { id: null, spelerId: null, soort: "blessure", vanaf: "", tot: "", reden: "", teltMee: null };
-function afwezigheidSoort(id) {
-  return AFWEZIGHEID_SOORTEN.filter(function(s) {
-    return s.id === id;
-  })[0] || AFWEZIGHEID_SOORTEN[0];
-}
-function afwezigheidTeltMee(rec) {
-  if (rec && (rec.teltMee === true || rec.teltMee === false)) return rec.teltMee;
-  return afwezigheidSoort(rec && rec.soort).noemer;
-}
-function inAfwezigheid(rec, datum) {
-  if (!rec) return false;
-  var d = parseerDatum(datum);
-  if (!d) return false;
-  var van = parseerDatum(rec.vanaf);
-  if (!van) return false;
-  var tot = rec.tot ? parseerDatum(rec.tot) : null;
-  if (d < van) return false;
-  if (tot && d > tot) return false;
-  return true;
-}
-function afwezigheidOp(afwezigheden, spelerId, datum) {
-  var raak = (afwezigheden || []).filter(function(r) {
-    return r.spelerId === spelerId && inAfwezigheid(r, datum);
-  });
-  if (!raak.length) return null;
-  raak.sort(function(a, b) {
-    return (afwezigheidTeltMee(a) ? 1 : 0) - (afwezigheidTeltMee(b) ? 1 : 0);
-  });
-  return raak[0];
-}
 function vandaagISO() {
   var d = /* @__PURE__ */ new Date();
   return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
-}
-function afwezigheidFase(rec, vandaag) {
-  var nu = vandaag || vandaagISO();
-  if (inAfwezigheid(rec, nu)) return "nu";
-  var van = parseerDatum(rec.vanaf), d = parseerDatum(nu);
-  if (van && d && d < van) return "komt";
-  return "voorbij";
-}
-function afwezigheidDagen(rec) {
-  var van = parseerDatum(rec.vanaf), tot = rec.tot ? parseerDatum(rec.tot) : null;
-  if (!van || !tot) return null;
-  return Math.round((tot - van) / 864e5) + 1;
-}
-function afwezigheidResterend(rec, vandaag) {
-  var tot = rec.tot ? parseerDatum(rec.tot) : null;
-  if (!tot) return null;
-  var d = parseerDatum(vandaag || vandaagISO());
-  if (!d) return null;
-  return Math.max(0, Math.round((tot - d) / 864e5));
-}
-function afwezigheidPeriodeTekst(rec) {
-  if (!rec || !rec.vanaf) return "";
-  var van = formateerDatum(rec.vanaf);
-  if (!rec.tot) return "vanaf " + van;
-  return van + " \u2013 " + formateerDatum(rec.tot);
 }
 function OefeningFormulier({ oefening, onOpslaan, onSluiten }) {
   const [form, setForm] = useState(Object.assign({}, LEEG_OEFENING, oefening || {}));
