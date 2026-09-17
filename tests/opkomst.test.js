@@ -98,6 +98,21 @@ function knipConstOpkomst(naam) { return knipConstUit(regelsOpkomst, "src/domein
    knippen in plaats van de hele component na te bouwen. */
 function knipRegel(re, wat) { return regels[eis(re, wat)]; }
 
+/* Van een startregel tot en met een eindregel, allebei op tekst
+   herkend — voor rekenblokjes die geen eigen functie hebben en ook
+   niet netjes op een sluitende "  }" eindigen (aanwPct in
+   TeamStatistieken, het opkomst-blokje in Dashboard). Net als
+   knipBlokUit hierboven, maar met een eigen eindregel in plaats van
+   de vaste "  }", omdat deze twee blokken niet allebei in een
+   if-blok met diezelfde inspringing eindigen. */
+function knipVanTotUit(bronRegels, bronNaam, startRe, eindRe, wat) {
+  const a = eisIn(bronRegels, bronNaam, startRe, wat);
+  let e = a; while (e < bronRegels.length && !eindRe.test(bronRegels[e])) e++;
+  if (e >= bronRegels.length) throw new Error("eindregel niet gevonden voor " + wat + " in " + bronNaam);
+  return bronRegels.slice(a, e + 1).join("\n");
+}
+function knipVanTot(startRe, eindRe, wat) { return knipVanTotUit(regels, "src/app.jsx", startRe, eindRe, wat); }
+
 /* Eén blok binnen een grotere functie, van een gegeven startregel tot
    de eerstvolgende regel die precies "  }" is (twee spaties, dan de
    sluitende accolade — de inspringing van het if-blok eromheen). Voor
@@ -160,6 +175,21 @@ try {
     "return trainPct;\n};"
   );
 
+  /* aanwPct — TeamStatistieken (src/app.jsx). Sinds de samenvoeging
+     (stap C, 17 sep. 2026) gewogen: alle aanwezig/totaal van
+     opkomstVan eerst bij elkaar optellen, dan pas delen. Ongewijzigd
+     overgenomen, verpakt in een functie die dezelfde `trainingen` en
+     `afwezigheden` als parameter neemt. */
+  const AANWPCT_BLOK = knipVanTot(
+    /^\s*let totAanwT = 0, totTotT = 0;\s*$/,
+    /^\s*const aanwPct = totTotT \? Math\.round/,
+    "de aanwPct-berekening in TeamStatistieken");
+  eval(
+    "global.aanwPctBerekening = function(trainingen, afwezigheden) {\n" +
+    AANWPCT_BLOK + "\n" +
+    "return aanwPct;\n};"
+  );
+
   /* De vierde variant: het trainingsopkomst-blokje uit spelerInzichten
      (src/domein/statistieken.js). Ongewijzigd overgenomen, inclusief
      de if (metOpkomst.length >= 4)-drempel die in de app ook geldt —
@@ -182,7 +212,7 @@ try {
 
 const NAMEN = ["opkomstVan", "presentieTabel", "presentieGebeurtenissen", "teltAlsAanwezig",
                "afwezigheidOp", "afwezigheidTeltMee", "afwezigheidSoort", "trainPctBerekening",
-               "trainingsopkomstBerekening"];
+               "trainingsopkomstBerekening", "aanwPctBerekening"];
 const missen = NAMEN.filter((n) => { try { return typeof eval(n) !== "function"; } catch (e) { return true; } });
 if (missen.length) {
   console.log("\nDeze functies staan niet meer waar deze test ze zoekt:");
@@ -346,6 +376,39 @@ ok("trainPct op dezelfde vulling telt e5 wél mee in de noemer: 4 van de 5, dus 
    TRAINPCT_E, 80);
 okAnders("spelerInzichten (100%) en trainPct (80%) verschillen dus ook hier",
    INZICHT_E.pct, TRAINPCT_E);
+
+/* ══════════════════════════════════════════════════════════════
+   (e) aanwPct (TeamStatistieken, src/app.jsx) — na de samenvoeging
+       (stap C) gewogen: alle meetellende aanwezig/totaal eerst bij
+       elkaar optellen, dan pas delen. Dat is een ANDER getal dan het
+       gemiddelde van de losse trainingspercentages, en dat verschil
+       moet met opzet groot genoeg zijn om niet toevallig samen te
+       vallen.
+   Training GROOT: 14 spelers, 7 aanwezig (opkomstVan-pct 50%).
+   Training KLEIN:  4 spelers, 4 aanwezig (opkomstVan-pct 100%).
+     Gewogen:                round((7+4)/(14+4)*100)  = round(61.1) = 61
+     Gemiddelde van percentages (de OUDE manier): round((50+100)/2) = 75
+   Die twee horen te verschillen — anders bewijst deze test niets.
+   ══════════════════════════════════════════════════════════════ */
+groep("(e) aanwPct — gewogen na de samenvoeging, niet het gemiddelde van percentages");
+
+const TRAINING_GROOT = {id: "tg1", datum: "2026-09-01", aanwezigheid:
+  Array.from({length: 14}, function(_, i){ return {spelerId: "sg"+i, status: i<7 ? "aanwezig" : "geenbericht"}; })};
+const TRAINING_KLEIN = {id: "tk1", datum: "2026-09-08", aanwezigheid:
+  Array.from({length: 4}, function(_, i){ return {spelerId: "sk"+i, status: "aanwezig"}; })};
+
+ok("opkomstVan op de grote training: 7 van de 14, dus 50%",
+   opkomstVan(TRAINING_GROOT, []), {aanwezig: 7, totaal: 14, pct: 50});
+ok("opkomstVan op de kleine training: 4 van de 4, dus 100%",
+   opkomstVan(TRAINING_KLEIN, []), {aanwezig: 4, totaal: 4, pct: 100});
+
+const AANWPCT_NIEUW = aanwPctBerekening([TRAINING_GROOT, TRAINING_KLEIN], []);
+ok("aanwPct telt (7+4) aanwezig over (14+4) totaal op: round(11/18*100) = 61 procent",
+   AANWPCT_NIEUW, 61);
+
+const GEMIDDELDE_VAN_PERCENTAGES = Math.round((50 + 100) / 2);
+okAnders("het oude gemiddelde-van-percentages (75%) is dus een ander getal dan het nieuwe gewogen resultaat (61%)",
+   AANWPCT_NIEUW, GEMIDDELDE_VAN_PERCENTAGES);
 
 /* ── uitslag ────────────────────────────────────────────────── */
 console.log("\n" + goed + " geslaagd, " + fout + " gefaald");

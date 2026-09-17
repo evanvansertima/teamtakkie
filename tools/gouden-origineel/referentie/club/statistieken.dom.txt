@@ -1173,7 +1173,7 @@
             <div class="stat-raster-3">
               <div class="stat-pill">
                 <div class="stat-pill-getal">
-                  "61"
+                  "81"
                   "%"
                 <div class="stat-pill-label">
                   "Trainings­opkomst"

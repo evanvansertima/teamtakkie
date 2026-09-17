@@ -32373,14 +32373,15 @@ function TeamStatistieken() {
     }).length;
     return o;
   }, {});
-  let aanwPct = 0;
-  if (trainingen.length > 0) {
-    const totRatio = trainingen.reduce(function(s, t2) {
-      var o = opkomstVan(t2, afwezigheden);
-      return s + (o ? o.aanwezig / o.totaal : 0);
-    }, 0);
-    aanwPct = Math.round(totRatio / trainingen.length * 100);
-  }
+  let totAanwT = 0, totTotT = 0;
+  trainingen.forEach(function(t2) {
+    var o = opkomstVan(t2, afwezigheden);
+    if (o) {
+      totAanwT += o.aanwezig;
+      totTotT += o.totaal;
+    }
+  });
+  const aanwPct = totTotT ? Math.round(totAanwT / totTotT * 100) : 0;
   return /* @__PURE__ */ React.createElement("div", null, (function() {
     var mots = motsRanglijst(spelers, wedstrijden);
     if (!mots.length) return null;

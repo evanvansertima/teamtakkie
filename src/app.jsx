@@ -24331,13 +24331,19 @@ function TeamStatistieken() {
     return o;
   }, {});
 
-  let aanwPct = 0;
-  if (trainingen.length>0) {
-    const totRatio = trainingen.reduce(function(s,t){
-      var o = opkomstVan(t, afwezigheden); return s + (o ? o.aanwezig/o.totaal : 0);
-    },0);
-    aanwPct = Math.round(totRatio/trainingen.length*100);
-  }
+  /* Gewogen, niet het gemiddelde van percentages (besluit Evan,
+     17 sep. 2026): alle meetellende aanwezig/totaal over alle
+     trainingen eerst bij elkaar optellen, dan pas delen. Een training
+     met een volle groep weegt zo zwaarder dan een avond met drie man.
+     opkomstVan regelt zelf al dat een lege presentielijst en een
+     niet-meetellende afwezigheidsperiode buiten teller én noemer
+     vallen — hier alleen nog optellen. */
+  let totAanwT = 0, totTotT = 0;
+  trainingen.forEach(function(t){
+    var o = opkomstVan(t, afwezigheden);
+    if (o) { totAanwT += o.aanwezig; totTotT += o.totaal; }
+  });
+  const aanwPct = totTotT ? Math.round(totAanwT/totTotT*100) : 0;
   return (
     <div>
       {/* Resultaten */}
