@@ -93,8 +93,13 @@ const DOMEIN_VOLGORDE = ["boetepot.js", "wedstrijden.js", "statistieken.js", "op
    (gedeeld.jsx) is de enige die nu bestaat; de overige acht
    schermmodules komen in latere, aparte stappen. Een module die nog
    niet bestaat wordt net als bij kern en domein overgeslagen, zodat
-   dit incrementeel kan groeien zonder dat bouw.js breekt. */
-const SCHERM_VOLGORDE = ["gedeeld.jsx"];
+   dit incrementeel kan groeien zonder dat bouw.js breekt.
+
+   "onboarding.jsx" (P4 stap 1, 17 september 2026) is de tweede
+   toevoeging: de kleinste en meest geïsoleerde van de acht
+   schermmodules (OnboardingSchil, ServerScherm, AanmeldScherm,
+   ClubScherm, TeamScherm) — zie docs/p4-stappenplan.md §1. */
+const SCHERM_VOLGORDE = ["gedeeld.jsx", "onboarding.jsx"];
 
 /* Het merkteken in src/index.html waar de gebouwde app terechtkomt.
    Bewust een commentaarregel en geen los token: zo blijft het sjabloon

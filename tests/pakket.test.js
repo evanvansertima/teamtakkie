@@ -112,6 +112,18 @@ const licentieKeyRegel = (() => {
   throw new Error("const LICENTIE_KEY niet gevonden in src/kern/sleutels.js");
 })();
 
+/* Zelfde soort verhuizing, nu door P4 stap 1 (docs/p4-stappenplan.md):
+   TeamScherm — en daarmee één van de drie aanroepen van magNieuwTeam()
+   — verhuisde op 17 september 2026 van app.jsx naar
+   src/schermen/onboarding.jsx. De pakketlaag zelf (MODULES,
+   PAKKETTEN, magNieuwTeam() als functie) bleef in app.jsx staan; alleen
+   de plek waar hij wordt AANGEROEPEN ligt nu deels elders. Vandaar deze
+   tweede aparte bron, alleen gebruikt door de groep "magNieuwTeam wordt
+   ook echt gebruikt" verderop. */
+const ONBOARDING = path.join(__dirname, "..", "src", "schermen", "onboarding.jsx");
+const bronOnboarding = fs.readFileSync(ONBOARDING, "utf8");
+const regelsOnboarding = bronOnboarding.split("\n");
+
 /* Eén regel uit de app (de sleutelnaam staat los van het blok) */
 function knipRegel(re, wat) { return regels[eis(re, wat)]; }
 
@@ -292,8 +304,10 @@ const okAls = (ids, naam, echtFn, verwacht) => {
 };
 
 /* De regels waarop een naam echt wórdt aangeroepen: niet de eigen
-   definitieregel, en niet een vermelding in een stuk toelichting. */
-const aanroepen = (naam) => regels
+   definitieregel, en niet een vermelding in een stuk toelichting.
+   Standaard alleen app.jsx; geef er een andere regelset aan (zoals
+   regelsOnboarding) om diezelfde vraag in een schermmodule te stellen. */
+const aanroepen = (naam, uitRegels) => (uitRegels || regels)
   .map((r, i) => ({nr: i + 1, tekst: r}))
   .filter((r) =>
     new RegExp("\\b" + naam + "\\s*\\(").test(r.tekst) &&
@@ -512,15 +526,20 @@ leeg(); opPakket("free");
 ok("zonder teams op het apparaat mag je beginnen", magNieuwTeam(), true);
 
 groep("magNieuwTeam wordt ook echt gebruikt — de drie plekken uit het plan");
-const nieuwTeamPlekken = aanroepen("magNieuwTeam");
-ok("er zijn drie aanroepen", nieuwTeamPlekken.length, 3);
-console.log("        regels: " + nieuwTeamPlekken.join(", "));
+/* Sinds P4 stap 1 zit één van de drie ("het aanmaakscherm") in
+   TeamScherm, dat naar src/schermen/onboarding.jsx is verhuisd — zie
+   de aparte bron hierboven. De andere twee staan nog in app.jsx. */
+const nieuwTeamPlekkenApp = aanroepen("magNieuwTeam");
+const nieuwTeamPlekkenOnboarding = aanroepen("magNieuwTeam", regelsOnboarding);
+ok("er zijn drie aanroepen", nieuwTeamPlekkenApp.length + nieuwTeamPlekkenOnboarding.length, 3);
+console.log("        regels in app.jsx: " + nieuwTeamPlekkenApp.join(", ") +
+            "  —  in onboarding.jsx: " + nieuwTeamPlekkenOnboarding.join(", "));
 ok("de knop 'team toevoegen' vraagt het na",
    /if \(!magNieuwTeam\(\)\) return;/.test(bron), true);
 ok("het scherm verbergt de knop als het niet mag",
    /\{magNieuwTeam\(\) \? \(/.test(bron), true);
 ok("en het aanmaakscherm legt uit waaróm het niet mag",
-   /if \(!eerste && !magNieuwTeam\(\)\)/.test(bron), true);
+   /if \(!eerste && !magNieuwTeam\(\)\)/.test(bronOnboarding), true);
 
 /* ══ 8. waar het tabblad Ontwikkeling staat ══
    Het besluit noemt Ontwikkeling "een tabblad in Selectie". In de code
