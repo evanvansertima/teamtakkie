@@ -52,12 +52,13 @@ const regels = bron.split("\n");
 
 /* Sinds P3 stap 2 (professionaliseringsplan.md, 17 september 2026)
    staan WEDSTRIJD_SOORTEN/wedstrijdSoort/wedstrijdTelt/tellendeWedstrijden
-   niet meer in src/app.jsx maar in src/domein/wedstrijden.js.
-   berekenSpelerStats blijft voorlopig in src/app.jsx — die verhuist pas
-   in een latere stap (src/domein/statistieken.js) — en wordt dus nog
-   uit `regels` geknipt. */
+   niet meer in src/app.jsx maar in src/domein/wedstrijden.js. Sinds
+   stap 3 (dezelfde dag) staat berekenSpelerStats niet meer in src/app.jsx
+   maar in src/domein/statistieken.js. */
 const DOMEIN = path.join(__dirname, "..", "src", "domein", "wedstrijden.js");
 const regelsDomein = fs.readFileSync(DOMEIN, "utf8").split("\n");
+const DOMEIN_STAT = path.join(__dirname, "..", "src", "domein", "statistieken.js");
+const regelsStat = fs.readFileSync(DOMEIN_STAT, "utf8").split("\n");
 
 const zoekIn = (bronRegels, re) => { for (let i = 0; i < bronRegels.length; i++) if (re.test(bronRegels[i])) return i; return -1; };
 const eisIn = (bronRegels, bronNaam, re, wat) => {
@@ -74,6 +75,7 @@ function knipFunctieUit(bronRegels, bronNaam, naam) {
 }
 function knipFunctie(naam) { return knipFunctieUit(regels, "src/app.jsx", naam); }
 function knipFunctieDomein(naam) { return knipFunctieUit(regelsDomein, "src/domein/wedstrijden.js", naam); }
+function knipFunctieStat(naam) { return knipFunctieUit(regelsStat, "src/domein/statistieken.js", naam); }
 function knipConstUit(bronRegels, bronNaam, naam) {
   const a = eisIn(bronRegels, bronNaam, new RegExp("^const " + naam + " = \\["), "const " + naam);
   let e = a; while (e < bronRegels.length && !/^\];/.test(bronRegels[e])) e++;
@@ -87,7 +89,7 @@ try {
     knipFunctieDomein("wedstrijdSoort") + "\n" +
     knipFunctieDomein("wedstrijdTelt") + "\n" +
     knipFunctieDomein("tellendeWedstrijden") + "\n" +
-    knipFunctie("berekenSpelerStats")
+    knipFunctieStat("berekenSpelerStats")
   );
 } catch (e) {
   console.log("\nDe statistiekfuncties zijn niet uit src/app.jsx of src/domein/wedstrijden.js te knippen:");
@@ -134,7 +136,7 @@ ok("geen enkele kaart heeft nog een veld `soort`",
 ok("elke kaart heeft een id en een naam",
    alleKaarten.filter((k) => k.id && k.naam).length, 4);
 ok("de app leest kaarten op k.type — anders klopt de test hierboven niet",
-   /k\.type/.test(knipFunctie("berekenSpelerStats")), true);
+   /k\.type/.test(knipFunctieStat("berekenSpelerStats")), true);
 
 groep("Wat de app uit die kaarten rekent");
 ok("Bas Kolderhorst heeft twee gele kaarten", uitWed("s04").geelKaarten, 2);
