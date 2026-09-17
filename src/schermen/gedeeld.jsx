@@ -34,17 +34,27 @@
    scope (clubhuis.jsx laadt ná dit bestand), zie de toelichting onderin
    dit bestand bij "TOEGEVOEGD BIJ P4 STAP 6" voor de volledige uitleg,
    inclusief een aantal tenue-hulpfuncties die toen óók hier hadden
-   moeten staan en nu alsnog zijn toegevoegd. Ook `tenueTeller` (de
-   teller voor unieke
-   SVG-id's, gebruikt door TenueBeeld) blijft in src/app.jsx staan:
-   hij stond niet met naam in het stappenplan en verhuist daarom niet
-   mee in deze stap. Dat is functioneel geen probleem — het is een
-   top-level `let` die pas ná het laden van alle scripts gelezen
-   wordt (in TenueBeeld's renderfunctie, ruim na het inladen), maar
-   het betekent wel dat gedeeld.jsx voor dit ene detail leunt op iets
-   dat fysiek in app.jsx blijft staan.
+   moeten staan en nu alsnog zijn toegevoegd.
 
-   Zie docs/p4-stappenplan.md §0 en §3 voor de volledige redenering,
+   TOEGEVOEGD BIJ P4 STAP 7 (17 september 2026)
+   Twee stukken stonden sinds stap 0 nog fysiek in de opstellingen-zone
+   van src/app.jsx, met opzet niet meeverhuisd omdat ze niet met naam
+   in het stappenplan stonden — bij het narekenen voor stap 7 bleken ze
+   uitsluitend hier gebruikt te worden, en zijn nu alsnog verplaatst:
+   - `tenueTeller` (de teller voor unieke SVG-id's), vlak vóór
+     TenueBeeld hieronder — precies waar de toelichting hierboven al
+     op wees.
+   - POP_HUID, POP_HAAR, POP_VLAK, POP_KAPSEL en de functies
+     popGetal()/popDonker(), vlak vóór SpelerPop hieronder — het
+     tekengereedschap voor het willekeurige spelerpoppetje, dat al
+     sinds stap 0 alleen door SpelerPop hier wordt gebruikt.
+   Beide waren al die tijd functioneel geen probleem (function-
+   declaraties hoisten, en `let`/`const` op topniveau worden pas
+   gelezen ná het laden van alle scripts, in een renderfunctie) — dit
+   is dus een opruiming, geen gedragswijziging.
+
+   Zie docs/p4-stappenplan.md §0, §1 (stap 7) en §3 voor de volledige
+   redenering,
    inclusief waarom de plakvolgorde (SCHERM_VOLGORDE vóór de rest van
    src/app.jsx) hier de enige plek is waar volgorde in theorie zou
    kunnen uitmaken (const-hoisting geeft geen bruikbare waarde, in
@@ -375,6 +385,31 @@ const TENUE_MOUW_R = {x:87, y:12, b:25, h:42};
 const TENUE_BROEK_PAD = "M33 92 L87 92 L87 112 L83 132 L63 132 L60 112 L57 132 L37 132 L33 112 Z";
 const TENUE_SOK = [{x:38, y:134, b:17, h:22}, {x:65, y:134, b:17, h:22}];
 
+/* ═══════════════════════════════════════════════════════════
+   SPELERPOPPETJE
+   Heeft een speler geen foto, dan tekenen we er een. Alles komt
+   uit de naam zelf, dus dezelfde speler krijgt altijd hetzelfde
+   poppetje — en er is geen internet of plaatjesbestand voor nodig.
+═══════════════════════════════════════════════════════════ */
+const POP_HUID = ["#f7d9c0","#efc9a6","#e0aa80","#c98a5e","#a56a42","#7d4a2b"];
+const POP_HAAR = ["#241a12","#3d2a1a","#6b4423","#96612c","#c9a227","#d6d1cb","#101010","#5a3a2e"];
+const POP_VLAK = ["#dbeafe","#dcfce7","#fef3c7","#fae8ff","#ffe4e6","#e0e7ff","#ccfbf1","#ffedd5"];
+/* Hoe ver het haar over het hoofd valt, per kapsel. 0 = kaal. */
+const POP_KAPSEL = [12, 15, 15, 9, 14, 0];
+
+function popGetal(tekst) {
+  var s = String(tekst || "?"), x = 2166136261;
+  for (var i = 0; i < s.length; i++) { x ^= s.charCodeAt(i); x = Math.imul(x, 16777619); }
+  return x >>> 0;
+}
+/* Iets donkerder maken, voor de schaduw in de hals */
+function popDonker(hex) {
+  var c = String(hex).replace("#","");
+  var r = parseInt(c.slice(0,2),16), g = parseInt(c.slice(2,4),16), b = parseInt(c.slice(4,6),16);
+  function d(v){ return Math.max(0, Math.round(v*0.82)).toString(16).padStart(2,"0"); }
+  return "#"+d(r)+d(g)+d(b);
+}
+
 function SpelerPop({ naam, shirt, vlak, grootte, tenueSet: tset }) {
   const g = popGetal(naam);
   const huid  = POP_HUID[g % POP_HUID.length];
@@ -569,6 +604,8 @@ function TenueKader({ laag, stuk, onGreep, breedOpScherm }) {
 
 /* ── Het tenue als tekening ─────────────────────────────────
    Voorkant met clubwapen en sponsor, achterkant met naam en nummer. */
+let tenueTeller = 0;
+
 function TenueBeeld({ set, kant, nummer, naam, breed, schaduw, kader, kaderStuk, onGreep, vel }) {
   const s = Object.assign({}, STANDAARD_SET, set || {});
   /* Elk shirt heeft zijn eigen clipPath nodig; twee tenues op één

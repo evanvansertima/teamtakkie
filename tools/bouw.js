@@ -145,8 +145,36 @@ const DOMEIN_VOLGORDE = ["boetepot.js", "wedstrijden.js", "statistieken.js", "op
    deze stap alsnog naar gedeeld.jsx verplaatst (zie de bestandskop
    van gedeeld.jsx, onderaan). TenueOntwerperTab roept TenueBeeld drie
    keer aan (blijft in gedeeld.jsx, laadt hiervóór) — werkt via
-   gedeelde scope. */
-const SCHERM_VOLGORDE = ["gedeeld.jsx", "onboarding.jsx", "instellingen.jsx", "statistieken.jsx", "trainingen.jsx", "spelers.jsx", "clubhuis.jsx"];
+   gedeelde scope.
+
+   "opstellingen.jsx" (P4 stap 7, zelfde dag) is de achtste en laatste
+   toevoeging vóór wedstrijden (stap 8, de schil): opstellingenveld en
+   tactiekbord (VeldAchtergrond, TenueStrook, SpelerCircle,
+   VeldZoomKnoppen, OpstellingVeld, OpstellingenTab, TactiekTekenBord,
+   TactiekenTab, VeldIcoon, FrameMiniatuur, TrainingTekenBord) — zie
+   docs/p4-stappenplan.md §1, stap 7, het risicovolste van de negen
+   stappen ("de meeste uitgaande afhankelijkheden van alle acht").
+   Vier kruisverwijzingen blijven werken via gedeelde scope: TenueStrook
+   en VeldZoomKnoppen worden ook door WedstrijdOpstelling gebruikt
+   (blijft in app.jsx, stap 8); TrainingTekenBord wordt ook gebruikt
+   door WedstrijdTactiek (app.jsx) én driemaal door trainingen.jsx
+   (al verplaatst stap 4); en OpstellingVeld — niet met naam genoemd in
+   het stappenplan, gevonden bij het narekenen — wordt ook gebruikt
+   door WedstrijdOpstelling, WedstrijdTactiek en TegenstanderSectie
+   (alle drie in app.jsx). Omgekeerd roept SelectiePagina (spelers.jsx,
+   stap 5) op zijn beurt OpstellingenTab/TactiekenTab hier aan — de
+   tegenhanger van de kruisverwijzing die spelers.jsx zelf al meldde.
+   Groter dan die 11 namen: ~2.750 regels exclusief-door-opstellingen-
+   gebruikte tekenbord-hulpcode (zoom, canvas-tekenwerk, materiaal/
+   zone-data, video/PDF-export) stond ertussen, niet met naam genoemd
+   — zie de bestandskop van opstellingen.jsx voor de volledige lijst.
+   Drie stukken die daar fysiek tussenin stonden hoorden niet bij
+   opstellingen en zijn bij deze stap alsnog verplaatst: POP_HUID e.a.
+   en tenueTeller naar gedeeld.jsx (uitsluitend gebruikt door SpelerPop/
+   TenueBeeld, stap 0), en BENEN/beenInfo naar spelers.jsx (uitsluitend
+   gebruikt daar, stap 5) — zie de bestandskoppen van gedeeld.jsx en
+   spelers.jsx voor de volledige toelichting. */
+const SCHERM_VOLGORDE = ["gedeeld.jsx", "onboarding.jsx", "instellingen.jsx", "statistieken.jsx", "trainingen.jsx", "spelers.jsx", "clubhuis.jsx", "opstellingen.jsx"];
 
 /* Het merkteken in src/index.html waar de gebouwde app terechtkomt.
    Bewust een commentaarregel en geen los token: zo blijft het sjabloon

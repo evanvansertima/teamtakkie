@@ -36,22 +36,19 @@
       precies zoals bij SelectiePagina (`case "selectie": return
       <SelectiePagina />;`) hierboven.
 
-   WAT HIER BEWUST NIET IS MEEGEKOMEN
+   BENEN/BEENINFO TOEGEVOEGD BIJ P4 STAP 7 (17 september 2026)
    BENEN (de const met "Rechts"/"Links"/"Beide") en zijn helper
-   beenInfo() stonden, net als VoetIcoon, fysiek in de opstellingen-zone
-   en worden — bij narekenen gevonden, niet met naam genoemd in het
-   stappenplan — ook uitsluitend door componenten in déze module
-   gebruikt (SpelerFormulier, SpelerProfiel, SpelersLijst). Ze zijn toch
-   bewust in src/app.jsx achtergebleven: beenInfo() is een
-   function-declaratie (hoist overal naartoe, net als TrainingTekenBord
-   bij stap 4) en BENEN wordt alleen binnen render-functies gelezen, dus
-   pas op het moment dat de component tekent — ruim nadat alle scripts,
-   inclusief src/app.jsx zelf, geladen zijn. Precies dezelfde situatie
-   als POP_HUID/POP_HAAR/popGetal()/popDonker() (blijven ín src/app.jsx
-   terwijl gedeeld.jsx's SpelerPop ze sinds stap 0 al gebruikt) — een
-   al bestaand, geverifieerd werkend patroon. Verplaatsen was dus niet
-   nodig; met opzet niet gedaan om de verplaatsing tot de met naam
-   genoemde lijst te beperken.
+   beenInfo() stonden, net als VoetIcoon hierboven, fysiek in de
+   opstellingen-zone van src/app.jsx en werden — bij narekenen voor
+   stap 5 al gevonden, niet met naam genoemd in het stappenplan —
+   uitsluitend door componenten in déze module gebruikt (SpelerFormulier,
+   SpelerProfiel, SpelersLijst). Bij stap 5 bewust niet meeverhuisd (zie
+   de toelichting die daar stond: beenInfo() hoist en BENEN wordt pas in
+   een renderfunctie gelezen, dus functioneel geen probleem, maar wel
+   een bewuste keuze om de verplaatsing tot de met naam genoemde lijst
+   te beperken). Bij het narekenen voor stap 7 bleek de opstellingen-
+   module zelf ze nergens te gebruiken, dus zijn ze nu alsnog hierheen
+   verplaatst — aan het eind van dit bestand, direct na VoetIcoon.
 
    TESTAANPASSING BIJ DEZE STAP
    Drie van de zeven testbestanden lazen componenten uit deze module
@@ -2591,3 +2588,10 @@ function VoetIcoon({ kant, grootte }) {
     </svg>
   );
 }
+
+const BENEN = [
+  {id:"Rechts", label:"Rechts", kant:"rechts"},
+  {id:"Links",  label:"Links",  kant:"links"},
+  {id:"Beide",  label:"Beide",  kant:"beide"}
+];
+function beenInfo(v) { return BENEN.filter(function(b){ return b.id===v; })[0] || null; }
