@@ -1,0 +1,151 @@
+<html lang="nl" data-thema="licht">
+  <div class="app-schil">
+    <aside class="zijbalk">
+      <button class="zijbalk-merk zijbalk-team" title="Van team wisselen">
+        <img alt="VV Verzonnen Kamp" class="logo-img" src="data:image/png#28734-10ebnl0">
+        <div class="header-tekst">
+          <h1>
+            "VV Verzonnen Kamp"
+          <div class="header-subtitel">
+            "JO19-2"
+            <i class="fa-solid fa-chevron-down header-pijl">
+      <nav class="zijbalk-nav">
+        <button class="zij-item">
+          <span class="zij-icoon">
+            <i class="fa-solid fa-house">
+          <span>
+            "Dashboard"
+        <button class="zij-item">
+          <span class="zij-icoon">
+            <i class="fa-solid fa-futbol">
+          <span>
+            "Wedstrijden"
+        <button class="zij-item">
+          <span class="zij-icoon">
+            <i class="fa-solid fa-person-running">
+          <span>
+            "Trainingen"
+        <button aria-current="page" class="zij-item actief">
+          <span class="zij-icoon">
+            <i class="fa-solid fa-users">
+          <span>
+            "Selectie"
+        <button class="zij-item">
+          <span class="zij-icoon">
+            <i class="fa-solid fa-calendar-days">
+          <span>
+            "Agenda"
+        <div class="zijbalk-kop">
+          "Analyse"
+        <button class="zij-item">
+          <span class="zij-icoon">
+            <i class="fa-solid fa-chart-bar">
+          <span>
+            "Statistieken"
+        <button class="zij-item">
+          <span class="zij-icoon">
+            <i class="fa-solid fa-stopwatch">
+          <span>
+            "Live analyse"
+        <div class="zijbalk-kop">
+          "Extra"
+        <button class="zij-item">
+          <span class="zij-icoon">
+            <i class="fa-solid fa-map">
+          <span>
+            "Clubhuis"
+      <div class="zijbalk-voet">
+        <button class="sync-lampje mislukt" title="Er staat iets klaar dat nog niet verstuurd is. Zodra er weer bereik is gaat het vanzelf.">
+          <i class="fa-solid fa-triangle-exclamation">
+          <span>
+            "Geen verbinding"
+        <button class="zij-item">
+          <span class="zij-icoon">
+            <i class="fa-solid fa-gear">
+          <span>
+            "Instellingen"
+        <div class="zij-ontwerp">
+          <span class="zij-ontwerp-studio">
+            "TEAMTAKKIE"
+          <span class="zij-ontwerp-naam">
+            "EVS production"
+    <header class="header">
+      <button class="header-logo header-team" title="Van team wisselen">
+        <img alt="VV Verzonnen Kamp" class="logo-img" src="data:image/png#28734-10ebnl0">
+        <div class="header-tekst">
+          <h1>
+            "VV Verzonnen Kamp"
+          <div class="header-subtitel">
+            "JO19-2 · TEAMTAKKIE"
+            <i class="fa-solid fa-chevron-down header-pijl">
+      <button aria-label="Instellingen" style="font-size: 20px; cursor: pointer; background: none; border-width: medium; border-style: none; border-color: currentcolor; border-image: none; color: inherit; padding: 6px 4px;">
+        <i class="fa-solid fa-gear">
+    <main class="inhoud">
+      <div>
+        <div class="tabs">
+          <button class="tab-knop">
+            <i class="fa-solid fa-users">
+            "Spelers"
+          <button class="tab-knop">
+            <i class="fa-solid fa-table-cells-large">
+            "Opstellingen"
+          <button class="tab-knop">
+            <i class="fa-solid fa-chess">
+            "Tactieken"
+          <button class="tab-knop actief">
+            <i class="fa-solid fa-briefcase-medical">
+            "Blessures"
+          <button class="tab-knop">
+            <i class="fa-solid fa-piggy-bank">
+            "Boetepot"
+        <div>
+          <div class="kaart" style="margin-bottom: 12px;">
+            <div class="kaart-titel" style="justify-content: space-between; flex-wrap: wrap; gap: 8px;">
+              <span>
+                <i class="fa-solid fa-briefcase-medical">
+                "Blessures en afwezigheid"
+              <button class="knop klein">
+                <i class="fa-solid fa-plus">
+                "Nieuwe periode"
+            <p style="font-size: 12px; color: var(--grijs-donker); font-weight: 400; line-height: 1.6; margin: 2px 0px 0px;">
+              "Leg één keer vast dat een speler er langere tijd niet is. De presentielijst vult zichzelf, en blessure, ziekte en schorsing tellen niet mee in zijn opkomstpercentage — anders zakt een jongen met een gescheurde kruisband naar 20% en zegt dat cijfer niets meer."
+          <div class="leeg">
+            <div class="leeg-icoon">
+              <i class="fa-solid fa-briefcase-medical">
+            <h3>
+              "Iedereen beschikbaar"
+            <p>
+              "Zodra iemand langere tijd uit de roulatie is, leg je dat hier één keer vast in plaats van elke training opnieuw."
+            <button class="knop">
+              "+ Eerste periode"
+    <nav class="bottom-nav">
+      <button class="nav-item">
+        <div class="nav-pip">
+        <span class="nav-icon">
+          <i class="fa-solid fa-house">
+        <span>
+          "Home"
+      <button class="nav-item">
+        <div class="nav-pip">
+        <span class="nav-icon">
+          <i class="fa-solid fa-futbol">
+        <span>
+          "Wedstrijden"
+      <button class="nav-item actief">
+        <div class="nav-pip">
+        <span class="nav-icon">
+          <i class="fa-solid fa-users">
+        <span>
+          "Selectie"
+      <button class="nav-item">
+        <div class="nav-pip">
+        <span class="nav-icon">
+          <i class="fa-solid fa-person-running">
+        <span>
+          "Training"
+      <button class="nav-item">
+        <div class="nav-pip">
+        <span class="nav-icon">
+          <i class="fa-solid fa-chart-bar">
+        <span>
+          "Stats"

@@ -360,6 +360,183 @@ const DIEPTES_CLUB = [
        dit bewijs. */
     bewijs: '.profiel-naam:has-text("Joep Bramsloot")'
   },
+  /* ── OP 17 SEPTEMBER 2026 ZIJN ER ELF BIJGEKOMEN (P4-VERKENNING) ──
+     Een collega heeft de opsplitsing van src/app.jsx in schermmodules
+     (P4) verkend en meldde drie dingen terug. Evan heeft over alle
+     drie beslist, en één daarvan is: vóórdat er iets verplaatst wordt,
+     moet het gouden origineel eerst de tabbladen dekken die P4 gaat
+     aanraken. Tot nu toe stonden alleen de 8 hoofdschermen en twee
+     diepteopnames vast; zowat elk tabblad-binnen-een-scherm viel onder
+     de belangrijkste bekende beperking hierboven ("alles achter een
+     tab staat nergens open"). Voor de tabbladen die P4 als eerste gaat
+     verplaatsen was dat geen blinde vlek meer maar een risico.
+
+     Elf nieuwe diepteopnames, in vier groepjes:
+
+     • Selectie: de vier tabbladen náást "Spelers" — Opstellingen,
+       Tactieken (met de tekentool erachter), Blessures en Boetepot.
+       Deze vier vormen straks twee verschillende P4-modules (Opstel-
+       lingen bij "opstellingen/tekenbord", Blessures en Boetepot bij
+       het nieuwe "spelers/ontwikkeling") en stonden alle vier nergens
+       vast — ze zaten achter een klik op een tabblad dat zelf al
+       achter "Selectie" verstopt zat.
+     • Clubhuis: de drie kaarten waarvan de collega meldde dat ze
+       tenue-tekendata en de gedeelde SpelerBeeld/TenueBeeld-laag
+       gebruiken — De Bouwput (sportpark), De Kleedkamer (tenue-
+       ontwerper) en Betweterige Scheids (spelregelquiz). Dit zijn de
+       Nederlandse kaarttitels uit t(), niet de interne namen; wie hier
+       een titel verandert, ziet dat aan een niet-gevonden knop en niet
+       aan een stilzwijgend overgeslagen opname.
+     • Wedstrijden: het onderdeel "Tactiek" binnen een wedstrijd (een
+       van de acht WEDSTRIJD_SECTIES, tot nu toe geen van alle gedekt)
+       plus, twee klikken verder, de tekentool die daar opengaat. Dit is
+       een ándere tekentool-plek dan die bij Selectie › Tactieken: beide
+       gebruiken TrainingTekenBord, maar met een eigen invoerpad, en dus
+       ook een eigen risico bij het verplaatsen.
+     • Trainingen: het tabblad Oefeningen (de oefeningenbibliotheek),
+       tot nu toe alleen gedekt op het niveau van het hoofdscherm
+       "Trainingen" (het tabblad "Trainingen" zelf), niet op de andere
+       twee tabbladen ernaast.
+
+     Bewust NIET aan DIEPTES_FREE toegevoegd: geen van deze elf zit
+     achter een pakketslot. Selectie en Wedstrijden zijn in Free al
+     schermen die gewoon open staan (zie SETS), en wat daar binnenin
+     zit is niet pakket-afhankelijk — de club-opname dekt dat dus al.
+     Clubhuis en Trainingen zítten in Free achter een heel-scherm-slot,
+     en dát slot staat al vast in DIEPTES_FREE (slot-melding e.a.); de
+     tabbladen erbínnen zijn met Free per definitie onbereikbaar, dus
+     daar valt niets aan toe te voegen.
+
+     Gecontroleerd met een opzettelijke fout (teruggedraaid vóór de
+     commit): de tekst "Nog geen tactieken" in TactiekenTab (src/app.jsx)
+     tijdelijk naar "Nog geen tactiek's" veranderd. --vergelijk gaf ROOD
+     op precies "selectie-tactieken" en op geen van de andere negentien
+     opnames — het bewijs van dit gereedschap: een fout op één tabblad
+     wordt ook als een fout op precies dat tabblad aangewezen. */
+  {
+    id: "selectie-opstellingen",
+    label: "Selectie › Opstellingen",
+    begin: "selectie",
+    stappen: [
+      {wat: 'het tabblad "Opstellingen" binnen Selectie',
+       kies: '.tab-knop:has-text("Opstellingen")'}
+    ],
+    /* De knop met de actieve formatie erin ("⚽ 4-3-3A") bestaat alleen
+       op dit tabblad; de titel van het venster dat hij opent hoort door
+       de DOM-vergelijking beoordeeld te worden, niet door dit bewijs. */
+    bewijs: '.formatie-keuze-knop'
+  },
+  {
+    id: "selectie-tactieken",
+    label: "Selectie › Tactieken",
+    begin: "selectie",
+    stappen: [
+      {wat: 'het tabblad "Tactieken" binnen Selectie',
+       kies: '.tab-knop:has-text("Tactieken")'}
+    ],
+    bewijs: '.pagina-header-tekst h2:has-text("Tactieken")'
+  },
+  {
+    id: "selectie-tactieken-tekenbord",
+    label: "Selectie › Tactieken › nieuwe tekening",
+    begin: "selectie",
+    stappen: [
+      {wat: 'het tabblad "Tactieken" binnen Selectie',
+       kies: '.tab-knop:has-text("Tactieken")'},
+      {wat: 'de knop om een nieuwe tactiek te tekenen',
+       kies: '.knop-plus'}
+    ],
+    /* Niet de tekentool zelf (.bord-veld — die staat ook bij de
+       wedstrijd-tekentool hieronder en bewijst dus niet welke van de
+       twee het is), maar de terugknop met de eigen tekst van dít pad. */
+    bewijs: '.back-knop:has-text("Terug naar tactieken")'
+  },
+  {
+    id: "selectie-blessures",
+    label: "Selectie › Blessures",
+    begin: "selectie",
+    stappen: [
+      {wat: 'het tabblad "Blessures" binnen Selectie',
+       kies: '.tab-knop:has-text("Blessures")'}
+    ],
+    bewijs: '.kaart-titel:has-text("Blessures en afwezigheid")'
+  },
+  {
+    id: "selectie-boetepot",
+    label: "Selectie › Boetepot",
+    begin: "selectie",
+    stappen: [
+      {wat: 'het tabblad "Boetepot" binnen Selectie',
+       kies: '.tab-knop:has-text("Boetepot")'}
+    ],
+    bewijs: '.kaart-titel:has-text("Boetepot")'
+  },
+  {
+    id: "clubhuis-sportpark",
+    label: 'Clubhuis › "De Bouwput" (sportpark)',
+    begin: "clubhuis",
+    stappen: [
+      {wat: 'de kaart "De Bouwput" in het Clubhuis',
+       kies: '.clubhuis-kaart:has-text("De Bouwput")'}
+    ],
+    bewijs: '.park-vlak'
+  },
+  {
+    id: "clubhuis-tenue",
+    label: 'Clubhuis › "De Kleedkamer" (tenue-ontwerper)',
+    begin: "clubhuis",
+    stappen: [
+      {wat: 'de kaart "De Kleedkamer" in het Clubhuis',
+       kies: '.clubhuis-kaart:has-text("De Kleedkamer")'}
+    ],
+    bewijs: '.tenue-werkblad'
+  },
+  {
+    id: "clubhuis-quiz",
+    label: 'Clubhuis › "Betweterige Scheids" (spelregelquiz)',
+    begin: "clubhuis",
+    stappen: [
+      {wat: 'de kaart "Betweterige Scheids" in het Clubhuis',
+       kies: '.clubhuis-kaart:has-text("Betweterige Scheids")'}
+    ],
+    bewijs: '.kaart-titel:has-text("Spelregelkennis")'
+  },
+  {
+    id: "wedstrijd-tactiek",
+    label: "Wedstrijden › wedstrijd › Tactiek",
+    begin: "wedstrijden",
+    stappen: [
+      {wat: 'de wedstrijd tegen "VV Nevelmeer O19-1" in de lijst',
+       kies: '.w-item:has-text("VV Nevelmeer O19-1")'},
+      {wat: 'het onderdeel "Tactiek" in het wedstrijdmenu',
+       kies: '.w-sectie:has-text("Tactiek")'}
+    ],
+    bewijs: '.kaart-titel:has-text("Tactiek")'
+  },
+  {
+    id: "wedstrijd-tactiek-tekenbord",
+    label: "Wedstrijden › wedstrijd › Tactiek › nieuwe tekening",
+    begin: "wedstrijden",
+    stappen: [
+      {wat: 'de wedstrijd tegen "VV Nevelmeer O19-1" in de lijst',
+       kies: '.w-item:has-text("VV Nevelmeer O19-1")'},
+      {wat: 'het onderdeel "Tactiek" in het wedstrijdmenu',
+       kies: '.w-sectie:has-text("Tactiek")'},
+      {wat: 'de knop "Tekening maken" bij de tactische tekening',
+       kies: 'button:has-text("Tekening maken")'}
+    ],
+    bewijs: '.bord-veld'
+  },
+  {
+    id: "trainingen-oefeningen",
+    label: "Trainingen › Oefeningen (bibliotheek)",
+    begin: "trainingen",
+    stappen: [
+      {wat: 'het tabblad "Oefeningen" binnen Trainingen',
+       kies: '.tab-knop:has-text("Oefeningen")'}
+    ],
+    bewijs: '.pagina-header-tekst h2:has-text("Oefeningen")'
+  },
   /* ── Het instellingenvenster ──
      Dit venster stond sinds het begin bovenaan de bekende beperkingen
      van dit gereedschap: het was hét voorbeeld van "alles achter een

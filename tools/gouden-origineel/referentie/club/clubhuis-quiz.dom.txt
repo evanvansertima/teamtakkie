@@ -1,0 +1,155 @@
+<html lang="nl" data-thema="licht">
+  <div class="app-schil">
+    <aside class="zijbalk">
+      <button class="zijbalk-merk zijbalk-team" title="Van team wisselen">
+        <img alt="VV Verzonnen Kamp" class="logo-img" src="data:image/png#28734-10ebnl0">
+        <div class="header-tekst">
+          <h1>
+            "VV Verzonnen Kamp"
+          <div class="header-subtitel">
+            "JO19-2"
+            <i class="fa-solid fa-chevron-down header-pijl">
+      <nav class="zijbalk-nav">
+        <button class="zij-item">
+          <span class="zij-icoon">
+            <i class="fa-solid fa-house">
+          <span>
+            "Dashboard"
+        <button class="zij-item">
+          <span class="zij-icoon">
+            <i class="fa-solid fa-futbol">
+          <span>
+            "Wedstrijden"
+        <button class="zij-item">
+          <span class="zij-icoon">
+            <i class="fa-solid fa-person-running">
+          <span>
+            "Trainingen"
+        <button class="zij-item">
+          <span class="zij-icoon">
+            <i class="fa-solid fa-users">
+          <span>
+            "Selectie"
+        <button class="zij-item">
+          <span class="zij-icoon">
+            <i class="fa-solid fa-calendar-days">
+          <span>
+            "Agenda"
+        <div class="zijbalk-kop">
+          "Analyse"
+        <button class="zij-item">
+          <span class="zij-icoon">
+            <i class="fa-solid fa-chart-bar">
+          <span>
+            "Statistieken"
+        <button class="zij-item">
+          <span class="zij-icoon">
+            <i class="fa-solid fa-stopwatch">
+          <span>
+            "Live analyse"
+        <div class="zijbalk-kop">
+          "Extra"
+        <button aria-current="page" class="zij-item actief">
+          <span class="zij-icoon">
+            <i class="fa-solid fa-map">
+          <span>
+            "Clubhuis"
+      <div class="zijbalk-voet">
+        <button class="sync-lampje mislukt" title="Er staat iets klaar dat nog niet verstuurd is. Zodra er weer bereik is gaat het vanzelf.">
+          <i class="fa-solid fa-triangle-exclamation">
+          <span>
+            "Geen verbinding"
+        <button class="zij-item">
+          <span class="zij-icoon">
+            <i class="fa-solid fa-gear">
+          <span>
+            "Instellingen"
+        <div class="zij-ontwerp">
+          <span class="zij-ontwerp-studio">
+            "TEAMTAKKIE"
+          <span class="zij-ontwerp-naam">
+            "EVS production"
+    <header class="header">
+      <button class="header-logo header-team" title="Van team wisselen">
+        <img alt="VV Verzonnen Kamp" class="logo-img" src="data:image/png#28734-10ebnl0">
+        <div class="header-tekst">
+          <h1>
+            "VV Verzonnen Kamp"
+          <div class="header-subtitel">
+            "JO19-2 · TEAMTAKKIE"
+            <i class="fa-solid fa-chevron-down header-pijl">
+      <button aria-label="Instellingen" style="font-size: 20px; cursor: pointer; background: none; border-width: medium; border-style: none; border-color: currentcolor; border-image: none; color: inherit; padding: 6px 4px;">
+        <i class="fa-solid fa-gear">
+    <main class="inhoud">
+      <div>
+        <button class="back-knop">
+          <i class="fa-solid fa-chevron-left">
+          "Clubhuis"
+        <div>
+          <div class="kaart" style="margin-bottom: 12px;">
+            <div class="kaart-titel">
+              <i class="fa-solid fa-clipboard-question">
+              "Spelregelkennis"
+            <p style="font-size: 12.5px; color: var(--grijs-donker); font-weight: 400; line-height: 1.6; margin: 2px 0px 0px;">
+              "Vijf vragen over de spelregels, plus een bonusopdracht waarin je het antwoord tekent. De vragen komen uit een bank van"
+              "26"
+              "stuks en worden elke ronde opnieuw getrokken — ook de antwoorden staan steeds in een andere volgorde."
+          <div class="quiz-cats">
+            <span class="quiz-cat" style="background: rgb(8, 145, 178);">
+              "Buitenspel"
+              <b>
+                "4"
+            <span class="quiz-cat" style="background: rgb(179, 38, 30);">
+              "Overtredingen"
+              <b>
+                "4"
+            <span class="quiz-cat" style="background: rgb(13, 148, 136);">
+              "Spelhervatting"
+              <b>
+                "5"
+            <span class="quiz-cat" style="background: rgb(124, 58, 237);">
+              "De keeper"
+              <b>
+                "4"
+            <span class="quiz-cat" style="background: rgb(224, 138, 11);">
+              "Kaarten"
+              <b>
+                "3"
+            <span class="quiz-cat" style="background: rgb(0, 74, 173);">
+              "Veld en spel"
+              <b>
+                "6"
+          <button class="knop" style="width: 100%; justify-content: center; margin-top: 14px;">
+            <i class="fa-solid fa-play">
+            "Start de quiz"
+    <nav class="bottom-nav">
+      <button class="nav-item">
+        <div class="nav-pip">
+        <span class="nav-icon">
+          <i class="fa-solid fa-house">
+        <span>
+          "Home"
+      <button class="nav-item">
+        <div class="nav-pip">
+        <span class="nav-icon">
+          <i class="fa-solid fa-futbol">
+        <span>
+          "Wedstrijden"
+      <button class="nav-item">
+        <div class="nav-pip">
+        <span class="nav-icon">
+          <i class="fa-solid fa-users">
+        <span>
+          "Selectie"
+      <button class="nav-item">
+        <div class="nav-pip">
+        <span class="nav-icon">
+          <i class="fa-solid fa-person-running">
+        <span>
+          "Training"
+      <button class="nav-item">
+        <div class="nav-pip">
+        <span class="nav-icon">
+          <i class="fa-solid fa-chart-bar">
+        <span>
+          "Stats"

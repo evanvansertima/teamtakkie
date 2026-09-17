@@ -1,0 +1,658 @@
+<html lang="nl" data-thema="licht">
+  <div class="app-schil">
+    <aside class="zijbalk">
+      <button class="zijbalk-merk zijbalk-team" title="Van team wisselen">
+        <img alt="VV Verzonnen Kamp" class="logo-img" src="data:image/png#28734-10ebnl0">
+        <div class="header-tekst">
+          <h1>
+            "VV Verzonnen Kamp"
+          <div class="header-subtitel">
+            "JO19-2"
+            <i class="fa-solid fa-chevron-down header-pijl">
+      <nav class="zijbalk-nav">
+        <button class="zij-item">
+          <span class="zij-icoon">
+            <i class="fa-solid fa-house">
+          <span>
+            "Dashboard"
+        <button class="zij-item">
+          <span class="zij-icoon">
+            <i class="fa-solid fa-futbol">
+          <span>
+            "Wedstrijden"
+        <button class="zij-item">
+          <span class="zij-icoon">
+            <i class="fa-solid fa-person-running">
+          <span>
+            "Trainingen"
+        <button class="zij-item">
+          <span class="zij-icoon">
+            <i class="fa-solid fa-users">
+          <span>
+            "Selectie"
+        <button class="zij-item">
+          <span class="zij-icoon">
+            <i class="fa-solid fa-calendar-days">
+          <span>
+            "Agenda"
+        <div class="zijbalk-kop">
+          "Analyse"
+        <button class="zij-item">
+          <span class="zij-icoon">
+            <i class="fa-solid fa-chart-bar">
+          <span>
+            "Statistieken"
+        <button class="zij-item">
+          <span class="zij-icoon">
+            <i class="fa-solid fa-stopwatch">
+          <span>
+            "Live analyse"
+        <div class="zijbalk-kop">
+          "Extra"
+        <button aria-current="page" class="zij-item actief">
+          <span class="zij-icoon">
+            <i class="fa-solid fa-map">
+          <span>
+            "Clubhuis"
+      <div class="zijbalk-voet">
+        <button class="sync-lampje mislukt" title="Er staat iets klaar dat nog niet verstuurd is. Zodra er weer bereik is gaat het vanzelf.">
+          <i class="fa-solid fa-triangle-exclamation">
+          <span>
+            "Geen verbinding"
+        <button class="zij-item">
+          <span class="zij-icoon">
+            <i class="fa-solid fa-gear">
+          <span>
+            "Instellingen"
+        <div class="zij-ontwerp">
+          <span class="zij-ontwerp-studio">
+            "TEAMTAKKIE"
+          <span class="zij-ontwerp-naam">
+            "EVS production"
+    <header class="header">
+      <button class="header-logo header-team" title="Van team wisselen">
+        <img alt="VV Verzonnen Kamp" class="logo-img" src="data:image/png#28734-10ebnl0">
+        <div class="header-tekst">
+          <h1>
+            "VV Verzonnen Kamp"
+          <div class="header-subtitel">
+            "JO19-2 · TEAMTAKKIE"
+            <i class="fa-solid fa-chevron-down header-pijl">
+      <button aria-label="Instellingen" style="font-size: 20px; cursor: pointer; background: none; border-width: medium; border-style: none; border-color: currentcolor; border-image: none; color: inherit; padding: 6px 4px;">
+        <i class="fa-solid fa-gear">
+    <main class="inhoud">
+      <div>
+        <button class="back-knop">
+          <i class="fa-solid fa-chevron-left">
+          "Clubhuis"
+        <div>
+          <div style="display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; margin-bottom: 8px;">
+            <h2 style="margin: 0px;">
+              "De Kleedkamer"
+            <span style="font-size: 12px; color: var(--grijs-donker);">
+              "Nog"
+              "12"
+              "van de"
+              "12"
+              "lagen vrij op"
+              "shirt voor"
+              "."
+          <div class="tenue-soorten">
+            <button class="tenue-soort actief">
+              <span class="tenue-stip" style="background: rgb(0, 74, 173);">
+              <span>
+                "Thuis"
+            <button class="tenue-soort">
+              <span class="tenue-stip" style="background: rgb(255, 255, 255);">
+              <span>
+                "Uit"
+            <button class="tenue-soort">
+              <span class="tenue-stip" style="background: rgb(27, 31, 42);">
+              <span>
+                "Derde"
+            <button class="tenue-soort">
+              <span class="tenue-stip" style="background: rgb(40, 167, 69);">
+              <span>
+                "Keeper thuis"
+            <button class="tenue-soort">
+              <span class="tenue-stip" style="background: rgb(245, 119, 27);">
+              <span>
+                "Keeper uit"
+            <span style="flex: 1 1 0%;">
+            <button class="tenue-soort actief">
+              <span>
+                "Shirt voor"
+              <span style="opacity: 0.55; font-weight: 600;">
+                "0"
+            <button class="tenue-soort">
+              <span>
+                "Shirt achter"
+              <span style="opacity: 0.55; font-weight: 600;">
+                "0"
+            <button class="tenue-soort">
+              <span>
+                "Broek"
+              <span style="opacity: 0.55; font-weight: 600;">
+                "0"
+            <button class="tenue-soort">
+              <span>
+                "Sokken"
+              <span style="opacity: 0.55; font-weight: 600;">
+                "0"
+          <div class="tenue-soorten alleen-smal" style="margin-bottom: 8px;">
+            <button class="tenue-soort actief">
+              "Vormen kiezen"
+            <button class="tenue-soort">
+              "Lagen en kleuren"
+          <div aria-hidden="true" style="position: absolute; left: -99999px; top: 0px; width: 1px; height: 1px; overflow: hidden;">
+            <svg height="312" style="display: block; overflow: visible; filter: none;" viewBox="0 0 120 156" width="240">
+              <defs>
+                <clippath id="tn1-s">
+                  <path d="M46 10 L28 15 L8 31 L19 53 L33 46 L33 88 L87 88 L87 46 L101 53 L112 31 L92 15 L74 10 C68 22 52 22 46 10 Z">
+                <clippath id="tn1-p">
+                  <path d="M33 92 L87 92 L87 112 L83 132 L63 132 L60 112 L57 132 L37 132 L33 112 Z">
+                <clippath id="tn1-k">
+                  <rect height="22" rx="5" width="17" x="38" y="134">
+                  <rect height="22" rx="5" width="17" x="65" y="134">
+              <g clip-path="url(#tn1-s)">
+                <rect fill="#004aad" height="92" width="120" x="0" y="0">
+              <path d="M46 10 L28 15 L8 31 L19 53 L33 46 L33 88 L87 88 L87 46 L101 53 L112 31 L92 15 L74 10 C68 22 52 22 46 10 Z" fill="none" stroke="rgba(0,0,0,.28)" stroke-width="1.4">
+              <path d="M46 10 C52 22 68 22 74 10" fill="none" stroke="#ffffff" stroke-linecap="round" stroke-width="6">
+              <path d="M46 10 C52 22 68 22 74 10" fill="none" stroke="rgba(0,0,0,.28)" stroke-width="0.9">
+              <path d="M8 31 L19 53" stroke="#ffffff" stroke-linecap="round" stroke-width="5">
+              <path d="M112 31 L101 53" stroke="#ffffff" stroke-linecap="round" stroke-width="5">
+              <g>
+              <g clip-path="url(#tn1-p)">
+                <path d="M33 92 L87 92 L87 112 L83 132 L63 132 L60 112 L57 132 L37 132 L33 112 Z" fill="#ffffff">
+              <path d="M33 92 L87 92 L87 112 L83 132 L63 132 L60 112 L57 132 L37 132 L33 112 Z" fill="none" stroke="rgba(0,0,0,.28)" stroke-width="1.4">
+              <path d="M60 92 L60 112" stroke="rgba(0,0,0,.28)" stroke-width="0.9">
+              <g clip-path="url(#tn1-k)">
+                <rect fill="#004aad" height="22" rx="5" width="17" x="38" y="134">
+                <rect fill="#004aad" height="22" rx="5" width="17" x="65" y="134">
+                <rect fill="#ffffff" height="5" rx="2.4" width="17" x="38" y="134">
+                <rect fill="#ffffff" height="5" rx="2.4" width="17" x="65" y="134">
+              <rect fill="none" height="22" rx="5" stroke="rgba(0,0,0,.28)" stroke-width="1.2" width="17" x="38" y="134">
+              <rect fill="none" height="22" rx="5" stroke="rgba(0,0,0,.28)" stroke-width="1.2" width="17" x="65" y="134">
+            <svg height="312" style="display: block; overflow: visible; filter: none;" viewBox="0 0 120 156" width="240">
+              <defs>
+                <clippath id="tn2-s">
+                  <path d="M46 10 L28 15 L8 31 L19 53 L33 46 L33 88 L87 88 L87 46 L101 53 L112 31 L92 15 L74 10 C68 22 52 22 46 10 Z">
+                <clippath id="tn2-p">
+                  <path d="M33 92 L87 92 L87 112 L83 132 L63 132 L60 112 L57 132 L37 132 L33 112 Z">
+                <clippath id="tn2-k">
+                  <rect height="22" rx="5" width="17" x="38" y="134">
+                  <rect height="22" rx="5" width="17" x="65" y="134">
+              <g clip-path="url(#tn2-s)">
+                <rect fill="#004aad" height="92" width="120" x="0" y="0">
+              <path d="M46 10 L28 15 L8 31 L19 53 L33 46 L33 88 L87 88 L87 46 L101 53 L112 31 L92 15 L74 10 C68 22 52 22 46 10 Z" fill="none" stroke="rgba(0,0,0,.28)" stroke-width="1.4">
+              <path d="M46 10 C52 22 68 22 74 10" fill="none" stroke="#ffffff" stroke-linecap="round" stroke-width="6">
+              <path d="M46 10 C52 22 68 22 74 10" fill="none" stroke="rgba(0,0,0,.28)" stroke-width="0.9">
+              <path d="M8 31 L19 53" stroke="#ffffff" stroke-linecap="round" stroke-width="5">
+              <path d="M112 31 L101 53" stroke="#ffffff" stroke-linecap="round" stroke-width="5">
+              <g clip-path="url(#tn2-p)">
+                <path d="M33 92 L87 92 L87 112 L83 132 L63 132 L60 112 L57 132 L37 132 L33 112 Z" fill="#ffffff">
+              <path d="M33 92 L87 92 L87 112 L83 132 L63 132 L60 112 L57 132 L37 132 L33 112 Z" fill="none" stroke="rgba(0,0,0,.28)" stroke-width="1.4">
+              <path d="M60 92 L60 112" stroke="rgba(0,0,0,.28)" stroke-width="0.9">
+              <g clip-path="url(#tn2-k)">
+                <rect fill="#004aad" height="22" rx="5" width="17" x="38" y="134">
+                <rect fill="#004aad" height="22" rx="5" width="17" x="65" y="134">
+                <rect fill="#ffffff" height="5" rx="2.4" width="17" x="38" y="134">
+                <rect fill="#ffffff" height="5" rx="2.4" width="17" x="65" y="134">
+              <rect fill="none" height="22" rx="5" stroke="rgba(0,0,0,.28)" stroke-width="1.2" width="17" x="38" y="134">
+              <rect fill="none" height="22" rx="5" stroke="rgba(0,0,0,.28)" stroke-width="1.2" width="17" x="65" y="134">
+            <svg height="312" style="display: block; overflow: visible; filter: none;" viewBox="0 0 120 156" width="240">
+              <defs>
+                <clippath id="tn3-s">
+                  <path d="M46 10 L28 15 L8 31 L19 53 L33 46 L33 88 L87 88 L87 46 L101 53 L112 31 L92 15 L74 10 C68 22 52 22 46 10 Z">
+                <clippath id="tn3-p">
+                  <path d="M33 92 L87 92 L87 112 L83 132 L63 132 L60 112 L57 132 L37 132 L33 112 Z">
+                <clippath id="tn3-k">
+                  <rect height="22" rx="5" width="17" x="38" y="134">
+                  <rect height="22" rx="5" width="17" x="65" y="134">
+              <g clip-path="url(#tn3-s)">
+                <rect fill="#ffffff" height="92" width="120" x="0" y="0">
+              <path d="M46 10 L28 15 L8 31 L19 53 L33 46 L33 88 L87 88 L87 46 L101 53 L112 31 L92 15 L74 10 C68 22 52 22 46 10 Z" fill="none" stroke="rgba(0,0,0,.28)" stroke-width="1.4">
+              <path d="M46 10 C52 22 68 22 74 10" fill="none" stroke="#004aad" stroke-linecap="round" stroke-width="6">
+              <path d="M46 10 C52 22 68 22 74 10" fill="none" stroke="rgba(0,0,0,.28)" stroke-width="0.9">
+              <path d="M8 31 L19 53" stroke="#004aad" stroke-linecap="round" stroke-width="5">
+              <path d="M112 31 L101 53" stroke="#004aad" stroke-linecap="round" stroke-width="5">
+              <g>
+              <g clip-path="url(#tn3-p)">
+                <path d="M33 92 L87 92 L87 112 L83 132 L63 132 L60 112 L57 132 L37 132 L33 112 Z" fill="#004aad">
+              <path d="M33 92 L87 92 L87 112 L83 132 L63 132 L60 112 L57 132 L37 132 L33 112 Z" fill="none" stroke="rgba(0,0,0,.28)" stroke-width="1.4">
+              <path d="M60 92 L60 112" stroke="rgba(0,0,0,.28)" stroke-width="0.9">
+              <g clip-path="url(#tn3-k)">
+                <rect fill="#ffffff" height="22" rx="5" width="17" x="38" y="134">
+                <rect fill="#ffffff" height="22" rx="5" width="17" x="65" y="134">
+                <rect fill="#004aad" height="5" rx="2.4" width="17" x="38" y="134">
+                <rect fill="#004aad" height="5" rx="2.4" width="17" x="65" y="134">
+              <rect fill="none" height="22" rx="5" stroke="rgba(0,0,0,.28)" stroke-width="1.2" width="17" x="38" y="134">
+              <rect fill="none" height="22" rx="5" stroke="rgba(0,0,0,.28)" stroke-width="1.2" width="17" x="65" y="134">
+            <svg height="312" style="display: block; overflow: visible; filter: none;" viewBox="0 0 120 156" width="240">
+              <defs>
+                <clippath id="tn4-s">
+                  <path d="M46 10 L28 15 L8 31 L19 53 L33 46 L33 88 L87 88 L87 46 L101 53 L112 31 L92 15 L74 10 C68 22 52 22 46 10 Z">
+                <clippath id="tn4-p">
+                  <path d="M33 92 L87 92 L87 112 L83 132 L63 132 L60 112 L57 132 L37 132 L33 112 Z">
+                <clippath id="tn4-k">
+                  <rect height="22" rx="5" width="17" x="38" y="134">
+                  <rect height="22" rx="5" width="17" x="65" y="134">
+              <g clip-path="url(#tn4-s)">
+                <rect fill="#ffffff" height="92" width="120" x="0" y="0">
+              <path d="M46 10 L28 15 L8 31 L19 53 L33 46 L33 88 L87 88 L87 46 L101 53 L112 31 L92 15 L74 10 C68 22 52 22 46 10 Z" fill="none" stroke="rgba(0,0,0,.28)" stroke-width="1.4">
+              <path d="M46 10 C52 22 68 22 74 10" fill="none" stroke="#004aad" stroke-linecap="round" stroke-width="6">
+              <path d="M46 10 C52 22 68 22 74 10" fill="none" stroke="rgba(0,0,0,.28)" stroke-width="0.9">
+              <path d="M8 31 L19 53" stroke="#004aad" stroke-linecap="round" stroke-width="5">
+              <path d="M112 31 L101 53" stroke="#004aad" stroke-linecap="round" stroke-width="5">
+              <g clip-path="url(#tn4-p)">
+                <path d="M33 92 L87 92 L87 112 L83 132 L63 132 L60 112 L57 132 L37 132 L33 112 Z" fill="#004aad">
+              <path d="M33 92 L87 92 L87 112 L83 132 L63 132 L60 112 L57 132 L37 132 L33 112 Z" fill="none" stroke="rgba(0,0,0,.28)" stroke-width="1.4">
+              <path d="M60 92 L60 112" stroke="rgba(0,0,0,.28)" stroke-width="0.9">
+              <g clip-path="url(#tn4-k)">
+                <rect fill="#ffffff" height="22" rx="5" width="17" x="38" y="134">
+                <rect fill="#ffffff" height="22" rx="5" width="17" x="65" y="134">
+                <rect fill="#004aad" height="5" rx="2.4" width="17" x="38" y="134">
+                <rect fill="#004aad" height="5" rx="2.4" width="17" x="65" y="134">
+              <rect fill="none" height="22" rx="5" stroke="rgba(0,0,0,.28)" stroke-width="1.2" width="17" x="38" y="134">
+              <rect fill="none" height="22" rx="5" stroke="rgba(0,0,0,.28)" stroke-width="1.2" width="17" x="65" y="134">
+            <svg height="312" style="display: block; overflow: visible; filter: none;" viewBox="0 0 120 156" width="240">
+              <defs>
+                <clippath id="tn5-s">
+                  <path d="M46 10 L28 15 L8 31 L19 53 L33 46 L33 88 L87 88 L87 46 L101 53 L112 31 L92 15 L74 10 C68 22 52 22 46 10 Z">
+                <clippath id="tn5-p">
+                  <path d="M33 92 L87 92 L87 112 L83 132 L63 132 L60 112 L57 132 L37 132 L33 112 Z">
+                <clippath id="tn5-k">
+                  <rect height="22" rx="5" width="17" x="38" y="134">
+                  <rect height="22" rx="5" width="17" x="65" y="134">
+              <g clip-path="url(#tn5-s)">
+                <rect fill="#1b1f2a" height="92" width="120" x="0" y="0">
+              <path d="M46 10 L28 15 L8 31 L19 53 L33 46 L33 88 L87 88 L87 46 L101 53 L112 31 L92 15 L74 10 C68 22 52 22 46 10 Z" fill="none" stroke="rgba(0,0,0,.28)" stroke-width="1.4">
+              <path d="M46 10 C52 22 68 22 74 10" fill="none" stroke="#f5c542" stroke-linecap="round" stroke-width="6">
+              <path d="M46 10 C52 22 68 22 74 10" fill="none" stroke="rgba(0,0,0,.28)" stroke-width="0.9">
+              <path d="M8 31 L19 53" stroke="#f5c542" stroke-linecap="round" stroke-width="5">
+              <path d="M112 31 L101 53" stroke="#f5c542" stroke-linecap="round" stroke-width="5">
+              <g>
+              <g clip-path="url(#tn5-p)">
+                <path d="M33 92 L87 92 L87 112 L83 132 L63 132 L60 112 L57 132 L37 132 L33 112 Z" fill="#1b1f2a">
+              <path d="M33 92 L87 92 L87 112 L83 132 L63 132 L60 112 L57 132 L37 132 L33 112 Z" fill="none" stroke="rgba(0,0,0,.28)" stroke-width="1.4">
+              <path d="M60 92 L60 112" stroke="rgba(0,0,0,.28)" stroke-width="0.9">
+              <g clip-path="url(#tn5-k)">
+                <rect fill="#f5c542" height="22" rx="5" width="17" x="38" y="134">
+                <rect fill="#f5c542" height="22" rx="5" width="17" x="65" y="134">
+                <rect fill="#f5c542" height="5" rx="2.4" width="17" x="38" y="134">
+                <rect fill="#f5c542" height="5" rx="2.4" width="17" x="65" y="134">
+              <rect fill="none" height="22" rx="5" stroke="rgba(0,0,0,.28)" stroke-width="1.2" width="17" x="38" y="134">
+              <rect fill="none" height="22" rx="5" stroke="rgba(0,0,0,.28)" stroke-width="1.2" width="17" x="65" y="134">
+            <svg height="312" style="display: block; overflow: visible; filter: none;" viewBox="0 0 120 156" width="240">
+              <defs>
+                <clippath id="tn6-s">
+                  <path d="M46 10 L28 15 L8 31 L19 53 L33 46 L33 88 L87 88 L87 46 L101 53 L112 31 L92 15 L74 10 C68 22 52 22 46 10 Z">
+                <clippath id="tn6-p">
+                  <path d="M33 92 L87 92 L87 112 L83 132 L63 132 L60 112 L57 132 L37 132 L33 112 Z">
+                <clippath id="tn6-k">
+                  <rect height="22" rx="5" width="17" x="38" y="134">
+                  <rect height="22" rx="5" width="17" x="65" y="134">
+              <g clip-path="url(#tn6-s)">
+                <rect fill="#1b1f2a" height="92" width="120" x="0" y="0">
+              <path d="M46 10 L28 15 L8 31 L19 53 L33 46 L33 88 L87 88 L87 46 L101 53 L112 31 L92 15 L74 10 C68 22 52 22 46 10 Z" fill="none" stroke="rgba(0,0,0,.28)" stroke-width="1.4">
+              <path d="M46 10 C52 22 68 22 74 10" fill="none" stroke="#f5c542" stroke-linecap="round" stroke-width="6">
+              <path d="M46 10 C52 22 68 22 74 10" fill="none" stroke="rgba(0,0,0,.28)" stroke-width="0.9">
+              <path d="M8 31 L19 53" stroke="#f5c542" stroke-linecap="round" stroke-width="5">
+              <path d="M112 31 L101 53" stroke="#f5c542" stroke-linecap="round" stroke-width="5">
+              <g clip-path="url(#tn6-p)">
+                <path d="M33 92 L87 92 L87 112 L83 132 L63 132 L60 112 L57 132 L37 132 L33 112 Z" fill="#1b1f2a">
+              <path d="M33 92 L87 92 L87 112 L83 132 L63 132 L60 112 L57 132 L37 132 L33 112 Z" fill="none" stroke="rgba(0,0,0,.28)" stroke-width="1.4">
+              <path d="M60 92 L60 112" stroke="rgba(0,0,0,.28)" stroke-width="0.9">
+              <g clip-path="url(#tn6-k)">
+                <rect fill="#f5c542" height="22" rx="5" width="17" x="38" y="134">
+                <rect fill="#f5c542" height="22" rx="5" width="17" x="65" y="134">
+                <rect fill="#f5c542" height="5" rx="2.4" width="17" x="38" y="134">
+                <rect fill="#f5c542" height="5" rx="2.4" width="17" x="65" y="134">
+              <rect fill="none" height="22" rx="5" stroke="rgba(0,0,0,.28)" stroke-width="1.2" width="17" x="38" y="134">
+              <rect fill="none" height="22" rx="5" stroke="rgba(0,0,0,.28)" stroke-width="1.2" width="17" x="65" y="134">
+            <svg height="312" style="display: block; overflow: visible; filter: none;" viewBox="0 0 120 156" width="240">
+              <defs>
+                <clippath id="tn7-s">
+                  <path d="M46 10 L28 15 L8 31 L19 53 L33 46 L33 88 L87 88 L87 46 L101 53 L112 31 L92 15 L74 10 C68 22 52 22 46 10 Z">
+                <clippath id="tn7-p">
+                  <path d="M33 92 L87 92 L87 112 L83 132 L63 132 L60 112 L57 132 L37 132 L33 112 Z">
+                <clippath id="tn7-k">
+                  <rect height="22" rx="5" width="17" x="38" y="134">
+                  <rect height="22" rx="5" width="17" x="65" y="134">
+              <g clip-path="url(#tn7-s)">
+                <rect fill="#28a745" height="92" width="120" x="0" y="0">
+              <path d="M46 10 L28 15 L8 31 L19 53 L33 46 L33 88 L87 88 L87 46 L101 53 L112 31 L92 15 L74 10 C68 22 52 22 46 10 Z" fill="none" stroke="rgba(0,0,0,.28)" stroke-width="1.4">
+              <path d="M46 10 C52 22 68 22 74 10" fill="none" stroke="#1b5e2a" stroke-linecap="round" stroke-width="6">
+              <path d="M46 10 C52 22 68 22 74 10" fill="none" stroke="rgba(0,0,0,.28)" stroke-width="0.9">
+              <path d="M8 31 L19 53" stroke="#1b5e2a" stroke-linecap="round" stroke-width="5">
+              <path d="M112 31 L101 53" stroke="#1b5e2a" stroke-linecap="round" stroke-width="5">
+              <g>
+              <g clip-path="url(#tn7-p)">
+                <path d="M33 92 L87 92 L87 112 L83 132 L63 132 L60 112 L57 132 L37 132 L33 112 Z" fill="#1b1f2a">
+              <path d="M33 92 L87 92 L87 112 L83 132 L63 132 L60 112 L57 132 L37 132 L33 112 Z" fill="none" stroke="rgba(0,0,0,.28)" stroke-width="1.4">
+              <path d="M60 92 L60 112" stroke="rgba(0,0,0,.28)" stroke-width="0.9">
+              <g clip-path="url(#tn7-k)">
+                <rect fill="#28a745" height="22" rx="5" width="17" x="38" y="134">
+                <rect fill="#28a745" height="22" rx="5" width="17" x="65" y="134">
+                <rect fill="#28a745" height="5" rx="2.4" width="17" x="38" y="134">
+                <rect fill="#28a745" height="5" rx="2.4" width="17" x="65" y="134">
+              <rect fill="none" height="22" rx="5" stroke="rgba(0,0,0,.28)" stroke-width="1.2" width="17" x="38" y="134">
+              <rect fill="none" height="22" rx="5" stroke="rgba(0,0,0,.28)" stroke-width="1.2" width="17" x="65" y="134">
+            <svg height="312" style="display: block; overflow: visible; filter: none;" viewBox="0 0 120 156" width="240">
+              <defs>
+                <clippath id="tn8-s">
+                  <path d="M46 10 L28 15 L8 31 L19 53 L33 46 L33 88 L87 88 L87 46 L101 53 L112 31 L92 15 L74 10 C68 22 52 22 46 10 Z">
+                <clippath id="tn8-p">
+                  <path d="M33 92 L87 92 L87 112 L83 132 L63 132 L60 112 L57 132 L37 132 L33 112 Z">
+                <clippath id="tn8-k">
+                  <rect height="22" rx="5" width="17" x="38" y="134">
+                  <rect height="22" rx="5" width="17" x="65" y="134">
+              <g clip-path="url(#tn8-s)">
+                <rect fill="#28a745" height="92" width="120" x="0" y="0">
+              <path d="M46 10 L28 15 L8 31 L19 53 L33 46 L33 88 L87 88 L87 46 L101 53 L112 31 L92 15 L74 10 C68 22 52 22 46 10 Z" fill="none" stroke="rgba(0,0,0,.28)" stroke-width="1.4">
+              <path d="M46 10 C52 22 68 22 74 10" fill="none" stroke="#1b5e2a" stroke-linecap="round" stroke-width="6">
+              <path d="M46 10 C52 22 68 22 74 10" fill="none" stroke="rgba(0,0,0,.28)" stroke-width="0.9">
+              <path d="M8 31 L19 53" stroke="#1b5e2a" stroke-linecap="round" stroke-width="5">
+              <path d="M112 31 L101 53" stroke="#1b5e2a" stroke-linecap="round" stroke-width="5">
+              <g clip-path="url(#tn8-p)">
+                <path d="M33 92 L87 92 L87 112 L83 132 L63 132 L60 112 L57 132 L37 132 L33 112 Z" fill="#1b1f2a">
+              <path d="M33 92 L87 92 L87 112 L83 132 L63 132 L60 112 L57 132 L37 132 L33 112 Z" fill="none" stroke="rgba(0,0,0,.28)" stroke-width="1.4">
+              <path d="M60 92 L60 112" stroke="rgba(0,0,0,.28)" stroke-width="0.9">
+              <g clip-path="url(#tn8-k)">
+                <rect fill="#28a745" height="22" rx="5" width="17" x="38" y="134">
+                <rect fill="#28a745" height="22" rx="5" width="17" x="65" y="134">
+                <rect fill="#28a745" height="5" rx="2.4" width="17" x="38" y="134">
+                <rect fill="#28a745" height="5" rx="2.4" width="17" x="65" y="134">
+              <rect fill="none" height="22" rx="5" stroke="rgba(0,0,0,.28)" stroke-width="1.2" width="17" x="38" y="134">
+              <rect fill="none" height="22" rx="5" stroke="rgba(0,0,0,.28)" stroke-width="1.2" width="17" x="65" y="134">
+            <svg height="312" style="display: block; overflow: visible; filter: none;" viewBox="0 0 120 156" width="240">
+              <defs>
+                <clippath id="tn9-s">
+                  <path d="M46 10 L28 15 L8 31 L19 53 L33 46 L33 88 L87 88 L87 46 L101 53 L112 31 L92 15 L74 10 C68 22 52 22 46 10 Z">
+                <clippath id="tn9-p">
+                  <path d="M33 92 L87 92 L87 112 L83 132 L63 132 L60 112 L57 132 L37 132 L33 112 Z">
+                <clippath id="tn9-k">
+                  <rect height="22" rx="5" width="17" x="38" y="134">
+                  <rect height="22" rx="5" width="17" x="65" y="134">
+              <g clip-path="url(#tn9-s)">
+                <rect fill="#f5771b" height="92" width="120" x="0" y="0">
+              <path d="M46 10 L28 15 L8 31 L19 53 L33 46 L33 88 L87 88 L87 46 L101 53 L112 31 L92 15 L74 10 C68 22 52 22 46 10 Z" fill="none" stroke="rgba(0,0,0,.28)" stroke-width="1.4">
+              <path d="M46 10 C52 22 68 22 74 10" fill="none" stroke="#1b1f2a" stroke-linecap="round" stroke-width="6">
+              <path d="M46 10 C52 22 68 22 74 10" fill="none" stroke="rgba(0,0,0,.28)" stroke-width="0.9">
+              <path d="M8 31 L19 53" stroke="#1b1f2a" stroke-linecap="round" stroke-width="5">
+              <path d="M112 31 L101 53" stroke="#1b1f2a" stroke-linecap="round" stroke-width="5">
+              <g>
+              <g clip-path="url(#tn9-p)">
+                <path d="M33 92 L87 92 L87 112 L83 132 L63 132 L60 112 L57 132 L37 132 L33 112 Z" fill="#1b1f2a">
+              <path d="M33 92 L87 92 L87 112 L83 132 L63 132 L60 112 L57 132 L37 132 L33 112 Z" fill="none" stroke="rgba(0,0,0,.28)" stroke-width="1.4">
+              <path d="M60 92 L60 112" stroke="rgba(0,0,0,.28)" stroke-width="0.9">
+              <g clip-path="url(#tn9-k)">
+                <rect fill="#f5771b" height="22" rx="5" width="17" x="38" y="134">
+                <rect fill="#f5771b" height="22" rx="5" width="17" x="65" y="134">
+                <rect fill="#1b1f2a" height="5" rx="2.4" width="17" x="38" y="134">
+                <rect fill="#1b1f2a" height="5" rx="2.4" width="17" x="65" y="134">
+              <rect fill="none" height="22" rx="5" stroke="rgba(0,0,0,.28)" stroke-width="1.2" width="17" x="38" y="134">
+              <rect fill="none" height="22" rx="5" stroke="rgba(0,0,0,.28)" stroke-width="1.2" width="17" x="65" y="134">
+            <svg height="312" style="display: block; overflow: visible; filter: none;" viewBox="0 0 120 156" width="240">
+              <defs>
+                <clippath id="tn10-s">
+                  <path d="M46 10 L28 15 L8 31 L19 53 L33 46 L33 88 L87 88 L87 46 L101 53 L112 31 L92 15 L74 10 C68 22 52 22 46 10 Z">
+                <clippath id="tn10-p">
+                  <path d="M33 92 L87 92 L87 112 L83 132 L63 132 L60 112 L57 132 L37 132 L33 112 Z">
+                <clippath id="tn10-k">
+                  <rect height="22" rx="5" width="17" x="38" y="134">
+                  <rect height="22" rx="5" width="17" x="65" y="134">
+              <g clip-path="url(#tn10-s)">
+                <rect fill="#f5771b" height="92" width="120" x="0" y="0">
+              <path d="M46 10 L28 15 L8 31 L19 53 L33 46 L33 88 L87 88 L87 46 L101 53 L112 31 L92 15 L74 10 C68 22 52 22 46 10 Z" fill="none" stroke="rgba(0,0,0,.28)" stroke-width="1.4">
+              <path d="M46 10 C52 22 68 22 74 10" fill="none" stroke="#1b1f2a" stroke-linecap="round" stroke-width="6">
+              <path d="M46 10 C52 22 68 22 74 10" fill="none" stroke="rgba(0,0,0,.28)" stroke-width="0.9">
+              <path d="M8 31 L19 53" stroke="#1b1f2a" stroke-linecap="round" stroke-width="5">
+              <path d="M112 31 L101 53" stroke="#1b1f2a" stroke-linecap="round" stroke-width="5">
+              <g clip-path="url(#tn10-p)">
+                <path d="M33 92 L87 92 L87 112 L83 132 L63 132 L60 112 L57 132 L37 132 L33 112 Z" fill="#1b1f2a">
+              <path d="M33 92 L87 92 L87 112 L83 132 L63 132 L60 112 L57 132 L37 132 L33 112 Z" fill="none" stroke="rgba(0,0,0,.28)" stroke-width="1.4">
+              <path d="M60 92 L60 112" stroke="rgba(0,0,0,.28)" stroke-width="0.9">
+              <g clip-path="url(#tn10-k)">
+                <rect fill="#f5771b" height="22" rx="5" width="17" x="38" y="134">
+                <rect fill="#f5771b" height="22" rx="5" width="17" x="65" y="134">
+                <rect fill="#1b1f2a" height="5" rx="2.4" width="17" x="38" y="134">
+                <rect fill="#1b1f2a" height="5" rx="2.4" width="17" x="65" y="134">
+              <rect fill="none" height="22" rx="5" stroke="rgba(0,0,0,.28)" stroke-width="1.2" width="17" x="38" y="134">
+              <rect fill="none" height="22" rx="5" stroke="rgba(0,0,0,.28)" stroke-width="1.2" width="17" x="65" y="134">
+          <div class="tenue-werkblad">
+            <div class="tenue-kolom">
+              <div class="tenue-groepbalk" style="margin: 0px; border-radius: 13px 13px 0px 0px;">
+                <button class="tenue-groep actief" title="Vormen">
+                  <i class="fa-solid fa-shapes">
+                <button class="tenue-groep" title="Patronen">
+                  <i class="fa-solid fa-bars-staggered">
+                <button class="tenue-groep" title="Schilden">
+                  <i class="fa-solid fa-shield-halved">
+                <button class="tenue-groep" title="Cijfers">
+                  <i class="fa-solid fa-7">
+                <button class="tenue-groep" title="Tekst">
+                  <i class="fa-solid fa-font">
+                <button class="tenue-groep" title="Symbolen">
+                  <i class="fa-solid fa-star">
+                <button class="tenue-groep" title="Eigen">
+                  <i class="fa-solid fa-image">
+              <div class="tenue-schuifgebied">
+                <div class="tenue-vormen">
+                  <button class="tenue-vormknop" title="Cirkel">
+                    <svg height="100%" style="display: block;" viewBox="0 0 100 100" width="100%">
+                      <g fill="#1b1f2a" fill-rule="nonzero">
+                        <path d="M4 50A46 46 0 1 0 96 50A46 46 0 1 0 4 50Z">
+                  <button class="tenue-vormknop" title="Ring">
+                    <svg height="100%" style="display: block;" viewBox="0 0 100 100" width="100%">
+                      <g fill="#1b1f2a" fill-rule="evenodd">
+                        <path d="M4 50A46 46 0 1 0 96 50A46 46 0 1 0 4 50ZM26 50A24 24 0 1 0 74 50A24 24 0 1 0 26 50Z">
+                  <button class="tenue-vormknop" title="Vierkant">
+                    <svg height="100%" style="display: block;" viewBox="0 0 100 100" width="100%">
+                      <g fill="#1b1f2a" fill-rule="nonzero">
+                        <path d="M6 6H94V94H6Z">
+                  <button class="tenue-vormknop" title="Afgerond">
+                    <svg height="100%" style="display: block;" viewBox="0 0 100 100" width="100%">
+                      <g fill="#1b1f2a" fill-rule="nonzero">
+                        <path d="M20 6H80A14 14 0 0 1 94 20V80A14 14 0 0 1 80 94H20A14 14 0 0 1 6 80V20A14 14 0 0 1 20 6Z">
+                  <button class="tenue-vormknop" title="Driehoek">
+                    <svg height="100%" style="display: block;" viewBox="0 0 100 100" width="100%">
+                      <g fill="#1b1f2a" fill-rule="nonzero">
+                        <path d="M50 6L94 90H6Z">
+                  <button class="tenue-vormknop" title="Punt">
+                    <svg height="100%" style="display: block;" viewBox="0 0 100 100" width="100%">
+                      <g fill="#1b1f2a" fill-rule="nonzero">
+                        <path d="M6 10H94L50 94Z">
+                  <button class="tenue-vormknop" title="Ruit">
+                    <svg height="100%" style="display: block;" viewBox="0 0 100 100" width="100%">
+                      <g fill="#1b1f2a" fill-rule="nonzero">
+                        <path d="M50 4L96 50L50 96L4 50Z">
+                  <button class="tenue-vormknop" title="Zeshoek">
+                    <svg height="100%" style="display: block;" viewBox="0 0 100 100" width="100%">
+                      <g fill="#1b1f2a" fill-rule="nonzero">
+                        <path d="M28 8H72L94 50L72 92H28L6 50Z">
+                  <button class="tenue-vormknop" title="Achthoek">
+                    <svg height="100%" style="display: block;" viewBox="0 0 100 100" width="100%">
+                      <g fill="#1b1f2a" fill-rule="nonzero">
+                        <path d="M32 6H68L94 32V68L68 94H32L6 68V32Z">
+                  <button class="tenue-vormknop" title="Halve">
+                    <svg height="100%" style="display: block;" viewBox="0 0 100 100" width="100%">
+                      <g fill="#1b1f2a" fill-rule="nonzero">
+                        <path d="M4 70A46 46 0 0 1 96 70Z">
+                  <button class="tenue-vormknop" title="Kwart">
+                    <svg height="100%" style="display: block;" viewBox="0 0 100 100" width="100%">
+                      <g fill="#1b1f2a" fill-rule="nonzero">
+                        <path d="M6 94V6A88 88 0 0 1 94 94Z">
+                  <button class="tenue-vormknop" title="Druppel">
+                    <svg height="100%" style="display: block;" viewBox="0 0 100 100" width="100%">
+                      <g fill="#1b1f2a" fill-rule="nonzero">
+                        <path d="M50 4C74 30 90 46 90 62A40 40 0 0 1 10 62C10 46 26 30 50 4Z">
+                  <button class="tenue-vormknop" title="Wig">
+                    <svg height="100%" style="display: block;" viewBox="0 0 100 100" width="100%">
+                      <g fill="#1b1f2a" fill-rule="nonzero">
+                        <path d="M6 94V6L94 94Z">
+                  <button class="tenue-vormknop" title="Kruis">
+                    <svg height="100%" style="display: block;" viewBox="0 0 100 100" width="100%">
+                      <g fill="#1b1f2a" fill-rule="nonzero">
+                        <path d="M36 6H64V36H94V64H64V94H36V64H6V36H36Z">
+                  <button class="tenue-vormknop" title="Balk">
+                    <svg height="100%" style="display: block;" viewBox="0 0 100 100" width="100%">
+                      <g fill="#1b1f2a" fill-rule="nonzero">
+                        <path d="M6 36H94V64H6Z">
+                  <button class="tenue-vormknop" title="Pijl">
+                    <svg height="100%" style="display: block;" viewBox="0 0 100 100" width="100%">
+                      <g fill="#1b1f2a" fill-rule="nonzero">
+                        <path d="M50 4L88 42H66V96H34V42H12Z">
+            <div style="display: flex; flex-direction: column; min-height: 0px; gap: 0px;">
+              <div class="tenue-doekvak">
+                <div class="tenue-hoekknoppen">
+                  <button class="tenue-wisknop" title="Dit tenue opslaan als afbeelding">
+                    <i class="fa-solid fa-image">
+                  <button class="tenue-wisknop" title="Alle vijf de tenues als PDF">
+                    <i class="fa-solid fa-file-pdf">
+                  <button class="tenue-wisknop" disabled="" title="Ongedaan maken">
+                    <i class="fa-solid fa-rotate-left">
+                  <button class="tenue-wisknop" disabled="" title="Opnieuw">
+                    <i class="fa-solid fa-rotate-right">
+                <div class="tenue-mini">
+                  <svg height="96.2" style="display: block; overflow: visible; filter: drop-shadow(rgba(0, 0, 0, 0.28) 0px 3px 6px);" viewBox="0 0 120 156" width="74">
+                    <defs>
+                      <clippath id="tn11-s">
+                        <path d="M46 10 L28 15 L8 31 L19 53 L33 46 L33 88 L87 88 L87 46 L101 53 L112 31 L92 15 L74 10 C68 22 52 22 46 10 Z">
+                      <clippath id="tn11-p">
+                        <path d="M33 92 L87 92 L87 112 L83 132 L63 132 L60 112 L57 132 L37 132 L33 112 Z">
+                      <clippath id="tn11-k">
+                        <rect height="22" rx="5" width="17" x="38" y="134">
+                        <rect height="22" rx="5" width="17" x="65" y="134">
+                    <g clip-path="url(#tn11-s)">
+                      <rect fill="#004aad" height="92" width="120" x="0" y="0">
+                    <path d="M46 10 L28 15 L8 31 L19 53 L33 46 L33 88 L87 88 L87 46 L101 53 L112 31 L92 15 L74 10 C68 22 52 22 46 10 Z" fill="none" stroke="rgba(0,0,0,.28)" stroke-width="1.4">
+                    <path d="M46 10 C52 22 68 22 74 10" fill="none" stroke="#ffffff" stroke-linecap="round" stroke-width="6">
+                    <path d="M46 10 C52 22 68 22 74 10" fill="none" stroke="rgba(0,0,0,.28)" stroke-width="0.9">
+                    <path d="M8 31 L19 53" stroke="#ffffff" stroke-linecap="round" stroke-width="5">
+                    <path d="M112 31 L101 53" stroke="#ffffff" stroke-linecap="round" stroke-width="5">
+                    <g clip-path="url(#tn11-p)">
+                      <path d="M33 92 L87 92 L87 112 L83 132 L63 132 L60 112 L57 132 L37 132 L33 112 Z" fill="#ffffff">
+                    <path d="M33 92 L87 92 L87 112 L83 132 L63 132 L60 112 L57 132 L37 132 L33 112 Z" fill="none" stroke="rgba(0,0,0,.28)" stroke-width="1.4">
+                    <path d="M60 92 L60 112" stroke="rgba(0,0,0,.28)" stroke-width="0.9">
+                    <g clip-path="url(#tn11-k)">
+                      <rect fill="#004aad" height="22" rx="5" width="17" x="38" y="134">
+                      <rect fill="#004aad" height="22" rx="5" width="17" x="65" y="134">
+                      <rect fill="#ffffff" height="5" rx="2.4" width="17" x="38" y="134">
+                      <rect fill="#ffffff" height="5" rx="2.4" width="17" x="65" y="134">
+                    <rect fill="none" height="22" rx="5" stroke="rgba(0,0,0,.28)" stroke-width="1.2" width="17" x="38" y="134">
+                    <rect fill="none" height="22" rx="5" stroke="rgba(0,0,0,.28)" stroke-width="1.2" width="17" x="65" y="134">
+                  <div class="tenue-kant">
+                    "Achter"
+                <div class="tenue-zoomknoppen">
+                  <button title="Uitzoomen">
+                    <i class="fa-solid fa-magnifying-glass-minus">
+                  <span class="tenue-zoomwaarde" title="Terug naar honderd procent">
+                    "100%"
+                  <button title="Inzoomen">
+                    <i class="fa-solid fa-magnifying-glass-plus">
+                <div class="tenue-midden">
+                  <div class="tenue-doek">
+                    <svg height="566" style="display: block; overflow: visible; filter: drop-shadow(rgba(0, 0, 0, 0.28) 0px 3px 6px);" viewBox="0 0 120 156" width="435.38461538461536">
+                      <defs>
+                        <clippath id="tn12-s">
+                          <path d="M46 10 L28 15 L8 31 L19 53 L33 46 L33 88 L87 88 L87 46 L101 53 L112 31 L92 15 L74 10 C68 22 52 22 46 10 Z">
+                        <clippath id="tn12-p">
+                          <path d="M33 92 L87 92 L87 112 L83 132 L63 132 L60 112 L57 132 L37 132 L33 112 Z">
+                        <clippath id="tn12-k">
+                          <rect height="22" rx="5" width="17" x="38" y="134">
+                          <rect height="22" rx="5" width="17" x="65" y="134">
+                      <g clip-path="url(#tn12-s)">
+                        <rect fill="#004aad" height="92" width="120" x="0" y="0">
+                      <path d="M46 10 L28 15 L8 31 L19 53 L33 46 L33 88 L87 88 L87 46 L101 53 L112 31 L92 15 L74 10 C68 22 52 22 46 10 Z" fill="none" stroke="rgba(0,0,0,.28)" stroke-width="1.4">
+                      <path d="M46 10 C52 22 68 22 74 10" fill="none" stroke="#ffffff" stroke-linecap="round" stroke-width="6">
+                      <path d="M46 10 C52 22 68 22 74 10" fill="none" stroke="rgba(0,0,0,.28)" stroke-width="0.9">
+                      <path d="M8 31 L19 53" stroke="#ffffff" stroke-linecap="round" stroke-width="5">
+                      <path d="M112 31 L101 53" stroke="#ffffff" stroke-linecap="round" stroke-width="5">
+                      <g>
+                      <g clip-path="url(#tn12-p)">
+                        <path d="M33 92 L87 92 L87 112 L83 132 L63 132 L60 112 L57 132 L37 132 L33 112 Z" fill="#ffffff">
+                      <path d="M33 92 L87 92 L87 112 L83 132 L63 132 L60 112 L57 132 L37 132 L33 112 Z" fill="none" stroke="rgba(0,0,0,.28)" stroke-width="1.4">
+                      <path d="M60 92 L60 112" stroke="rgba(0,0,0,.28)" stroke-width="0.9">
+                      <g clip-path="url(#tn12-k)">
+                        <rect fill="#004aad" height="22" rx="5" width="17" x="38" y="134">
+                        <rect fill="#004aad" height="22" rx="5" width="17" x="65" y="134">
+                        <rect fill="#ffffff" height="5" rx="2.4" width="17" x="38" y="134">
+                        <rect fill="#ffffff" height="5" rx="2.4" width="17" x="65" y="134">
+                      <rect fill="none" height="22" rx="5" stroke="rgba(0,0,0,.28)" stroke-width="1.2" width="17" x="38" y="134">
+                      <rect fill="none" height="22" rx="5" stroke="rgba(0,0,0,.28)" stroke-width="1.2" width="17" x="65" y="134">
+              <div class="tenue-gereed" style="justify-content: center;">
+                <span style="font-size: 11.5px; color: var(--grijs-donker); font-weight: 600;">
+                  "Kies links een vorm, of tik rechts op een laag om hem te bewerken."
+            <div class="tenue-kolom verborgen">
+              <div class="tenue-kolomkop">
+                "Lagen"
+              <div class="tenue-schuifgebied">
+                <div class="tenue-leeg" style="font-size: 11px;">
+                  "Nog niets opgelegd."
+              <div class="tenue-kolomkop" style="border-bottom-width: medium; border-bottom-style: none; border-bottom-color: currentcolor; border-top: 1px solid var(--grijs);">
+                "Kleuren"
+              <div class="tenue-schuifgebied" style="flex: 0 0 auto; max-height: 190px; padding-top: 4px;">
+                <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 5px;">
+                  <input class="tenue-kleur-input" style="width: 30px; height: 24px;" type="color" value="#004aad">
+                  <span style="font-size: 11px; font-weight: 700; color: var(--tekst); font-family: "Helvetica Neue", Arial;">
+                    "Shirt"
+                <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 5px;">
+                  <input class="tenue-kleur-input" style="width: 30px; height: 24px;" type="color" value="#ffffff">
+                  <span style="font-size: 11px; font-weight: 700; color: var(--tekst); font-family: "Helvetica Neue", Arial;">
+                    "Tweede"
+                <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 5px;">
+                  <input class="tenue-kleur-input" style="width: 30px; height: 24px;" type="color" value="#004aad">
+                  <span style="font-size: 11px; font-weight: 700; color: var(--grijs-donker); font-family: "Helvetica Neue", Arial;">
+                    "Mouwen"
+                <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 5px;">
+                  <input class="tenue-kleur-input" style="width: 30px; height: 24px;" type="color" value="#ffffff">
+                  <span style="font-size: 11px; font-weight: 700; color: var(--tekst); font-family: "Helvetica Neue", Arial;">
+                    "Kraag"
+                <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 5px;">
+                  <input class="tenue-kleur-input" style="width: 30px; height: 24px;" type="color" value="#ffffff">
+                  <span style="font-size: 11px; font-weight: 700; color: var(--tekst); font-family: "Helvetica Neue", Arial;">
+                    "Broek"
+                <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 5px;">
+                  <input class="tenue-kleur-input" style="width: 30px; height: 24px;" type="color" value="#004aad">
+                  <span style="font-size: 11px; font-weight: 700; color: var(--tekst); font-family: "Helvetica Neue", Arial;">
+                    "Sokken"
+                <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 5px;">
+                  <input class="tenue-kleur-input" style="width: 30px; height: 24px;" type="color" value="#ffffff">
+                  <span style="font-size: 11px; font-weight: 700; color: var(--tekst); font-family: "Helvetica Neue", Arial;">
+                    "Nummer"
+                <button class="tenue-knopje" style="width: 100%; margin-top: 4px;">
+                  <i class="fa-solid fa-shield-halved">
+                  "Wapen"
+                <input class="formulier-input" maxlength="18" placeholder="Sponsor" style="margin-top: 6px; font-size: 11px; padding: 5px 7px;" type="text" value="">
+    <nav class="bottom-nav">
+      <button class="nav-item">
+        <div class="nav-pip">
+        <span class="nav-icon">
+          <i class="fa-solid fa-house">
+        <span>
+          "Home"
+      <button class="nav-item">
+        <div class="nav-pip">
+        <span class="nav-icon">
+          <i class="fa-solid fa-futbol">
+        <span>
+          "Wedstrijden"
+      <button class="nav-item">
+        <div class="nav-pip">
+        <span class="nav-icon">
+          <i class="fa-solid fa-users">
+        <span>
+          "Selectie"
+      <button class="nav-item">
+        <div class="nav-pip">
+        <span class="nav-icon">
+          <i class="fa-solid fa-person-running">
+        <span>
+          "Training"
+      <button class="nav-item">
+        <div class="nav-pip">
+        <span class="nav-icon">
+          <i class="fa-solid fa-chart-bar">
+        <span>
+          "Stats"

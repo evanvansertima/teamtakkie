@@ -1,0 +1,275 @@
+<html lang="nl" data-thema="licht">
+  <div class="app-schil">
+    <aside class="zijbalk">
+      <button class="zijbalk-merk zijbalk-team" title="Van team wisselen">
+        <img alt="VV Verzonnen Kamp" class="logo-img" src="data:image/png#28734-10ebnl0">
+        <div class="header-tekst">
+          <h1>
+            "VV Verzonnen Kamp"
+          <div class="header-subtitel">
+            "JO19-2"
+            <i class="fa-solid fa-chevron-down header-pijl">
+      <nav class="zijbalk-nav">
+        <button class="zij-item">
+          <span class="zij-icoon">
+            <i class="fa-solid fa-house">
+          <span>
+            "Dashboard"
+        <button class="zij-item">
+          <span class="zij-icoon">
+            <i class="fa-solid fa-futbol">
+          <span>
+            "Wedstrijden"
+        <button class="zij-item">
+          <span class="zij-icoon">
+            <i class="fa-solid fa-person-running">
+          <span>
+            "Trainingen"
+        <button aria-current="page" class="zij-item actief">
+          <span class="zij-icoon">
+            <i class="fa-solid fa-users">
+          <span>
+            "Selectie"
+        <button class="zij-item">
+          <span class="zij-icoon">
+            <i class="fa-solid fa-calendar-days">
+          <span>
+            "Agenda"
+        <div class="zijbalk-kop">
+          "Analyse"
+        <button class="zij-item">
+          <span class="zij-icoon">
+            <i class="fa-solid fa-chart-bar">
+          <span>
+            "Statistieken"
+        <button class="zij-item">
+          <span class="zij-icoon">
+            <i class="fa-solid fa-stopwatch">
+          <span>
+            "Live analyse"
+        <div class="zijbalk-kop">
+          "Extra"
+        <button class="zij-item">
+          <span class="zij-icoon">
+            <i class="fa-solid fa-map">
+          <span>
+            "Clubhuis"
+      <div class="zijbalk-voet">
+        <button class="sync-lampje mislukt" title="Er staat iets klaar dat nog niet verstuurd is. Zodra er weer bereik is gaat het vanzelf.">
+          <i class="fa-solid fa-triangle-exclamation">
+          <span>
+            "Geen verbinding"
+        <button class="zij-item">
+          <span class="zij-icoon">
+            <i class="fa-solid fa-gear">
+          <span>
+            "Instellingen"
+        <div class="zij-ontwerp">
+          <span class="zij-ontwerp-studio">
+            "TEAMTAKKIE"
+          <span class="zij-ontwerp-naam">
+            "EVS production"
+    <header class="header">
+      <button class="header-logo header-team" title="Van team wisselen">
+        <img alt="VV Verzonnen Kamp" class="logo-img" src="data:image/png#28734-10ebnl0">
+        <div class="header-tekst">
+          <h1>
+            "VV Verzonnen Kamp"
+          <div class="header-subtitel">
+            "JO19-2 · TEAMTAKKIE"
+            <i class="fa-solid fa-chevron-down header-pijl">
+      <button aria-label="Instellingen" style="font-size: 20px; cursor: pointer; background: none; border-width: medium; border-style: none; border-color: currentcolor; border-image: none; color: inherit; padding: 6px 4px;">
+        <i class="fa-solid fa-gear">
+    <main class="inhoud">
+      <div>
+        <div class="tabs">
+          <button class="tab-knop">
+            <i class="fa-solid fa-users">
+            "Spelers"
+          <button class="tab-knop actief">
+            <i class="fa-solid fa-table-cells-large">
+            "Opstellingen"
+          <button class="tab-knop">
+            <i class="fa-solid fa-chess">
+            "Tactieken"
+          <button class="tab-knop">
+            <i class="fa-solid fa-briefcase-medical">
+            "Blessures"
+          <button class="tab-knop">
+            <i class="fa-solid fa-piggy-bank">
+            "Boetepot"
+        <div>
+          <button class="formatie-keuze-knop">
+            <span class="formatie-keuze-naam">
+              "⚽ 4-3-3A"
+            <span class="formatie-keuze-hint">
+              "Wijzig ▼"
+          <div style="margin-bottom: 8px; font-size: 13px; color: var(--grijs-donker); font-weight: 400; text-align: center;">
+            "Tik op een positie om een speler toe te wijzen ·"
+            "0"
+            "/11 ingevuld"
+          <div class="veld-zoom">
+            <button class="veld-zoomknop" title="Kleiner">
+              <i class="fa-solid fa-magnifying-glass-minus">
+            <button class="veld-zoomgetal" title="Terug naar honderd procent">
+              "100"
+              "%"
+            <button class="veld-zoomknop" title="Groter">
+              <i class="fa-solid fa-magnifying-glass-plus">
+          <div class="opstel-veld">
+            <div style="position: absolute; inset: 0px; border-radius: 14px; overflow: hidden; pointer-events: none;">
+              <div style="position: absolute; left: 0px; right: 0px; top: 0%; height: 16.6667%; background: rgba(0, 0, 0, 0.04);">
+              <div style="position: absolute; left: 0px; right: 0px; top: 16.6667%; height: 16.6667%; background: rgba(255, 255, 255, 0.02);">
+              <div style="position: absolute; left: 0px; right: 0px; top: 33.3333%; height: 16.6667%; background: rgba(0, 0, 0, 0.04);">
+              <div style="position: absolute; left: 0px; right: 0px; top: 50%; height: 16.6667%; background: rgba(255, 255, 255, 0.02);">
+              <div style="position: absolute; left: 0px; right: 0px; top: 66.6667%; height: 16.6667%; background: rgba(0, 0, 0, 0.04);">
+              <div style="position: absolute; left: 0px; right: 0px; top: 83.3333%; height: 16.6667%; background: rgba(255, 255, 255, 0.02);">
+            <svg preserveAspectRatio="xMidYMid meet" style="position: absolute; inset: 0px; width: 100%; height: 100%; pointer-events: none;" viewBox="0 0 200 300">
+              <rect fill="none" height="284" stroke="rgba(255,255,255,0.5)" stroke-width="1.8" width="180" x="10" y="8">
+              <g fill="none" stroke="rgba(255,255,255,0.45)" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.6">
+                <line stroke="rgba(255,255,255,0.5)" stroke-width="1.8" x1="10" x2="190" y1="150" y2="150">
+                <ellipse cx="100" cy="150" rx="24.22058823529412" ry="24.74857142857143" stroke="rgba(255,255,255,0.5)" stroke-width="1.8">
+                <circle cx="100" cy="150" fill="rgba(255,255,255,0.6)" r="2.5" stroke="none">
+                <rect height="44.62857142857143" width="106.72941176470589" x="46.63529411764706" y="8">
+                <rect height="14.876190476190477" width="48.49411764705882" x="75.75294117647059" y="8">
+                <rect height="44.62857142857143" width="106.72941176470589" x="46.63529411764706" y="247.37142857142857">
+                <rect height="14.876190476190477" width="48.49411764705882" x="75.75294117647059" y="277.12380952380954">
+                <rect height="7" stroke="rgba(255,255,255,0.7)" stroke-width="2.2" width="19.376470588235293" x="90.31176470588235" y="1">
+                <rect height="7" stroke="rgba(255,255,255,0.7)" stroke-width="2.2" width="19.376470588235293" x="90.31176470588235" y="292">
+                <circle cx="100" cy="37.75238095238095" fill="rgba(255,255,255,0.55)" r="2.5" stroke="none">
+                <circle cx="100" cy="262.247619047619" fill="rgba(255,255,255,0.55)" r="2.5" stroke="none">
+                <polyline points="80.64,52.63 81.82,54.11 83.11,55.49 84.50,56.77 85.98,57.93 87.54,58.98 89.18,59.90 90.89,60.68 92.64,61.33 94.44,61.84 96.28,62.21 98.13,62.43 100.00,62.50 101.87,62.43 103.72,62.21 105.56,61.84 107.36,61.33 109.11,60.68 110.82,59.90 112.46,58.98 114.02,57.93 115.50,56.77 116.89,55.49 118.18,54.11 119.36,52.63">
+                <polyline points="80.64,247.37 81.82,245.89 83.11,244.51 84.50,243.23 85.98,242.07 87.54,241.02 89.18,240.10 90.89,239.32 92.64,238.67 94.44,238.16 96.28,237.79 98.13,237.57 100.00,237.50 101.87,237.57 103.72,237.79 105.56,238.16 107.36,238.67 109.11,239.32 110.82,240.10 112.46,241.02 114.02,242.07 115.50,243.23 116.89,244.51 118.18,245.89 119.36,247.37">
+                <g stroke="rgba(255,255,255,0.4)" stroke-width="1.5">
+                  <polyline points="12.65,8.00 12.60,8.53 12.45,9.04 12.20,9.50 11.87,9.91 11.47,10.25 11.01,10.50 10.52,10.65 10.00,10.70">
+                  <polyline points="187.35,8.00 187.40,8.53 187.55,9.04 187.80,9.50 188.13,9.91 188.53,10.25 188.99,10.50 189.48,10.65 190.00,10.70">
+                  <polyline points="12.65,292.00 12.60,291.47 12.45,290.96 12.20,290.50 11.87,290.09 11.47,289.75 11.01,289.50 10.52,289.35 10.00,289.30">
+                  <polyline points="187.35,292.00 187.40,291.47 187.55,290.96 187.80,290.50 188.13,290.09 188.53,289.75 188.99,289.50 189.48,289.35 190.00,289.30">
+            <div style="position: absolute; left: 50%; top: 88%; transform: translate(-50%, -50%); display: flex; flex-direction: column; align-items: center; cursor: pointer; z-index: 2; -webkit-tap-highlight-color: transparent;">
+              <div style="position: relative;">
+                <div style="width: 44px; height: 44px; border-radius: 50%; background: rgba(255, 255, 255, 0.22); border: 2.5px solid rgba(255, 255, 255, 0.5); display: flex; align-items: center; justify-content: center; overflow: hidden; box-shadow: rgba(0, 0, 0, 0.45) 0px 2px 9px; font-family: "Helvetica Neue", Arial, sans-serif;">
+                  <span style="font-size: 10px; font-weight: 700; color: white; opacity: 0.85; font-family: "Helvetica Neue", Arial;">
+                    "DM"
+              <div style="font-size: 8px; font-weight: 700; color: white; margin-top: 2px; text-shadow: rgba(0, 0, 0, 0.9) 0px 1px 3px; font-family: "Helvetica Neue", Arial; background: rgba(0, 0, 0, 0.42); border-radius: 3px; padding: 1px 4px; line-height: 1.4; max-width: 64px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                "DM"
+            <div style="position: absolute; left: 14%; top: 72%; transform: translate(-50%, -50%); display: flex; flex-direction: column; align-items: center; cursor: pointer; z-index: 2; -webkit-tap-highlight-color: transparent;">
+              <div style="position: relative;">
+                <div style="width: 44px; height: 44px; border-radius: 50%; background: rgba(255, 255, 255, 0.22); border: 2.5px solid rgba(255, 255, 255, 0.5); display: flex; align-items: center; justify-content: center; overflow: hidden; box-shadow: rgba(0, 0, 0, 0.45) 0px 2px 9px; font-family: "Helvetica Neue", Arial, sans-serif;">
+                  <span style="font-size: 10px; font-weight: 700; color: white; opacity: 0.85; font-family: "Helvetica Neue", Arial;">
+                    "LV"
+              <div style="font-size: 8px; font-weight: 700; color: white; margin-top: 2px; text-shadow: rgba(0, 0, 0, 0.9) 0px 1px 3px; font-family: "Helvetica Neue", Arial; background: rgba(0, 0, 0, 0.42); border-radius: 3px; padding: 1px 4px; line-height: 1.4; max-width: 64px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                "LV"
+            <div style="position: absolute; left: 37%; top: 76%; transform: translate(-50%, -50%); display: flex; flex-direction: column; align-items: center; cursor: pointer; z-index: 2; -webkit-tap-highlight-color: transparent;">
+              <div style="position: relative;">
+                <div style="width: 44px; height: 44px; border-radius: 50%; background: rgba(255, 255, 255, 0.22); border: 2.5px solid rgba(255, 255, 255, 0.5); display: flex; align-items: center; justify-content: center; overflow: hidden; box-shadow: rgba(0, 0, 0, 0.45) 0px 2px 9px; font-family: "Helvetica Neue", Arial, sans-serif;">
+                  <span style="font-size: 10px; font-weight: 700; color: white; opacity: 0.85; font-family: "Helvetica Neue", Arial;">
+                    "CV"
+              <div style="font-size: 8px; font-weight: 700; color: white; margin-top: 2px; text-shadow: rgba(0, 0, 0, 0.9) 0px 1px 3px; font-family: "Helvetica Neue", Arial; background: rgba(0, 0, 0, 0.42); border-radius: 3px; padding: 1px 4px; line-height: 1.4; max-width: 64px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                "CV"
+            <div style="position: absolute; left: 63%; top: 76%; transform: translate(-50%, -50%); display: flex; flex-direction: column; align-items: center; cursor: pointer; z-index: 2; -webkit-tap-highlight-color: transparent;">
+              <div style="position: relative;">
+                <div style="width: 44px; height: 44px; border-radius: 50%; background: rgba(255, 255, 255, 0.22); border: 2.5px solid rgba(255, 255, 255, 0.5); display: flex; align-items: center; justify-content: center; overflow: hidden; box-shadow: rgba(0, 0, 0, 0.45) 0px 2px 9px; font-family: "Helvetica Neue", Arial, sans-serif;">
+                  <span style="font-size: 10px; font-weight: 700; color: white; opacity: 0.85; font-family: "Helvetica Neue", Arial;">
+                    "CV"
+              <div style="font-size: 8px; font-weight: 700; color: white; margin-top: 2px; text-shadow: rgba(0, 0, 0, 0.9) 0px 1px 3px; font-family: "Helvetica Neue", Arial; background: rgba(0, 0, 0, 0.42); border-radius: 3px; padding: 1px 4px; line-height: 1.4; max-width: 64px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                "CV"
+            <div style="position: absolute; left: 86%; top: 72%; transform: translate(-50%, -50%); display: flex; flex-direction: column; align-items: center; cursor: pointer; z-index: 2; -webkit-tap-highlight-color: transparent;">
+              <div style="position: relative;">
+                <div style="width: 44px; height: 44px; border-radius: 50%; background: rgba(255, 255, 255, 0.22); border: 2.5px solid rgba(255, 255, 255, 0.5); display: flex; align-items: center; justify-content: center; overflow: hidden; box-shadow: rgba(0, 0, 0, 0.45) 0px 2px 9px; font-family: "Helvetica Neue", Arial, sans-serif;">
+                  <span style="font-size: 10px; font-weight: 700; color: white; opacity: 0.85; font-family: "Helvetica Neue", Arial;">
+                    "RV"
+              <div style="font-size: 8px; font-weight: 700; color: white; margin-top: 2px; text-shadow: rgba(0, 0, 0, 0.9) 0px 1px 3px; font-family: "Helvetica Neue", Arial; background: rgba(0, 0, 0, 0.42); border-radius: 3px; padding: 1px 4px; line-height: 1.4; max-width: 64px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                "RV"
+            <div style="position: absolute; left: 50%; top: 57%; transform: translate(-50%, -50%); display: flex; flex-direction: column; align-items: center; cursor: pointer; z-index: 2; -webkit-tap-highlight-color: transparent;">
+              <div style="position: relative;">
+                <div style="width: 44px; height: 44px; border-radius: 50%; background: rgba(255, 255, 255, 0.22); border: 2.5px solid rgba(255, 255, 255, 0.5); display: flex; align-items: center; justify-content: center; overflow: hidden; box-shadow: rgba(0, 0, 0, 0.45) 0px 2px 9px; font-family: "Helvetica Neue", Arial, sans-serif;">
+                  <span style="font-size: 10px; font-weight: 700; color: white; opacity: 0.85; font-family: "Helvetica Neue", Arial;">
+                    "CVM"
+              <div style="font-size: 8px; font-weight: 700; color: white; margin-top: 2px; text-shadow: rgba(0, 0, 0, 0.9) 0px 1px 3px; font-family: "Helvetica Neue", Arial; background: rgba(0, 0, 0, 0.42); border-radius: 3px; padding: 1px 4px; line-height: 1.4; max-width: 64px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                "CVM"
+            <div style="position: absolute; left: 26%; top: 44%; transform: translate(-50%, -50%); display: flex; flex-direction: column; align-items: center; cursor: pointer; z-index: 2; -webkit-tap-highlight-color: transparent;">
+              <div style="position: relative;">
+                <div style="width: 44px; height: 44px; border-radius: 50%; background: rgba(255, 255, 255, 0.22); border: 2.5px solid rgba(255, 255, 255, 0.5); display: flex; align-items: center; justify-content: center; overflow: hidden; box-shadow: rgba(0, 0, 0, 0.45) 0px 2px 9px; font-family: "Helvetica Neue", Arial, sans-serif;">
+                  <span style="font-size: 10px; font-weight: 700; color: white; opacity: 0.85; font-family: "Helvetica Neue", Arial;">
+                    "CAM"
+              <div style="font-size: 8px; font-weight: 700; color: white; margin-top: 2px; text-shadow: rgba(0, 0, 0, 0.9) 0px 1px 3px; font-family: "Helvetica Neue", Arial; background: rgba(0, 0, 0, 0.42); border-radius: 3px; padding: 1px 4px; line-height: 1.4; max-width: 64px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                "CAM"
+            <div style="position: absolute; left: 74%; top: 44%; transform: translate(-50%, -50%); display: flex; flex-direction: column; align-items: center; cursor: pointer; z-index: 2; -webkit-tap-highlight-color: transparent;">
+              <div style="position: relative;">
+                <div style="width: 44px; height: 44px; border-radius: 50%; background: rgba(255, 255, 255, 0.22); border: 2.5px solid rgba(255, 255, 255, 0.5); display: flex; align-items: center; justify-content: center; overflow: hidden; box-shadow: rgba(0, 0, 0, 0.45) 0px 2px 9px; font-family: "Helvetica Neue", Arial, sans-serif;">
+                  <span style="font-size: 10px; font-weight: 700; color: white; opacity: 0.85; font-family: "Helvetica Neue", Arial;">
+                    "CAM"
+              <div style="font-size: 8px; font-weight: 700; color: white; margin-top: 2px; text-shadow: rgba(0, 0, 0, 0.9) 0px 1px 3px; font-family: "Helvetica Neue", Arial; background: rgba(0, 0, 0, 0.42); border-radius: 3px; padding: 1px 4px; line-height: 1.4; max-width: 64px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                "CAM"
+            <div style="position: absolute; left: 13%; top: 22%; transform: translate(-50%, -50%); display: flex; flex-direction: column; align-items: center; cursor: pointer; z-index: 2; -webkit-tap-highlight-color: transparent;">
+              <div style="position: relative;">
+                <div style="width: 44px; height: 44px; border-radius: 50%; background: rgba(255, 255, 255, 0.22); border: 2.5px solid rgba(255, 255, 255, 0.5); display: flex; align-items: center; justify-content: center; overflow: hidden; box-shadow: rgba(0, 0, 0, 0.45) 0px 2px 9px; font-family: "Helvetica Neue", Arial, sans-serif;">
+                  <span style="font-size: 10px; font-weight: 700; color: white; opacity: 0.85; font-family: "Helvetica Neue", Arial;">
+                    "LVA"
+              <div style="font-size: 8px; font-weight: 700; color: white; margin-top: 2px; text-shadow: rgba(0, 0, 0, 0.9) 0px 1px 3px; font-family: "Helvetica Neue", Arial; background: rgba(0, 0, 0, 0.42); border-radius: 3px; padding: 1px 4px; line-height: 1.4; max-width: 64px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                "LVA"
+            <div style="position: absolute; left: 50%; top: 15%; transform: translate(-50%, -50%); display: flex; flex-direction: column; align-items: center; cursor: pointer; z-index: 2; -webkit-tap-highlight-color: transparent;">
+              <div style="position: relative;">
+                <div style="width: 44px; height: 44px; border-radius: 50%; background: rgba(255, 255, 255, 0.22); border: 2.5px solid rgba(255, 255, 255, 0.5); display: flex; align-items: center; justify-content: center; overflow: hidden; box-shadow: rgba(0, 0, 0, 0.45) 0px 2px 9px; font-family: "Helvetica Neue", Arial, sans-serif;">
+                  <span style="font-size: 10px; font-weight: 700; color: white; opacity: 0.85; font-family: "Helvetica Neue", Arial;">
+                    "SP"
+              <div style="font-size: 8px; font-weight: 700; color: white; margin-top: 2px; text-shadow: rgba(0, 0, 0, 0.9) 0px 1px 3px; font-family: "Helvetica Neue", Arial; background: rgba(0, 0, 0, 0.42); border-radius: 3px; padding: 1px 4px; line-height: 1.4; max-width: 64px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                "SP"
+            <div style="position: absolute; left: 87%; top: 22%; transform: translate(-50%, -50%); display: flex; flex-direction: column; align-items: center; cursor: pointer; z-index: 2; -webkit-tap-highlight-color: transparent;">
+              <div style="position: relative;">
+                <div style="width: 44px; height: 44px; border-radius: 50%; background: rgba(255, 255, 255, 0.22); border: 2.5px solid rgba(255, 255, 255, 0.5); display: flex; align-items: center; justify-content: center; overflow: hidden; box-shadow: rgba(0, 0, 0, 0.45) 0px 2px 9px; font-family: "Helvetica Neue", Arial, sans-serif;">
+                  <span style="font-size: 10px; font-weight: 700; color: white; opacity: 0.85; font-family: "Helvetica Neue", Arial;">
+                    "RVA"
+              <div style="font-size: 8px; font-weight: 700; color: white; margin-top: 2px; text-shadow: rgba(0, 0, 0, 0.9) 0px 1px 3px; font-family: "Helvetica Neue", Arial; background: rgba(0, 0, 0, 0.42); border-radius: 3px; padding: 1px 4px; line-height: 1.4; max-width: 64px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                "RVA"
+          <div style="display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap;">
+            <button class="knop lijn klein" style="flex: 1 1 0%; justify-content: center;">
+              <i class="fa-solid fa-rotate-left">
+              "Leegmaken"
+            <button class="knop klein" style="flex: 2 1 0%; justify-content: center;">
+              <i class="fa-solid fa-floppy-disk">
+              "Opslaan"
+            <button class="knop klein pdf-knop" style="flex: 1 1 0%; justify-content: center;">
+              <i class="fa-solid fa-file-pdf">
+              "PDF"
+            <button class="knop klein" style="flex: 1 1 0%; justify-content: center; background: rgb(37, 211, 102); color: white;">
+              <i class="fa-brands fa-whatsapp">
+              "WhatsApp"
+          <div style="display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap;">
+            <button class="knop klein" style="flex: 2 1 0%; justify-content: center; background: var(--blauw-licht);">
+              <i class="fa-solid fa-image">
+              "Deel als afbeelding"
+            <button class="knop lijn klein" style="flex: 1 1 0%; justify-content: center;">
+              <i class="fa-solid fa-shirt">
+              "Tenue"
+    <nav class="bottom-nav">
+      <button class="nav-item">
+        <div class="nav-pip">
+        <span class="nav-icon">
+          <i class="fa-solid fa-house">
+        <span>
+          "Home"
+      <button class="nav-item">
+        <div class="nav-pip">
+        <span class="nav-icon">
+          <i class="fa-solid fa-futbol">
+        <span>
+          "Wedstrijden"
+      <button class="nav-item actief">
+        <div class="nav-pip">
+        <span class="nav-icon">
+          <i class="fa-solid fa-users">
+        <span>
+          "Selectie"
+      <button class="nav-item">
+        <div class="nav-pip">
+        <span class="nav-icon">
+          <i class="fa-solid fa-person-running">
+        <span>
+          "Training"
+      <button class="nav-item">
+        <div class="nav-pip">
+        <span class="nav-icon">
+          <i class="fa-solid fa-chart-bar">
+        <span>
+          "Stats"

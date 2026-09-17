@@ -1,0 +1,221 @@
+<html lang="nl" data-thema="licht">
+  <div class="app-schil">
+    <aside class="zijbalk">
+      <button class="zijbalk-merk zijbalk-team" title="Van team wisselen">
+        <img alt="VV Verzonnen Kamp" class="logo-img" src="data:image/png#28734-10ebnl0">
+        <div class="header-tekst">
+          <h1>
+            "VV Verzonnen Kamp"
+          <div class="header-subtitel">
+            "JO19-2"
+            <i class="fa-solid fa-chevron-down header-pijl">
+      <nav class="zijbalk-nav">
+        <button class="zij-item">
+          <span class="zij-icoon">
+            <i class="fa-solid fa-house">
+          <span>
+            "Dashboard"
+        <button aria-current="page" class="zij-item actief">
+          <span class="zij-icoon">
+            <i class="fa-solid fa-futbol">
+          <span>
+            "Wedstrijden"
+        <button class="zij-item">
+          <span class="zij-icoon">
+            <i class="fa-solid fa-person-running">
+          <span>
+            "Trainingen"
+        <button class="zij-item">
+          <span class="zij-icoon">
+            <i class="fa-solid fa-users">
+          <span>
+            "Selectie"
+        <button class="zij-item">
+          <span class="zij-icoon">
+            <i class="fa-solid fa-calendar-days">
+          <span>
+            "Agenda"
+        <div class="zijbalk-kop">
+          "Analyse"
+        <button class="zij-item">
+          <span class="zij-icoon">
+            <i class="fa-solid fa-chart-bar">
+          <span>
+            "Statistieken"
+        <button class="zij-item">
+          <span class="zij-icoon">
+            <i class="fa-solid fa-stopwatch">
+          <span>
+            "Live analyse"
+        <div class="zijbalk-kop">
+          "Extra"
+        <button class="zij-item">
+          <span class="zij-icoon">
+            <i class="fa-solid fa-map">
+          <span>
+            "Clubhuis"
+      <div class="zijbalk-voet">
+        <button class="sync-lampje mislukt" title="Er staat iets klaar dat nog niet verstuurd is. Zodra er weer bereik is gaat het vanzelf.">
+          <i class="fa-solid fa-triangle-exclamation">
+          <span>
+            "Geen verbinding"
+        <button class="zij-item">
+          <span class="zij-icoon">
+            <i class="fa-solid fa-gear">
+          <span>
+            "Instellingen"
+        <div class="zij-ontwerp">
+          <span class="zij-ontwerp-studio">
+            "TEAMTAKKIE"
+          <span class="zij-ontwerp-naam">
+            "EVS production"
+    <header class="header">
+      <button class="header-logo header-team" title="Van team wisselen">
+        <img alt="VV Verzonnen Kamp" class="logo-img" src="data:image/png#28734-10ebnl0">
+        <div class="header-tekst">
+          <h1>
+            "VV Verzonnen Kamp"
+          <div class="header-subtitel">
+            "JO19-2 · TEAMTAKKIE"
+            <i class="fa-solid fa-chevron-down header-pijl">
+      <button aria-label="Instellingen" style="font-size: 20px; cursor: pointer; background: none; border-width: medium; border-style: none; border-color: currentcolor; border-image: none; color: inherit; padding: 6px 4px;">
+        <i class="fa-solid fa-gear">
+    <main class="inhoud">
+      <div class="pagina-slide">
+        <div class="w-kop winst gespeeld">
+          <button class="w-kop-terug" title="Terug naar wedstrijden">
+            <i class="fa-solid fa-arrow-left">
+          <div class="w-kop-midden">
+            <div class="w-kop-teams">
+              <span class="w-kop-team">
+                "VV Verzonnen Kamp"
+              <span class="w-kop-score">
+                "3 – 1"
+              <span class="w-kop-team">
+                "VV Nevelmeer O19-1"
+            <div class="w-kop-meta">
+              <span class="w-kop-uitslag winst">
+                "Gewonnen"
+              <span>
+                "12 sep"
+              <span>
+                "14:30"
+              <span>
+                "Thuis"
+              <span class="w-kop-weg">
+                "Sportpark De Verzonnen Kamp"
+              <span class="w-kop-weg">
+                "Competitie"
+        <div class="w-lijf">
+          <nav class="w-secties" role="tablist">
+            <button aria-selected="false" class="w-sectie" role="tab">
+              <i class="fa-solid fa-clipboard-check">
+              <span>
+                "Voorbereiding"
+            <button aria-selected="true" class="w-sectie aan" role="tab">
+              <i class="fa-solid fa-chess-board">
+              <span>
+                "Tactiek"
+            <button aria-selected="false" class="w-sectie" role="tab">
+              <i class="fa-solid fa-user-tag">
+              <span>
+                "Spelersrollen"
+            <button aria-selected="false" class="w-sectie" role="tab">
+              <i class="fa-solid fa-people-line">
+              <span>
+                "Opstelling"
+              <b>
+                "11"
+            <button aria-selected="false" class="w-sectie" role="tab">
+              <i class="fa-solid fa-flag">
+              <span>
+                "Spelhervattingen"
+            <button aria-selected="false" class="w-sectie" role="tab">
+              <i class="fa-solid fa-binoculars">
+              <span>
+                "Tegenstander"
+            <button aria-selected="false" class="w-sectie" role="tab">
+              <i class="fa-solid fa-futbol">
+              <span>
+                "Uitslag"
+              <b>
+                "4"
+            <button aria-selected="false" class="w-sectie" role="tab">
+              <i class="fa-solid fa-users">
+              <span>
+                "Speelminuten"
+          <div class="w-inhoud">
+            <div style="display: flex; gap: 10px; margin-top: 4px;">
+              <button class="knop lijn" style="flex: 1 1 0%; justify-content: center;">
+                <i class="fa-solid fa-pen">
+                "Bewerken"
+              <button class="knop lijn klein" style="border-color: var(--grijs-donker); color: var(--grijs-donker);" title="Uitslag wissen, wedstrijd terug op gepland">
+                <i class="fa-solid fa-rotate-left">
+              <button class="knop lijn klein" style="border-color: var(--oranje); color: var(--oranje);">
+                <i class="fa-solid fa-arrows-rotate">
+                "Uitslag wijzigen"
+              <button class="knop gevaar klein">
+                <i class="fa-solid fa-trash">
+            <div class="kaart detail-sectie">
+              <div class="kaart-titel" style="justify-content: space-between; flex-wrap: wrap; gap: 8px;">
+                <span>
+                  <i class="fa-solid fa-chess-board">
+                  "Tactiek"
+                <span class="rol-tel">
+                  "nog geen opdrachten"
+              <div class="tac-fase">
+                <div class="tac-fase-kop">
+                  <span class="tac-fase-icoon" style="background: var(--blauw);">
+                    <i class="fa-solid fa-clipboard-list">
+                  "Wedstrijdplan"
+                <textarea class="formulier-input" placeholder="Bijv. de eerste 5 minuten vol druk, daarna inzakken en via de counter de aanval zoeken." rows="2" style="resize: vertical; margin-bottom: 0px;">
+              <button class="knop lijn klein" style="width: 100%; justify-content: center; margin: 4px 0px 10px;">
+                <i class="fa-solid fa-plus">
+                "Balbezit, balverlies en omschakeling"
+              <div class="tac-fase">
+                <div class="tac-fase-kop">
+                  <span class="tac-fase-icoon" style="background: rgb(124, 58, 237);">
+                    <i class="fa-solid fa-pen-ruler">
+                  "Tactische tekening"
+                <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                  <button class="knop lijn klein" style="flex: 1 1 180px; justify-content: center;">
+                    <i class="fa-solid fa-pen-ruler">
+                    "Tekening maken"
+              <div class="tac-fase">
+                <div class="tac-fase-kop">
+                  <span class="tac-fase-icoon" style="background: var(--oranje);">
+                    <i class="fa-solid fa-user-pen">
+                  "Opdracht per speler"
+                <div style="font-size: 12px; color: var(--grijs-donker); line-height: 1.6;">
+                  "Stel eerst je basisopstelling samen, dan kun je hier per speler een opdracht geven."
+    <nav class="bottom-nav">
+      <button class="nav-item">
+        <div class="nav-pip">
+        <span class="nav-icon">
+          <i class="fa-solid fa-house">
+        <span>
+          "Home"
+      <button class="nav-item actief">
+        <div class="nav-pip">
+        <span class="nav-icon">
+          <i class="fa-solid fa-futbol">
+        <span>
+          "Wedstrijden"
+      <button class="nav-item">
+        <div class="nav-pip">
+        <span class="nav-icon">
+          <i class="fa-solid fa-users">
+        <span>
+          "Selectie"
+      <button class="nav-item">
+        <div class="nav-pip">
+        <span class="nav-icon">
+          <i class="fa-solid fa-person-running">
+        <span>
+          "Training"
+      <button class="nav-item">
+        <div class="nav-pip">
+        <span class="nav-icon">
+          <i class="fa-solid fa-chart-bar">
+        <span>
+          "Stats"

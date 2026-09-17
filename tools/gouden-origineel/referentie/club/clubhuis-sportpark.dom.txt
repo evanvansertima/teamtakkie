@@ -1,0 +1,643 @@
+<html lang="nl" data-thema="licht">
+  <div class="app-schil">
+    <aside class="zijbalk">
+      <button class="zijbalk-merk zijbalk-team" title="Van team wisselen">
+        <img alt="VV Verzonnen Kamp" class="logo-img" src="data:image/png#28734-10ebnl0">
+        <div class="header-tekst">
+          <h1>
+            "VV Verzonnen Kamp"
+          <div class="header-subtitel">
+            "JO19-2"
+            <i class="fa-solid fa-chevron-down header-pijl">
+      <nav class="zijbalk-nav">
+        <button class="zij-item">
+          <span class="zij-icoon">
+            <i class="fa-solid fa-house">
+          <span>
+            "Dashboard"
+        <button class="zij-item">
+          <span class="zij-icoon">
+            <i class="fa-solid fa-futbol">
+          <span>
+            "Wedstrijden"
+        <button class="zij-item">
+          <span class="zij-icoon">
+            <i class="fa-solid fa-person-running">
+          <span>
+            "Trainingen"
+        <button class="zij-item">
+          <span class="zij-icoon">
+            <i class="fa-solid fa-users">
+          <span>
+            "Selectie"
+        <button class="zij-item">
+          <span class="zij-icoon">
+            <i class="fa-solid fa-calendar-days">
+          <span>
+            "Agenda"
+        <div class="zijbalk-kop">
+          "Analyse"
+        <button class="zij-item">
+          <span class="zij-icoon">
+            <i class="fa-solid fa-chart-bar">
+          <span>
+            "Statistieken"
+        <button class="zij-item">
+          <span class="zij-icoon">
+            <i class="fa-solid fa-stopwatch">
+          <span>
+            "Live analyse"
+        <div class="zijbalk-kop">
+          "Extra"
+        <button aria-current="page" class="zij-item actief">
+          <span class="zij-icoon">
+            <i class="fa-solid fa-map">
+          <span>
+            "Clubhuis"
+      <div class="zijbalk-voet">
+        <button class="sync-lampje mislukt" title="Er staat iets klaar dat nog niet verstuurd is. Zodra er weer bereik is gaat het vanzelf.">
+          <i class="fa-solid fa-triangle-exclamation">
+          <span>
+            "Geen verbinding"
+        <button class="zij-item">
+          <span class="zij-icoon">
+            <i class="fa-solid fa-gear">
+          <span>
+            "Instellingen"
+        <div class="zij-ontwerp">
+          <span class="zij-ontwerp-studio">
+            "TEAMTAKKIE"
+          <span class="zij-ontwerp-naam">
+            "EVS production"
+    <header class="header">
+      <button class="header-logo header-team" title="Van team wisselen">
+        <img alt="VV Verzonnen Kamp" class="logo-img" src="data:image/png#28734-10ebnl0">
+        <div class="header-tekst">
+          <h1>
+            "VV Verzonnen Kamp"
+          <div class="header-subtitel">
+            "JO19-2 · TEAMTAKKIE"
+            <i class="fa-solid fa-chevron-down header-pijl">
+      <button aria-label="Instellingen" style="font-size: 20px; cursor: pointer; background: none; border-width: medium; border-style: none; border-color: currentcolor; border-image: none; color: inherit; padding: 6px 4px;">
+        <i class="fa-solid fa-gear">
+    <main class="inhoud">
+      <div>
+        <button class="back-knop">
+          <i class="fa-solid fa-chevron-left">
+          "Clubhuis"
+        <div>
+          <div class="kaart" style="margin-bottom: 12px;">
+            <div class="kaart-titel" style="justify-content: space-between; flex-wrap: wrap; gap: 8px;">
+              <span>
+                <i class="fa-solid fa-cube">
+                "Ons sportpark"
+              <button class="knop klein">
+                <i class="fa-solid fa-expand">
+                "Schermvullend bouwen"
+            <p style="font-size: 11.5px; color: var(--grijs-donker); font-weight: 400; line-height: 1.6; margin: 2px 0px 0px;">
+              "Kies iets uit de kist: het hangt dan aan je muis, doorzichtig, en je klikt waar het moet komen. Draaien mag alvast, met de knopjes in de balk of met de"
+              <b>
+                "R"
+              "en de pijltjestoetsen. Rood betekent dat er iets in de weg staat. Escape of de rechtermuisknop laat het weer los. Wat er staat versleep je gewoon, en met de knopjes erboven draai je het in stappen van"
+              "15"
+              "graden. Met het gele blokje op de hoek trek je een onderdeel breder of dieper, met het blauwe blokje erboven hoger of lager. Op gras, bestrating, paden en wegen mag van alles staan; alleen twee velden over elkaar heen gaat niet. Zet je iets op iets anders, dan klimt het er vanzelf bovenop — zo stapel je containers en hang je een dak boven een tribune. Met de pijltjes in de balk boven het onderdeel zet je het hoger of lager. De knoppen staan op een breed scherm in de tekening zelf — linksboven terug, kleuren, vrij bouwen, delen en leegmaken, rechtsonder de camera en linksonder de tijd van de dag. Op een smal scherm staan ze onder de tekening, zodat ze je bouwvlak niet opeten. Materiaal zoals pionnen en doeltjes mag over een veld heen. Sleep naast de gebouwen om om je complex heen te lopen. Op een telefoon of tablet knijp je met twee vingers om in en uit te zoomen, en schuif je met diezelfde twee vingers over het terrein; met een muis gaat dat met het wiel en met Shift ingedrukt slepen. Met"
+              <b>
+                "Vierkantsdijk"
+              "zet je in één keer de grondvorm van ons eigen complex neer."
+          <div class="kaart" style="margin-bottom: 12px;">
+            <div class="kaart-titel" style="justify-content: space-between; flex-wrap: wrap; gap: 8px;">
+              <span>
+                <i class="fa-solid fa-floppy-disk">
+                "Bewaarde sportparken"
+              <span style="font-size: 11px; color: var(--grijs-donker); font-weight: 600;">
+                "0"
+                "van de"
+                "5"
+            <div class="park-bewaard">
+              <button class="park-leegslot" disabled="" style="opacity: 0.45; cursor: default;">
+                <i class="fa-solid fa-plus">
+                "Dit park bewaren"
+            <p style="font-size: 11.5px; color: var(--grijs-donker); font-weight: 400; line-height: 1.6; margin: 8px 0px 0px;">
+              "Nog niets bewaard. Wat je op het terrein hebt staan blijft sowieso bewaard — hier zet je versies weg die je later terug wilt kunnen halen."
+          <div class="tabs">
+            <button class="tab-knop actief">
+              "Velden"
+            <button class="tab-knop">
+              "Materiaal"
+            <button class="tab-knop">
+              "Gebouwen"
+            <button class="tab-knop">
+              "Publiek"
+            <button class="tab-knop">
+              "Daken"
+            <button class="tab-knop">
+              "Terrein"
+            <button class="tab-knop">
+              "Groen"
+            <button class="tab-knop">
+              "Sfeer"
+          <div class="park-kist">
+            <button class="park-knop">
+              <svg class="park-mini" viewBox="0 0 840 560">
+                <rect fill="#48a04d" height="560" rx="2.4" stroke="none" stroke-width="0" width="840" x="0" y="0">
+                <rect fill="#347a38" height="560" rx="0" stroke="none" stroke-width="0" width="46.66666666666667" x="46.66666666666667" y="0">
+                <rect fill="#347a38" height="560" rx="0" stroke="none" stroke-width="0" width="46.66666666666667" x="140" y="0">
+                <rect fill="#347a38" height="560" rx="0" stroke="none" stroke-width="0" width="46.66666666666667" x="233.33333333333331" y="0">
+                <rect fill="#347a38" height="560" rx="0" stroke="none" stroke-width="0" width="46.66666666666667" x="326.66666666666663" y="0">
+                <rect fill="#347a38" height="560" rx="0" stroke="none" stroke-width="0" width="46.66666666666667" x="420" y="0">
+                <rect fill="#347a38" height="560" rx="0" stroke="none" stroke-width="0" width="46.66666666666667" x="513.3333333333334" y="0">
+                <rect fill="#347a38" height="560" rx="0" stroke="none" stroke-width="0" width="46.66666666666667" x="606.6666666666666" y="0">
+                <rect fill="#347a38" height="560" rx="0" stroke="none" stroke-width="0" width="46.66666666666667" x="700" y="0">
+                <rect fill="#347a38" height="560" rx="0" stroke="none" stroke-width="0" width="46.66666666666667" x="793.3333333333333" y="0">
+                <rect fill="rgba(150,132,86,.34)" height="142.68800000000002" rx="24.863999999999997" stroke="none" stroke-width="0" width="62.16" x="5.6000000000000005" y="208.656">
+                <rect fill="rgba(150,132,86,.34)" height="142.68800000000002" rx="24.863999999999997" stroke="none" stroke-width="0" width="62.16" x="772.24" y="208.656">
+                <circle cx="420" cy="280" fill="rgba(150,132,86,.34)" r="24.696" stroke="none" stroke-width="0">
+                <rect fill="none" height="548.8000000000001" rx="0" stroke="rgba(255,255,255,.75)" stroke-width="1.2" width="828.8" x="5.6000000000000005" y="5.6000000000000005">
+                <line stroke="rgba(255,255,255,.75)" stroke-linecap="round" stroke-width="1.2" x1="420" x2="420" y1="5.6000000000000005" y2="554.4000000000001">
+                <circle cx="420" cy="280" fill="none" r="73.84588235294117" stroke="rgba(255,255,255,.75)" stroke-width="1.2">
+                <circle cx="420" cy="280" fill="rgba(255,255,255,.75)" r="1.7999999999999998" stroke="none" stroke-width="0">
+                <rect fill="none" height="325.4061176470588" rx="0" stroke="rgba(255,255,255,.75)" stroke-width="1.2" width="130.23999999999998" x="5.6000000000000005" y="117.29694117647063">
+                <rect fill="none" height="147.85317647058824" rx="0" stroke="rgba(255,255,255,.75)" stroke-width="1.2" width="43.41333333333333" x="5.6000000000000005" y="206.07341176470587">
+                <circle cx="92.42666666666666" cy="280" fill="rgba(255,255,255,.75)" r="1.7999999999999998" stroke="none" stroke-width="0">
+                <rect fill="none" height="325.4061176470588" rx="0" stroke="rgba(255,255,255,.75)" stroke-width="1.2" width="130.23999999999998" x="704.16" y="117.29694117647063">
+                <rect fill="none" height="147.85317647058824" rx="0" stroke="rgba(255,255,255,.75)" stroke-width="1.2" width="43.41333333333333" x="790.9866666666666" y="206.07341176470587">
+                <circle cx="747.5733333333334" cy="280" fill="rgba(255,255,255,.75)" r="1.7999999999999998" stroke="none" stroke-width="0">
+                <line stroke="rgba(255,255,255,.75)" stroke-linecap="round" stroke-width="1.2" x1="16.576" x2="15.740501748843885" y1="5.6000000000000005" y2="9.800333353639227">
+                <line stroke="rgba(255,255,255,.75)" stroke-linecap="round" stroke-width="1.2" x1="15.740501748843885" x2="13.361204030303547" y1="9.800333353639227" y2="13.361204030303547">
+                <line stroke="rgba(255,255,255,.75)" stroke-linecap="round" stroke-width="1.2" x1="13.361204030303547" x2="9.800333353639228" y1="13.361204030303547" y2="15.740501748843885">
+                <line stroke="rgba(255,255,255,.75)" stroke-linecap="round" stroke-width="1.2" x1="9.800333353639228" x2="5.600000000000001" y1="15.740501748843885" y2="16.576">
+                <line stroke="rgba(255,255,255,.75)" stroke-linecap="round" stroke-width="1.2" x1="823.424" x2="824.2594982511561" y1="5.6000000000000005" y2="9.800333353639227">
+                <line stroke="rgba(255,255,255,.75)" stroke-linecap="round" stroke-width="1.2" x1="824.2594982511561" x2="826.6387959696964" y1="9.800333353639227" y2="13.361204030303547">
+                <line stroke="rgba(255,255,255,.75)" stroke-linecap="round" stroke-width="1.2" x1="826.6387959696964" x2="830.1996666463607" y1="13.361204030303547" y2="15.740501748843885">
+                <line stroke="rgba(255,255,255,.75)" stroke-linecap="round" stroke-width="1.2" x1="830.1996666463607" x2="834.4" y1="15.740501748843885" y2="16.576">
+                <line stroke="rgba(255,255,255,.75)" stroke-linecap="round" stroke-width="1.2" x1="16.576" x2="15.740501748843885" y1="554.4000000000001" y2="550.1996666463608">
+                <line stroke="rgba(255,255,255,.75)" stroke-linecap="round" stroke-width="1.2" x1="15.740501748843885" x2="13.361204030303547" y1="550.1996666463608" y2="546.6387959696965">
+                <line stroke="rgba(255,255,255,.75)" stroke-linecap="round" stroke-width="1.2" x1="13.361204030303547" x2="9.800333353639228" y1="546.6387959696965" y2="544.2594982511562">
+                <line stroke="rgba(255,255,255,.75)" stroke-linecap="round" stroke-width="1.2" x1="9.800333353639228" x2="5.600000000000001" y1="544.2594982511562" y2="543.4240000000001">
+                <line stroke="rgba(255,255,255,.75)" stroke-linecap="round" stroke-width="1.2" x1="823.424" x2="824.2594982511561" y1="554.4000000000001" y2="550.1996666463608">
+                <line stroke="rgba(255,255,255,.75)" stroke-linecap="round" stroke-width="1.2" x1="824.2594982511561" x2="826.6387959696964" y1="550.1996666463608" y2="546.6387959696965">
+                <line stroke="rgba(255,255,255,.75)" stroke-linecap="round" stroke-width="1.2" x1="826.6387959696964" x2="830.1996666463607" y1="546.6387959696965" y2="544.2594982511562">
+                <line stroke="rgba(255,255,255,.75)" stroke-linecap="round" stroke-width="1.2" x1="830.1996666463607" x2="834.4" y1="544.2594982511562" y2="543.4240000000001">
+              <span class="park-knop-naam">
+                "Wedstrijdveld"
+              <span class="park-knop-maat">
+                "105 × 70 m"
+            <button class="park-knop">
+              <svg class="park-mini" viewBox="0 0 840 560">
+                <rect fill="#3f9450" height="560" rx="2.4" stroke="none" stroke-width="0" width="840" x="0" y="0">
+                <rect fill="none" height="548.8000000000001" rx="0" stroke="rgba(255,255,255,.75)" stroke-width="1.2" width="828.8" x="5.6000000000000005" y="5.6000000000000005">
+                <line stroke="rgba(255,255,255,.75)" stroke-linecap="round" stroke-width="1.2" x1="420" x2="420" y1="5.6000000000000005" y2="554.4000000000001">
+                <circle cx="420" cy="280" fill="none" r="73.84588235294117" stroke="rgba(255,255,255,.75)" stroke-width="1.2">
+                <circle cx="420" cy="280" fill="rgba(255,255,255,.75)" r="1.7999999999999998" stroke="none" stroke-width="0">
+                <rect fill="none" height="325.4061176470588" rx="0" stroke="rgba(255,255,255,.75)" stroke-width="1.2" width="130.23999999999998" x="5.6000000000000005" y="117.29694117647063">
+                <rect fill="none" height="147.85317647058824" rx="0" stroke="rgba(255,255,255,.75)" stroke-width="1.2" width="43.41333333333333" x="5.6000000000000005" y="206.07341176470587">
+                <circle cx="92.42666666666666" cy="280" fill="rgba(255,255,255,.75)" r="1.7999999999999998" stroke="none" stroke-width="0">
+                <rect fill="none" height="325.4061176470588" rx="0" stroke="rgba(255,255,255,.75)" stroke-width="1.2" width="130.23999999999998" x="704.16" y="117.29694117647063">
+                <rect fill="none" height="147.85317647058824" rx="0" stroke="rgba(255,255,255,.75)" stroke-width="1.2" width="43.41333333333333" x="790.9866666666666" y="206.07341176470587">
+                <circle cx="747.5733333333334" cy="280" fill="rgba(255,255,255,.75)" r="1.7999999999999998" stroke="none" stroke-width="0">
+                <line stroke="rgba(255,255,255,.75)" stroke-linecap="round" stroke-width="1.2" x1="16.576" x2="15.740501748843885" y1="5.6000000000000005" y2="9.800333353639227">
+                <line stroke="rgba(255,255,255,.75)" stroke-linecap="round" stroke-width="1.2" x1="15.740501748843885" x2="13.361204030303547" y1="9.800333353639227" y2="13.361204030303547">
+                <line stroke="rgba(255,255,255,.75)" stroke-linecap="round" stroke-width="1.2" x1="13.361204030303547" x2="9.800333353639228" y1="13.361204030303547" y2="15.740501748843885">
+                <line stroke="rgba(255,255,255,.75)" stroke-linecap="round" stroke-width="1.2" x1="9.800333353639228" x2="5.600000000000001" y1="15.740501748843885" y2="16.576">
+                <line stroke="rgba(255,255,255,.75)" stroke-linecap="round" stroke-width="1.2" x1="823.424" x2="824.2594982511561" y1="5.6000000000000005" y2="9.800333353639227">
+                <line stroke="rgba(255,255,255,.75)" stroke-linecap="round" stroke-width="1.2" x1="824.2594982511561" x2="826.6387959696964" y1="9.800333353639227" y2="13.361204030303547">
+                <line stroke="rgba(255,255,255,.75)" stroke-linecap="round" stroke-width="1.2" x1="826.6387959696964" x2="830.1996666463607" y1="13.361204030303547" y2="15.740501748843885">
+                <line stroke="rgba(255,255,255,.75)" stroke-linecap="round" stroke-width="1.2" x1="830.1996666463607" x2="834.4" y1="15.740501748843885" y2="16.576">
+                <line stroke="rgba(255,255,255,.75)" stroke-linecap="round" stroke-width="1.2" x1="16.576" x2="15.740501748843885" y1="554.4000000000001" y2="550.1996666463608">
+                <line stroke="rgba(255,255,255,.75)" stroke-linecap="round" stroke-width="1.2" x1="15.740501748843885" x2="13.361204030303547" y1="550.1996666463608" y2="546.6387959696965">
+                <line stroke="rgba(255,255,255,.75)" stroke-linecap="round" stroke-width="1.2" x1="13.361204030303547" x2="9.800333353639228" y1="546.6387959696965" y2="544.2594982511562">
+                <line stroke="rgba(255,255,255,.75)" stroke-linecap="round" stroke-width="1.2" x1="9.800333353639228" x2="5.600000000000001" y1="544.2594982511562" y2="543.4240000000001">
+                <line stroke="rgba(255,255,255,.75)" stroke-linecap="round" stroke-width="1.2" x1="823.424" x2="824.2594982511561" y1="554.4000000000001" y2="550.1996666463608">
+                <line stroke="rgba(255,255,255,.75)" stroke-linecap="round" stroke-width="1.2" x1="824.2594982511561" x2="826.6387959696964" y1="550.1996666463608" y2="546.6387959696965">
+                <line stroke="rgba(255,255,255,.75)" stroke-linecap="round" stroke-width="1.2" x1="826.6387959696964" x2="830.1996666463607" y1="546.6387959696965" y2="544.2594982511562">
+                <line stroke="rgba(255,255,255,.75)" stroke-linecap="round" stroke-width="1.2" x1="830.1996666463607" x2="834.4" y1="544.2594982511562" y2="543.4240000000001">
+              <span class="park-knop-naam">
+                "Kunstgrasveld"
+              <span class="park-knop-maat">
+                "105 × 70 m"
+            <button class="park-knop">
+              <svg class="park-mini" viewBox="0 0 560 420">
+                <rect fill="#48a04d" height="420" rx="2.4" stroke="none" stroke-width="0" width="560" x="0" y="0">
+                <rect fill="#347a38" height="420" rx="0" stroke="none" stroke-width="0" width="46.66666666666667" x="46.66666666666667" y="0">
+                <rect fill="#347a38" height="420" rx="0" stroke="none" stroke-width="0" width="46.66666666666667" x="140" y="0">
+                <rect fill="#347a38" height="420" rx="0" stroke="none" stroke-width="0" width="46.66666666666667" x="233.33333333333331" y="0">
+                <rect fill="#347a38" height="420" rx="0" stroke="none" stroke-width="0" width="46.66666666666667" x="326.66666666666663" y="0">
+                <rect fill="#347a38" height="420" rx="0" stroke="none" stroke-width="0" width="46.66666666666667" x="420" y="0">
+                <rect fill="#347a38" height="420" rx="0" stroke="none" stroke-width="0" width="46.66666666666667" x="513.3333333333334" y="0">
+                <rect fill="rgba(150,132,86,.34)" height="106.28800000000001" rx="16.464" stroke="none" stroke-width="0" width="41.16" x="5.6000000000000005" y="156.856">
+                <rect fill="rgba(150,132,86,.34)" height="106.28800000000001" rx="16.464" stroke="none" stroke-width="0" width="41.16" x="513.24" y="156.856">
+                <circle cx="280" cy="210" fill="rgba(150,132,86,.34)" r="18.396" stroke="none" stroke-width="0">
+                <rect fill="none" height="408.8" rx="0" stroke="rgba(255,255,255,.75)" stroke-width="1.2" width="548.8000000000001" x="5.6000000000000005" y="5.6000000000000005">
+                <line stroke="rgba(255,255,255,.75)" stroke-linecap="round" stroke-width="1.2" x1="280" x2="280" y1="5.6000000000000005" y2="414.40000000000003">
+                <circle cx="280" cy="210" fill="none" r="55.00764705882353" stroke="rgba(255,255,255,.75)" stroke-width="1.2">
+                <circle cx="280" cy="210" fill="rgba(255,255,255,.75)" r="1.7999999999999998" stroke="none" stroke-width="0">
+                <rect fill="none" height="242.39435294117646" rx="0" stroke="rgba(255,255,255,.75)" stroke-width="1.2" width="86.24000000000001" x="5.6000000000000005" y="88.80282352941178">
+                <rect fill="none" height="110.13552941176471" rx="0" stroke="rgba(255,255,255,.75)" stroke-width="1.2" width="28.746666666666666" x="5.6000000000000005" y="154.93223529411767">
+                <circle cx="63.093333333333334" cy="210" fill="rgba(255,255,255,.75)" r="1.7999999999999998" stroke="none" stroke-width="0">
+                <rect fill="none" height="242.39435294117646" rx="0" stroke="rgba(255,255,255,.75)" stroke-width="1.2" width="86.24000000000001" x="468.16" y="88.80282352941178">
+                <rect fill="none" height="110.13552941176471" rx="0" stroke="rgba(255,255,255,.75)" stroke-width="1.2" width="28.746666666666666" x="525.6533333333333" y="154.93223529411767">
+                <circle cx="496.90666666666675" cy="210" fill="rgba(255,255,255,.75)" r="1.7999999999999998" stroke="none" stroke-width="0">
+                <line stroke="rgba(255,255,255,.75)" stroke-linecap="round" stroke-width="1.2" x1="13.776000000000002" x2="13.153639057812283" y1="5.6000000000000005" y2="8.728819743016976">
+                <line stroke="rgba(255,255,255,.75)" stroke-linecap="round" stroke-width="1.2" x1="13.153639057812283" x2="11.381305042981214" y1="8.728819743016976" y2="11.381305042981214">
+                <line stroke="rgba(255,255,255,.75)" stroke-linecap="round" stroke-width="1.2" x1="11.381305042981214" x2="8.728819743016976" y1="11.381305042981214" y2="13.153639057812283">
+                <line stroke="rgba(255,255,255,.75)" stroke-linecap="round" stroke-width="1.2" x1="8.728819743016976" x2="5.6000000000000005" y1="13.153639057812283" y2="13.776000000000002">
+                <line stroke="rgba(255,255,255,.75)" stroke-linecap="round" stroke-width="1.2" x1="546.224" x2="546.8463609421877" y1="5.6000000000000005" y2="8.728819743016976">
+                <line stroke="rgba(255,255,255,.75)" stroke-linecap="round" stroke-width="1.2" x1="546.8463609421877" x2="548.6186949570188" y1="8.728819743016976" y2="11.381305042981214">
+                <line stroke="rgba(255,255,255,.75)" stroke-linecap="round" stroke-width="1.2" x1="548.6186949570188" x2="551.2711802569831" y1="11.381305042981214" y2="13.153639057812283">
+                <line stroke="rgba(255,255,255,.75)" stroke-linecap="round" stroke-width="1.2" x1="551.2711802569831" x2="554.4000000000001" y1="13.153639057812283" y2="13.776000000000002">
+                <line stroke="rgba(255,255,255,.75)" stroke-linecap="round" stroke-width="1.2" x1="13.776000000000002" x2="13.153639057812283" y1="414.40000000000003" y2="411.2711802569831">
+                <line stroke="rgba(255,255,255,.75)" stroke-linecap="round" stroke-width="1.2" x1="13.153639057812283" x2="11.381305042981214" y1="411.2711802569831" y2="408.6186949570188">
+                <line stroke="rgba(255,255,255,.75)" stroke-linecap="round" stroke-width="1.2" x1="11.381305042981214" x2="8.728819743016976" y1="408.6186949570188" y2="406.84636094218774">
+                <line stroke="rgba(255,255,255,.75)" stroke-linecap="round" stroke-width="1.2" x1="8.728819743016976" x2="5.6000000000000005" y1="406.84636094218774" y2="406.22400000000005">
+                <line stroke="rgba(255,255,255,.75)" stroke-linecap="round" stroke-width="1.2" x1="546.224" x2="546.8463609421877" y1="414.40000000000003" y2="411.2711802569831">
+                <line stroke="rgba(255,255,255,.75)" stroke-linecap="round" stroke-width="1.2" x1="546.8463609421877" x2="548.6186949570188" y1="411.2711802569831" y2="408.6186949570188">
+                <line stroke="rgba(255,255,255,.75)" stroke-linecap="round" stroke-width="1.2" x1="548.6186949570188" x2="551.2711802569831" y1="408.6186949570188" y2="406.84636094218774">
+                <line stroke="rgba(255,255,255,.75)" stroke-linecap="round" stroke-width="1.2" x1="551.2711802569831" x2="554.4000000000001" y1="406.84636094218774" y2="406.22400000000005">
+              <span class="park-knop-naam">
+                "Half veld"
+              <span class="park-knop-maat">
+                "70 × 52.5 m"
+            <button class="park-knop">
+              <svg class="park-mini" viewBox="0 0 560 420">
+                <rect fill="#3f9450" height="420" rx="2.4" stroke="none" stroke-width="0" width="560" x="0" y="0">
+                <rect fill="none" height="408.8" rx="0" stroke="rgba(255,255,255,.75)" stroke-width="1.2" width="548.8000000000001" x="5.6000000000000005" y="5.6000000000000005">
+                <line stroke="rgba(255,255,255,.75)" stroke-linecap="round" stroke-width="1.2" x1="280" x2="280" y1="5.6000000000000005" y2="414.40000000000003">
+                <circle cx="280" cy="210" fill="none" r="55.00764705882353" stroke="rgba(255,255,255,.75)" stroke-width="1.2">
+                <circle cx="280" cy="210" fill="rgba(255,255,255,.75)" r="1.7999999999999998" stroke="none" stroke-width="0">
+                <rect fill="none" height="242.39435294117646" rx="0" stroke="rgba(255,255,255,.75)" stroke-width="1.2" width="86.24000000000001" x="5.6000000000000005" y="88.80282352941178">
+                <rect fill="none" height="110.13552941176471" rx="0" stroke="rgba(255,255,255,.75)" stroke-width="1.2" width="28.746666666666666" x="5.6000000000000005" y="154.93223529411767">
+                <circle cx="63.093333333333334" cy="210" fill="rgba(255,255,255,.75)" r="1.7999999999999998" stroke="none" stroke-width="0">
+                <rect fill="none" height="242.39435294117646" rx="0" stroke="rgba(255,255,255,.75)" stroke-width="1.2" width="86.24000000000001" x="468.16" y="88.80282352941178">
+                <rect fill="none" height="110.13552941176471" rx="0" stroke="rgba(255,255,255,.75)" stroke-width="1.2" width="28.746666666666666" x="525.6533333333333" y="154.93223529411767">
+                <circle cx="496.90666666666675" cy="210" fill="rgba(255,255,255,.75)" r="1.7999999999999998" stroke="none" stroke-width="0">
+                <line stroke="rgba(255,255,255,.75)" stroke-linecap="round" stroke-width="1.2" x1="13.776000000000002" x2="13.153639057812283" y1="5.6000000000000005" y2="8.728819743016976">
+                <line stroke="rgba(255,255,255,.75)" stroke-linecap="round" stroke-width="1.2" x1="13.153639057812283" x2="11.381305042981214" y1="8.728819743016976" y2="11.381305042981214">
+                <line stroke="rgba(255,255,255,.75)" stroke-linecap="round" stroke-width="1.2" x1="11.381305042981214" x2="8.728819743016976" y1="11.381305042981214" y2="13.153639057812283">
+                <line stroke="rgba(255,255,255,.75)" stroke-linecap="round" stroke-width="1.2" x1="8.728819743016976" x2="5.6000000000000005" y1="13.153639057812283" y2="13.776000000000002">
+                <line stroke="rgba(255,255,255,.75)" stroke-linecap="round" stroke-width="1.2" x1="546.224" x2="546.8463609421877" y1="5.6000000000000005" y2="8.728819743016976">
+                <line stroke="rgba(255,255,255,.75)" stroke-linecap="round" stroke-width="1.2" x1="546.8463609421877" x2="548.6186949570188" y1="8.728819743016976" y2="11.381305042981214">
+                <line stroke="rgba(255,255,255,.75)" stroke-linecap="round" stroke-width="1.2" x1="548.6186949570188" x2="551.2711802569831" y1="11.381305042981214" y2="13.153639057812283">
+                <line stroke="rgba(255,255,255,.75)" stroke-linecap="round" stroke-width="1.2" x1="551.2711802569831" x2="554.4000000000001" y1="13.153639057812283" y2="13.776000000000002">
+                <line stroke="rgba(255,255,255,.75)" stroke-linecap="round" stroke-width="1.2" x1="13.776000000000002" x2="13.153639057812283" y1="414.40000000000003" y2="411.2711802569831">
+                <line stroke="rgba(255,255,255,.75)" stroke-linecap="round" stroke-width="1.2" x1="13.153639057812283" x2="11.381305042981214" y1="411.2711802569831" y2="408.6186949570188">
+                <line stroke="rgba(255,255,255,.75)" stroke-linecap="round" stroke-width="1.2" x1="11.381305042981214" x2="8.728819743016976" y1="408.6186949570188" y2="406.84636094218774">
+                <line stroke="rgba(255,255,255,.75)" stroke-linecap="round" stroke-width="1.2" x1="8.728819743016976" x2="5.6000000000000005" y1="406.84636094218774" y2="406.22400000000005">
+                <line stroke="rgba(255,255,255,.75)" stroke-linecap="round" stroke-width="1.2" x1="546.224" x2="546.8463609421877" y1="414.40000000000003" y2="411.2711802569831">
+                <line stroke="rgba(255,255,255,.75)" stroke-linecap="round" stroke-width="1.2" x1="546.8463609421877" x2="548.6186949570188" y1="411.2711802569831" y2="408.6186949570188">
+                <line stroke="rgba(255,255,255,.75)" stroke-linecap="round" stroke-width="1.2" x1="548.6186949570188" x2="551.2711802569831" y1="408.6186949570188" y2="406.84636094218774">
+                <line stroke="rgba(255,255,255,.75)" stroke-linecap="round" stroke-width="1.2" x1="551.2711802569831" x2="554.4000000000001" y1="406.84636094218774" y2="406.22400000000005">
+              <span class="park-knop-naam">
+                "Half kunstgras"
+              <span class="park-knop-maat">
+                "70 × 52.5 m"
+            <button class="park-knop">
+              <svg class="park-mini" viewBox="0 0 560 620">
+                <rect fill="#3f9450" height="620" rx="2.4" stroke="none" stroke-width="0" width="560" x="0" y="0">
+                <rect fill="none" height="608.8000000000001" rx="0" stroke="rgba(255,255,255,.75)" stroke-width="1.2" width="548.8000000000001" x="5.6000000000000005" y="5.6000000000000005">
+                <line stroke="rgba(255,255,255,.75)" stroke-linecap="round" stroke-width="1.2" x1="5.6000000000000005" x2="554.4000000000001" y1="310" y2="310">
+                <circle cx="280" cy="310" fill="none" r="73.84588235294117" stroke="rgba(255,255,255,.75)" stroke-width="1.2">
+                <circle cx="280" cy="310" fill="rgba(255,255,255,.75)" r="1.7999999999999998" stroke="none" stroke-width="0">
+                <rect fill="none" height="95.66857142857144" rx="0" stroke="rgba(255,255,255,.75)" stroke-width="1.2" width="325.4061176470588" x="117.29694117647063" y="5.6000000000000005">
+                <rect fill="none" height="31.889523809523812" rx="0" stroke="rgba(255,255,255,.75)" stroke-width="1.2" width="147.85317647058824" x="206.07341176470587" y="5.6000000000000005">
+                <circle cx="280" cy="69.37904761904763" fill="rgba(255,255,255,.75)" r="1.7999999999999998" stroke="none" stroke-width="0">
+                <rect fill="none" height="95.66857142857144" rx="0" stroke="rgba(255,255,255,.75)" stroke-width="1.2" width="325.4061176470588" x="117.29694117647063" y="518.7314285714286">
+                <rect fill="none" height="31.889523809523812" rx="0" stroke="rgba(255,255,255,.75)" stroke-width="1.2" width="147.85317647058824" x="206.07341176470587" y="582.5104761904763">
+                <circle cx="280" cy="550.6209523809524" fill="rgba(255,255,255,.75)" r="1.7999999999999998" stroke="none" stroke-width="0">
+                <line stroke="rgba(255,255,255,.75)" stroke-linecap="round" stroke-width="1.2" x1="5.6000000000000005" x2="9.800333353639227" y1="16.576" y2="15.740501748843885">
+                <line stroke="rgba(255,255,255,.75)" stroke-linecap="round" stroke-width="1.2" x1="9.800333353639227" x2="13.361204030303547" y1="15.740501748843885" y2="13.361204030303547">
+                <line stroke="rgba(255,255,255,.75)" stroke-linecap="round" stroke-width="1.2" x1="13.361204030303547" x2="15.740501748843885" y1="13.361204030303547" y2="9.800333353639228">
+                <line stroke="rgba(255,255,255,.75)" stroke-linecap="round" stroke-width="1.2" x1="15.740501748843885" x2="16.576" y1="9.800333353639228" y2="5.600000000000001">
+                <line stroke="rgba(255,255,255,.75)" stroke-linecap="round" stroke-width="1.2" x1="5.6000000000000005" x2="9.800333353639227" y1="603.4240000000001" y2="604.2594982511562">
+                <line stroke="rgba(255,255,255,.75)" stroke-linecap="round" stroke-width="1.2" x1="9.800333353639227" x2="13.361204030303547" y1="604.2594982511562" y2="606.6387959696965">
+                <line stroke="rgba(255,255,255,.75)" stroke-linecap="round" stroke-width="1.2" x1="13.361204030303547" x2="15.740501748843885" y1="606.6387959696965" y2="610.1996666463608">
+                <line stroke="rgba(255,255,255,.75)" stroke-linecap="round" stroke-width="1.2" x1="15.740501748843885" x2="16.576" y1="610.1996666463608" y2="614.4000000000001">
+                <line stroke="rgba(255,255,255,.75)" stroke-linecap="round" stroke-width="1.2" x1="554.4000000000001" x2="550.1996666463608" y1="16.576" y2="15.740501748843885">
+                <line stroke="rgba(255,255,255,.75)" stroke-linecap="round" stroke-width="1.2" x1="550.1996666463608" x2="546.6387959696965" y1="15.740501748843885" y2="13.361204030303547">
+                <line stroke="rgba(255,255,255,.75)" stroke-linecap="round" stroke-width="1.2" x1="546.6387959696965" x2="544.2594982511562" y1="13.361204030303547" y2="9.800333353639228">
+                <line stroke="rgba(255,255,255,.75)" stroke-linecap="round" stroke-width="1.2" x1="544.2594982511562" x2="543.4240000000001" y1="9.800333353639228" y2="5.600000000000001">
+                <line stroke="rgba(255,255,255,.75)" stroke-linecap="round" stroke-width="1.2" x1="554.4000000000001" x2="550.1996666463608" y1="603.4240000000001" y2="604.2594982511562">
+                <line stroke="rgba(255,255,255,.75)" stroke-linecap="round" stroke-width="1.2" x1="550.1996666463608" x2="546.6387959696965" y1="604.2594982511562" y2="606.6387959696965">
+                <line stroke="rgba(255,255,255,.75)" stroke-linecap="round" stroke-width="1.2" x1="546.6387959696965" x2="544.2594982511562" y1="606.6387959696965" y2="610.1996666463608">
+                <line stroke="rgba(255,255,255,.75)" stroke-linecap="round" stroke-width="1.2" x1="544.2594982511562" x2="543.4240000000001" y1="610.1996666463608" y2="614.4000000000001">
+              <span class="park-knop-naam">
+                "Driekwart kunstgras"
+              <span class="park-knop-maat">
+                "70 × 77.5 m"
+            <button class="park-knop">
+              <svg class="park-mini" viewBox="0 0 560 620">
+                <rect fill="#48a04d" height="620" rx="2.4" stroke="none" stroke-width="0" width="560" x="0" y="0">
+                <rect fill="#347a38" height="47.69230769230769" rx="0" stroke="none" stroke-width="0" width="560" x="0" y="47.69230769230769">
+                <rect fill="#347a38" height="47.69230769230769" rx="0" stroke="none" stroke-width="0" width="560" x="0" y="143.0769230769231">
+                <rect fill="#347a38" height="47.69230769230769" rx="0" stroke="none" stroke-width="0" width="560" x="0" y="238.46153846153845">
+                <rect fill="#347a38" height="47.69230769230769" rx="0" stroke="none" stroke-width="0" width="560" x="0" y="333.84615384615387">
+                <rect fill="#347a38" height="47.69230769230769" rx="0" stroke="none" stroke-width="0" width="560" x="0" y="429.23076923076917">
+                <rect fill="#347a38" height="47.69230769230769" rx="0" stroke="none" stroke-width="0" width="560" x="0" y="524.6153846153846">
+                <rect fill="rgba(150,132,86,.34)" height="45.66" rx="18.264" stroke="none" stroke-width="0" width="142.68800000000002" x="208.656" y="5.6000000000000005">
+                <rect fill="rgba(150,132,86,.34)" height="45.66" rx="18.264" stroke="none" stroke-width="0" width="142.68800000000002" x="208.656" y="568.74">
+                <circle cx="280" cy="310" fill="rgba(150,132,86,.34)" r="24.696" stroke="none" stroke-width="0">
+                <rect fill="none" height="608.8000000000001" rx="0" stroke="rgba(255,255,255,.75)" stroke-width="1.2" width="548.8000000000001" x="5.6000000000000005" y="5.6000000000000005">
+                <line stroke="rgba(255,255,255,.75)" stroke-linecap="round" stroke-width="1.2" x1="5.6000000000000005" x2="554.4000000000001" y1="310" y2="310">
+                <circle cx="280" cy="310" fill="none" r="73.84588235294117" stroke="rgba(255,255,255,.75)" stroke-width="1.2">
+                <circle cx="280" cy="310" fill="rgba(255,255,255,.75)" r="1.7999999999999998" stroke="none" stroke-width="0">
+                <rect fill="none" height="95.66857142857144" rx="0" stroke="rgba(255,255,255,.75)" stroke-width="1.2" width="325.4061176470588" x="117.29694117647063" y="5.6000000000000005">
+                <rect fill="none" height="31.889523809523812" rx="0" stroke="rgba(255,255,255,.75)" stroke-width="1.2" width="147.85317647058824" x="206.07341176470587" y="5.6000000000000005">
+                <circle cx="280" cy="69.37904761904763" fill="rgba(255,255,255,.75)" r="1.7999999999999998" stroke="none" stroke-width="0">
+                <rect fill="none" height="95.66857142857144" rx="0" stroke="rgba(255,255,255,.75)" stroke-width="1.2" width="325.4061176470588" x="117.29694117647063" y="518.7314285714286">
+                <rect fill="none" height="31.889523809523812" rx="0" stroke="rgba(255,255,255,.75)" stroke-width="1.2" width="147.85317647058824" x="206.07341176470587" y="582.5104761904763">
+                <circle cx="280" cy="550.6209523809524" fill="rgba(255,255,255,.75)" r="1.7999999999999998" stroke="none" stroke-width="0">
+                <line stroke="rgba(255,255,255,.75)" stroke-linecap="round" stroke-width="1.2" x1="5.6000000000000005" x2="9.800333353639227" y1="16.576" y2="15.740501748843885">
+                <line stroke="rgba(255,255,255,.75)" stroke-linecap="round" stroke-width="1.2" x1="9.800333353639227" x2="13.361204030303547" y1="15.740501748843885" y2="13.361204030303547">
+                <line stroke="rgba(255,255,255,.75)" stroke-linecap="round" stroke-width="1.2" x1="13.361204030303547" x2="15.740501748843885" y1="13.361204030303547" y2="9.800333353639228">
+                <line stroke="rgba(255,255,255,.75)" stroke-linecap="round" stroke-width="1.2" x1="15.740501748843885" x2="16.576" y1="9.800333353639228" y2="5.600000000000001">
+                <line stroke="rgba(255,255,255,.75)" stroke-linecap="round" stroke-width="1.2" x1="5.6000000000000005" x2="9.800333353639227" y1="603.4240000000001" y2="604.2594982511562">
+                <line stroke="rgba(255,255,255,.75)" stroke-linecap="round" stroke-width="1.2" x1="9.800333353639227" x2="13.361204030303547" y1="604.2594982511562" y2="606.6387959696965">
+                <line stroke="rgba(255,255,255,.75)" stroke-linecap="round" stroke-width="1.2" x1="13.361204030303547" x2="15.740501748843885" y1="606.6387959696965" y2="610.1996666463608">
+                <line stroke="rgba(255,255,255,.75)" stroke-linecap="round" stroke-width="1.2" x1="15.740501748843885" x2="16.576" y1="610.1996666463608" y2="614.4000000000001">
+                <line stroke="rgba(255,255,255,.75)" stroke-linecap="round" stroke-width="1.2" x1="554.4000000000001" x2="550.1996666463608" y1="16.576" y2="15.740501748843885">
+                <line stroke="rgba(255,255,255,.75)" stroke-linecap="round" stroke-width="1.2" x1="550.1996666463608" x2="546.6387959696965" y1="15.740501748843885" y2="13.361204030303547">
+                <line stroke="rgba(255,255,255,.75)" stroke-linecap="round" stroke-width="1.2" x1="546.6387959696965" x2="544.2594982511562" y1="13.361204030303547" y2="9.800333353639228">
+                <line stroke="rgba(255,255,255,.75)" stroke-linecap="round" stroke-width="1.2" x1="544.2594982511562" x2="543.4240000000001" y1="9.800333353639228" y2="5.600000000000001">
+                <line stroke="rgba(255,255,255,.75)" stroke-linecap="round" stroke-width="1.2" x1="554.4000000000001" x2="550.1996666463608" y1="603.4240000000001" y2="604.2594982511562">
+                <line stroke="rgba(255,255,255,.75)" stroke-linecap="round" stroke-width="1.2" x1="550.1996666463608" x2="546.6387959696965" y1="604.2594982511562" y2="606.6387959696965">
+                <line stroke="rgba(255,255,255,.75)" stroke-linecap="round" stroke-width="1.2" x1="546.6387959696965" x2="544.2594982511562" y1="606.6387959696965" y2="610.1996666463608">
+                <line stroke="rgba(255,255,255,.75)" stroke-linecap="round" stroke-width="1.2" x1="544.2594982511562" x2="543.4240000000001" y1="610.1996666463608" y2="614.4000000000001">
+              <span class="park-knop-naam">
+                "Driekwart veld"
+              <span class="park-knop-maat">
+                "70 × 77.5 m"
+            <button class="park-knop">
+              <svg class="park-mini" viewBox="0 0 320 240">
+                <rect fill="#48a04d" height="240" rx="2.4" stroke="none" stroke-width="0" width="320" x="0" y="0">
+                <rect fill="#347a38" height="240" rx="0" stroke="none" stroke-width="0" width="45.71428571428571" x="45.71428571428571" y="0">
+                <rect fill="#347a38" height="240" rx="0" stroke="none" stroke-width="0" width="45.71428571428571" x="137.14285714285714" y="0">
+                <rect fill="#347a38" height="240" rx="0" stroke="none" stroke-width="0" width="45.71428571428571" x="228.57142857142858" y="0">
+                <rect fill="rgba(150,132,86,.34)" height="59.488" rx="9.264" stroke="none" stroke-width="0" width="23.159999999999997" x="5.6000000000000005" y="90.25599999999999">
+                <rect fill="rgba(150,132,86,.34)" height="59.488" rx="9.264" stroke="none" stroke-width="0" width="23.159999999999997" x="291.24" y="90.25599999999999">
+                <circle cx="160" cy="120" fill="rgba(150,132,86,.34)" r="10.296" stroke="none" stroke-width="0">
+                <rect fill="none" height="228.79999999999998" rx="0" stroke="rgba(255,255,255,.75)" stroke-width="1.2" width="308.8" x="5.6000000000000005" y="5.6000000000000005">
+                <line stroke="rgba(255,255,255,.75)" stroke-linecap="round" stroke-width="1.2" x1="160" x2="160" y1="5.6000000000000005" y2="234.39999999999998">
+                <circle cx="160" cy="120" fill="none" r="30.787058823529406" stroke="rgba(255,255,255,.75)" stroke-width="1.2">
+                <circle cx="160" cy="120" fill="rgba(255,255,255,.75)" r="1.7999999999999998" stroke="none" stroke-width="0">
+                <rect fill="none" height="135.66494117647056" rx="0" stroke="rgba(255,255,255,.75)" stroke-width="1.2" width="48.52571428571429" x="5.6000000000000005" y="52.16752941176472">
+                <rect fill="none" height="61.64141176470588" rx="0" stroke="rgba(255,255,255,.75)" stroke-width="1.2" width="16.175238095238097" x="5.6000000000000005" y="89.17929411764705">
+                <circle cx="37.950476190476195" cy="120" fill="rgba(255,255,255,.75)" r="1.7999999999999998" stroke="none" stroke-width="0">
+                <rect fill="none" height="135.66494117647056" rx="0" stroke="rgba(255,255,255,.75)" stroke-width="1.2" width="48.52571428571429" x="265.8742857142857" y="52.16752941176472">
+                <rect fill="none" height="61.64141176470588" rx="0" stroke="rgba(255,255,255,.75)" stroke-width="1.2" width="16.175238095238097" x="298.22476190476186" y="89.17929411764705">
+                <circle cx="282.04952380952375" cy="120" fill="rgba(255,255,255,.75)" r="1.7999999999999998" stroke="none" stroke-width="0">
+                <line stroke="rgba(255,255,255,.75)" stroke-linecap="round" stroke-width="1.2" x1="10.176" x2="9.82767274077165" y1="5.6000000000000005" y2="7.351159386502651">
+                <line stroke="rgba(255,255,255,.75)" stroke-linecap="round" stroke-width="1.2" x1="9.82767274077165" x2="8.835720630709643" y1="7.351159386502651" y2="8.835720630709643">
+                <line stroke="rgba(255,255,255,.75)" stroke-linecap="round" stroke-width="1.2" x1="8.835720630709643" x2="7.351159386502651" y1="8.835720630709643" y2="9.82767274077165">
+                <line stroke="rgba(255,255,255,.75)" stroke-linecap="round" stroke-width="1.2" x1="7.351159386502651" x2="5.6000000000000005" y1="9.82767274077165" y2="10.176">
+                <line stroke="rgba(255,255,255,.75)" stroke-linecap="round" stroke-width="1.2" x1="309.82399999999996" x2="310.1723272592283" y1="5.6000000000000005" y2="7.351159386502651">
+                <line stroke="rgba(255,255,255,.75)" stroke-linecap="round" stroke-width="1.2" x1="310.1723272592283" x2="311.16427936929034" y1="7.351159386502651" y2="8.835720630709643">
+                <line stroke="rgba(255,255,255,.75)" stroke-linecap="round" stroke-width="1.2" x1="311.16427936929034" x2="312.6488406134973" y1="8.835720630709643" y2="9.82767274077165">
+                <line stroke="rgba(255,255,255,.75)" stroke-linecap="round" stroke-width="1.2" x1="312.6488406134973" x2="314.4" y1="9.82767274077165" y2="10.176">
+                <line stroke="rgba(255,255,255,.75)" stroke-linecap="round" stroke-width="1.2" x1="10.176" x2="9.82767274077165" y1="234.39999999999998" y2="232.64884061349733">
+                <line stroke="rgba(255,255,255,.75)" stroke-linecap="round" stroke-width="1.2" x1="9.82767274077165" x2="8.835720630709643" y1="232.64884061349733" y2="231.1642793692903">
+                <line stroke="rgba(255,255,255,.75)" stroke-linecap="round" stroke-width="1.2" x1="8.835720630709643" x2="7.351159386502651" y1="231.1642793692903" y2="230.17232725922835">
+                <line stroke="rgba(255,255,255,.75)" stroke-linecap="round" stroke-width="1.2" x1="7.351159386502651" x2="5.6000000000000005" y1="230.17232725922835" y2="229.82399999999998">
+                <line stroke="rgba(255,255,255,.75)" stroke-linecap="round" stroke-width="1.2" x1="309.82399999999996" x2="310.1723272592283" y1="234.39999999999998" y2="232.64884061349733">
+                <line stroke="rgba(255,255,255,.75)" stroke-linecap="round" stroke-width="1.2" x1="310.1723272592283" x2="311.16427936929034" y1="232.64884061349733" y2="231.1642793692903">
+                <line stroke="rgba(255,255,255,.75)" stroke-linecap="round" stroke-width="1.2" x1="311.16427936929034" x2="312.6488406134973" y1="231.1642793692903" y2="230.17232725922835">
+                <line stroke="rgba(255,255,255,.75)" stroke-linecap="round" stroke-width="1.2" x1="312.6488406134973" x2="314.4" y1="230.17232725922835" y2="229.82399999999998">
+              <span class="park-knop-naam">
+                "Pupillenveld"
+              <span class="park-knop-maat">
+                "40 × 30 m"
+            <button class="park-knop">
+              <svg class="park-mini" viewBox="0 0 640 480">
+                <rect fill="#48a04d" height="480" rx="2.4" stroke="none" stroke-width="0" width="640" x="0" y="0">
+                <rect fill="#347a38" height="480" rx="0" stroke="none" stroke-width="0" width="49.23076923076923" x="49.23076923076923" y="0">
+                <rect fill="#347a38" height="480" rx="0" stroke="none" stroke-width="0" width="49.23076923076923" x="147.6923076923077" y="0">
+                <rect fill="#347a38" height="480" rx="0" stroke="none" stroke-width="0" width="49.23076923076923" x="246.15384615384616" y="0">
+                <rect fill="#347a38" height="480" rx="0" stroke="none" stroke-width="0" width="49.23076923076923" x="344.6153846153846" y="0">
+                <rect fill="#347a38" height="480" rx="0" stroke="none" stroke-width="0" width="49.23076923076923" x="443.0769230769231" y="0">
+                <rect fill="#347a38" height="480" rx="0" stroke="none" stroke-width="0" width="49.23076923076923" x="541.5384615384615" y="0">
+                <rect fill="rgba(150,132,86,.34)" height="121.888" rx="18.864" stroke="none" stroke-width="0" width="47.160000000000004" x="5.6000000000000005" y="179.05599999999998">
+                <rect fill="rgba(150,132,86,.34)" height="121.888" rx="18.864" stroke="none" stroke-width="0" width="47.160000000000004" x="587.24" y="179.05599999999998">
+                <circle cx="320" cy="240" fill="rgba(150,132,86,.34)" r="21.096" stroke="none" stroke-width="0">
+              <span class="park-knop-naam">
+                "Trainingsveld"
+              <span class="park-knop-maat">
+                "80 × 60 m"
+            <button class="park-knop">
+              <svg class="park-mini" viewBox="0 0 480 320">
+                <rect fill="#48a04d" height="320" rx="2.4" stroke="none" stroke-width="0" width="480" x="0" y="0">
+                <rect fill="#347a38" height="320" rx="0" stroke="none" stroke-width="0" width="48" x="48" y="0">
+                <rect fill="#347a38" height="320" rx="0" stroke="none" stroke-width="0" width="48" x="144" y="0">
+                <rect fill="#347a38" height="320" rx="0" stroke="none" stroke-width="0" width="48" x="240" y="0">
+                <rect fill="#347a38" height="320" rx="0" stroke="none" stroke-width="0" width="48" x="336" y="0">
+                <rect fill="#347a38" height="320" rx="0" stroke="none" stroke-width="0" width="48" x="432" y="0">
+                <rect fill="rgba(150,132,86,.34)" height="80.28800000000001" rx="14.064" stroke="none" stroke-width="0" width="35.16" x="5.6000000000000005" y="119.856">
+                <rect fill="rgba(150,132,86,.34)" height="80.28800000000001" rx="14.064" stroke="none" stroke-width="0" width="35.16" x="439.24000000000007" y="119.856">
+                <circle cx="240" cy="160" fill="rgba(150,132,86,.34)" r="13.895999999999999" stroke="none" stroke-width="0">
+                <rect fill="none" height="308.8" rx="0" stroke="rgba(255,255,255,.75)" stroke-width="1.2" width="468.8" x="5.6000000000000005" y="5.6000000000000005">
+                <line stroke="rgba(255,255,255,.75)" stroke-linecap="round" stroke-width="1.2" x1="240" x2="240" y1="5.6000000000000005" y2="314.4">
+                <circle cx="240" cy="160" fill="none" r="41.55176470588235" stroke="rgba(255,255,255,.75)" stroke-width="1.2">
+                <circle cx="240" cy="160" fill="rgba(255,255,255,.75)" r="1.7999999999999998" stroke="none" stroke-width="0">
+                <rect fill="none" height="183.10023529411762" rx="0" stroke="rgba(255,255,255,.75)" stroke-width="1.2" width="73.66857142857144" x="5.6000000000000005" y="68.44988235294119">
+                <rect fill="none" height="83.19435294117646" rx="0" stroke="rgba(255,255,255,.75)" stroke-width="1.2" width="24.55619047619048" x="5.6000000000000005" y="118.40282352941176">
+                <circle cx="54.71238095238096" cy="160" fill="rgba(255,255,255,.75)" r="1.7999999999999998" stroke="none" stroke-width="0">
+                <rect fill="none" height="183.10023529411762" rx="0" stroke="rgba(255,255,255,.75)" stroke-width="1.2" width="73.66857142857144" x="400.73142857142864" y="68.44988235294119">
+                <rect fill="none" height="83.19435294117646" rx="0" stroke="rgba(255,255,255,.75)" stroke-width="1.2" width="24.55619047619048" x="449.84380952380957" y="118.40282352941176">
+                <circle cx="425.28761904761905" cy="160" fill="rgba(255,255,255,.75)" r="1.7999999999999998" stroke="none" stroke-width="0">
+                <line stroke="rgba(255,255,255,.75)" stroke-linecap="round" stroke-width="1.2" x1="11.776" x2="11.30587999278971" y1="5.6000000000000005" y2="7.9634528782867955">
+                <line stroke="rgba(255,255,255,.75)" stroke-linecap="round" stroke-width="1.2" x1="11.30587999278971" x2="9.967091480608119" y1="7.9634528782867955" y2="9.967091480608119">
+                <line stroke="rgba(255,255,255,.75)" stroke-linecap="round" stroke-width="1.2" x1="9.967091480608119" x2="7.9634528782867955" y1="9.967091480608119" y2="11.30587999278971">
+                <line stroke="rgba(255,255,255,.75)" stroke-linecap="round" stroke-width="1.2" x1="7.9634528782867955" x2="5.6000000000000005" y1="11.30587999278971" y2="11.776">
+                <line stroke="rgba(255,255,255,.75)" stroke-linecap="round" stroke-width="1.2" x1="468.22400000000005" x2="468.69412000721036" y1="5.6000000000000005" y2="7.9634528782867955">
+                <line stroke="rgba(255,255,255,.75)" stroke-linecap="round" stroke-width="1.2" x1="468.69412000721036" x2="470.0329085193919" y1="7.9634528782867955" y2="9.967091480608119">
+                <line stroke="rgba(255,255,255,.75)" stroke-linecap="round" stroke-width="1.2" x1="470.0329085193919" x2="472.0365471217133" y1="9.967091480608119" y2="11.30587999278971">
+                <line stroke="rgba(255,255,255,.75)" stroke-linecap="round" stroke-width="1.2" x1="472.0365471217133" x2="474.40000000000003" y1="11.30587999278971" y2="11.776">
+                <line stroke="rgba(255,255,255,.75)" stroke-linecap="round" stroke-width="1.2" x1="11.776" x2="11.30587999278971" y1="314.4" y2="312.03654712171317">
+                <line stroke="rgba(255,255,255,.75)" stroke-linecap="round" stroke-width="1.2" x1="11.30587999278971" x2="9.967091480608119" y1="312.03654712171317" y2="310.03290851939187">
+                <line stroke="rgba(255,255,255,.75)" stroke-linecap="round" stroke-width="1.2" x1="9.967091480608119" x2="7.9634528782867955" y1="310.03290851939187" y2="308.69412000721024">
+                <line stroke="rgba(255,255,255,.75)" stroke-linecap="round" stroke-width="1.2" x1="7.9634528782867955" x2="5.6000000000000005" y1="308.69412000721024" y2="308.224">
+                <line stroke="rgba(255,255,255,.75)" stroke-linecap="round" stroke-width="1.2" x1="468.22400000000005" x2="468.69412000721036" y1="314.4" y2="312.03654712171317">
+                <line stroke="rgba(255,255,255,.75)" stroke-linecap="round" stroke-width="1.2" x1="468.69412000721036" x2="470.0329085193919" y1="312.03654712171317" y2="310.03290851939187">
+                <line stroke="rgba(255,255,255,.75)" stroke-linecap="round" stroke-width="1.2" x1="470.0329085193919" x2="472.0365471217133" y1="310.03290851939187" y2="308.69412000721024">
+                <line stroke="rgba(255,255,255,.75)" stroke-linecap="round" stroke-width="1.2" x1="472.0365471217133" x2="474.40000000000003" y1="308.69412000721024" y2="308.224">
+              <span class="park-knop-naam">
+                "Eigen maat"
+              <span class="park-knop-maat">
+                "60 × 40 m"
+            <button class="park-knop">
+              <svg class="park-mini" viewBox="0 0 160 100">
+                <rect fill="#2f6f33" height="100" rx="12" stroke="none" stroke-width="0" width="160" x="0" y="0">
+                <circle cx="80" cy="50" fill="none" r="18" stroke="rgba(255,255,255,.75)" stroke-width="2.4">
+              <span class="park-knop-naam">
+                "Pannakooi"
+              <span class="park-knop-maat">
+                "20 × 12.5 m"
+          <div class="park-doek">
+            <div class="park-vlak">
+              <div class="park-3d" style="touch-action: none;">
+                <canvas height="522" style="display: block; width: 1000px; height: 522px;" width="1000">
+              <div class="park-balk">
+                <div class="park-dagdelen">
+                  <button class="park-dagknop" title="Ochtend">
+                    <i class="fa-solid fa-cloud-sun">
+                    "Ochtend"
+                  <button class="park-dagknop aan" title="Middag">
+                    <i class="fa-solid fa-sun">
+                    "Middag"
+                  <button class="park-dagknop" title="Studio">
+                    <i class="fa-solid fa-cube">
+                    "Studio"
+                  <button class="park-dagknop" title="Avond">
+                    <i class="fa-solid fa-moon">
+                    "Avond"
+                <div class="park-werk">
+                  <button class="park-werkknop park-meer altijd" title="Meer gereedschap">
+                    <i class="fa-solid fa-ellipsis">
+                    <span class="park-knopnaam">
+                      "Meer"
+                  <button class="park-werkknop altijd" title="Schermvullend bouwen">
+                    <i class="fa-solid fa-expand">
+                    <span class="park-knopnaam">
+                      "Groot"
+                  <button class="park-werkknop altijd" disabled="" title="Laatste stap ongedaan maken">
+                    <i class="fa-solid fa-rotate-left">
+                    <span class="park-knopnaam">
+                      "Terug"
+                  <span class="park-stuur-scheiding">
+                  <button class="park-werkknop" title="Clubkleuren en gras">
+                    <i class="fa-solid fa-palette">
+                    <span class="park-knopnaam">
+                      "Kleuren"
+                  <button class="park-werkknop" title="Vrij bouwen: alle regels uit">
+                    <i class="fa-solid fa-unlock">
+                    <span class="park-knopnaam">
+                      "Vrij"
+                  <span class="park-stuur-scheiding">
+                  <button class="park-werkknop" title="Sportpark Vierkantsdijk neerzetten">
+                    <i class="fa-solid fa-wand-magic-sparkles">
+                    <span class="park-knopnaam">
+                      "Sjabloon"
+                  <button class="park-werkknop" disabled="" title="Delen als afbeelding">
+                    <i class="fa-brands fa-whatsapp">
+                    <span class="park-knopnaam">
+                      "Delen"
+                  <button class="park-werkknop gevaar" disabled="" title="Sportpark leegmaken">
+                    <i class="fa-solid fa-trash">
+                    <span class="park-knopnaam">
+                      "Leeg"
+                <div class="park-stuur">
+                  <button class="park-stuurknop aan" title="Om je complex heen draaien">
+                    <i class="fa-solid fa-arrows-rotate">
+                    <span class="park-knopnaam">
+                      "Draaien"
+                  <button class="park-stuurknop" title="Over het terrein schuiven">
+                    <i class="fa-solid fa-up-down-left-right">
+                    <span class="park-knopnaam">
+                      "Schuiven"
+                  <span class="park-stuur-scheiding">
+                  <button class="park-stuurknop" title="Naar links draaien">
+                    <i class="fa-solid fa-rotate-left">
+                    <span class="park-knopnaam">
+                      "Links"
+                  <button class="park-stuurknop" title="Naar rechts draaien">
+                    <i class="fa-solid fa-rotate-right">
+                    <span class="park-knopnaam">
+                      "Rechts"
+                  <button class="park-stuurknop" title="Inzoomen">
+                    <i class="fa-solid fa-magnifying-glass-plus">
+                    <span class="park-knopnaam">
+                      "In"
+                  <button class="park-stuurknop" title="Uitzoomen">
+                    <i class="fa-solid fa-magnifying-glass-minus">
+                    <span class="park-knopnaam">
+                      "Uit"
+                  <button class="park-stuurknop altijd" title="Alles in beeld">
+                    <i class="fa-solid fa-maximize">
+                    <span class="park-knopnaam">
+                      "Alles"
+                  <button class="park-stuurknop" title="Van bovenaf">
+                    <i class="fa-solid fa-map">
+                    <span class="park-knopnaam">
+                      "Boven"
+                  <button class="park-stuurknop" title="Terug naar het begin">
+                    <i class="fa-solid fa-house">
+                    <span class="park-knopnaam">
+                      "Begin"
+          <div class="park-strook">
+            <span>
+              "Capaciteit"
+              <b class="op">
+                "0"
+            <span>
+              "staan"
+              <b>
+                "0"
+            <span>
+              "zit"
+              <b>
+                "0"
+            <span>
+              "overdekt"
+              <b>
+                "0"
+            <span>
+              "VIP"
+              <b>
+                "0"
+            <span>
+              "velden"
+              <b>
+                "0"
+            <span>
+              "gebouwen"
+              <b>
+                "0"
+            <span>
+              "parkeren"
+              <b>
+                "0"
+            <span>
+              "masten"
+              <b>
+                "0"
+            <span>
+              "bomen"
+              <b>
+                "0"
+            <span>
+              "onderdelen"
+              <b>
+                "0"
+            <span>
+              "bebouwd"
+              <b>
+                "0"
+                "m²"
+    <nav class="bottom-nav">
+      <button class="nav-item">
+        <div class="nav-pip">
+        <span class="nav-icon">
+          <i class="fa-solid fa-house">
+        <span>
+          "Home"
+      <button class="nav-item">
+        <div class="nav-pip">
+        <span class="nav-icon">
+          <i class="fa-solid fa-futbol">
+        <span>
+          "Wedstrijden"
+      <button class="nav-item">
+        <div class="nav-pip">
+        <span class="nav-icon">
+          <i class="fa-solid fa-users">
+        <span>
+          "Selectie"
+      <button class="nav-item">
+        <div class="nav-pip">
+        <span class="nav-icon">
+          <i class="fa-solid fa-person-running">
+        <span>
+          "Training"
+      <button class="nav-item">
+        <div class="nav-pip">
+        <span class="nav-icon">
+          <i class="fa-solid fa-chart-bar">
+        <span>
+          "Stats"
