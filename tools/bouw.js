@@ -10,6 +10,8 @@
                          — zie KERN_VOLGORDE hieronder)
      + src/domein/*.js  (sinds P3: de domeinlogica, in vaste volgorde
                          — zie DOMEIN_VOLGORDE hieronder)
+     + src/schermen/*.jsx (sinds P4: de schermmodules, in vaste
+                         volgorde — zie SCHERM_VOLGORDE hieronder)
      + src/app.jsx      (de rest van de applicatie, JSX)
      ─────────────────────────────────────────────────────────
      = online/index.html
@@ -49,8 +51,9 @@ const WORTEL   = path.join(__dirname, "..");
 const SJABLOON = path.join(WORTEL, "src", "index.html");
 const APPBRON  = path.join(WORTEL, "src", "app.jsx");
 const UITVOER  = path.join(WORTEL, "online", "index.html");
-const KERN_MAP   = path.join(WORTEL, "src", "kern");
-const DOMEIN_MAP = path.join(WORTEL, "src", "domein");
+const KERN_MAP    = path.join(WORTEL, "src", "kern");
+const DOMEIN_MAP  = path.join(WORTEL, "src", "domein");
+const SCHERM_MAP  = path.join(WORTEL, "src", "schermen");
 
 /* Sinds P2 (professionaliseringsplan.md) valt src/app.jsx uiteen in
    losse "kern"-modules onder src/kern/. Geen import/export: elke
@@ -73,6 +76,25 @@ const KERN_VOLGORDE = ["sleutels.js", "server.js", "rollen.js", "opslag.js", "sy
    en vóór src/app.jsx zelf. Een module die nog niet bestaat wordt
    net als bij de kern overgeslagen. */
 const DOMEIN_VOLGORDE = ["boetepot.js", "wedstrijden.js", "statistieken.js", "opkomst.js"];
+
+/* Sinds P4 (docs/p4-stappenplan.md) komt daar een derde laag bovenop:
+   de schermmodules onder src/schermen/ — de React-componenten van
+   src/app.jsx, opgesplitst per scherm. Dezelfde regel als bij KERN_
+   en DOMEIN_VOLGORDE: geen import/export, gedeelde scope, en de
+   volgorde bepaalt wie van wie mag gebruikmaken (al maakt dat in de
+   praktijk voor function-declaraties niets uit door hoisting — zie
+   de uitleg bij gedeeld.jsx zelf). "gedeeld.jsx" staat en blijft
+   eerst: dat is het enige schermbestand met top-level const-data
+   (de tenue-tekendata) die vóór gebruik gedefinieerd moet zijn, in
+   tegenstelling tot function-declaraties die overal hoisten. Deze
+   modules komen ná de domeinlogica en vóór src/app.jsx zelf (dat na
+   alle acht schermstappen alleen nog de schil overhoudt: App,
+   renderPagina, zijGroepen, PAKKETTEN, PAGINA_MODULE). Stap 0
+   (gedeeld.jsx) is de enige die nu bestaat; de overige acht
+   schermmodules komen in latere, aparte stappen. Een module die nog
+   niet bestaat wordt net als bij kern en domein overgeslagen, zodat
+   dit incrementeel kan groeien zonder dat bouw.js breekt. */
+const SCHERM_VOLGORDE = ["gedeeld.jsx"];
 
 /* Het merkteken in src/index.html waar de gebouwde app terechtkomt.
    Bewust een commentaarregel en geen los token: zo blijft het sjabloon
@@ -120,7 +142,20 @@ async function bouwInGeheugen() {
     console.log("  · domein-modules meegenomen: " + domeinBestanden.map((p) => path.basename(p)).join(", "));
   }
 
-  const appBron = kernBron + domeinBron + fs.readFileSync(APPBRON, "utf8");
+  /* Zelfde plaktruc, nu voor de schermmodules — ná de domeinlogica,
+     vóór src/app.jsx zelf. gedeeld.jsx (indien aanwezig) staat door
+     SCHERM_VOLGORDE altijd als eerste van de drie, om de reden die
+     daar hierboven staat uitgelegd (const-hoisting van de
+     tenue-tekendata). */
+  const schermBestanden = SCHERM_VOLGORDE
+    .map((naam) => path.join(SCHERM_MAP, naam))
+    .filter((p) => fs.existsSync(p));
+  const schermBron = schermBestanden.map((p) => fs.readFileSync(p, "utf8")).join("\n");
+  if (schermBestanden.length) {
+    console.log("  · schermmodules meegenomen: " + schermBestanden.map((p) => path.basename(p)).join(", "));
+  }
+
+  const appBron = kernBron + domeinBron + schermBron + fs.readFileSync(APPBRON, "utf8");
 
   /* ── Babel eruit ────────────────────────────────────────────── */
   const voor = sjabloonRegels.length;

@@ -293,13 +293,24 @@ alles += f3
 # src/index.html zelf zijn losse bestanden, geen mappen, en vallen
 # dus vanzelf buiten deze lus -- die worden hierboven al apart
 # gecontroleerd.
+#
+# Sinds P4 (docs/p4-stappenplan.md, 17 september 2026) staat hier ook
+# src/schermen/ -- en dat bevat, anders dan src/kern/ en src/domein/,
+# .jsx-bestanden: React-componenten met JSX erin, in tegenstelling tot
+# de kale JavaScript-modules van P2/P3. Zonder ".jsx" in de
+# extensielijst hieronder zou dit script zo'n bestand stilzwijgend
+# overslaan -- groen omdat er niets gecontroleerd werd, niet omdat
+# alles in orde was. Precies het soort verdwenen controle waarvoor dit
+# bestand oorspronkelijk is herschreven (zie de kop hierboven, over
+# legacy/check.py dat naar het verkeerde bestand wees).
 SRC_MAP = os.path.join(os.path.dirname(HIER), "src")
+EXTENSIES = (".js", ".jsx")
 if os.path.isdir(SRC_MAP):
     for submap in sorted(os.listdir(SRC_MAP)):
         subpad = os.path.join(SRC_MAP, submap)
         if not os.path.isdir(subpad): continue
         for naam in sorted(os.listdir(subpad)):
-            if not naam.endswith(".js"): continue
+            if not naam.endswith(EXTENSIES): continue
             pad = os.path.join(subpad, naam)
             modulecode = open(pad, encoding='utf-8').read()
             alles += basisControles(modulecode, 1, "src/"+submap+"/"+naam)

@@ -6884,6 +6884,654 @@ function afwezigheidPeriodeTekst(rec) {
   if (!rec.tot) return "vanaf " + van;
   return van + " \u2013 " + formateerDatum(rec.tot);
 }
+function SlotJe({ badge }) {
+  return /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-lock " + (badge ? "slot-badge" : "slotje"), "aria-hidden": "true" });
+}
+function SlotKnop({ naam, module }) {
+  return /* @__PURE__ */ React.createElement(
+    "button",
+    {
+      type: "button",
+      className: "slot-knop",
+      "aria-label": slotLabel(naam, module),
+      onClick: function(e) {
+        e.stopPropagation();
+        slotMelding(module);
+      }
+    },
+    /* @__PURE__ */ React.createElement(SlotJe, null)
+  );
+}
+function ToastHouder() {
+  const [lijst, setLijst] = useState([]);
+  useEffect(function() {
+    function luister(t2) {
+      setLijst(function(l) {
+        return l.concat([t2]);
+      });
+      setTimeout(function() {
+        setLijst(function(l) {
+          return l.filter(function(x) {
+            return x.id !== t2.id;
+          });
+        });
+      }, t2.duur);
+    }
+    _toastLuisteraars.push(luister);
+    return function() {
+      _toastLuisteraars = _toastLuisteraars.filter(function(f) {
+        return f !== luister;
+      });
+    };
+  }, []);
+  function sluit(id) {
+    setLijst(function(l) {
+      return l.filter(function(x) {
+        return x.id !== id;
+      });
+    });
+  }
+  if (lijst.length === 0) return null;
+  const iconen = { info: "fa-solid fa-circle-info", goed: "fa-solid fa-circle-check", fout: "fa-solid fa-triangle-exclamation" };
+  const kleuren = { info: "var(--blauw-licht)", goed: "var(--succes)", fout: "var(--gevaar)" };
+  return /* @__PURE__ */ React.createElement("div", { className: "toast-houder" }, lijst.slice(-3).map(function(t2) {
+    return /* @__PURE__ */ React.createElement("div", { key: t2.id, className: "toast" }, /* @__PURE__ */ React.createElement("i", { className: iconen[t2.soort] || iconen.info, style: { color: kleuren[t2.soort] || kleuren.info } }), /* @__PURE__ */ React.createElement("span", { className: "toast-tekst" }, t2.bericht), t2.actie && /* @__PURE__ */ React.createElement("button", { className: "toast-actie", onClick: function() {
+      t2.actie();
+      sluit(t2.id);
+    } }, t2.actieLabel || "Ongedaan maken"), /* @__PURE__ */ React.createElement("button", { className: "toast-sluit", onClick: function() {
+      sluit(t2.id);
+    } }, "\u2715"));
+  }));
+}
+function DeelVenster(props) {
+  const varianten = props.varianten || [];
+  const [keuze, setKeuze] = useState(0);
+  const [simpel, setSimpel] = useState(false);
+  const [bewerken, setBewerken] = useState(false);
+  const [eigen, setEigen] = useState({});
+  const [gekopieerd, setGekopieerd] = useState(false);
+  const veldRef = useRef(null);
+  const huidig = varianten[keuze] || { id: "leeg", tekst: "" };
+  const basis = huidig.tekst || "";
+  const isAangepast = Object.prototype.hasOwnProperty.call(eigen, huidig.id);
+  const ruw = isAangepast ? eigen[huidig.id] : basis;
+  const tekst = simpel && !isAangepast ? zonderEmoji(ruw) : ruw;
+  const kanDelen = typeof navigator !== "undefined" && !!navigator.share;
+  function schrijf(waarde) {
+    setEigen(function(o) {
+      var n = Object.assign({}, o);
+      n[huidig.id] = waarde;
+      return n;
+    });
+  }
+  function herstel() {
+    setEigen(function(o) {
+      var n = Object.assign({}, o);
+      delete n[huidig.id];
+      return n;
+    });
+  }
+  function wisselEmoji() {
+    var aan = !simpel;
+    setSimpel(aan);
+    if (isAangepast) schrijf(aan ? zonderEmoji(eigen[huidig.id]) : eigen[huidig.id]);
+  }
+  function kopieer() {
+    function gelukt() {
+      setGekopieerd(true);
+      setTimeout(function() {
+        setGekopieerd(false);
+      }, 2200);
+    }
+    function oudeManier() {
+      try {
+        var v = document.createElement("textarea");
+        v.value = tekst;
+        v.style.position = "fixed";
+        v.style.opacity = "0";
+        document.body.appendChild(v);
+        v.select();
+        document.execCommand("copy");
+        document.body.removeChild(v);
+        gelukt();
+      } catch (e) {
+        meldFout("Kopi\xEBren lukte niet, selecteer de tekst handmatig");
+      }
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(tekst).then(gelukt).catch(oudeManier);
+    } else {
+      oudeManier();
+    }
+  }
+  function voegIn(voor, na) {
+    var el = veldRef.current;
+    if (!el) return;
+    var s = el.selectionStart, e = el.selectionEnd;
+    var mid = tekst.slice(s, e) || "tekst";
+    var nieuw = tekst.slice(0, s) + voor + mid + (na || "") + tekst.slice(e);
+    schrijf(nieuw);
+    setTimeout(function() {
+      el.focus();
+      el.setSelectionRange(s + voor.length, s + voor.length + mid.length);
+    }, 0);
+  }
+  var nu = /* @__PURE__ */ new Date();
+  var klok = String(nu.getHours()).padStart(2, "0") + ":" + String(nu.getMinutes()).padStart(2, "0");
+  return /* @__PURE__ */ React.createElement("div", { className: "modal-overlay", style: { zIndex: 500 }, onClick: function(e) {
+    if (e.target === e.currentTarget) props.onSluiten();
+  } }, /* @__PURE__ */ React.createElement("div", { className: "modal-sheet", onClick: function(e) {
+    e.stopPropagation();
+  } }, /* @__PURE__ */ React.createElement("div", { className: "modal-greep" }), /* @__PURE__ */ React.createElement("div", { className: "modal-titel" }, /* @__PURE__ */ React.createElement("i", { className: "fa-brands fa-whatsapp" }), " ", props.titel || "Bericht delen"), varianten.length > 1 && /* @__PURE__ */ React.createElement("div", { className: "deel-keuze" }, varianten.map(function(v, i) {
+    var mee = Object.prototype.hasOwnProperty.call(eigen, v.id);
+    return /* @__PURE__ */ React.createElement("button", { key: v.id, className: i === keuze ? "actief" : "", onClick: function() {
+      setKeuze(i);
+    } }, v.label, mee ? " \u2022" : "");
+  })), /* @__PURE__ */ React.createElement("div", { className: "deel-kopregel" }, /* @__PURE__ */ React.createElement("span", null, bewerken ? "Je eigen tekst" : "Zo komt het aan"), /* @__PURE__ */ React.createElement("button", { className: "deel-schakelknop", onClick: function() {
+    setBewerken(!bewerken);
+  } }, /* @__PURE__ */ React.createElement("i", { className: bewerken ? "fa-solid fa-eye" : "fa-solid fa-pen" }), " ", bewerken ? "Voorbeeld" : "Bewerken")), bewerken ? /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { className: "deel-opmaakbalk" }, /* @__PURE__ */ React.createElement("button", { onClick: function() {
+    voegIn("*", "*");
+  }, title: "Vet" }, /* @__PURE__ */ React.createElement("strong", null, "B")), /* @__PURE__ */ React.createElement("button", { onClick: function() {
+    voegIn("_", "_");
+  }, title: "Cursief" }, /* @__PURE__ */ React.createElement("em", null, "I")), /* @__PURE__ */ React.createElement("button", { onClick: function() {
+    voegIn("~", "~");
+  }, title: "Doorhalen" }, /* @__PURE__ */ React.createElement("s", null, "S")), /* @__PURE__ */ React.createElement("span", { className: "teken-sep" }), /* @__PURE__ */ React.createElement("button", { onClick: function() {
+    voegIn("\u2022 ", "");
+  }, title: "Opsommingsteken" }, "\u2022"), /* @__PURE__ */ React.createElement("button", { onClick: function() {
+    voegIn("\n" + DEEL_STREEP + "\n", "");
+  }, title: "Scheidingslijn" }, "\u2014")), /* @__PURE__ */ React.createElement(
+    "textarea",
+    {
+      ref: veldRef,
+      className: "formulier-input deel-invoer",
+      value: tekst,
+      onChange: function(e) {
+        schrijf(e.target.value);
+      },
+      rows: "12",
+      spellCheck: "false"
+    }
+  ), /* @__PURE__ */ React.createElement("div", { className: "deel-tip" }, "Tip: ", /* @__PURE__ */ React.createElement("code", null, "*vet*"), " \xB7 ", /* @__PURE__ */ React.createElement("code", null, "_cursief_"), " \xB7 ", /* @__PURE__ */ React.createElement("code", null, "~doorgehaald~"), " \u2014 precies zoals WhatsApp het leest.")) : /* @__PURE__ */ React.createElement("div", { className: "deel-doek" }, /* @__PURE__ */ React.createElement("div", { className: "deel-bubbel" }, /* @__PURE__ */ React.createElement("div", { className: "deel-tekst" }, waOpmaak(tekst)), /* @__PURE__ */ React.createElement("div", { className: "deel-tijd" }, klok, " ", /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-check-double", style: { color: "#53bdeb" } })))), /* @__PURE__ */ React.createElement("div", { className: "deel-regelbalk" }, /* @__PURE__ */ React.createElement("label", { className: "deel-schakel", onClick: function(e) {
+    e.preventDefault();
+    wisselEmoji();
+  } }, /* @__PURE__ */ React.createElement("span", { className: "doel-vink" + (simpel ? " aan" : "") }, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-check" })), /* @__PURE__ */ React.createElement("span", null, "Zonder emoji")), /* @__PURE__ */ React.createElement("span", { className: "deel-teller" }, tekst.length, " tekens"), isAangepast && /* @__PURE__ */ React.createElement("button", { className: "deel-schakelknop", onClick: herstel }, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-rotate-left" }), " Standaardtekst")), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 8, marginTop: 10, flexWrap: "wrap" } }, /* @__PURE__ */ React.createElement("button", { className: "knop lijn klein", style: { flex: "1 1 120px", justifyContent: "center" }, onClick: kopieer }, /* @__PURE__ */ React.createElement("i", { className: gekopieerd ? "fa-solid fa-check" : "fa-solid fa-copy" }), " ", gekopieerd ? "Gekopieerd" : "Kopi\xEBren"), props.pdfActie && /* @__PURE__ */ React.createElement(
+    "button",
+    {
+      className: "knop lijn klein",
+      style: { flex: "1 1 120px", justifyContent: "center" },
+      onClick: function() {
+        props.pdfActie();
+      }
+    },
+    /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-file-pdf" }),
+    " ",
+    props.pdfLabel || "PDF"
+  ), kanDelen && /* @__PURE__ */ React.createElement(
+    "button",
+    {
+      className: "knop lijn klein",
+      style: { flex: "1 1 120px", justifyContent: "center" },
+      onClick: function() {
+        navigator.share({ text: tekst }).catch(function() {
+        });
+      }
+    },
+    /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-share-nodes" }),
+    " Delen\u2026"
+  )), props.pdfActie && /* @__PURE__ */ React.createElement("div", { className: "deel-tip", style: { marginTop: 8 } }, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-circle-info" }), " Stuur het bericht eerst, en hang de PDF er daarna als bijlage aan."), /* @__PURE__ */ React.createElement(
+    "a",
+    {
+      href: whatsappLink(tekst),
+      target: "_blank",
+      rel: "noopener noreferrer",
+      className: "knop wa",
+      onClick: function() {
+        setTimeout(props.onSluiten, 400);
+      }
+    },
+    /* @__PURE__ */ React.createElement("i", { className: "fa-brands fa-whatsapp", style: { fontSize: 18 } }),
+    " Openen in WhatsApp"
+  ), /* @__PURE__ */ React.createElement("div", { className: "modal-voet" }, /* @__PURE__ */ React.createElement("button", { className: "knop lijn", style: { flex: 1, justifyContent: "center" }, onClick: props.onSluiten }, "Sluiten"))));
+}
+function GetalVeld({ waarde, opWaarde, leeg, min, max, ...rest }) {
+  const [ruw, setRuw] = useState(null);
+  const legeWaarde = leeg === void 0 ? 0 : leeg;
+  const echt = waarde === null || waarde === void 0 || waarde === "" ? "" : String(waarde);
+  const toon2 = ruw !== null ? ruw : echt;
+  return /* @__PURE__ */ React.createElement(
+    "input",
+    {
+      ...rest,
+      type: "number",
+      min,
+      max,
+      value: toon2,
+      onFocus: function(e) {
+        setRuw(echt);
+        e.target.select();
+      },
+      onChange: function(e) {
+        var g = getalTyp(e.target.value, legeWaarde);
+        setRuw(g.toon);
+        opWaarde(g.waarde);
+      },
+      onBlur: function(e) {
+        setRuw(null);
+        opWaarde(getalKlaar(e.target.value, legeWaarde, min, max));
+      }
+    }
+  );
+}
+function Logo() {
+  const [fout, setFout] = useState(false);
+  const i = gebruikInstellingen();
+  const bron = logoKopbalk(true);
+  useEffect(function() {
+    setFout(false);
+  }, [i.logo]);
+  if (fout) return /* @__PURE__ */ React.createElement("div", { className: "logo-fallback" }, initialen(i.clubNaam || APP_NAAM));
+  return /* @__PURE__ */ React.createElement("img", { src: bron, alt: i.clubNaam || APP_NAAM, className: "logo-img", onError: function() {
+    setFout(true);
+  } });
+}
+function NaamVeld({ waarde, opWaarde, namen, lijstId, placeholder }) {
+  return /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement(
+    "input",
+    {
+      className: "formulier-input",
+      value: waarde || "",
+      list: lijstId,
+      placeholder,
+      autoComplete: "off",
+      onChange: function(e) {
+        opWaarde(e.target.value);
+      }
+    }
+  ), /* @__PURE__ */ React.createElement("datalist", { id: lijstId }, (namen || []).map(function(n) {
+    return /* @__PURE__ */ React.createElement("option", { key: n, value: n });
+  })));
+}
+const TENUE_KEY = "fch_tenue_v1";
+function laadTenue() {
+  try {
+    var r = localStorage.getItem(sleutelVoor(TENUE_KEY));
+    return tenueVernieuw(r ? JSON.parse(r) : null);
+  } catch (e) {
+    return tenueVernieuw(null);
+  }
+}
+function slaTenueOp(t2) {
+  try {
+    localStorage.setItem(sleutelVoor(TENUE_KEY), JSON.stringify(tenueVernieuw(t2)));
+  } catch (e) {
+  }
+}
+const TENUE_SOORTEN = [
+  { id: "thuis", label: "Thuis", kort: "Thuis", keeper: false },
+  { id: "uit", label: "Uit", kort: "Uit", keeper: false },
+  { id: "derde", label: "Derde shirt", kort: "Derde", keeper: false },
+  { id: "keeperT", label: "Keeper thuis", kort: "Keeper thuis", keeper: true },
+  { id: "keeperU", label: "Keeper uit", kort: "Keeper uit", keeper: true }
+];
+const TENUE_VEL = { b: 120, h: 156 };
+const TENUE_SHIRT_PAD = "M46 10 L28 15 L8 31 L19 53 L33 46 L33 88 L87 88 L87 46 L101 53 L112 31 L92 15 L74 10 C68 22 52 22 46 10 Z";
+const TENUE_ROMP = { x: 33, y: 10, b: 54, h: 78 };
+const TENUE_MOUW_L = { x: 8, y: 12, b: 25, h: 42 };
+const TENUE_MOUW_R = { x: 87, y: 12, b: 25, h: 42 };
+const TENUE_BROEK_PAD = "M33 92 L87 92 L87 112 L83 132 L63 132 L60 112 L57 132 L37 132 L33 112 Z";
+const TENUE_SOK = [{ x: 38, y: 134, b: 17, h: 22 }, { x: 65, y: 134, b: 17, h: 22 }];
+function SpelerPop({ naam, shirt, vlak, grootte, tenueSet: tset }) {
+  const g = popGetal(naam);
+  const huid = POP_HUID[g % POP_HUID.length];
+  const haar = POP_HAAR[(g >>> 3) % POP_HAAR.length];
+  const trui = shirt || "#004aad";
+  const kapsel = (g >>> 9) % POP_KAPSEL.length;
+  const haarH = POP_KAPSEL[kapsel];
+  const baard = (g >>> 13) % 5 === 0 && kapsel !== 5;
+  const id = "pop" + g % 1e6 + "-" + kapsel;
+  const maat = grootte || "100%";
+  const patroon = tset ? tenuePatroonDelen(tset) : [];
+  const opgelegd = tset ? tenueKleineLagen(tset) : [];
+  const SCHOUDER = "M32 41c12 0 21 9 22 24H10c1-15 10-24 22-24z";
+  return /* @__PURE__ */ React.createElement(
+    "svg",
+    {
+      viewBox: "0 0 64 64",
+      width: maat,
+      height: maat,
+      "aria-hidden": "true",
+      style: { display: "block", overflow: "visible" }
+    },
+    /* @__PURE__ */ React.createElement("defs", null, patroon.length > 0 && /* @__PURE__ */ React.createElement("clipPath", { id: id + "-t" }, /* @__PURE__ */ React.createElement("path", { d: SCHOUDER })), haarH > 0 && /* @__PURE__ */ React.createElement("clipPath", { id: id + "-h" }, /* @__PURE__ */ React.createElement("rect", { x: "13", y: "5", width: "38", height: haarH + 5 })), baard && /* @__PURE__ */ React.createElement("clipPath", { id: id + "-b" }, /* @__PURE__ */ React.createElement("rect", { x: "16", y: "28", width: "32", height: "18" }))),
+    /* @__PURE__ */ React.createElement("path", { d: SCHOUDER, fill: trui }),
+    (patroon.length > 0 || opgelegd.length > 0) && /* @__PURE__ */ React.createElement("g", { clipPath: "url(#" + id + "-t)" }, /* @__PURE__ */ React.createElement("g", { transform: "translate(10,41) scale(0.3667,0.293) translate(0,-8)" }, patroon.map(function(d, i) {
+      return d.vorm === "rect" ? /* @__PURE__ */ React.createElement("rect", { key: i, x: d.x, y: d.y, width: d.b, height: d.h, fill: d.kleur }) : /* @__PURE__ */ React.createElement("path", { key: i, d: d.d, fill: d.kleur });
+    }), opgelegd.map(function(l, i) {
+      return /* @__PURE__ */ React.createElement(
+        TenueLaag,
+        {
+          key: l.id || i,
+          laag: l,
+          stuk: "shirt",
+          sleutel: id + "-p" + (l.id || i)
+        }
+      );
+    }))),
+    /* @__PURE__ */ React.createElement("path", { d: "M25.6 42.8L32 50.6l6.4-7.8-3-1.6h-6.8z", fill: "#ffffff", opacity: ".34" }),
+    /* @__PURE__ */ React.createElement("rect", { x: "27.3", y: "31", width: "9.4", height: "11", rx: "4.7", fill: popDonker(huid) }),
+    /* @__PURE__ */ React.createElement("circle", { cx: "19", cy: "26", r: "3.1", fill: huid }),
+    /* @__PURE__ */ React.createElement("circle", { cx: "45", cy: "26", r: "3.1", fill: huid }),
+    /* @__PURE__ */ React.createElement("circle", { cx: "32", cy: "24", r: "13", fill: huid }),
+    baard && /* @__PURE__ */ React.createElement("circle", { cx: "32", cy: "24", r: "13.3", fill: haar, opacity: ".8", clipPath: "url(#" + id + "-b)" }),
+    /* @__PURE__ */ React.createElement("circle", { cx: "27.2", cy: "23", r: "1.6", fill: "#2b2118" }),
+    /* @__PURE__ */ React.createElement("circle", { cx: "36.8", cy: "23", r: "1.6", fill: "#2b2118" }),
+    /* @__PURE__ */ React.createElement(
+      "path",
+      {
+        d: "M28.6 30.4c2 1.7 4.8 1.7 6.8 0",
+        stroke: "#2b2118",
+        strokeOpacity: ".55",
+        strokeWidth: "1.4",
+        strokeLinecap: "round",
+        fill: "none"
+      }
+    ),
+    haarH > 0 && /* @__PURE__ */ React.createElement("circle", { cx: "32", cy: "24.5", r: "13.6", fill: haar, clipPath: "url(#" + id + "-h)" }),
+    kapsel === 2 && /* @__PURE__ */ React.createElement("g", { fill: haar }, /* @__PURE__ */ React.createElement("rect", { x: "18.4", y: "19", width: "4.2", height: "11", rx: "2.1" }), /* @__PURE__ */ React.createElement("rect", { x: "41.4", y: "19", width: "4.2", height: "11", rx: "2.1" })),
+    kapsel === 4 && /* @__PURE__ */ React.createElement("g", { fill: haar }, /* @__PURE__ */ React.createElement("circle", { cx: "23.5", cy: "13.5", r: "4.6" }), /* @__PURE__ */ React.createElement("circle", { cx: "32", cy: "10.8", r: "5.1" }), /* @__PURE__ */ React.createElement("circle", { cx: "40.5", cy: "13.5", r: "4.6" }))
+  );
+}
+function TenueLaag({ laag, stuk, sleutel, nummer, naam }) {
+  const l = tenueLaagVernieuw(laag);
+  const plek = tenueLaagPlaats(l, stuk);
+  const soort = tenueLaagSoort(l);
+  const vak = tenueVak(stuk);
+  if (soort === "beeld") {
+    return /* @__PURE__ */ React.createElement(
+      "image",
+      {
+        href: l.beeld,
+        x: -50,
+        y: -50,
+        width: 100,
+        height: 100,
+        preserveAspectRatio: "xMidYMid meet",
+        transform: plek.transform + " translate(50,50)",
+        opacity: l.doorzicht
+      }
+    );
+  }
+  if (soort === "tekst") {
+    const woord = tenueLaagTekst(l, nummer, naam);
+    if (!woord) return null;
+    const stijl = tenueLetterStijl(l.font);
+    if (Math.abs(l.boog) < 3) {
+      return /* @__PURE__ */ React.createElement(
+        "text",
+        {
+          x: "50",
+          y: "72",
+          textAnchor: "middle",
+          fill: l.kleur,
+          opacity: l.doorzicht,
+          transform: plek.transform,
+          style: stijl
+        },
+        woord
+      );
+    }
+    const straal = 4e3 / Math.abs(l.boog);
+    const op = l.boog > 0;
+    const pad = "M" + (50 - straal) + " 50A" + straal + " " + straal + " 0 0 " + (op ? 1 : 0) + " " + (50 + straal) + " 50";
+    return /* @__PURE__ */ React.createElement("g", { transform: plek.transform, opacity: l.doorzicht }, /* @__PURE__ */ React.createElement("defs", null, /* @__PURE__ */ React.createElement("path", { id: sleutel + "-b", d: pad })), /* @__PURE__ */ React.createElement("text", { fill: l.kleur, style: stijl }, /* @__PURE__ */ React.createElement("textPath", { href: "#" + sleutel + "-b", startOffset: "50%", textAnchor: "middle" }, woord)));
+  }
+  const v = tenueVorm(l.vorm);
+  const delen = tenueVormDelen(l.vorm);
+  if (!delen.length) return null;
+  const schaal = Math.max(0.01, (plek.breed || 100) / 100);
+  const dik = l.lijnDik ? l.lijnDik / schaal : 0;
+  return /* @__PURE__ */ React.createElement(
+    "g",
+    {
+      transform: plek.transform,
+      fill: l.kleur,
+      opacity: l.doorzicht,
+      stroke: dik ? l.lijn : "none",
+      strokeWidth: dik,
+      strokeLinejoin: "round",
+      fillRule: v && v.regel === "evenodd" ? "evenodd" : "nonzero"
+    },
+    delen.map(function(d, i) {
+      return d.d ? /* @__PURE__ */ React.createElement("path", { key: i, d: d.d }) : /* @__PURE__ */ React.createElement("rect", { key: i, x: d.x, y: d.y, width: d.b, height: d.h });
+    })
+  );
+}
+function TenueKader({ laag, stuk, onGreep, breedOpScherm }) {
+  const plek = tenueLaagPlaats(laag, stuk);
+  if (!plek.kader) return null;
+  const k = plek.kader;
+  const mx = k.x + k.b / 2, my = k.y + k.h / 2;
+  const maat = tenueKaderMaten(breedOpScherm, aanraakScherm());
+  const knop = tenueDraaiKnop(laag, stuk, breedOpScherm);
+  const punt = function(g) {
+    return { x: mx + (g.sx || 0) * k.b / 2, y: my + (g.sy || 0) * k.h / 2 };
+  };
+  const grijp = function(g) {
+    return function(e) {
+      if (!onGreep) return;
+      e.stopPropagation();
+      onGreep(g, e);
+    };
+  };
+  return /* @__PURE__ */ React.createElement("g", null, /* @__PURE__ */ React.createElement("g", { transform: "rotate(" + k.hoek + " " + mx + " " + my + ")" }, /* @__PURE__ */ React.createElement(
+    "rect",
+    {
+      x: k.x,
+      y: k.y,
+      width: k.b,
+      height: k.h,
+      fill: "none",
+      stroke: "rgba(255,255,255,.95)",
+      strokeWidth: maat.lijn,
+      strokeDasharray: maat.streep,
+      style: { pointerEvents: "none" }
+    }
+  ), /* @__PURE__ */ React.createElement(
+    "rect",
+    {
+      x: k.x,
+      y: k.y,
+      width: k.b,
+      height: k.h,
+      fill: "none",
+      stroke: "rgba(0,0,0,.55)",
+      strokeWidth: maat.dunneLijn,
+      strokeDasharray: maat.streep,
+      style: { pointerEvents: "none" }
+    }
+  ), TENUE_GREPEN.map(function(g) {
+    var p = punt(g);
+    return /* @__PURE__ */ React.createElement(
+      "g",
+      {
+        key: g.naam,
+        onPointerDown: grijp({ soort: "maat", sx: g.sx, sy: g.sy }),
+        style: { cursor: "nwse-resize", touchAction: "none" }
+      },
+      /* @__PURE__ */ React.createElement("circle", { cx: p.x, cy: p.y, r: maat.raak, fill: "rgba(0,0,0,0)" }),
+      /* @__PURE__ */ React.createElement(
+        "circle",
+        {
+          cx: p.x,
+          cy: p.y,
+          r: maat.greep,
+          fill: "rgba(255,255,255,.92)",
+          stroke: "rgba(0,0,0,.55)",
+          strokeWidth: maat.dunneLijn,
+          style: { pointerEvents: "none" }
+        }
+      )
+    );
+  })), /* @__PURE__ */ React.createElement(
+    "line",
+    {
+      x1: knop.vanX,
+      y1: knop.vanY,
+      x2: knop.x,
+      y2: knop.y,
+      stroke: "rgba(255,255,255,.9)",
+      strokeWidth: maat.lijn,
+      style: { pointerEvents: "none" }
+    }
+  ), /* @__PURE__ */ React.createElement("g", { onPointerDown: grijp({ soort: "draai" }), style: { cursor: "grab", touchAction: "none" } }, /* @__PURE__ */ React.createElement("circle", { cx: knop.x, cy: knop.y, r: maat.raak, fill: "rgba(0,0,0,0)" }), /* @__PURE__ */ React.createElement(
+    "circle",
+    {
+      cx: knop.x,
+      cy: knop.y,
+      r: maat.greep * 1.15,
+      fill: "var(--blauw, #004aad)",
+      stroke: "rgba(255,255,255,.95)",
+      strokeWidth: maat.lijn,
+      style: { pointerEvents: "none" }
+    }
+  )));
+}
+function TenueBeeld({ set, kant, nummer, naam, breed, schaduw, kader, kaderStuk, onGreep, vel }) {
+  const s = Object.assign({}, STANDAARD_SET, set || {});
+  const idRef = useRef(null);
+  if (idRef.current === null) idRef.current = "tn" + ++tenueTeller;
+  const id = idRef.current;
+  const achter = kant === "achter";
+  const delen = tenuePatroonDelen(s);
+  const w = breed || 150;
+  const lijn = "rgba(0,0,0,.28)";
+  const shirtDeel = achter ? "shirtAchter" : "shirtVoor";
+  const lagen = function(deelId, stuk) {
+    return tenueLagen(s, deelId).map(function(l, i) {
+      return /* @__PURE__ */ React.createElement(
+        TenueLaag,
+        {
+          key: l.id || i,
+          laag: l,
+          stuk,
+          nummer,
+          naam,
+          sleutel: id + "-" + (l.id || i)
+        }
+      );
+    });
+  };
+  return /* @__PURE__ */ React.createElement(
+    "svg",
+    {
+      ref: vel,
+      viewBox: "0 0 " + TENUE_VEL.b + " " + TENUE_VEL.h,
+      width: w,
+      height: w * TENUE_VEL.h / TENUE_VEL.b,
+      style: {
+        display: "block",
+        overflow: "visible",
+        filter: schaduw === false ? "none" : "drop-shadow(0 3px 6px rgba(0,0,0,.28))"
+      }
+    },
+    /* @__PURE__ */ React.createElement("defs", null, /* @__PURE__ */ React.createElement("clipPath", { id: id + "-s" }, /* @__PURE__ */ React.createElement("path", { d: TENUE_SHIRT_PAD })), /* @__PURE__ */ React.createElement("clipPath", { id: id + "-p" }, /* @__PURE__ */ React.createElement("path", { d: TENUE_BROEK_PAD })), /* @__PURE__ */ React.createElement("clipPath", { id: id + "-k" }, TENUE_SOK.map(function(k, i) {
+      return /* @__PURE__ */ React.createElement("rect", { key: i, x: k.x, y: k.y, width: k.b, height: k.h, rx: "5" });
+    }))),
+    /* @__PURE__ */ React.createElement("g", { clipPath: "url(#" + id + "-s)" }, /* @__PURE__ */ React.createElement("rect", { x: "0", y: "0", width: TENUE_VEL.b, height: "92", fill: s.shirt }), delen.map(function(d, i) {
+      return d.vorm === "rect" ? /* @__PURE__ */ React.createElement("rect", { key: i, x: d.x, y: d.y, width: d.b, height: d.h, fill: d.kleur }) : /* @__PURE__ */ React.createElement("path", { key: i, d: d.d, fill: d.kleur });
+    }), lagen(shirtDeel, "shirt")),
+    /* @__PURE__ */ React.createElement("path", { d: TENUE_SHIRT_PAD, fill: "none", stroke: lijn, strokeWidth: "1.4" }),
+    /* @__PURE__ */ React.createElement(
+      "path",
+      {
+        d: "M46 10 C52 22 68 22 74 10",
+        fill: "none",
+        stroke: s.kraag,
+        strokeWidth: "6",
+        strokeLinecap: "round"
+      }
+    ),
+    /* @__PURE__ */ React.createElement("path", { d: "M46 10 C52 22 68 22 74 10", fill: "none", stroke: lijn, strokeWidth: "0.9" }),
+    /* @__PURE__ */ React.createElement("path", { d: "M8 31 L19 53", stroke: s.kraag, strokeWidth: "5", strokeLinecap: "round" }),
+    /* @__PURE__ */ React.createElement("path", { d: "M112 31 L101 53", stroke: s.kraag, strokeWidth: "5", strokeLinecap: "round" }),
+    achter ? null : /* @__PURE__ */ React.createElement("g", null, s.embleem !== false && /* @__PURE__ */ React.createElement("g", { transform: "translate(41,32)" }, /* @__PURE__ */ React.createElement(
+      "path",
+      {
+        d: "M0 0 H15 V9 C15 15 7.5 18 7.5 18 C7.5 18 0 15 0 9 Z",
+        fill: s.tekst,
+        stroke: lijn,
+        strokeWidth: "0.8"
+      }
+    ), /* @__PURE__ */ React.createElement(
+      "path",
+      {
+        d: "M2.4 2.4 H12.6 V9 C12.6 13 7.5 15.2 7.5 15.2 C7.5 15.2 2.4 13 2.4 9 Z",
+        fill: s.shirt
+      }
+    )), s.sponsor ? /* @__PURE__ */ React.createElement(
+      "text",
+      {
+        x: "60",
+        y: "70",
+        textAnchor: "middle",
+        fill: s.tekst,
+        style: {
+          fontFamily: "'Helvetica Neue',Arial,sans-serif",
+          fontSize: "9px",
+          fontWeight: 800,
+          letterSpacing: ".5px"
+        }
+      },
+      s.sponsor.toUpperCase()
+    ) : null),
+    /* @__PURE__ */ React.createElement("g", { clipPath: "url(#" + id + "-p)" }, /* @__PURE__ */ React.createElement("path", { d: TENUE_BROEK_PAD, fill: s.broek }), lagen("broek", "broek")),
+    /* @__PURE__ */ React.createElement("path", { d: TENUE_BROEK_PAD, fill: "none", stroke: lijn, strokeWidth: "1.4" }),
+    /* @__PURE__ */ React.createElement("path", { d: "M60 92 L60 112", stroke: lijn, strokeWidth: "0.9" }),
+    /* @__PURE__ */ React.createElement("g", { clipPath: "url(#" + id + "-k)" }, TENUE_SOK.map(function(k, i) {
+      return /* @__PURE__ */ React.createElement("rect", { key: i, x: k.x, y: k.y, width: k.b, height: k.h, rx: "5", fill: s.sokken });
+    }), lagen("sok", "sok"), TENUE_SOK.map(function(k, i) {
+      return /* @__PURE__ */ React.createElement("rect", { key: "b" + i, x: k.x, y: k.y, width: k.b, height: "5", rx: "2.4", fill: s.shirt2 });
+    })),
+    TENUE_SOK.map(function(k, i) {
+      return /* @__PURE__ */ React.createElement(
+        "rect",
+        {
+          key: i,
+          x: k.x,
+          y: k.y,
+          width: k.b,
+          height: k.h,
+          rx: "5",
+          fill: "none",
+          stroke: lijn,
+          strokeWidth: "1.2"
+        }
+      );
+    }),
+    kader && /* @__PURE__ */ React.createElement(
+      TenueKader,
+      {
+        laag: kader,
+        stuk: kaderStuk || "shirt",
+        onGreep,
+        breedOpScherm: w
+      }
+    )
+  );
+}
+function SpelerBeeld({ speler, shirt, vlak, tenueSet: tset }) {
+  if (speler && speler.foto) {
+    return /* @__PURE__ */ React.createElement(
+      "img",
+      {
+        src: speler.foto,
+        alt: speler.naam || "",
+        style: { width: "100%", height: "100%", objectFit: "cover", borderRadius: "50%", display: "block" }
+      }
+    );
+  }
+  return /* @__PURE__ */ React.createElement(SpelerPop, { naam: speler && speler.naam || "?", shirt, vlak, tenueSet: tset });
+}
 const { useState, useEffect, useRef } = React;
 const initialen = (naam) => naam ? naam.trim().split(" ").map((d) => d[0]).slice(0, 2).join("").toUpperCase() : "?";
 function teamKort(naam) {
@@ -7019,24 +7667,6 @@ function slotMelding(module) {
       if (_pakkettenOpener) _pakkettenOpener(p ? p.id : null);
     }
   });
-}
-function SlotJe({ badge }) {
-  return /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-lock " + (badge ? "slot-badge" : "slotje"), "aria-hidden": "true" });
-}
-function SlotKnop({ naam, module }) {
-  return /* @__PURE__ */ React.createElement(
-    "button",
-    {
-      type: "button",
-      className: "slot-knop",
-      "aria-label": slotLabel(naam, module),
-      onClick: function(e) {
-        e.stopPropagation();
-        slotMelding(module);
-      }
-    },
-    /* @__PURE__ */ React.createElement(SlotJe, null)
-  );
 }
 function slotLabel(naam, module) {
   var p = pakketVoorModule(module);
@@ -7626,63 +8256,7 @@ function meldFout(bericht) {
 function meldGoed(bericht) {
   return toon(bericht, { soort: "goed" });
 }
-function ToastHouder() {
-  const [lijst, setLijst] = useState([]);
-  useEffect(function() {
-    function luister(t2) {
-      setLijst(function(l) {
-        return l.concat([t2]);
-      });
-      setTimeout(function() {
-        setLijst(function(l) {
-          return l.filter(function(x) {
-            return x.id !== t2.id;
-          });
-        });
-      }, t2.duur);
-    }
-    _toastLuisteraars.push(luister);
-    return function() {
-      _toastLuisteraars = _toastLuisteraars.filter(function(f) {
-        return f !== luister;
-      });
-    };
-  }, []);
-  function sluit(id) {
-    setLijst(function(l) {
-      return l.filter(function(x) {
-        return x.id !== id;
-      });
-    });
-  }
-  if (lijst.length === 0) return null;
-  const iconen = { info: "fa-solid fa-circle-info", goed: "fa-solid fa-circle-check", fout: "fa-solid fa-triangle-exclamation" };
-  const kleuren = { info: "var(--blauw-licht)", goed: "var(--succes)", fout: "var(--gevaar)" };
-  return /* @__PURE__ */ React.createElement("div", { className: "toast-houder" }, lijst.slice(-3).map(function(t2) {
-    return /* @__PURE__ */ React.createElement("div", { key: t2.id, className: "toast" }, /* @__PURE__ */ React.createElement("i", { className: iconen[t2.soort] || iconen.info, style: { color: kleuren[t2.soort] || kleuren.info } }), /* @__PURE__ */ React.createElement("span", { className: "toast-tekst" }, t2.bericht), t2.actie && /* @__PURE__ */ React.createElement("button", { className: "toast-actie", onClick: function() {
-      t2.actie();
-      sluit(t2.id);
-    } }, t2.actieLabel || "Ongedaan maken"), /* @__PURE__ */ React.createElement("button", { className: "toast-sluit", onClick: function() {
-      sluit(t2.id);
-    } }, "\u2715"));
-  }));
-}
-const TENUE_KEY = "fch_tenue_v1";
 const STANDAARD_TENUE = { shirt: "#004aad", shirt2: "#ffffff", tekst: "#ffffff", patroon: "effen", keeper: "#28a745", keuze: "thuis" };
-function laadTenue() {
-  try {
-    var r = localStorage.getItem(sleutelVoor(TENUE_KEY));
-    return tenueVernieuw(r ? JSON.parse(r) : null);
-  } catch (e) {
-    return tenueVernieuw(null);
-  }
-}
-function slaTenueOp(t2) {
-  try {
-    localStorage.setItem(sleutelVoor(TENUE_KEY), JSON.stringify(tenueVernieuw(t2)));
-  } catch (e) {
-  }
-}
 const ACCENTEN = [
   { id: "club", label: "Clubblauw", l: ["#004aad", "#38b6ff"], d: ["#1f6fe0", "#5cc4ff"], op: "#052e5c" },
   { id: "magenta", label: "Magenta", l: ["#c2166a", "#ff5ba7"], d: ["#d81b74", "#ff5ba7"], op: "#2a0416" },
@@ -7711,13 +8285,6 @@ const TENUE_PATRONEN = [
   { id: "diagonaal", label: "Diagonaal" },
   { id: "keper", label: "Sjerp" },
   { id: "mouwen", label: "Mouwen" }
-];
-const TENUE_SOORTEN = [
-  { id: "thuis", label: "Thuis", kort: "Thuis", keeper: false },
-  { id: "uit", label: "Uit", kort: "Uit", keeper: false },
-  { id: "derde", label: "Derde shirt", kort: "Derde", keeper: false },
-  { id: "keeperT", label: "Keeper thuis", kort: "Keeper thuis", keeper: true },
-  { id: "keeperU", label: "Keeper uit", kort: "Keeper uit", keeper: true }
 ];
 const STANDAARD_SET = {
   shirt: "#004aad",
@@ -7826,13 +8393,6 @@ function tenueAchtergrond(tenue, isKeeper) {
   var t2 = tenue || STANDAARD_TENUE;
   return tenueVulling(t2.sets ? tenueVoor(t2, t2.keuze || "thuis", isKeeper) : isKeeper ? Object.assign({}, STANDAARD_SET, { shirt: t2.keeper, patroon: "effen" }) : Object.assign({}, STANDAARD_SET, t2));
 }
-const TENUE_VEL = { b: 120, h: 156 };
-const TENUE_SHIRT_PAD = "M46 10 L28 15 L8 31 L19 53 L33 46 L33 88 L87 88 L87 46 L101 53 L112 31 L92 15 L74 10 C68 22 52 22 46 10 Z";
-const TENUE_ROMP = { x: 33, y: 10, b: 54, h: 78 };
-const TENUE_MOUW_L = { x: 8, y: 12, b: 25, h: 42 };
-const TENUE_MOUW_R = { x: 87, y: 12, b: 25, h: 42 };
-const TENUE_BROEK_PAD = "M33 92 L87 92 L87 112 L83 132 L63 132 L60 112 L57 132 L37 132 L33 112 Z";
-const TENUE_SOK = [{ x: 38, y: 134, b: 17, h: 22 }, { x: 65, y: 134, b: 17, h: 22 }];
 const TENUE_GROEPEN = [
   { id: "vorm", label: "Vormen", icoon: "fa-solid fa-shapes" },
   { id: "patroon", label: "Patronen", icoon: "fa-solid fa-bars-staggered" },
@@ -9767,156 +10327,6 @@ function waOpmaak(tekst) {
   }
   return stukken;
 }
-function DeelVenster(props) {
-  const varianten = props.varianten || [];
-  const [keuze, setKeuze] = useState(0);
-  const [simpel, setSimpel] = useState(false);
-  const [bewerken, setBewerken] = useState(false);
-  const [eigen, setEigen] = useState({});
-  const [gekopieerd, setGekopieerd] = useState(false);
-  const veldRef = useRef(null);
-  const huidig = varianten[keuze] || { id: "leeg", tekst: "" };
-  const basis = huidig.tekst || "";
-  const isAangepast = Object.prototype.hasOwnProperty.call(eigen, huidig.id);
-  const ruw = isAangepast ? eigen[huidig.id] : basis;
-  const tekst = simpel && !isAangepast ? zonderEmoji(ruw) : ruw;
-  const kanDelen = typeof navigator !== "undefined" && !!navigator.share;
-  function schrijf(waarde) {
-    setEigen(function(o) {
-      var n = Object.assign({}, o);
-      n[huidig.id] = waarde;
-      return n;
-    });
-  }
-  function herstel() {
-    setEigen(function(o) {
-      var n = Object.assign({}, o);
-      delete n[huidig.id];
-      return n;
-    });
-  }
-  function wisselEmoji() {
-    var aan = !simpel;
-    setSimpel(aan);
-    if (isAangepast) schrijf(aan ? zonderEmoji(eigen[huidig.id]) : eigen[huidig.id]);
-  }
-  function kopieer() {
-    function gelukt() {
-      setGekopieerd(true);
-      setTimeout(function() {
-        setGekopieerd(false);
-      }, 2200);
-    }
-    function oudeManier() {
-      try {
-        var v = document.createElement("textarea");
-        v.value = tekst;
-        v.style.position = "fixed";
-        v.style.opacity = "0";
-        document.body.appendChild(v);
-        v.select();
-        document.execCommand("copy");
-        document.body.removeChild(v);
-        gelukt();
-      } catch (e) {
-        meldFout("Kopi\xEBren lukte niet, selecteer de tekst handmatig");
-      }
-    }
-    if (navigator.clipboard && navigator.clipboard.writeText) {
-      navigator.clipboard.writeText(tekst).then(gelukt).catch(oudeManier);
-    } else {
-      oudeManier();
-    }
-  }
-  function voegIn(voor, na) {
-    var el = veldRef.current;
-    if (!el) return;
-    var s = el.selectionStart, e = el.selectionEnd;
-    var mid = tekst.slice(s, e) || "tekst";
-    var nieuw = tekst.slice(0, s) + voor + mid + (na || "") + tekst.slice(e);
-    schrijf(nieuw);
-    setTimeout(function() {
-      el.focus();
-      el.setSelectionRange(s + voor.length, s + voor.length + mid.length);
-    }, 0);
-  }
-  var nu = /* @__PURE__ */ new Date();
-  var klok = String(nu.getHours()).padStart(2, "0") + ":" + String(nu.getMinutes()).padStart(2, "0");
-  return /* @__PURE__ */ React.createElement("div", { className: "modal-overlay", style: { zIndex: 500 }, onClick: function(e) {
-    if (e.target === e.currentTarget) props.onSluiten();
-  } }, /* @__PURE__ */ React.createElement("div", { className: "modal-sheet", onClick: function(e) {
-    e.stopPropagation();
-  } }, /* @__PURE__ */ React.createElement("div", { className: "modal-greep" }), /* @__PURE__ */ React.createElement("div", { className: "modal-titel" }, /* @__PURE__ */ React.createElement("i", { className: "fa-brands fa-whatsapp" }), " ", props.titel || "Bericht delen"), varianten.length > 1 && /* @__PURE__ */ React.createElement("div", { className: "deel-keuze" }, varianten.map(function(v, i) {
-    var mee = Object.prototype.hasOwnProperty.call(eigen, v.id);
-    return /* @__PURE__ */ React.createElement("button", { key: v.id, className: i === keuze ? "actief" : "", onClick: function() {
-      setKeuze(i);
-    } }, v.label, mee ? " \u2022" : "");
-  })), /* @__PURE__ */ React.createElement("div", { className: "deel-kopregel" }, /* @__PURE__ */ React.createElement("span", null, bewerken ? "Je eigen tekst" : "Zo komt het aan"), /* @__PURE__ */ React.createElement("button", { className: "deel-schakelknop", onClick: function() {
-    setBewerken(!bewerken);
-  } }, /* @__PURE__ */ React.createElement("i", { className: bewerken ? "fa-solid fa-eye" : "fa-solid fa-pen" }), " ", bewerken ? "Voorbeeld" : "Bewerken")), bewerken ? /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { className: "deel-opmaakbalk" }, /* @__PURE__ */ React.createElement("button", { onClick: function() {
-    voegIn("*", "*");
-  }, title: "Vet" }, /* @__PURE__ */ React.createElement("strong", null, "B")), /* @__PURE__ */ React.createElement("button", { onClick: function() {
-    voegIn("_", "_");
-  }, title: "Cursief" }, /* @__PURE__ */ React.createElement("em", null, "I")), /* @__PURE__ */ React.createElement("button", { onClick: function() {
-    voegIn("~", "~");
-  }, title: "Doorhalen" }, /* @__PURE__ */ React.createElement("s", null, "S")), /* @__PURE__ */ React.createElement("span", { className: "teken-sep" }), /* @__PURE__ */ React.createElement("button", { onClick: function() {
-    voegIn("\u2022 ", "");
-  }, title: "Opsommingsteken" }, "\u2022"), /* @__PURE__ */ React.createElement("button", { onClick: function() {
-    voegIn("\n" + DEEL_STREEP + "\n", "");
-  }, title: "Scheidingslijn" }, "\u2014")), /* @__PURE__ */ React.createElement(
-    "textarea",
-    {
-      ref: veldRef,
-      className: "formulier-input deel-invoer",
-      value: tekst,
-      onChange: function(e) {
-        schrijf(e.target.value);
-      },
-      rows: "12",
-      spellCheck: "false"
-    }
-  ), /* @__PURE__ */ React.createElement("div", { className: "deel-tip" }, "Tip: ", /* @__PURE__ */ React.createElement("code", null, "*vet*"), " \xB7 ", /* @__PURE__ */ React.createElement("code", null, "_cursief_"), " \xB7 ", /* @__PURE__ */ React.createElement("code", null, "~doorgehaald~"), " \u2014 precies zoals WhatsApp het leest.")) : /* @__PURE__ */ React.createElement("div", { className: "deel-doek" }, /* @__PURE__ */ React.createElement("div", { className: "deel-bubbel" }, /* @__PURE__ */ React.createElement("div", { className: "deel-tekst" }, waOpmaak(tekst)), /* @__PURE__ */ React.createElement("div", { className: "deel-tijd" }, klok, " ", /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-check-double", style: { color: "#53bdeb" } })))), /* @__PURE__ */ React.createElement("div", { className: "deel-regelbalk" }, /* @__PURE__ */ React.createElement("label", { className: "deel-schakel", onClick: function(e) {
-    e.preventDefault();
-    wisselEmoji();
-  } }, /* @__PURE__ */ React.createElement("span", { className: "doel-vink" + (simpel ? " aan" : "") }, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-check" })), /* @__PURE__ */ React.createElement("span", null, "Zonder emoji")), /* @__PURE__ */ React.createElement("span", { className: "deel-teller" }, tekst.length, " tekens"), isAangepast && /* @__PURE__ */ React.createElement("button", { className: "deel-schakelknop", onClick: herstel }, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-rotate-left" }), " Standaardtekst")), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 8, marginTop: 10, flexWrap: "wrap" } }, /* @__PURE__ */ React.createElement("button", { className: "knop lijn klein", style: { flex: "1 1 120px", justifyContent: "center" }, onClick: kopieer }, /* @__PURE__ */ React.createElement("i", { className: gekopieerd ? "fa-solid fa-check" : "fa-solid fa-copy" }), " ", gekopieerd ? "Gekopieerd" : "Kopi\xEBren"), props.pdfActie && /* @__PURE__ */ React.createElement(
-    "button",
-    {
-      className: "knop lijn klein",
-      style: { flex: "1 1 120px", justifyContent: "center" },
-      onClick: function() {
-        props.pdfActie();
-      }
-    },
-    /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-file-pdf" }),
-    " ",
-    props.pdfLabel || "PDF"
-  ), kanDelen && /* @__PURE__ */ React.createElement(
-    "button",
-    {
-      className: "knop lijn klein",
-      style: { flex: "1 1 120px", justifyContent: "center" },
-      onClick: function() {
-        navigator.share({ text: tekst }).catch(function() {
-        });
-      }
-    },
-    /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-share-nodes" }),
-    " Delen\u2026"
-  )), props.pdfActie && /* @__PURE__ */ React.createElement("div", { className: "deel-tip", style: { marginTop: 8 } }, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-circle-info" }), " Stuur het bericht eerst, en hang de PDF er daarna als bijlage aan."), /* @__PURE__ */ React.createElement(
-    "a",
-    {
-      href: whatsappLink(tekst),
-      target: "_blank",
-      rel: "noopener noreferrer",
-      className: "knop wa",
-      onClick: function() {
-        setTimeout(props.onSluiten, 400);
-      }
-    },
-    /* @__PURE__ */ React.createElement("i", { className: "fa-brands fa-whatsapp", style: { fontSize: 18 } }),
-    " Openen in WhatsApp"
-  ), /* @__PURE__ */ React.createElement("div", { className: "modal-voet" }, /* @__PURE__ */ React.createElement("button", { className: "knop lijn", style: { flex: 1, justifyContent: "center" }, onClick: props.onSluiten }, "Sluiten"))));
-}
 function deelVariantenWedstrijd(w, spelers, wedstrijden) {
   if (w.status === "gespeeld") return [
     { id: "lang", label: "Uitgebreid", tekst: deelWedstrijdUitslag(w, spelers, wedstrijden, true) },
@@ -11089,35 +11499,6 @@ function getalKlaar(tekst, leeg, min, max) {
   if (g.leeg) return leeg;
   var k = getalKlem(g.waarde, min, max);
   return k === null ? leeg : k;
-}
-function GetalVeld({ waarde, opWaarde, leeg, min, max, ...rest }) {
-  const [ruw, setRuw] = useState(null);
-  const legeWaarde = leeg === void 0 ? 0 : leeg;
-  const echt = waarde === null || waarde === void 0 || waarde === "" ? "" : String(waarde);
-  const toon2 = ruw !== null ? ruw : echt;
-  return /* @__PURE__ */ React.createElement(
-    "input",
-    {
-      ...rest,
-      type: "number",
-      min,
-      max,
-      value: toon2,
-      onFocus: function(e) {
-        setRuw(echt);
-        e.target.select();
-      },
-      onChange: function(e) {
-        var g = getalTyp(e.target.value, legeWaarde);
-        setRuw(g.toon);
-        opWaarde(g.waarde);
-      },
-      onBlur: function(e) {
-        setRuw(null);
-        opWaarde(getalKlaar(e.target.value, legeWaarde, min, max));
-      }
-    }
-  );
 }
 function pvGebouw(b, h, dakKleur, deur) {
   var v = [
@@ -19509,18 +19890,6 @@ function maakOpstellingCanvas(naam, formatie, toewijzing, tenue) {
   x.textAlign = "left";
   return c;
 }
-function Logo() {
-  const [fout, setFout] = useState(false);
-  const i = gebruikInstellingen();
-  const bron = logoKopbalk(true);
-  useEffect(function() {
-    setFout(false);
-  }, [i.logo]);
-  if (fout) return /* @__PURE__ */ React.createElement("div", { className: "logo-fallback" }, initialen(i.clubNaam || APP_NAAM));
-  return /* @__PURE__ */ React.createElement("img", { src: bron, alt: i.clubNaam || APP_NAAM, className: "logo-img", onError: function() {
-    setFout(true);
-  } });
-}
 function SpelerKeuzeModal({ titel, spelers, onKies, onSluiten, plekRol, bezet, rolLabels, uitleg }) {
   const [zoek, setZoek] = useState("");
   const [alleen, setAlleen] = useState(false);
@@ -20399,23 +20768,6 @@ function UitslagFormulier({ wedstrijd, spelers, onOpslaan, onSluiten }) {
       }
     }
   ));
-}
-function NaamVeld({ waarde, opWaarde, namen, lijstId, placeholder }) {
-  return /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement(
-    "input",
-    {
-      className: "formulier-input",
-      value: waarde || "",
-      list: lijstId,
-      placeholder,
-      autoComplete: "off",
-      onChange: function(e) {
-        opWaarde(e.target.value);
-      }
-    }
-  ), /* @__PURE__ */ React.createElement("datalist", { id: lijstId }, (namen || []).map(function(n) {
-    return /* @__PURE__ */ React.createElement("option", { key: n, value: n });
-  })));
 }
 function ToernooiFormulier({ toernooi, onOpslaan, onSluiten }) {
   const [form, setForm] = useState(Object.assign({}, LEEG_TOERNOOI, toernooi || {}));
@@ -26503,346 +26855,7 @@ function beenInfo(v) {
     return b.id === v;
   })[0] || null;
 }
-function SpelerPop({ naam, shirt, vlak, grootte, tenueSet: tset }) {
-  const g = popGetal(naam);
-  const huid = POP_HUID[g % POP_HUID.length];
-  const haar = POP_HAAR[(g >>> 3) % POP_HAAR.length];
-  const trui = shirt || "#004aad";
-  const kapsel = (g >>> 9) % POP_KAPSEL.length;
-  const haarH = POP_KAPSEL[kapsel];
-  const baard = (g >>> 13) % 5 === 0 && kapsel !== 5;
-  const id = "pop" + g % 1e6 + "-" + kapsel;
-  const maat = grootte || "100%";
-  const patroon = tset ? tenuePatroonDelen(tset) : [];
-  const opgelegd = tset ? tenueKleineLagen(tset) : [];
-  const SCHOUDER = "M32 41c12 0 21 9 22 24H10c1-15 10-24 22-24z";
-  return /* @__PURE__ */ React.createElement(
-    "svg",
-    {
-      viewBox: "0 0 64 64",
-      width: maat,
-      height: maat,
-      "aria-hidden": "true",
-      style: { display: "block", overflow: "visible" }
-    },
-    /* @__PURE__ */ React.createElement("defs", null, patroon.length > 0 && /* @__PURE__ */ React.createElement("clipPath", { id: id + "-t" }, /* @__PURE__ */ React.createElement("path", { d: SCHOUDER })), haarH > 0 && /* @__PURE__ */ React.createElement("clipPath", { id: id + "-h" }, /* @__PURE__ */ React.createElement("rect", { x: "13", y: "5", width: "38", height: haarH + 5 })), baard && /* @__PURE__ */ React.createElement("clipPath", { id: id + "-b" }, /* @__PURE__ */ React.createElement("rect", { x: "16", y: "28", width: "32", height: "18" }))),
-    /* @__PURE__ */ React.createElement("path", { d: SCHOUDER, fill: trui }),
-    (patroon.length > 0 || opgelegd.length > 0) && /* @__PURE__ */ React.createElement("g", { clipPath: "url(#" + id + "-t)" }, /* @__PURE__ */ React.createElement("g", { transform: "translate(10,41) scale(0.3667,0.293) translate(0,-8)" }, patroon.map(function(d, i) {
-      return d.vorm === "rect" ? /* @__PURE__ */ React.createElement("rect", { key: i, x: d.x, y: d.y, width: d.b, height: d.h, fill: d.kleur }) : /* @__PURE__ */ React.createElement("path", { key: i, d: d.d, fill: d.kleur });
-    }), opgelegd.map(function(l, i) {
-      return /* @__PURE__ */ React.createElement(
-        TenueLaag,
-        {
-          key: l.id || i,
-          laag: l,
-          stuk: "shirt",
-          sleutel: id + "-p" + (l.id || i)
-        }
-      );
-    }))),
-    /* @__PURE__ */ React.createElement("path", { d: "M25.6 42.8L32 50.6l6.4-7.8-3-1.6h-6.8z", fill: "#ffffff", opacity: ".34" }),
-    /* @__PURE__ */ React.createElement("rect", { x: "27.3", y: "31", width: "9.4", height: "11", rx: "4.7", fill: popDonker(huid) }),
-    /* @__PURE__ */ React.createElement("circle", { cx: "19", cy: "26", r: "3.1", fill: huid }),
-    /* @__PURE__ */ React.createElement("circle", { cx: "45", cy: "26", r: "3.1", fill: huid }),
-    /* @__PURE__ */ React.createElement("circle", { cx: "32", cy: "24", r: "13", fill: huid }),
-    baard && /* @__PURE__ */ React.createElement("circle", { cx: "32", cy: "24", r: "13.3", fill: haar, opacity: ".8", clipPath: "url(#" + id + "-b)" }),
-    /* @__PURE__ */ React.createElement("circle", { cx: "27.2", cy: "23", r: "1.6", fill: "#2b2118" }),
-    /* @__PURE__ */ React.createElement("circle", { cx: "36.8", cy: "23", r: "1.6", fill: "#2b2118" }),
-    /* @__PURE__ */ React.createElement(
-      "path",
-      {
-        d: "M28.6 30.4c2 1.7 4.8 1.7 6.8 0",
-        stroke: "#2b2118",
-        strokeOpacity: ".55",
-        strokeWidth: "1.4",
-        strokeLinecap: "round",
-        fill: "none"
-      }
-    ),
-    haarH > 0 && /* @__PURE__ */ React.createElement("circle", { cx: "32", cy: "24.5", r: "13.6", fill: haar, clipPath: "url(#" + id + "-h)" }),
-    kapsel === 2 && /* @__PURE__ */ React.createElement("g", { fill: haar }, /* @__PURE__ */ React.createElement("rect", { x: "18.4", y: "19", width: "4.2", height: "11", rx: "2.1" }), /* @__PURE__ */ React.createElement("rect", { x: "41.4", y: "19", width: "4.2", height: "11", rx: "2.1" })),
-    kapsel === 4 && /* @__PURE__ */ React.createElement("g", { fill: haar }, /* @__PURE__ */ React.createElement("circle", { cx: "23.5", cy: "13.5", r: "4.6" }), /* @__PURE__ */ React.createElement("circle", { cx: "32", cy: "10.8", r: "5.1" }), /* @__PURE__ */ React.createElement("circle", { cx: "40.5", cy: "13.5", r: "4.6" }))
-  );
-}
 let tenueTeller = 0;
-function TenueLaag({ laag, stuk, sleutel, nummer, naam }) {
-  const l = tenueLaagVernieuw(laag);
-  const plek = tenueLaagPlaats(l, stuk);
-  const soort = tenueLaagSoort(l);
-  const vak = tenueVak(stuk);
-  if (soort === "beeld") {
-    return /* @__PURE__ */ React.createElement(
-      "image",
-      {
-        href: l.beeld,
-        x: -50,
-        y: -50,
-        width: 100,
-        height: 100,
-        preserveAspectRatio: "xMidYMid meet",
-        transform: plek.transform + " translate(50,50)",
-        opacity: l.doorzicht
-      }
-    );
-  }
-  if (soort === "tekst") {
-    const woord = tenueLaagTekst(l, nummer, naam);
-    if (!woord) return null;
-    const stijl = tenueLetterStijl(l.font);
-    if (Math.abs(l.boog) < 3) {
-      return /* @__PURE__ */ React.createElement(
-        "text",
-        {
-          x: "50",
-          y: "72",
-          textAnchor: "middle",
-          fill: l.kleur,
-          opacity: l.doorzicht,
-          transform: plek.transform,
-          style: stijl
-        },
-        woord
-      );
-    }
-    const straal = 4e3 / Math.abs(l.boog);
-    const op = l.boog > 0;
-    const pad = "M" + (50 - straal) + " 50A" + straal + " " + straal + " 0 0 " + (op ? 1 : 0) + " " + (50 + straal) + " 50";
-    return /* @__PURE__ */ React.createElement("g", { transform: plek.transform, opacity: l.doorzicht }, /* @__PURE__ */ React.createElement("defs", null, /* @__PURE__ */ React.createElement("path", { id: sleutel + "-b", d: pad })), /* @__PURE__ */ React.createElement("text", { fill: l.kleur, style: stijl }, /* @__PURE__ */ React.createElement("textPath", { href: "#" + sleutel + "-b", startOffset: "50%", textAnchor: "middle" }, woord)));
-  }
-  const v = tenueVorm(l.vorm);
-  const delen = tenueVormDelen(l.vorm);
-  if (!delen.length) return null;
-  const schaal = Math.max(0.01, (plek.breed || 100) / 100);
-  const dik = l.lijnDik ? l.lijnDik / schaal : 0;
-  return /* @__PURE__ */ React.createElement(
-    "g",
-    {
-      transform: plek.transform,
-      fill: l.kleur,
-      opacity: l.doorzicht,
-      stroke: dik ? l.lijn : "none",
-      strokeWidth: dik,
-      strokeLinejoin: "round",
-      fillRule: v && v.regel === "evenodd" ? "evenodd" : "nonzero"
-    },
-    delen.map(function(d, i) {
-      return d.d ? /* @__PURE__ */ React.createElement("path", { key: i, d: d.d }) : /* @__PURE__ */ React.createElement("rect", { key: i, x: d.x, y: d.y, width: d.b, height: d.h });
-    })
-  );
-}
-function TenueKader({ laag, stuk, onGreep, breedOpScherm }) {
-  const plek = tenueLaagPlaats(laag, stuk);
-  if (!plek.kader) return null;
-  const k = plek.kader;
-  const mx = k.x + k.b / 2, my = k.y + k.h / 2;
-  const maat = tenueKaderMaten(breedOpScherm, aanraakScherm());
-  const knop = tenueDraaiKnop(laag, stuk, breedOpScherm);
-  const punt = function(g) {
-    return { x: mx + (g.sx || 0) * k.b / 2, y: my + (g.sy || 0) * k.h / 2 };
-  };
-  const grijp = function(g) {
-    return function(e) {
-      if (!onGreep) return;
-      e.stopPropagation();
-      onGreep(g, e);
-    };
-  };
-  return /* @__PURE__ */ React.createElement("g", null, /* @__PURE__ */ React.createElement("g", { transform: "rotate(" + k.hoek + " " + mx + " " + my + ")" }, /* @__PURE__ */ React.createElement(
-    "rect",
-    {
-      x: k.x,
-      y: k.y,
-      width: k.b,
-      height: k.h,
-      fill: "none",
-      stroke: "rgba(255,255,255,.95)",
-      strokeWidth: maat.lijn,
-      strokeDasharray: maat.streep,
-      style: { pointerEvents: "none" }
-    }
-  ), /* @__PURE__ */ React.createElement(
-    "rect",
-    {
-      x: k.x,
-      y: k.y,
-      width: k.b,
-      height: k.h,
-      fill: "none",
-      stroke: "rgba(0,0,0,.55)",
-      strokeWidth: maat.dunneLijn,
-      strokeDasharray: maat.streep,
-      style: { pointerEvents: "none" }
-    }
-  ), TENUE_GREPEN.map(function(g) {
-    var p = punt(g);
-    return /* @__PURE__ */ React.createElement(
-      "g",
-      {
-        key: g.naam,
-        onPointerDown: grijp({ soort: "maat", sx: g.sx, sy: g.sy }),
-        style: { cursor: "nwse-resize", touchAction: "none" }
-      },
-      /* @__PURE__ */ React.createElement("circle", { cx: p.x, cy: p.y, r: maat.raak, fill: "rgba(0,0,0,0)" }),
-      /* @__PURE__ */ React.createElement(
-        "circle",
-        {
-          cx: p.x,
-          cy: p.y,
-          r: maat.greep,
-          fill: "rgba(255,255,255,.92)",
-          stroke: "rgba(0,0,0,.55)",
-          strokeWidth: maat.dunneLijn,
-          style: { pointerEvents: "none" }
-        }
-      )
-    );
-  })), /* @__PURE__ */ React.createElement(
-    "line",
-    {
-      x1: knop.vanX,
-      y1: knop.vanY,
-      x2: knop.x,
-      y2: knop.y,
-      stroke: "rgba(255,255,255,.9)",
-      strokeWidth: maat.lijn,
-      style: { pointerEvents: "none" }
-    }
-  ), /* @__PURE__ */ React.createElement("g", { onPointerDown: grijp({ soort: "draai" }), style: { cursor: "grab", touchAction: "none" } }, /* @__PURE__ */ React.createElement("circle", { cx: knop.x, cy: knop.y, r: maat.raak, fill: "rgba(0,0,0,0)" }), /* @__PURE__ */ React.createElement(
-    "circle",
-    {
-      cx: knop.x,
-      cy: knop.y,
-      r: maat.greep * 1.15,
-      fill: "var(--blauw, #004aad)",
-      stroke: "rgba(255,255,255,.95)",
-      strokeWidth: maat.lijn,
-      style: { pointerEvents: "none" }
-    }
-  )));
-}
-function TenueBeeld({ set, kant, nummer, naam, breed, schaduw, kader, kaderStuk, onGreep, vel }) {
-  const s = Object.assign({}, STANDAARD_SET, set || {});
-  const idRef = useRef(null);
-  if (idRef.current === null) idRef.current = "tn" + ++tenueTeller;
-  const id = idRef.current;
-  const achter = kant === "achter";
-  const delen = tenuePatroonDelen(s);
-  const w = breed || 150;
-  const lijn = "rgba(0,0,0,.28)";
-  const shirtDeel = achter ? "shirtAchter" : "shirtVoor";
-  const lagen = function(deelId, stuk) {
-    return tenueLagen(s, deelId).map(function(l, i) {
-      return /* @__PURE__ */ React.createElement(
-        TenueLaag,
-        {
-          key: l.id || i,
-          laag: l,
-          stuk,
-          nummer,
-          naam,
-          sleutel: id + "-" + (l.id || i)
-        }
-      );
-    });
-  };
-  return /* @__PURE__ */ React.createElement(
-    "svg",
-    {
-      ref: vel,
-      viewBox: "0 0 " + TENUE_VEL.b + " " + TENUE_VEL.h,
-      width: w,
-      height: w * TENUE_VEL.h / TENUE_VEL.b,
-      style: {
-        display: "block",
-        overflow: "visible",
-        filter: schaduw === false ? "none" : "drop-shadow(0 3px 6px rgba(0,0,0,.28))"
-      }
-    },
-    /* @__PURE__ */ React.createElement("defs", null, /* @__PURE__ */ React.createElement("clipPath", { id: id + "-s" }, /* @__PURE__ */ React.createElement("path", { d: TENUE_SHIRT_PAD })), /* @__PURE__ */ React.createElement("clipPath", { id: id + "-p" }, /* @__PURE__ */ React.createElement("path", { d: TENUE_BROEK_PAD })), /* @__PURE__ */ React.createElement("clipPath", { id: id + "-k" }, TENUE_SOK.map(function(k, i) {
-      return /* @__PURE__ */ React.createElement("rect", { key: i, x: k.x, y: k.y, width: k.b, height: k.h, rx: "5" });
-    }))),
-    /* @__PURE__ */ React.createElement("g", { clipPath: "url(#" + id + "-s)" }, /* @__PURE__ */ React.createElement("rect", { x: "0", y: "0", width: TENUE_VEL.b, height: "92", fill: s.shirt }), delen.map(function(d, i) {
-      return d.vorm === "rect" ? /* @__PURE__ */ React.createElement("rect", { key: i, x: d.x, y: d.y, width: d.b, height: d.h, fill: d.kleur }) : /* @__PURE__ */ React.createElement("path", { key: i, d: d.d, fill: d.kleur });
-    }), lagen(shirtDeel, "shirt")),
-    /* @__PURE__ */ React.createElement("path", { d: TENUE_SHIRT_PAD, fill: "none", stroke: lijn, strokeWidth: "1.4" }),
-    /* @__PURE__ */ React.createElement(
-      "path",
-      {
-        d: "M46 10 C52 22 68 22 74 10",
-        fill: "none",
-        stroke: s.kraag,
-        strokeWidth: "6",
-        strokeLinecap: "round"
-      }
-    ),
-    /* @__PURE__ */ React.createElement("path", { d: "M46 10 C52 22 68 22 74 10", fill: "none", stroke: lijn, strokeWidth: "0.9" }),
-    /* @__PURE__ */ React.createElement("path", { d: "M8 31 L19 53", stroke: s.kraag, strokeWidth: "5", strokeLinecap: "round" }),
-    /* @__PURE__ */ React.createElement("path", { d: "M112 31 L101 53", stroke: s.kraag, strokeWidth: "5", strokeLinecap: "round" }),
-    achter ? null : /* @__PURE__ */ React.createElement("g", null, s.embleem !== false && /* @__PURE__ */ React.createElement("g", { transform: "translate(41,32)" }, /* @__PURE__ */ React.createElement(
-      "path",
-      {
-        d: "M0 0 H15 V9 C15 15 7.5 18 7.5 18 C7.5 18 0 15 0 9 Z",
-        fill: s.tekst,
-        stroke: lijn,
-        strokeWidth: "0.8"
-      }
-    ), /* @__PURE__ */ React.createElement(
-      "path",
-      {
-        d: "M2.4 2.4 H12.6 V9 C12.6 13 7.5 15.2 7.5 15.2 C7.5 15.2 2.4 13 2.4 9 Z",
-        fill: s.shirt
-      }
-    )), s.sponsor ? /* @__PURE__ */ React.createElement(
-      "text",
-      {
-        x: "60",
-        y: "70",
-        textAnchor: "middle",
-        fill: s.tekst,
-        style: {
-          fontFamily: "'Helvetica Neue',Arial,sans-serif",
-          fontSize: "9px",
-          fontWeight: 800,
-          letterSpacing: ".5px"
-        }
-      },
-      s.sponsor.toUpperCase()
-    ) : null),
-    /* @__PURE__ */ React.createElement("g", { clipPath: "url(#" + id + "-p)" }, /* @__PURE__ */ React.createElement("path", { d: TENUE_BROEK_PAD, fill: s.broek }), lagen("broek", "broek")),
-    /* @__PURE__ */ React.createElement("path", { d: TENUE_BROEK_PAD, fill: "none", stroke: lijn, strokeWidth: "1.4" }),
-    /* @__PURE__ */ React.createElement("path", { d: "M60 92 L60 112", stroke: lijn, strokeWidth: "0.9" }),
-    /* @__PURE__ */ React.createElement("g", { clipPath: "url(#" + id + "-k)" }, TENUE_SOK.map(function(k, i) {
-      return /* @__PURE__ */ React.createElement("rect", { key: i, x: k.x, y: k.y, width: k.b, height: k.h, rx: "5", fill: s.sokken });
-    }), lagen("sok", "sok"), TENUE_SOK.map(function(k, i) {
-      return /* @__PURE__ */ React.createElement("rect", { key: "b" + i, x: k.x, y: k.y, width: k.b, height: "5", rx: "2.4", fill: s.shirt2 });
-    })),
-    TENUE_SOK.map(function(k, i) {
-      return /* @__PURE__ */ React.createElement(
-        "rect",
-        {
-          key: i,
-          x: k.x,
-          y: k.y,
-          width: k.b,
-          height: k.h,
-          rx: "5",
-          fill: "none",
-          stroke: lijn,
-          strokeWidth: "1.2"
-        }
-      );
-    }),
-    kader && /* @__PURE__ */ React.createElement(
-      TenueKader,
-      {
-        laag: kader,
-        stuk: kaderStuk || "shirt",
-        onGreep,
-        breedOpScherm: w
-      }
-    )
-  );
-}
 function TenueStrook({ tenue, keuze, opKeuze, breed }) {
   const t2 = tenue || STANDAARD_TENUE;
   return /* @__PURE__ */ React.createElement("div", { className: "tenue-strook" }, /* @__PURE__ */ React.createElement("div", { className: "tenue-strook-beelden" }, /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement(
@@ -26876,19 +26889,6 @@ function TenueStrook({ tenue, keuze, opKeuze, breed }) {
       s.kort
     );
   })));
-}
-function SpelerBeeld({ speler, shirt, vlak, tenueSet: tset }) {
-  if (speler && speler.foto) {
-    return /* @__PURE__ */ React.createElement(
-      "img",
-      {
-        src: speler.foto,
-        alt: speler.naam || "",
-        style: { width: "100%", height: "100%", objectFit: "cover", borderRadius: "50%", display: "block" }
-      }
-    );
-  }
-  return /* @__PURE__ */ React.createElement(SpelerPop, { naam: speler && speler.naam || "?", shirt, vlak, tenueSet: tset });
 }
 function SpelerCircle({ positie, speler, onClick, tenue, aanvoerder }) {
   const heeftSpeler = speler && speler.naam;
