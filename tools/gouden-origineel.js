@@ -23,7 +23,7 @@
    Sinds 11 september schermt het pakket echt iets af. Daarmee is er
    niet één app meer om vast te leggen maar twee:
 
-     referentie/club/   8 schermen + 3 achter een klik = 11 opnames
+     referentie/club/   8 schermen + 4 achter een klik = 12 opnames
                         Alles open, geen enkel slotje. Dit bewijst dat
                         de betaalde beleving onveranderd is. De drie
                         achter een klik zijn het tabblad Ontwikkeling,
@@ -141,9 +141,11 @@
 
    1. Alles achter een venster, een tab of een knop. Zo'n plek staat bij
       geen enkele schermopname open, dus verandert er iets, dan blijft
-      alles groen. Dat geldt voor de tabs Individu/Stand binnen
-      Statistieken, voor de vier onderdelen van het Clubhuis, en voor
-      elk formulier.
+      alles groen. Dat geldt voor het tabblad Stand binnen Statistieken
+      en voor de subtabs Aanval/Discipline/Betrokkenheid binnen Individu
+      (het tabblad Individu zelf, de openingsstand met de standaard-
+      speler, is sinds 17 september gedekt — zie DIEPTES_CLUB), voor de
+      vier onderdelen van het Clubhuis, en voor elk formulier.
       → Wie daar iets verandert, heeft hier géén vangnet. Dat is de
         belangrijkste bekende beperking van dit gereedschap.
 
@@ -159,6 +161,15 @@
       ("Instelingen") gaf groen — en het werd dringend toen de knop die
       een hele vereniging weggooit erin kwam te staan. De meting die dat
       besluit droeg staat bij DIEPTES_CLUB hieronder.
+
+      OP 17 SEPTEMBER IS ER ÉÉN BIJ GEKOMEN: het tabblad Individu binnen
+      Statistieken (de openingsstand, met de standaard-speler). Niet
+      omdat daar iets stuk was, maar omdat er een gedragswijziging aan
+      trainPct in de planning staat (het samenvoegen van vijf uiteen-
+      lopende opkomstberekeningen, zie src/domein/opkomst.js) die dit
+      scherm zichtbaar raakt. Zonder deze opname zou die wijziging
+      zonder vangnet blijven. Zie de uitleg bij "statistieken-individu"
+      in DIEPTES_CLUB hieronder.
 
       Alle ándere tabs, vensters en formulieren staan nog steeds
       nergens op: dat zijn er, geteld in online/index.html, nog
@@ -298,6 +309,56 @@ const DIEPTES_CLUB = [
        kies: '.tabs .tab-knop:has-text("Ontwikkeling")'}
     ],
     bewijs: '.stat-label:has-text("Gemiddelde voortgang")'
+  },
+  /* ── Individu-statistieken: trainPct vóór de opkomst-samenvoeging ──
+     Dit scherm stond nergens in dit vangnet: de tabs binnen Statistieken
+     vielen tot nu toe onder de belangrijkste bekende beperking hierboven
+     ("alles achter een tab staat nergens open"). Dat werd op 17 september
+     2026 een probleem in plaats van een blinde vlek: er ligt een ontwerp
+     (nog niet uitgevoerd) om de vijf uiteenlopende manieren waarop de app
+     opkomst berekent tot één samen te voegen — zie de uitleg bovenaan
+     src/domein/opkomst.js. trainPct in IndividuStatistieken (src/app.jsx)
+     is één van de vijf, en niet de kleinste: hij telt élke training mee
+     in de noemer (trainingen.length), óók een training zonder ingevulde
+     presentielijst. In vulling.js heeft tr4 ("Standaardsituaties") zo'n
+     lege presentielijst, en die drukt daardoor vandaag het percentage
+     van praktisch elke speler — inclusief Joep hieronder.
+
+     Deze opname legt dat vast vóórdat de samenvoeging gebeurt: de
+     "vóór"-staat. Verandert trainPct straks om (zoals opkomstVan al
+     doet) zo'n lege training uit te sluiten, dan hoort dít scherm rood
+     te worden — en nergens anders in dit vangnet zou dat zichtbaar zijn
+     geweest.
+
+     Geen klik nodig om een speler te kiezen: IndividuStatistieken opent
+     altijd met spelers[0] (useState(spelers.length>0 ? spelers[0].id :
+     null)), en dat is met deze vulling Joep Bramsloot — dezelfde speler
+     als bij "selectie-ontwikkeling" hierboven, nu op een ander scherm.
+     Een andere speler kiezen kan hier niet: dat gaat via een <select>,
+     en de stappen in dit bestand kunnen alleen klikken (zie de lus
+     verderop die stap.kies aanklikt), niet selectOption() aanroepen op
+     een native dropdown.
+
+     Het cijfer zelf, nagerekend op de huidige (ongewijzigde) app: Joep
+     staat in vulling.js op positie 0, en dat is op zijn positie in elk
+     van de drie ingevulde trainingen "a" (aanwezig) — tr1, tr2 én tr3.
+     trainAanw wordt dus 3, maar trainingen.length telt ook de lege tr4
+     mee: trainPct = round(3/4*100) = 75%. Zodra tr4 straks buiten de
+     noemer valt, wordt dat 100% — een duidelijk, van-nul-verschillend
+     verschil op precies dit scherm. */
+  {
+    id: "statistieken-individu",
+    label: "Statistieken › Individu",
+    begin: "statistieken",
+    stappen: [
+      {wat: 'het tabblad "Individu" binnen Statistieken',
+       kies: '.tabs .tab-knop:has-text("Individu")'}
+    ],
+    /* De naam bewijst zowel het juiste scherm als de juiste (standaard)
+       speler; de tegels met trainPct zelf ("Aanwezig", "Trainingsopk.")
+       horen door de DOM-vergelijking beoordeeld te worden, niet door
+       dit bewijs. */
+    bewijs: '.profiel-naam:has-text("Joep Bramsloot")'
   },
   /* ── Het instellingenvenster ──
      Dit venster stond sinds het begin bovenaan de bekende beperkingen
