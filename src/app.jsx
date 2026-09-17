@@ -18032,6 +18032,7 @@ function Dashboard({ navigeer }) {
   const wedstrijden  = laadWedstrijden();
   const trainingen   = zichtbareTrainingen();
   const activiteiten = laadActiviteiten();
+  const afwezigheden = laadAfwezigheden();
   const [deelOpen, setDeelOpen] = useState(false);
 
   const gespeeld = tellendeWedstrijden(wedstrijden);
@@ -18112,8 +18113,8 @@ function Dashboard({ navigeer }) {
   if (metOpkomst.length) {
     var aanw=0, tot=0;
     metOpkomst.forEach(function(t){
-      aanw += t.aanwezigheid.filter(function(a){ return teltAlsAanwezig(a.status); }).length;
-      tot  += t.aanwezigheid.length;
+      var o = opkomstVan(t, afwezigheden);
+      if (o) { aanw += o.aanwezig; tot += o.totaal; }
     });
     opkomst = tot ? Math.round(aanw/tot*100) : null;
   }

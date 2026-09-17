@@ -190,6 +190,23 @@ try {
     "return aanwPct;\n};"
   );
 
+  /* Het Dashboard-opkomstblokje (src/app.jsx). Sinds de samenvoeging
+     (stap B, 17 sep. 2026) rekent het via opkomstVan, net als aanwPct.
+     Het commentaarblok "── Opkomst op de training ──" erboven is de
+     vaste marker die dit stukje in de component aanwijst; geknipt
+     wordt vanaf de metOpkomst-regel eronder, met dezelfde
+     knipBlokUit-truc als bij het trainingsopkomst-blokje van
+     spelerInzichten hierboven (tot en met de sluitende "  }" van het
+     if-blok). */
+  const DASHBOARD_OPKOMST_BLOK = knipBlokUit(regels, "src/app.jsx",
+    /^\s*const metOpkomst = trainingen\.filter\(function\(t\)\{ return \(t\.aanwezigheid\|\|\[\]\)\.length; \}\);\s*$/,
+    "het opkomst-blokje in Dashboard");
+  eval(
+    "global.dashboardOpkomstBerekening = function(trainingen, afwezigheden) {\n" +
+    DASHBOARD_OPKOMST_BLOK + "\n" +
+    "return {opkomst: opkomst, metOpkomst: metOpkomst.length};\n};"
+  );
+
   /* De vierde variant: het trainingsopkomst-blokje uit spelerInzichten
      (src/domein/statistieken.js). Ongewijzigd overgenomen, inclusief
      de if (metOpkomst.length >= 4)-drempel die in de app ook geldt —
@@ -212,7 +229,7 @@ try {
 
 const NAMEN = ["opkomstVan", "presentieTabel", "presentieGebeurtenissen", "teltAlsAanwezig",
                "afwezigheidOp", "afwezigheidTeltMee", "afwezigheidSoort", "trainPctBerekening",
-               "trainingsopkomstBerekening", "aanwPctBerekening"];
+               "trainingsopkomstBerekening", "aanwPctBerekening", "dashboardOpkomstBerekening"];
 const missen = NAMEN.filter((n) => { try { return typeof eval(n) !== "function"; } catch (e) { return true; } });
 if (missen.length) {
   console.log("\nDeze functies staan niet meer waar deze test ze zoekt:");
@@ -409,6 +426,38 @@ ok("aanwPct telt (7+4) aanwezig over (14+4) totaal op: round(11/18*100) = 61 pro
 const GEMIDDELDE_VAN_PERCENTAGES = Math.round((50 + 100) / 2);
 okAnders("het oude gemiddelde-van-percentages (75%) is dus een ander getal dan het nieuwe gewogen resultaat (61%)",
    AANWPCT_NIEUW, GEMIDDELDE_VAN_PERCENTAGES);
+
+/* ══════════════════════════════════════════════════════════════
+   (f) het Dashboard-opkomstblokje (src/app.jsx) — na de samenvoeging
+       (stap B) sluit een niet-meetellende afwezigheidsperiode een
+       speler uit van teller én noemer, net als opkomstVan.
+   Eén training, drie spelers: sd1 gewoon aanwezig, sd2 geblesseerd
+   én in een periode "blessure" (noemer:false) op die datum, sd3
+   niet afgemeld en zonder periode.
+   Met de hand: sd2 valt buiten teller én noemer. sd3 blijft gewoon
+   meetellen (geen periode), maar niet als aanwezig. Dus 1 van de 2
+   (sd1 wel, sd3 niet) = 50% — vóór deze stap was dat, met sd2 gewoon
+   meegeteld als afwezig, (1 van de 3) = 33%. Bewust NIET 100%, zodat
+   teller en noemer niet toevallig gelijk zijn — anders zou een fout
+   die aanwezig en totaal verwisselt hier niet opvallen. */
+groep("(f) Dashboard-opkomstblokje — een niet-meetellende afwezigheidsperiode telt niet meer mee");
+
+const TRAINING_DASH = {id: "td1", datum: "2026-09-15", aanwezigheid: [
+  {spelerId: "sd1", status: "aanwezig"},
+  {spelerId: "sd2", status: "geblesseerd"},
+  {spelerId: "sd3", status: "geenbericht"}
+]};
+const AFWEZIGHEDEN_DASH = [
+  {id: 1, spelerId: "sd2", soort: "blessure", vanaf: "2026-09-01", tot: "2026-09-30"}
+];
+
+const DASH_NA = dashboardOpkomstBerekening([TRAINING_DASH], AFWEZIGHEDEN_DASH);
+ok("het Dashboard-blokje sluit sd2 (blessure, telt niet mee) uit van teller én noemer: 1 van de 2, dus 50%",
+   DASH_NA.opkomst, 50);
+
+const DIRECT_DASH = opkomstVan(TRAINING_DASH, AFWEZIGHEDEN_DASH);
+ok("... en komt daarmee exact overeen met een rechtstreekse opkomstVan-optelling over dezelfde training",
+   DASH_NA.opkomst, DIRECT_DASH.pct);
 
 /* ── uitslag ────────────────────────────────────────────────── */
 console.log("\n" + goed + " geslaagd, " + fout + " gefaald");
