@@ -50,29 +50,47 @@ const VULLING = path.join(__dirname, "..", "tools", "gouden-origineel", "vulling
 const bron = fs.readFileSync(APP, "utf8");
 const regels = bron.split("\n");
 
-const zoek = (re) => { for (let i = 0; i < regels.length; i++) if (re.test(regels[i])) return i; return -1; };
-const eis = (re, wat) => { const i = zoek(re); if (i < 0) throw new Error(wat + " niet gevonden in src/app.jsx"); return i; };
-function knipFunctie(naam) {
-  const a = eis(new RegExp("^function " + naam + "\\("), "function " + naam);
-  let e = a; while (e < regels.length && !/^\}/.test(regels[e])) e++;
-  return regels.slice(a, e + 1).join("\n");
+/* Sinds P3 stap 2 (professionaliseringsplan.md, 17 september 2026)
+   staan WEDSTRIJD_SOORTEN/wedstrijdSoort/wedstrijdTelt/tellendeWedstrijden
+   niet meer in src/app.jsx maar in src/domein/wedstrijden.js.
+   berekenSpelerStats blijft voorlopig in src/app.jsx — die verhuist pas
+   in een latere stap (src/domein/statistieken.js) — en wordt dus nog
+   uit `regels` geknipt. */
+const DOMEIN = path.join(__dirname, "..", "src", "domein", "wedstrijden.js");
+const regelsDomein = fs.readFileSync(DOMEIN, "utf8").split("\n");
+
+const zoekIn = (bronRegels, re) => { for (let i = 0; i < bronRegels.length; i++) if (re.test(bronRegels[i])) return i; return -1; };
+const eisIn = (bronRegels, bronNaam, re, wat) => {
+  const i = zoekIn(bronRegels, re);
+  if (i < 0) throw new Error(wat + " niet gevonden in " + bronNaam);
+  return i;
+};
+const zoek = (re) => zoekIn(regels, re);
+const eis = (re, wat) => eisIn(regels, "src/app.jsx", re, wat);
+function knipFunctieUit(bronRegels, bronNaam, naam) {
+  const a = eisIn(bronRegels, bronNaam, new RegExp("^function " + naam + "\\("), "function " + naam);
+  let e = a; while (e < bronRegels.length && !/^\}/.test(bronRegels[e])) e++;
+  return bronRegels.slice(a, e + 1).join("\n");
 }
-function knipConst(naam) {
-  const a = eis(new RegExp("^const " + naam + " = \\["), "const " + naam);
-  let e = a; while (e < regels.length && !/^\];/.test(regels[e])) e++;
-  return regels.slice(a, e + 1).join("\n");
+function knipFunctie(naam) { return knipFunctieUit(regels, "src/app.jsx", naam); }
+function knipFunctieDomein(naam) { return knipFunctieUit(regelsDomein, "src/domein/wedstrijden.js", naam); }
+function knipConstUit(bronRegels, bronNaam, naam) {
+  const a = eisIn(bronRegels, bronNaam, new RegExp("^const " + naam + " = \\["), "const " + naam);
+  let e = a; while (e < bronRegels.length && !/^\];/.test(bronRegels[e])) e++;
+  return bronRegels.slice(a, e + 1).join("\n");
 }
+function knipConstDomein(naam) { return knipConstUit(regelsDomein, "src/domein/wedstrijden.js", naam); }
 
 try {
   eval(
-    knipConst("WEDSTRIJD_SOORTEN") + "\n" +
-    knipFunctie("wedstrijdSoort") + "\n" +
-    knipFunctie("wedstrijdTelt") + "\n" +
-    knipFunctie("tellendeWedstrijden") + "\n" +
+    knipConstDomein("WEDSTRIJD_SOORTEN") + "\n" +
+    knipFunctieDomein("wedstrijdSoort") + "\n" +
+    knipFunctieDomein("wedstrijdTelt") + "\n" +
+    knipFunctieDomein("tellendeWedstrijden") + "\n" +
     knipFunctie("berekenSpelerStats")
   );
 } catch (e) {
-  console.log("\nDe statistiekfuncties zijn niet uit src/app.jsx te knippen:");
+  console.log("\nDe statistiekfuncties zijn niet uit src/app.jsx of src/domein/wedstrijden.js te knippen:");
   console.log("  " + (e && e.message || e));
   console.log("\n0 geslaagd, 1 gefaald");
   process.exit(1);
