@@ -208,14 +208,16 @@ try {
   );
 
   /* De vierde variant: het trainingsopkomst-blokje uit spelerInzichten
-     (src/domein/statistieken.js). Ongewijzigd overgenomen, inclusief
-     de if (metOpkomst.length >= 4)-drempel die in de app ook geldt —
-     onder die drempel toont de app helemaal geen inzicht, en dat is
-     hier net zo goed onderdeel van "hoe deze variant zich gedraagt". */
+     (src/domein/statistieken.js). Sinds de samenvoeging (stap A,
+     17 sep. 2026) rekent dit blokje via opkomstVan en krijgt de
+     wrapper er daarom een `afwezigheden`-parameter bij — de
+     if (metOpkomst.length >= 4)-drempel die in de app ook geldt blijft
+     ongewijzigd staan, dat is nog altijd onderdeel van "hoe deze
+     variant zich gedraagt". */
   const INZICHT_BLOK = knipBlokUit(regelsStatistieken, "src/domein/statistieken.js",
     /^\s*\/\* 6\. trainingsopkomst \*\/\s*$/, "het trainingsopkomst-blokje in spelerInzichten");
   eval(
-    "global.trainingsopkomstBerekening = function(trainingen, speler) {\n" +
+    "global.trainingsopkomstBerekening = function(trainingen, speler, afwezigheden) {\n" +
     INZICHT_BLOK + "\n" +
     "return {metOpkomst: metOpkomst, aanw: (typeof aanw!=='undefined'?aanw:null), pct: (typeof pct!=='undefined'?pct:null)};\n};"
   );
@@ -458,6 +460,42 @@ ok("het Dashboard-blokje sluit sd2 (blessure, telt niet mee) uit van teller én 
 const DIRECT_DASH = opkomstVan(TRAINING_DASH, AFWEZIGHEDEN_DASH);
 ok("... en komt daarmee exact overeen met een rechtstreekse opkomstVan-optelling over dezelfde training",
    DASH_NA.opkomst, DIRECT_DASH.pct);
+
+/* ══════════════════════════════════════════════════════════════
+   (g) spelerInzichten (statistieken.js) — na de samenvoeging (stap A)
+       sluit een niet-meetellende afwezigheidsperiode een training uit
+       van teller én noemer, net als opkomstVan.
+   Vijf trainingen (nodig om de >=4-drempel te halen). g5 valt in een
+   periode "schorsing" (noemer:false) op die datum — met de hand:
+   g1..g4 blijven meetellen (allemaal "aanwezig"), g5 valt weg. Dus
+   metOpkomst.length = 4, aanw = 4, pct = 100 — vóór deze stap zou g5
+   gewoon als afwezig meegeteld zijn (metOpkomst.length 5, pct 80).
+   ══════════════════════════════════════════════════════════════ */
+groep("(g) spelerInzichten — een niet-meetellende afwezigheidsperiode sluit een training uit");
+
+const SPELER_G = {id: "s01", naam: "Speler Een"};
+const TRAININGEN_G = [
+  {id: "g1", datum: "2026-09-01", aanwezigheid: [{spelerId: "s01", status: "aanwezig"}]},
+  {id: "g2", datum: "2026-09-08", aanwezigheid: [{spelerId: "s01", status: "aanwezig"}]},
+  {id: "g3", datum: "2026-09-15", aanwezigheid: [{spelerId: "s01", status: "aanwezig"}]},
+  {id: "g4", datum: "2026-09-22", aanwezigheid: [{spelerId: "s01", status: "aanwezig"}]},
+  {id: "g5", datum: "2026-09-29", aanwezigheid: [{spelerId: "s01", status: "geenbericht"}]}
+];
+const AFWEZIGHEDEN_G = [
+  {id: 1, spelerId: "s01", soort: "schorsing", vanaf: "2026-09-25", tot: "2026-10-05"}
+];
+
+const INZICHT_G_MET = trainingsopkomstBerekening(TRAININGEN_G, SPELER_G, AFWEZIGHEDEN_G);
+ok("spelerInzichten sluit g5 (schorsing, telt niet mee) uit: metOpkomst bevat 4 trainingen, niet 5",
+   INZICHT_G_MET.metOpkomst.length, 4);
+ok("en komt daarmee op 100%, want alle 4 overgebleven trainingen zijn bijgewoond",
+   INZICHT_G_MET.pct, 100);
+
+const INZICHT_G_ZONDER = trainingsopkomstBerekening(TRAININGEN_G, SPELER_G, []);
+ok("zonder afwezigheidsperiode telt g5 gewoon mee als gemist: metOpkomst bevat 5 trainingen",
+   INZICHT_G_ZONDER.metOpkomst.length, 5);
+ok("... en het percentage zakt naar 80",
+   INZICHT_G_ZONDER.pct, 80);
 
 /* ── uitslag ────────────────────────────────────────────────── */
 console.log("\n" + goed + " geslaagd, " + fout + " gefaald");

@@ -16610,7 +16610,8 @@ function OntwikkelingTab({ speler }) {
   const score = ontwikkelingsScore(speler.id, doelen);
   const behaald = telBehaald(speler.id, doelen);
   const trainingen = laadTrainingen();
-  const inzichten = spelerInzichten(speler, wedstrijden, trainingen, doelen, reviews);
+  const afwezigheden = laadAfwezigheden();
+  const inzichten = spelerInzichten(speler, wedstrijden, trainingen, doelen, reviews, afwezigheden);
   const deelname = deelnameVanSpeler(speler.id, wedstrijden);
   const cijfer = gemiddeldCijfer(speler.id, wedstrijden);
   const motmAantal = telMotm(speler.id, wedstrijden);
@@ -16938,6 +16939,7 @@ function SpelersLijst({ spelers, onSelecteer, onNieuw }) {
      spelerskaarten. De rest van de kaart — cijfers, doelpunten,
      beschikbaarheid — blijft staan. */
   const alleTrainingen = zichtbareTrainingen();
+  const alleAfwezigheden = laadAfwezigheden();
   const alleReviews = laadReviews();
   const posities=["Alle","Keeper","Verdediger","Middenvelder","Aanvaller"];
   const gefilterd=spelers
@@ -17010,7 +17012,7 @@ function SpelersLijst({ spelers, onSelecteer, onNieuw }) {
             var eigenDoelen = doelenVanSpeler(s.id, alleDoelen);
             var besch = beschikbaarheidInfo(s.beschikbaar);
             var nietFitS = s.beschikbaar && s.beschikbaar!=="fit";
-            var inz = spelerInzichten(s, alleWedstrijden, alleTrainingen, alleDoelen, alleReviews);
+            var inz = spelerInzichten(s, alleWedstrijden, alleTrainingen, alleDoelen, alleReviews, alleAfwezigheden);
             var aandacht = inz.filter(function(x){ return x.soort==="aandacht"; }).length;
             return (
               <div key={s.id} className="sp-kaart" onClick={function(){onSelecteer(s);}}>

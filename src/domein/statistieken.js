@@ -316,7 +316,7 @@ function cijfersVanSpeler(spelerId, wedstrijden, reviews) {
 }
 
 /* ── AUTOMATISCHE INZICHTEN ── */
-function spelerInzichten(speler, wedstrijden, trainingen, doelen, reviews) {
+function spelerInzichten(speler, wedstrijden, trainingen, doelen, reviews, afwezigheden) {
   var uit = [];
   function voeg(soort, tekst) { uit.push({soort:soort, tekst:tekst}); }
   var voornaam = String(speler.naam||"").split(" ")[0] || "Deze speler";
@@ -377,11 +377,12 @@ function spelerInzichten(speler, wedstrijden, trainingen, doelen, reviews) {
   }
 
   /* 6. trainingsopkomst */
-  var metOpkomst = (trainingen||[]).filter(function(t){ return (t.aanwezigheid||[]).some(function(a){ return a.spelerId===speler.id; }); });
+  var metOpkomst = (trainingen||[]).map(function(t){
+    return opkomstVan({datum: t.datum, aanwezigheid:
+      (t.aanwezigheid||[]).filter(function(a){ return a.spelerId===speler.id; })}, afwezigheden);
+  }).filter(function(o){ return o !== null; });
   if (metOpkomst.length >= 4) {
-    var aanw = metOpkomst.filter(function(t){
-      return (t.aanwezigheid||[]).some(function(a){ return a.spelerId===speler.id && teltAlsAanwezig(a.status); });
-    }).length;
+    var aanw = metOpkomst.reduce(function(s,o){ return s+o.aanwezig; }, 0);
     var pct = Math.round(aanw/metOpkomst.length*100);
     if (pct >= 90) voeg("goed", "Trainingsopkomst "+pct+" procent. Bijna altijd present.");
     else if (pct < 65) voeg("aandacht", "Trainingsopkomst "+pct+" procent — "+(metOpkomst.length-aanw)+" van de "+metOpkomst.length+" gemist.");
