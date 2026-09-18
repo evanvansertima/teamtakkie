@@ -2994,7 +2994,7 @@ window.addEventListener("error", function(e){
 });
 </script>
 <script>
-const APP_VERSIE = "fc1f7b5";
+const APP_VERSIE = "0f9b89e";
 const TEAMS_KEY = "tt_teams_v1";
 const ACTIEF_KEY = "tt_actief_v1";
 const VOORKEUR_KEY = "tt_voorkeuren_v1";
@@ -33394,11 +33394,9 @@ function hefClubOp() {
       "geweigerd",
       "De vereniging is niet verwijderd \u2014 controleer of je de eigenaar bent."
     );
-    var aanmelding = sessieNu();
-    wisAllesLokaal();
-    zetSessie(aanmelding);
-    herlaadInstellingen();
-    return { ok: true, gegevens: weg[0] };
+    return serverAfmelden().then(function() {
+      return { ok: true, gegevens: weg[0] };
+    });
   });
 }
 function bewaarClubGegeven(wijziging) {

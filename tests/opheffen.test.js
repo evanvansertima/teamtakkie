@@ -76,10 +76,12 @@ function serverVraag(pad, opties) {
   return Promise.resolve(antwoord);
 }
 function serverFout(soort, tekst) { return { ok: false, fout: { soort: soort, tekst: tekst } }; }
-function sessieNu() { return { token: "abc", email: "evan@voorbeeld.nl" }; }
-function wisAllesLokaal() { gedaan.push("wisAllesLokaal"); return 0; }
-function zetSessie(s) { gedaan.push("zetSessie:" + (s && s.token)); return s; }
-function herlaadInstellingen() { gedaan.push("herlaadInstellingen"); }
+/* serverAfmelden() is de echte afmeldfunctie (src/kern/server.js): die
+   ruimt zelf al lokaal op en verwijdert de sessie, zowel lokaal als bij
+   Supabase. hefClubOp roept hem sinds 18 september 2026 aan in plaats
+   van de sessie terug te zetten (zie ══ 3 ══ hieronder) -- vandaar dat
+   deze test hem als geheel mockt, niet zijn losse onderdelen. */
+function serverAfmelden() { gedaan.push("serverAfmelden"); return Promise.resolve({ok:true}); }
 
 eval(knip("hefClubOp"));
 
@@ -159,10 +161,11 @@ r = await hefClubOp();
 ok("dit geldt als gelukt", r.ok, true);
 ok("en de verwijderde vereniging komt mee terug",
    (r.gegevens && r.gegevens.naam) || null, "FC Harlingen");
-ok("nu pas wordt dit apparaat leeggeruimd",
-   gedaan, ["wisAllesLokaal", "zetSessie:abc", "herlaadInstellingen"]);
-console.log("   de aanmelding wordt teruggezet: het account bestaat nog,");
-console.log("   alleen de vereniging niet — dus geen inlogscherm");
+ok("nu pas wordt dit apparaat afgemeld",
+   gedaan, ["serverAfmelden"]);
+console.log("   een echte afmelding: Evan gaf aan dat teruggaan naar het");
+console.log("   scherm 'Je vereniging' voelt als meteen een nieuwe moeten");
+console.log("   beginnen — nu landt hij op het inlogscherm");
 
 /* ══ 4. een echte fout van de server ══ */
 groep("een echte fout blijft een echte fout");

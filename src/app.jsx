@@ -299,16 +299,17 @@ function hefClubOp() {
        boven de controle staan, dan was een geweigerde verwijdering op
        de server tóch een lege app op dit apparaat geweest.
 
-       De aanmelding blijft staan: het account van deze persoon bestaat
-       gewoon nog, alleen zijn vereniging niet meer. Hij hoort dus in
-       het scherm "Je vereniging" te belanden en niet op het
-       inlogscherm — dat laatste zou lijken alsof hij ook zijn account
-       kwijt is. */
-    var aanmelding = sessieNu();
-    wisAllesLokaal();
-    zetSessie(aanmelding);
-    herlaadInstellingen();
-    return {ok:true, gegevens: weg[0]};
+       Eerder bleef de aanmelding hier bewust staan (het account van de
+       persoon bestaat nog, alleen zijn vereniging niet meer), met de
+       bedoeling hem in het scherm "Je vereniging" te laten landen.
+       Evan gaf na het zelf uittesten aan dat dit voelt als "nu moet ik
+       meteen weer een nieuwe vereniging beginnen" — verwarrend vlak na
+       het opheffen. Nu dus een echte afmelding: serverAfmelden() ruimt
+       lokaal op en verwijdert de sessie, zowel lokaal als bij Supabase
+       zelf, en de gebruiker landt op het inlogscherm. */
+    return serverAfmelden().then(function(){
+      return {ok:true, gegevens: weg[0]};
+    });
   });
 }
 
