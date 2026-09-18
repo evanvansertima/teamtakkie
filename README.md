@@ -1,7 +1,6 @@
 # TEAMTAKKIE
 
-Teammanagement-app voor amateurvoetbalclubs. Gebouwd vanuit FC Harlingen
-JO19-2, draait volledig in de browser.
+Teammanagement-app voor amateurvoetbalclubs. Als trainer heb je je maatje bij de hand, draait volledig in de browser.
 
 **Lees eerst [`CLAUDE.md`](CLAUDE.md)** — dat bestand bevat de harde regels
 voor dit project (niet herschrijven, tests horen in de repo, commentaar
