@@ -1,3 +1,4 @@
+// @ts-check
 /* ══════════════════════════════════════════════════════════════
    KERN: de server (Supabase), aanmelden, sessie
    ─────────────────────────────────────────────────────────────
@@ -67,6 +68,12 @@ const SERVER_INGEBOUWD = {
   sleutel: "sb_publishable_3ygbV3rj8fZa65N88ME2FQ_Q9nMa5EN"
 };
 
+/** @typedef {Object} ServerInst
+ * @property {string} url      adres van het Supabase-project, zonder eind-schuine-streep
+ * @property {string} sleutel  de publieke ("publishable"/"anon") sleutel
+ */
+
+/** @returns {ServerInst} het ingebouwde adres, eventueel overschreven door wat lokaal is ingesteld */
 function _leesServer() {
   var uit = Object.assign({}, SERVER_INGEBOUWD);
   try {
@@ -79,20 +86,28 @@ function _leesServer() {
   } catch(e) {}
   return uit;
 }
+/** @type {ServerInst} */
 var _server = _leesServer();
+/** @returns {ServerInst} */
 function serverInst() { return _server; }
+/**
+ * @param {Partial<ServerInst>} [v]  velden om over de huidige instelling heen te zetten
+ * @returns {ServerInst} de bijgewerkte instelling
+ */
 function zetServerInst(v) {
   _server = Object.assign({}, _server, v || {});
   if (_server.url) _server.url = String(_server.url).trim().replace(/\/+$/, "");
   try { localStorage.setItem(SERVER_KEY, JSON.stringify(_server)); } catch(e) {}
   return _server;
 }
+/** @returns {boolean} is er een adres én een sleutel ingesteld? */
 function serverAan() { return !!(_server.url && _server.sleutel); }
 
 /* Een nummer voor dit apparaat. Niet om je te volgen: het staat bij
    elke wijziging op de server, zodat een apparaat zijn eigen
    wijziging niet aanziet voor die van iemand anders — en je dus geen
    waarschuwing krijgt over een botsing met jezelf. */
+/** @returns {string} het (eventueel net aangemaakte) apparaat-id van dit apparaat */
 function apparaatId() {
   try {
     var r = localStorage.getItem(APPARAAT_KEY);
@@ -109,7 +124,17 @@ function apparaatId() {
    nieuw token haalt als het eerste verlopen is. Die tweede is de
    belangrijkste: zonder zou je elk uur opnieuw je wachtwoord moeten
    intypen, en dat doet niemand langs de lijn. */
+/** @typedef {Object} Sessie
+ * @property {string} token          het huidige toegangstoken (een uur geldig)
+ * @property {string|null} verversToken  waarmee een nieuw token gehaald wordt
+ * @property {number} verlooptOp     tijdstip (ms sinds epoch) waarop token verloopt
+ * @property {string|null} gebruikerId
+ * @property {string|null} email
+ */
+
+/** @type {((s: Sessie|null) => void)[]} functies die willen weten als de sessie verandert */
 var _sessieLuisteraars = [];
+/** @returns {Sessie|null} de bewaarde sessie, of null als die er niet (geldig) is */
 function _leesSessie() {
   try {
     var r = localStorage.getItem(SESSIE_KEY);
@@ -117,10 +142,18 @@ function _leesSessie() {
     return (o && o.token) ? o : null;
   } catch(e) { return null; }
 }
+/** @type {Sessie|null} */
 var _sessie = _leesSessie();
+/** @returns {Sessie|null} */
 function sessieNu() { return _sessie; }
+/** @returns {boolean} */
 function ingelogd() { return !!(_sessie && _sessie.token); }
+/** @returns {{id:string|null, email:string|null}|null} de ingelogde gebruiker, of null */
 function gebruikerNu() { return _sessie ? {id: _sessie.gebruikerId, email: _sessie.email} : null; }
+/**
+ * @param {Sessie|null} [s]  de nieuwe sessie, of niets/null om uit te loggen
+ * @returns {Sessie|null} de zojuist gezette sessie
+ */
 function zetSessie(s) {
   _sessie = s || null;
   try {
@@ -134,6 +167,11 @@ function zetSessie(s) {
    Supabase geeft de geldigheid als aantal seconden; wij rekenen dat
    meteen om naar een tijdstip, want een aantal seconden is over vijf
    minuten iets anders waard. */
+/**
+ * @param {any} antwoord  het rauwe antwoord van Supabase Auth
+ * @returns {Sessie|null} de sessie zoals wij die bewaren, of null als
+ *   het antwoord geen bruikbaar token bevatte
+ */
 function sessieUit(antwoord) {
   if (!antwoord || !antwoord.access_token) return null;
   var seconden = Number(antwoord.expires_in);
@@ -150,6 +188,11 @@ function sessieUit(antwoord) {
    vertrekt al te oud: onderweg kan het aflopen. Daarom nemen we een
    marge. */
 const TOKEN_MARGE_MS = 60 * 1000;
+/**
+ * @param {Sessie|null} [s]
+ * @param {number} [nu]  tijdstip om tegen te toetsen; standaard nu
+ * @returns {boolean} is dit token (bijna) verlopen?
+ */
 function tokenVerlopen(s, nu) {
   if (!s || !s.verlooptOp) return true;
   return (nu || Date.now()) + TOKEN_MARGE_MS >= s.verlooptOp;
@@ -162,7 +205,35 @@ function tokenVerlopen(s, nu) {
    Alles komt terug als {ok, gegevens, fout} in plaats van dat er iets
    wordt opgeworpen. Een app die langs de lijn zijn bereik verliest
    moet gewoon doorwerken, niet omvallen. */
+/** @typedef {Object} ServerFout
+ * @property {string} soort
+ * @property {string} tekst
+ */
+/** @typedef {Object} ServerUitkomst
+ *   wat elke functie die met de server praat teruggeeft — nooit een
+ *   opgeworpen fout, altijd dit vaste vormpje (zie de kop hierboven).
+ *   Geen strikte {ok:true}/{ok:false}-koppeling: op praktisch elke
+ *   plek wordt ok als boolean doorgegeven (bijv. `r.ok`) in plaats van
+ *   een letterlijke true/false, dus een striktere union zou hier
+ *   overal een vals "Type 'boolean' is not assignable to type 'true'"
+ *   opleveren zonder dat de code onduidelijker is.
+ * @property {boolean} ok
+ * @property {any} [gegevens]
+ * @property {ServerFout} [fout]
+ */
+/** @typedef {Object} HttpAntwoord
+ * @property {number} status
+ * @property {boolean} ok
+ * @property {any} gegevens
+ */
+
+/** @param {string} pad  bijv. "/rest/v1/leden" @returns {string} */
 function serverAdres(pad) { return _server.url + pad; }
+/**
+ * @param {string} [token]   toegangstoken; standaard de publieke sleutel
+ * @param {Object<string,string>} [extra]  extra of overschrijvende koppen
+ * @returns {Object<string,string>}
+ */
 function serverKoppen(token, extra) {
   var k = Object.assign({
     "apikey": _server.sleutel,
@@ -179,18 +250,25 @@ function serverKoppen(token, extra) {
   k["Authorization"] = "Bearer " + (token || _server.sleutel);
   return k;
 }
+/** @param {string} soort @param {string} tekst @returns {ServerUitkomst} */
 function serverFout(soort, tekst) { return {ok:false, fout:{soort:soort, tekst:tekst}}; }
 
 /* Wat er misging, in gewone taal, maar zonder de oorzaak weg te
    poetsen. "Geen verbinding" is een prima melding als er echt geen
    bereik is, maar een slechte als er iets anders aan de hand is: dan
    zoek je een uur in de verkeerde richting. */
+/** @param {any} e @returns {ServerUitkomst} */
 function verbindingsFout(e) {
   var tekst = (e && (e.message || e.name)) || "onbekend";
   return {ok:false, fout:{soort:"verbinding",
     tekst: "De server was niet te bereiken (" + tekst + "). " +
            "Controleer je internetverbinding en het adres bij Account instellen."}};
 }
+/**
+ * @param {string} pad
+ * @param {{methode?:string, token?:string, koppen?:Object<string,string>, lichaam?:any}} [opties]
+ * @returns {Promise<HttpAntwoord>}
+ */
 function _haalOp(pad, opties) {
   opties = opties || {};
   return fetch(serverAdres(pad), {
@@ -209,6 +287,7 @@ function _haalOp(pad, opties) {
 /* Een nieuw token halen met het verversToken. Lukt dat niet, dan is
    de aanmelding echt voorbij en moet je opnieuw inloggen — dan is het
    eerlijker om dat te zeggen dan om het stil te blijven proberen. */
+/** @returns {Promise<ServerUitkomst>} */
 function verversAanmelding() {
   var s = _sessie;
   if (!s || !s.verversToken) return Promise.resolve(serverFout("aanmelding", "Je bent niet meer aangemeld."));
@@ -227,17 +306,32 @@ function verversAanmelding() {
    ververst; komt er ondanks dat een 401 terug, dan wordt het nog één
    keer geprobeerd. Eén keer, niet eindeloos: anders blijft een app
    met een ongeldig token in een kringetje draaien. */
+/**
+ * @param {string} pad
+ * @param {{methode?:string, koppen?:Object<string,string>, lichaam?:any}} [opties]
+ * @returns {Promise<ServerUitkomst>}
+ */
 function serverVraag(pad, opties) {
   opties = opties || {};
   if (!serverAan()) return Promise.resolve(serverFout("geen-server", "Er is nog geen server ingesteld."));
   if (!ingelogd()) return Promise.resolve(serverFout("aanmelding", "Je bent niet ingelogd."));
+  /* ingelogd() hierboven betekent al dat _sessie niet leeg is, maar tsc
+     volgt dat niet door een functie-aanroep heen. Een eigen, nooit-
+     herschreven (const) naam mét een eigen if-controle geeft tsc wél
+     houvast, ook binnen de geneste .then's verderop — in tegenstelling
+     tot het gelijksoortige geval met "terugval" in sleutels.js, waar de
+     variabele met var werd vastgelegd. Puur een naam erbij voor de
+     typecontrole: deze tak wordt in de praktijk nooit genomen. */
+  const sessie = _sessie;
+  if (!sessie) return Promise.resolve(serverFout("aanmelding", "Je bent niet ingelogd."));
 
+  /** @param {string} token @returns {Promise<HttpAntwoord>} */
   function doe(token) {
     return _haalOp(pad, Object.assign({}, opties, {token: token}));
   }
-  var eerst = tokenVerlopen(_sessie)
-    ? verversAanmelding().then(function (r) { return r.ok ? _sessie.token : null; })
-    : Promise.resolve(_sessie.token);
+  var eerst = tokenVerlopen(sessie)
+    ? verversAanmelding().then(function (r) { return r.ok ? sessie.token : null; })
+    : Promise.resolve(sessie.token);
 
   return eerst.then(function (token) {
     if (!token) return serverFout("aanmelding", "Je aanmelding is verlopen. Log opnieuw in.");
@@ -248,7 +342,7 @@ function serverVraag(pad, opties) {
       /* Nog één poging na verversen */
       return verversAanmelding().then(function (v) {
         if (!v.ok) return v;
-        return doe(_sessie.token).then(function (r2) {
+        return doe(sessie.token).then(function (r2) {
           return r2.ok ? {ok:true, gegevens:r2.gegevens} : serverFout("server", serverBoodschap(r2));
         });
       });
@@ -263,6 +357,7 @@ function serverVraag(pad, opties) {
 
    Wat er niet in staat wordt doorgegeven zoals het is. Liever een
    Engelse zin die klopt dan een Nederlandse die gokt. */
+/** @type {[RegExp, string][]} */
 const SERVER_TAAL = [
   [/signups? not allowed|signup is disabled/i,
    "Er kunnen op dit moment geen nieuwe accounts worden aangemaakt."],
@@ -293,17 +388,28 @@ const SERVER_TAAL = [
   [/violates row-level security|permission denied/i,
    "Je hebt hier geen toegang toe. Hoor je bij de goede vereniging?"]
 ];
+/** @param {string} tekst @returns {string} */
 function vertaalServer(tekst) {
   if (!tekst) return tekst;
   for (var i = 0; i < SERVER_TAAL.length; i++) {
     var m = tekst.match(SERVER_TAAL[i][0]);
-    if (m) return SERVER_TAAL[i][1].replace(/\$(\d)/g, function (_, n) { return m[Number(n)] || ""; });
+    if (m) {
+      /* Een eigen, nooit-herschreven naam binnen dit blok: tsc volgt de
+         "m is niet null"-controle hierboven niet vanzelf tot in de
+         geneste .replace-functie, maar wél zodra de waarde in een eigen
+         const staat (zelfde truc als bij "sessie" in serverVraag
+         hierboven). Puur een naam erbij voor de typecontrole, geen
+         gedragswijziging. */
+      const gevonden = m;
+      return SERVER_TAAL[i][1].replace(/\$(\d)/g, function (_, n) { return gevonden[Number(n)] || ""; });
+    }
   }
   return tekst;
 }
 /* Wat de server terugzegt, in gewone taal. Supabase geeft zijn fouten
    in drie verschillende vormen terug, afhankelijk van welk onderdeel
    antwoordt. */
+/** @param {HttpAntwoord} r @returns {string} */
 function serverBoodschap(r) {
   var g = r && r.gegevens;
   if (!g) return "De server gaf een fout (" + (r && r.status) + ").";
@@ -316,6 +422,7 @@ function serverBoodschap(r) {
    Het wachtwoord gaat één keer naar de server en wordt hier nergens
    bewaard: wat er op dit apparaat achterblijft zijn de twee tokens,
    en die zijn in te trekken. */
+/** @param {string} email @param {string} wachtwoord @returns {Promise<ServerUitkomst>} */
 function serverAanmelden(email, wachtwoord) {
   if (!serverAan()) return Promise.resolve(serverFout("geen-server", "Er is nog geen server ingesteld."));
   return _haalOp("/auth/v1/token?grant_type=password",
@@ -328,6 +435,7 @@ function serverAanmelden(email, wachtwoord) {
     })
     .catch(verbindingsFout);
 }
+/** @param {string} email @param {string} wachtwoord @returns {Promise<ServerUitkomst>} */
 function serverRegistreren(email, wachtwoord) {
   if (!serverAan()) return Promise.resolve(serverFout("geen-server", "Er is nog geen server ingesteld."));
   return _haalOp("/auth/v1/signup",
@@ -342,6 +450,7 @@ function serverRegistreren(email, wachtwoord) {
     })
     .catch(verbindingsFout);
 }
+/** @returns {Promise<{ok:boolean}>} */
 function serverAfmelden() {
   var token = _sessie && _sessie.token;
   /* Eerst opruimen, dan pas de aanmelding weggooien. Andersom zou de
@@ -365,8 +474,12 @@ function serverAfmelden() {
    Elke stap gaat door, ook als de vorige mislukte: één keer kijken
    levert dan het hele beeld op in plaats van alleen het eerste
    struikelpunt. ────────────────────────────────────────────────── */
+/** @typedef {{wat:string, goed:boolean, tekst:string}} ServerTestRegel */
+/** @returns {Promise<ServerTestRegel[]>} */
 function serverTest() {
+  /** @type {ServerTestRegel[]} */
   var uit = [];
+  /** @param {string} wat @param {boolean} goed @param {string} [tekst] */
   function meld(wat, goed, tekst) { uit.push({wat:wat, goed:goed, tekst:tekst || ""}); }
 
   if (!serverAan()) {
@@ -444,9 +557,11 @@ function serverTest() {
     });
 }
 
+/** @returns {Sessie|null} de huidige sessie; laat het scherm herrenderen zodra die verandert */
 function gebruikSessie() {
   const [waarde, zet] = useState(_sessie);
   useEffect(function () {
+    /** @param {Sessie|null} n */
     function luister(n) { zet(n); }
     _sessieLuisteraars.push(luister);
     return function () {

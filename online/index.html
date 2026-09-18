@@ -3635,19 +3635,21 @@ function serverVraag(pad, opties) {
   opties = opties || {};
   if (!serverAan()) return Promise.resolve(serverFout("geen-server", "Er is nog geen server ingesteld."));
   if (!ingelogd()) return Promise.resolve(serverFout("aanmelding", "Je bent niet ingelogd."));
+  const sessie = _sessie;
+  if (!sessie) return Promise.resolve(serverFout("aanmelding", "Je bent niet ingelogd."));
   function doe(token) {
     return _haalOp(pad, Object.assign({}, opties, { token }));
   }
-  var eerst = tokenVerlopen(_sessie) ? verversAanmelding().then(function(r) {
-    return r.ok ? _sessie.token : null;
-  }) : Promise.resolve(_sessie.token);
+  var eerst = tokenVerlopen(sessie) ? verversAanmelding().then(function(r) {
+    return r.ok ? sessie.token : null;
+  }) : Promise.resolve(sessie.token);
   return eerst.then(function(token) {
     if (!token) return serverFout("aanmelding", "Je aanmelding is verlopen. Log opnieuw in.");
     return doe(token).then(function(r) {
       if (r.status !== 401) return r.ok ? { ok: true, gegevens: r.gegevens } : serverFout("server", serverBoodschap(r));
       return verversAanmelding().then(function(v) {
         if (!v.ok) return v;
-        return doe(_sessie.token).then(function(r2) {
+        return doe(sessie.token).then(function(r2) {
           return r2.ok ? { ok: true, gegevens: r2.gegevens } : serverFout("server", serverBoodschap(r2));
         });
       });
@@ -3716,9 +3718,12 @@ function vertaalServer(tekst) {
   if (!tekst) return tekst;
   for (var i = 0; i < SERVER_TAAL.length; i++) {
     var m = tekst.match(SERVER_TAAL[i][0]);
-    if (m) return SERVER_TAAL[i][1].replace(/\$(\d)/g, function(_, n) {
-      return m[Number(n)] || "";
-    });
+    if (m) {
+      const gevonden = m;
+      return SERVER_TAAL[i][1].replace(/\$(\d)/g, function(_, n) {
+        return gevonden[Number(n)] || "";
+      });
+    }
   }
   return tekst;
 }
