@@ -813,6 +813,233 @@ Zodat je weet wat er nog ligt en dit document niet meer belooft dan het is:
 
 ---
 
+## 8. Aanvulling 18 september 2026 — de betaalketen (Mollie)
+
+**Status:** ontwerp. Op het moment van schrijven is er nog geen betaalroute
+gebouwd en is er nog geen Mollie-account. Dit blok beschrijft wat er aan
+persoonsgegevens *bij komt* zodra clubs in de app zelf kunnen upgraden naar
+Coach of Club en betalen met iDEAL plus een SEPA-machtiging.
+
+Het staat hier als aanvulling en niet verwerkt in de punten 1 tot en met 7,
+omdat die punten een gemeten momentopname van 10-11 september 2026 zijn. Waar
+dit blok een eerder punt uitbreidt, staat dat erbij.
+
+---
+
+### 8.1 Wat er technisch bij komt
+
+Drie nieuwe onderdelen, elk met een eigen gevolg voor deze inventaris:
+
+| Onderdeel | Wat het is | Gevolg |
+|---|---|---|
+| **Mollie B.V.** | De betaaldienstverlener. Amsterdam, Nederlands bedrijf. | Nieuwe partij die persoonsgegevens ziet — hoort in 1.7 thuis. |
+| **Twee Supabase Edge Functions** (`betaling-starten`, `betaling-melding`) | Servercode die de betaling aanmaakt en de melding van Mollie verwerkt. | Nieuwe logbestanden bij Supabase. |
+| **`public.betalingen`** | Een nieuwe tabel: welke club heeft wanneer hoeveel betaald. | Nieuwe plek met gegevens — hoort bij 1.1 tot en met 1.6 thuis. |
+
+De betaalgegevens zelf — rekeningnummer, naam op de rekening, de machtiging —
+komen **niet** in de eigen database. Die worden ingevuld op de betaalpagina van
+Mollie en blijven daar. Dat is geen toeval maar een ontwerpkeuze, zie 8.3.
+
+---
+
+### 8.2 Welke nieuwe persoonsgegevens er zijn, en van wie
+
+Tot nu toe ging dit document bijna helemaal over spelers, en dat zijn voor het
+grootste deel minderjarigen. **Deze aanvulling gaat over een andere groep:** de
+volwassene die de club beheert en betaalt. Eén persoon per betalende club, geen
+minderjarigen, geen gezondheidsgegevens.
+
+| Gegeven | Waar het terechtkomt | Van wie |
+|---|---|---|
+| Naam en e-mailadres van de betaler | Bij Mollie (voor de betaling en de machtiging) | De eigenaar van de club |
+| IBAN en naam op de rekening | **Alleen bij Mollie** | De eigenaar van de club |
+| De SEPA-machtiging zelf (met datum en kenmerk) | **Alleen bij Mollie** | De eigenaar van de club |
+| IP-adres tijdens het afrekenen | Bij Mollie, en bij de bank in het iDEAL-scherm | De eigenaar van de club |
+| Betaalgeschiedenis: bedrag, datum, pakket, geslaagd of niet | In `public.betalingen`, bij ons | Gekoppeld aan de *club*, niet rechtstreeks aan een persoon |
+| Het Mollie-klantnummer (`cst_…`) en het machtigingskenmerk (`mdt_…`) | Bij ons, als verwijzing | Indirect herleidbaar tot de betaler |
+
+Dat laatste is belangrijk om eerlijk op te schrijven: een Mollie-klantnummer is
+op zichzelf een betekenisloze reeks tekens, maar met dat nummer kan wie de
+Mollie-sleutel heeft de naam en het rekeningnummer opvragen. Het is dus wél een
+persoonsgegeven, net zoals `gebruiker_id` in `public.leden` dat is.
+
+---
+
+### 8.3 Wat er met opzet níét wordt opgeslagen
+
+Dit is de aanbeveling die in het ontwerp is vastgelegd, en het is de goedkoopste
+privacymaatregel in dit hele document: **de eigen database slaat geen enkel
+rekeningnummer, geen naam van een betaler en geen e-mailadres van een betaler
+op.** Ook niet de laatste vier cijfers van een IBAN.
+
+De reden is praktisch. Alles wat er niet staat:
+
+- kan niet uitlekken;
+- hoeft niet in een bewaartermijn;
+- hoeft niet verwijderd te worden als iemand daarom vraagt;
+- hoeft niet in een back-up mee (zie 1.3 — de back-ups worden met de hand
+  gedownload en stonden tot voor kort in iCloud).
+
+Wil de app ooit tonen "SEPA-machtiging op rekening •••• 1234", dan is dat op te
+halen bij Mollie op het moment dat het scherm wordt getoond, in plaats van het
+hier te bewaren. **Openstaande vraag 20 hieronder gaat daarover** — dit is een
+keuze die nog niet definitief is.
+
+---
+
+### 8.4 De betaallog: wat erin staat en hoe lang
+
+De nieuwe tabel `public.betalingen` krijgt naar verwachting deze kolommen:
+het Mollie-betaalnummer, `club_id`, het bedrag, de munteenheid, het pakket
+(`coach`/`club`), de termijn (maand of jaar), de status, of het een test- of een
+echte betaling was, en drie tijdstippen (aangemaakt, betaald, verwerkt).
+
+**Bewaartermijn: zeven jaar.** Niet omdat de AVG dat wil, maar omdat de
+Belastingdienst dat wil: een administratie moet zeven jaar bewaard blijven. Dat
+is dus een langere termijn dan alles wat elders in dit document staat, en dat is
+verdedigbaar zolang er in die rijen géén naam, e-mailadres of rekeningnummer
+staat (zie 8.3). De enige persoonlijke aanwijzing is dan het clubnummer.
+
+**Eén valkuil die in het ontwerp is opgelost.** Zou `betalingen.club_id` met
+`on delete cascade` aan `public.clubs` hangen — zoals `abonnementen` dat doet
+(`server/01-schema.sql` regel 106) — dan verdwijnt de hele boekhouding op het
+moment dat een club wordt verwijderd. Dat is precies het geval waarin je hem
+nodig hebt. De aanbeveling is daarom `on delete set null`, plus een losse
+tekstkolom met de clubnaam zoals die op het moment van betalen was. Een
+clubnaam is geen persoonsgegeven; de boekhouding overleeft daarmee een
+verwijderverzoek zonder dat er iets persoonlijks blijft staan.
+
+**Lezen:** alleen de beheerder (jij), via `is_beheerder()` zoals bij
+`public.foutmeldingen` in `server/16-foutrapportage.sql`. Als een clubeigenaar
+later zijn eigen betaalgeschiedenis in de app moet kunnen zien, gebeurt dat via
+een aparte functie die alleen de veilige kolommen teruggeeft — niet door de
+tabel open te zetten.
+
+---
+
+### 8.5 Mollie als partij — en of daar een overeenkomst mee nodig is
+
+Dit is de tegenhanger van 3.1 (Supabase) en 3.2 (Netlify), en het is
+ingewikkelder dan die twee.
+
+**Wat vaststaat:** Mollie B.V. is een Nederlands bedrijf, gevestigd in
+Amsterdam, en staat onder toezicht van De Nederlandsche Bank. Er gaan geen
+spelersgegevens naar Mollie — geen namen van minderjarigen, geen geboortedata,
+geen blessures. Alleen de gegevens van de volwassene die betaalt. Dat maakt dit
+een aanzienlijk lichtere partij dan Supabase.
+
+**Wat een openstaande vraag is:** of Mollie hier *verwerker* is (dan hoort er
+een verwerkersovereenkomst te liggen) of **zelf verwerkingsverantwoordelijke**.
+Voor betaaldienstverleners geldt in de regel het tweede voor een deel van wat ze
+doen: een betaalinstelling moet op grond van de Wwft en het bankentoezicht zelf
+klantonderzoek doen en gegevens bewaren, en dat doet zij niet in jouw opdracht
+maar op eigen wettelijke titel. In de praktijk publiceert Mollie een
+verwerkersovereenkomst als onderdeel van de gebruikersovereenkomst, net zoals
+Supabase dat doet (3.1).
+
+**Wat Evan moet doen, en wanneer:** op het moment van de accountaanvraag, in
+hetzelfde half uur waarin je toch de voorwaarden doorneemt — de
+verwerkersovereenkomst en de subverwerkerslijst downloaden en met een datum
+opbergen, precies zoals bij Supabase. Dit is geen reden om het bouwen uit te
+stellen.
+
+**Dit verandert punt 4 niet.** De vraag wie verwerkingsverantwoordelijke is voor
+de *spelersgegevens* staat hier helemaal los van. Sterker: de eerste factuur is
+het moment waarop die vraag beantwoord moet zijn, en die eerste factuur komt met
+deze betaalroute dichterbij.
+
+---
+
+### 8.6 Twee nieuwe plekken waar gegevens langskomen
+
+**Aanvulling op 1.7 (partijen die de app onderweg tegenkomt):**
+
+| Partij | Wat zij zien |
+|---|---|
+| **Mollie B.V.** | Naam, e-mailadres, IBAN, IP-adres van de betaler. Geen spelersgegevens. |
+| **De bank van de betaler** | Het iDEAL-scherm draait bij zijn eigen bank. |
+| **Supabase Edge Functions** | Een nieuw logbestand per aanroep van `betaling-starten` en `betaling-melding`. |
+
+Dat laatste verdient een regel apart. Edge Functions loggen standaard mee wat er
+in- en uitgaat als de code dat opschrijft. **De eis in het ontwerp is dat er
+nooit een volledige verzoek- of antwoordtekst in het log terechtkomt**, want in
+het antwoord van Mollie staan wél de naam en het rekeningnummer van de betaler.
+Alleen het betaalnummer, de status en het clubnummer mogen in het log. Dezelfde
+terughoudendheid als bij `browser_info` in `public.foutmeldingen`
+(`server/16-foutrapportage.sql`), waar met opzet niet de volledige
+user-agent-tekst wordt bewaard.
+
+---
+
+### 8.7 Wat er bij de privacyverklaring en de voorwaarden bij komt
+
+Punt 3.4 (privacyverklaring) en 3.8 (algemene voorwaarden) worden hierdoor
+concreter. Er moet nu in elk geval in staan:
+
+- dat er voor het afrekenen een betaaldienstverlener wordt ingeschakeld, met
+  naam: Mollie B.V.;
+- welke gegevens daarheen gaan en dat ze daar blijven;
+- dat de betaalgeschiedenis zeven jaar bewaard wordt voor de belastingdienst;
+- hoe je opzegt, en wat er daarna met de gegevens gebeurt (zie 8.8);
+- dat er geen proefperiode is en dat er bij tussentijds opzeggen geen geld
+  terugkomt — dat hoort in de voorwaarden, niet in de privacyverklaring, maar
+  het komt uit dezelfde tekstronde.
+
+---
+
+### 8.8 Opzeggen, en het recht op je eigen gegevens
+
+Bij de betaalmuur hoort een besluit dat rechtstreeks aan dit document raakt:
+**wat gebeurt er met de gegevens van een club die stopt met betalen?**
+
+Het besluit van 18 september 2026 is: nadat een abonnement is verlopen mag de
+club nog zestig dagen (bovenop de bestaande veertien dagen respijt) gewoon
+doorwerken en opslaan. Daarna stopt het *schrijven* naar de server. **Lezen,
+exporteren en verwijderen blijven werken — voor altijd.**
+
+Dat laatste is voor deze inventaris het punt dat telt. Een club die stopt met
+betalen raakt zijn gegevens niet kwijt en komt er ook niet buiten te staan; hij
+kan ze blijven inzien en er een volledige export van maken. Dat is precies wat
+je bij een verzoek van een ouder nodig hebt, en het voorkomt de situatie waarin
+gegevens van vijftien minderjarigen onbereikbaar op een server achterblijven bij
+een club die er niet meer bij kan.
+
+**Wat dit niet oplost:** punt 5 blijft onverminderd staan. Er is nog steeds geen
+manier om de gegevens van één vertrokken speler echt weg te krijgen, en nog
+steeds geen manier voor een club om zichzelf op te heffen. De betaalmuur maakt
+dat urgenter, niet minder urgent: met betalende klanten komt de vraag "wij
+stoppen, wis alles" gegarandeerd een keer.
+
+---
+
+### 8.9 Nieuwe openstaande vragen
+
+Genummerd verder op de lijst in punt 6.
+
+**Voor jezelf, bij de Mollie-aanvraag (samen een half uur):**
+16. Heeft Mollie een verwerkersovereenkomst die automatisch bij de voorwaarden
+    hoort, zoals Supabase, of moet daar iets voor getekend worden? Download hem
+    en berg hem op met een datum.
+17. Staat er een subverwerkerslijst bij Mollie? Die heb je nodig voor hetzelfde
+    register als waar de lijst van Supabase in komt.
+18. In welk land staan de servers van Mollie, en gaan er gegevens buiten de EU?
+
+**Voor de jurist of de boekhouder:**
+19. Is Mollie hier verwerker, verwerkingsverantwoordelijke, of allebei voor
+    verschillende delen? (Vraag dit in hetzelfde gesprek als vraag 7 — het
+    antwoord op de een helpt bij het begrijpen van de ander.)
+20. Mogen de laatste vier cijfers van een IBAN in de eigen database worden
+    bewaard om in de app te tonen welke rekening gemachtigd is, of is het beter
+    dat gegeven bij Mollie te laten staan en op te halen wanneer nodig?
+21. Is zeven jaar de juiste bewaartermijn voor `public.betalingen`, en mag die
+    tabel dan inderdaad blijven staan als een club vraagt om verwijdering van
+    al haar gegevens? (Dit is de klassieke botsing tussen de fiscale
+    bewaarplicht en het recht op vergetelheid; het antwoord is doorgaans dat de
+    financiële administratie voorgaat, maar dat moet iemand bevestigen die daar
+    verstand van heeft.)
+
+---
+
 *Dit document is een inventarisatie op basis van de code en de back-upbestanden
 van 10 september 2026. Het is geen juridisch advies en geen volledige
 risicoanalyse. Elke conclusie over wat er moet gebeuren, hoort van een jurist te
