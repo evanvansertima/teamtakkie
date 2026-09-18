@@ -76,6 +76,15 @@
    toegevoegd op 17 september) bewaken deze module rechtstreeks.
    Verwachting van deze verplaatsing: volledig identiek.
 
+   BIJGEWERKT BIJ P4 STAP 8 (18 september 2026)
+   QuizTekenveld in SpelregelquizTab hieronder roept DSMVeldLijnen aan
+   (het spelhervattingsveld-lijnenpatroon) om het mini-tekenveld van de
+   "Betweterige Scheids"-quiz dezelfde veldlijnen te geven. DSMVeldLijnen
+   staat sinds stap 8 in src/schermen/wedstrijden.jsx — niet eerder
+   gemeld in het stappenplan, gevonden bij het narekenen van stap 8.
+   Werkt gewoon via gedeelde scope (hoisting): wedstrijden.jsx laadt ná
+   dit bestand, maar de aanroep gebeurt pas bij het renderen.
+
    Zie docs/p4-stappenplan.md §1 (stap 6) en §2 voor de volledige
    redenering achter wat wél en niet met naam was genoemd. */
 

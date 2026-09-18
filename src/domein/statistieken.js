@@ -27,11 +27,13 @@
    in JSX-componenten die pas ná dit bestand geparst worden:
      - FC_STERREN, ovrKleur (de skills-editor en de spelerskaart)
      - RAPPORT_SOORTEN (het rapportenscherm)
-     - BESCHIKBAARHEID, OPGAVE_OPTIES, TEGEN_TENUE, LEEG_SPELER,
-       LEEG_WEDSTRIJD (spelersformulier, wedstrijdformulier — al vóór
-       stap 3 in app.jsx gebleven)
+     - BESCHIKBAARHEID, OPGAVE_OPTIES, LEEG_SPELER (spelersformulier —
+       al vóór stap 3 in app.jsx gebleven; TEGEN_TENUE, LEEG_WEDSTRIJD
+       en SPEELDUREN stonden hier ook zo genoemd, maar zijn sinds P4
+       stap 8 (18 september 2026) verplaatst naar
+       src/schermen/wedstrijden.jsx — hun enige echte gebruikers bleken
+       daar te zitten, niet bij het spelersformulier)
      - POSITIECODE_NAAR_ROL, ROL_VOLGORDE (opstellingsveld, rollenscherm)
-     - SPEELDUREN (het wedstrijdformulier)
      - FORMATIES_DATA, FORMATIE_GROEPEN, FORMATIES_KEY, TACTIEKEN_KEY
        (opstellingsveld, tactiekbord — dit blijft ook data/opslag)
      - DOELEN_KEY/laadDoelen/LEEG_DOEL, REVIEWS_KEY/laadReviews/

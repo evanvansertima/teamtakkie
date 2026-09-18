@@ -173,8 +173,47 @@ const DOMEIN_VOLGORDE = ["boetepot.js", "wedstrijden.js", "statistieken.js", "op
    en tenueTeller naar gedeeld.jsx (uitsluitend gebruikt door SpelerPop/
    TenueBeeld, stap 0), en BENEN/beenInfo naar spelers.jsx (uitsluitend
    gebruikt daar, stap 5) — zie de bestandskoppen van gedeeld.jsx en
-   spelers.jsx voor de volledige toelichting. */
-const SCHERM_VOLGORDE = ["gedeeld.jsx", "onboarding.jsx", "instellingen.jsx", "statistieken.jsx", "trainingen.jsx", "spelers.jsx", "clubhuis.jsx", "opstellingen.jsx"];
+   spelers.jsx voor de volledige toelichting.
+
+   "wedstrijden.jsx" (P4 stap 8, 18 september 2026) is de negende en
+   laatste toevoeging — met deze stap houdt src/app.jsx alleen nog de
+   schil over (App, renderPagina, zijGroepen, PAKKETTEN, PAGINA_MODULE),
+   plus de bewust nog niet opgeruimde, cross-module gedeelde hulpcode.
+   27 met naam genoemde componenten (SpelerKeuzeModal, Kleedkamerbriefje,
+   DoelpuntScherm, TegenDoelpuntModal, WisselScherm, UitslagFormulier,
+   ToernooiFormulier, ToernooiDetail, ToernooienTab, WedstrijdFormulier,
+   ImportSheet, WedstrijdOpstelling, DSMVeldLijnen, DSMLijn, DSMBord,
+   DSMSectie, RollenSectie, WedstrijdTactiek, WerkVenster, BewaarMelder,
+   UitleenSectie, GastenSectie, TegenstanderSectie, KaartScherm,
+   Wedstrijdcentrum, WedstrijdDetail, WedstrijdenModule) — zie
+   docs/p4-stappenplan.md §1, stap 8, "grootste en laatste module: 27
+   componenten." Groter dan die 27 namen: 30 niet met naam genoemde
+   module-exclusieve hulpstukken ertussen (het spelhervattingsbord- en
+   tactiekbord-rekenwerk) plus nog eens 24 die fysiek vóór het bereik
+   stonden (het programma-importeer-gereedschap, deel-wedstrijd-
+   functies, PDF-export, taken/toernooien-opslag, en SPEELDUREN) — zie
+   de bestandskop van wedstrijden.jsx voor de volledige lijst. Daarbij
+   zijn ook WEDSTRIJD_ROLLEN, VLAG_ROLLEN, TEGEN_TENUE en LEEG_WEDSTRIJD
+   meeverhuisd: een P3-comment in src/domein/wedstrijden.js zei dat die
+   breder werden gebruikt, wat waar was tot bijna alle P4-modules waren
+   verplaatst — nagerekend bleken alle huidige gebruiksplekken binnen
+   wedstrijden te liggen, en die comment is bijgewerkt. Ook zijn twee
+   eerdere achterstanden ingelopen: de statistieken-achterstand van stap
+   3 (exporteerPresentiePDF, hexNaarRgb, ACTIE_CATEGORIEEN, ALLE_ACTIES,
+   getActieInfo, VELD_ZONES → statistieken.jsx; vandaagISO bleek bij
+   narekenen geen statistieken-gebruiker te hebben en ging naar
+   spelers.jsx in plaats daarvan) en de opstellingen-achterstand van
+   stap 7 (veldMaten e.a., negen stuks → opstellingen.jsx), plus een
+   niet eerder gemelde trainingen-achterstand van stap 4 (deelTraining/
+   deelVariantenTraining en het ICS-agendagereedschap, acht stuks →
+   trainingen.jsx). Twee kruisverwijzingen blijven werken via gedeelde
+   scope, nieuw gevonden bij het narekenen: DSMVeldLijnen (hier) wordt
+   aangeroepen door clubhuis.jsx's QuizTekenveld, en WerkVenster (hier)
+   door spelers.jsx's RapportTab. Omgekeerd roept deze module
+   OpstellingVeld/TenueStrook/VeldZoomKnoppen/TrainingTekenBord
+   (opstellingen.jsx) en SpelerStatusRaster (trainingen.jsx) aan, zoals
+   die bestanden al vanuit hun kant meldden. */
+const SCHERM_VOLGORDE = ["gedeeld.jsx", "onboarding.jsx", "instellingen.jsx", "statistieken.jsx", "trainingen.jsx", "spelers.jsx", "clubhuis.jsx", "opstellingen.jsx", "wedstrijden.jsx"];
 
 /* Het merkteken in src/index.html waar de gebouwde app terechtkomt.
    Bewust een commentaarregel en geen los token: zo blijft het sjabloon

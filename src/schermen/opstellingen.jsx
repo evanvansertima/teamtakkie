@@ -3384,3 +3384,555 @@ function TrainingTekenBord({ value, onChange, pdfNaam, pdfInfo }) {
     </div>
   );
 }
+
+
+/* ══════════════════════════════════════════════════════════════
+   ACHTERSTAND VAN STAP 7, INGELOPEN BIJ STAP 8
+   ─────────────────────────────────────────────────────────────
+   veldMaten, veldBoogPunten, veldHoekPunten, veldCirkelPunten,
+   exporteerOpstellingPDF, deelOpstellingWhatsApp, exporteerTekeningPDF,
+   deelTekeningAlsPNG en maakOpstellingCanvas stonden ná P4 stap 7 (17
+   september 2026) nog in src/app.jsx, pal vóór waar het wedstrijden-
+   bereik toen begon (SpelerKeuzeModal) — dus net buiten wat die stap
+   behandelde. Bij het narekenen van stap 8 (wedstrijden) bleek deze
+   hele cluster (met de oorspronkelijke sectiekop "MATEN VAN EEN HEEL
+   VELD") uitsluitend door OpstellingenTab en TactiekenTab hierboven te
+   worden gebruikt — nul treffers in de wedstrijdenmodule of elders.
+   Puur een verhuizing, geen herschrijving: dezelfde tekst, dezelfde
+   comments (inclusief de oorspronkelijke sectiekop hieronder). */
+
+/* ═══════════════════════════════════════════════════════════
+   MATEN VAN EEN HEEL VELD
+   Een wedstrijdveld is 105 bij 68 meter. Alles wat erop staat
+   wordt daaruit afgeleid, zodat de boog van het strafschopgebied
+   per definitie op de zestienlijn uitkomt. Het scherm, de PDF en
+   de WhatsApp-afbeelding rekenen alle drie hiermee.
+═══════════════════════════════════════════════════════════ */
+function veldMaten(L, T, B, D) {
+  var hx = B/68, hy = D/105;
+  return {
+    L:L, T:T, B:B, D:D, R:L+B, O:T+D,
+    mid: L + B/2, midY: T + D/2, hx:hx, hy:hy,
+    zestienB: 40.32*hx, zestienD: 16.5*hy,
+    vijfB:    18.32*hx, vijfD:     5.5*hy,
+    doelB:     7.32*hx,
+    stipD:       11*hy,
+    cirkelRx:  9.15*hx, cirkelRy: 9.15*hy,
+    /* Waar de cirkel om de penaltystip de zestienlijn snijdt:
+       de stip ligt 11 m van de doellijn, de lijn op 16,5 m. */
+    boogHalf: Math.sqrt(9.15*9.15 - 5.5*5.5) * hx,
+    hoekRx: 1*hx, hoekRy: 1*hy
+  };
+}
+/* De halve maan bij één van beide doelen, als reeks punten. */
+function veldBoogPunten(v, onder, stappen) {
+  var a = Math.asin(5.5/9.15), n = stappen || 24, pnt = [];
+  var cy = onder ? v.O - v.stipD : v.T + v.stipD;
+  var kant = onder ? -1 : 1;
+  for (var i = 0; i <= n; i++) {
+    var th = (Math.PI - a) + (i/n) * (a - (Math.PI - a));
+    pnt.push([v.mid + Math.cos(th)*v.cirkelRx, cy + kant*Math.sin(th)*v.cirkelRy]);
+  }
+  return pnt;
+}
+/* Hoekboog van één meter. */
+function veldHoekPunten(v, rechts, onder, stappen) {
+  var n = stappen || 8, pnt = [];
+  var cx = rechts ? v.R : v.L, cy = onder ? v.O : v.T;
+  var kx = rechts ? -1 : 1,    ky = onder ? -1 : 1;
+  for (var i = 0; i <= n; i++) {
+    var th = (i/n) * Math.PI/2;
+    pnt.push([cx + kx*Math.cos(th)*v.hoekRx, cy + ky*Math.sin(th)*v.hoekRy]);
+  }
+  return pnt;
+}
+/* De middencirkel als punten, want hij is licht ovaal wanneer het
+   veld niet precies op schaal getekend wordt. */
+function veldCirkelPunten(v, stappen) {
+  var n = stappen || 48, pnt = [];
+  for (var i = 0; i <= n; i++) {
+    var th = (i/n) * Math.PI * 2;
+    pnt.push([v.mid + Math.cos(th)*v.cirkelRx, v.midY + Math.sin(th)*v.cirkelRy]);
+  }
+  return pnt;
+}
+
+function exporteerOpstellingPDF(opstellingNaam, formatie, toewijzing) {
+  if (!window.jspdf) { meldFout("PDF-bibliotheek nog niet geladen. Probeer het zo nog eens."); return; }
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ orientation:"portrait", unit:"mm", format:"a4" });
+  const W=210, H=297;
+  const pdfLogo = logoAfbeelding();
+  // Gras achtergrond met strepen
+  for (let i=0;i<12;i++) {
+    if (i%2===0) { doc.setFillColor(24,108,24); } else { doc.setFillColor(20,95,20); }
+    doc.rect(0, i*(H/12), W, H/12, "F");
+  }
+  // Header
+  doc.setFillColor(0,74,173);
+  doc.rect(0,0,W,28,"F");
+  doc.setFillColor(56,182,255);
+  doc.rect(0,25,W,3,"F");
+  doc.setTextColor(255,255,255);
+  doc.setFont("helvetica","bold");
+  doc.setFontSize(16);
+  var kopX = W/2, kopUitlijn = "center";
+  if (pdfLogo) {
+    try {
+      var ph = 17, pb = pdfLogo.naturalWidth/pdfLogo.naturalHeight*ph;
+      if (pb > 26) { pb = 26; ph = pdfLogo.naturalHeight/pdfLogo.naturalWidth*pb; }
+      doc.addImage(pdfLogo, "PNG", 10, (25-ph)/2, pb, ph);
+      kopX = 10 + pb + 8; kopUitlijn = "left";
+    } catch(e) {}
+  }
+  doc.text(teamNaamVol().toUpperCase(), kopX, 12, {align:kopUitlijn});
+  doc.setFontSize(10);
+  doc.text("Opstelling: " + opstellingNaam + "  ·  " + formatie, kopX, 21, {align:kopUitlijn});
+  // Veld kader
+  var FL=30, FT=35, FW=150, FH=198;
+  var FR=FL+FW, FCX=FL+FW/2, FCY=FT+FH/2;
+  var v = veldMaten(FL, FT, FW, FH);
+  function pad(pnt) {
+    for (var i = 1; i < pnt.length; i++) {
+      doc.line(pnt[i-1][0], pnt[i-1][1], pnt[i][0], pnt[i][1]);
+    }
+  }
+  doc.setDrawColor(255,255,255);
+  doc.setLineWidth(0.8);
+  doc.rect(FL, FT, FW, FH, "S");
+  // Middenlijn en middenstip
+  doc.line(FL, v.midY, v.R, v.midY);
+  doc.setFillColor(255,255,255);
+  doc.circle(v.mid, v.midY, 1.8, "F");
+  // Middencirkel van 9,15 meter
+  pad(veldCirkelPunten(v));
+  // Strafschopgebied en doelgebied, boven en onder
+  doc.rect(v.mid - v.zestienB/2, FT, v.zestienB, v.zestienD, "S");
+  doc.rect(v.mid - v.vijfB/2,    FT, v.vijfB,    v.vijfD,    "S");
+  doc.rect(v.mid - v.zestienB/2, v.O - v.zestienD, v.zestienB, v.zestienD, "S");
+  doc.rect(v.mid - v.vijfB/2,    v.O - v.vijfD,    v.vijfB,    v.vijfD,    "S");
+  // De doelen
+  doc.setLineWidth(1.6);
+  doc.rect(v.mid - v.doelB/2, FT - 5, v.doelB, 5, "S");
+  doc.rect(v.mid - v.doelB/2, v.O,    v.doelB, 5, "S");
+  // Strafschopstippen op elf meter
+  doc.setLineWidth(0.8);
+  doc.setFillColor(255,255,255);
+  doc.circle(v.mid, FT + v.stipD, 1.2, "F");
+  doc.circle(v.mid, v.O - v.stipD, 1.2, "F");
+  // De halve manen en de hoekbogen
+  doc.setLineWidth(0.6);
+  pad(veldBoogPunten(v, false));
+  pad(veldBoogPunten(v, true));
+  pad(veldHoekPunten(v, false, false));
+  pad(veldHoekPunten(v, true,  false));
+  pad(veldHoekPunten(v, false, true));
+  pad(veldHoekPunten(v, true,  true));
+  // Spelers
+  var posities = FORMATIES_DATA[formatie]||FORMATIES_DATA["4-3-3A"];
+  posities.forEach(function(pos) {
+    var px = FL + (pos.x/100)*FW;
+    var py = FT + (pos.y/100)*FH;
+    var sp = toewijzing[pos.id];
+    var heeft = sp && sp.naam;
+    if (heeft) { doc.setFillColor(0,74,173); } else { doc.setFillColor(38,110,38); }
+    doc.setDrawColor(255,255,255);
+    doc.setLineWidth(0.9);
+    doc.circle(px, py, 7, "FD");
+    doc.setTextColor(255,255,255);
+    doc.setFont("helvetica","bold");
+    doc.setFontSize(5.5);
+    doc.text(pos.l, px, py+1.3, {align:"center"});
+    if (heeft) {
+      doc.setFont("helvetica","bold");
+      doc.setFontSize(6.5);
+      doc.setTextColor(240,248,240);
+      var vollNaam = (sp.rugnummer ? "#"+sp.rugnummer+" " : "") + sp.naam;
+      var naamRegels = doc.splitTextToSize(vollNaam, 28);
+      if (naamRegels.length > 2) { naamRegels = naamRegels.slice(0,2); }
+      naamRegels.forEach(function(regel, ri) {
+        doc.text(regel, px, py+10.5+(ri*3.8), {align:"center"});
+      });
+      var instrY = py + 10.5 + (naamRegels.length * 3.8) + 1.5;
+      if (sp.aanvalInstructie || sp.verdedigingInstructie) {
+        doc.setFont("helvetica","normal");
+        doc.setFontSize(5);
+        doc.setTextColor(200,235,200);
+        if (sp.aanvalInstructie) {
+          var aR = doc.splitTextToSize("A: "+sp.aanvalInstructie, 30);
+          aR.slice(0,2).forEach(function(r,ri){ doc.text(r, px, instrY+(ri*3.2), {align:"center"}); });
+          instrY += Math.min(aR.length,2)*3.2 + 0.5;
+        }
+        if (sp.verdedigingInstructie) {
+          var vR = doc.splitTextToSize("V: "+sp.verdedigingInstructie, 30);
+          vR.slice(0,2).forEach(function(r,ri){ doc.text(r, px, instrY+(ri*3.2), {align:"center"}); });
+        }
+      }
+    }
+  });
+  pdfVoet(doc, W, H, {donker:true, seizoen:true, marge:14});
+  doc.save("fc-harlingen-opstelling.pdf");
+}
+
+function deelOpstellingWhatsApp(opstellingNaam, formatie, toewijzing) {
+  var CW=800, CH=1120;
+  var canvas = document.createElement("canvas");
+  canvas.width=CW; canvas.height=CH;
+  var ctx = canvas.getContext("2d");
+  // Gras
+  for(var gi=0;gi<12;gi++){
+    ctx.fillStyle=gi%2===0?"#186c18":"#145f14";
+    ctx.fillRect(0,gi*(CH/12),CW,CH/12);
+  }
+  // Header
+  ctx.fillStyle="#004aad"; ctx.fillRect(0,0,CW,120);
+  ctx.fillStyle="#38b6ff"; ctx.fillRect(0,114,CW,12);
+  ctx.fillStyle="white"; ctx.textAlign="center";
+  ctx.font="bold 40px 'Helvetica Neue',Arial";
+  ctx.fillText("FC HARLINGEN JO19-2",CW/2,62);
+  ctx.font="bold 22px 'Helvetica Neue',Arial";
+  ctx.fillText("Opstelling: "+opstellingNaam+"  ·  "+formatie,CW/2,96);
+  // Veld
+  var FL=80,FT=145,FW=640,FH=840;
+  var FR=FL+FW, FCX=FL+FW/2, FCY=FT+FH/2;
+  var v = veldMaten(FL, FT, FW, FH);
+  function pad(pnt) {
+    ctx.beginPath();
+    ctx.moveTo(pnt[0][0], pnt[0][1]);
+    for (var i = 1; i < pnt.length; i++) ctx.lineTo(pnt[i][0], pnt[i][1]);
+    ctx.stroke();
+  }
+  ctx.strokeStyle="rgba(255,255,255,0.55)"; ctx.lineWidth=3;
+  ctx.lineJoin="round"; ctx.lineCap="round";
+  ctx.strokeRect(FL,FT,FW,FH);
+  ctx.beginPath(); ctx.moveTo(FL,v.midY); ctx.lineTo(v.R,v.midY); ctx.stroke();
+  pad(veldCirkelPunten(v));
+  ctx.fillStyle="rgba(255,255,255,0.65)";
+  ctx.beginPath(); ctx.arc(v.mid,v.midY,7,0,2*Math.PI); ctx.fill();
+  ctx.strokeRect(v.mid-v.zestienB/2, FT, v.zestienB, v.zestienD);
+  ctx.strokeRect(v.mid-v.vijfB/2,    FT, v.vijfB,    v.vijfD);
+  ctx.strokeRect(v.mid-v.zestienB/2, v.O-v.zestienD, v.zestienB, v.zestienD);
+  ctx.strokeRect(v.mid-v.vijfB/2,    v.O-v.vijfD,    v.vijfB,    v.vijfD);
+  ctx.lineWidth=5;
+  ctx.strokeRect(v.mid-v.doelB/2, FT-24, v.doelB, 24);
+  ctx.strokeRect(v.mid-v.doelB/2, v.O,   v.doelB, 24);
+  ctx.lineWidth=3;
+  ctx.fillStyle="rgba(255,255,255,0.65)";
+  ctx.beginPath(); ctx.arc(v.mid, FT+v.stipD, 5, 0, 2*Math.PI); ctx.fill();
+  ctx.beginPath(); ctx.arc(v.mid, v.O-v.stipD, 5, 0, 2*Math.PI); ctx.fill();
+  // De halve manen en de hoekbogen
+  ctx.strokeStyle="rgba(255,255,255,0.5)"; ctx.lineWidth=2;
+  pad(veldBoogPunten(v, false));
+  pad(veldBoogPunten(v, true));
+  pad(veldHoekPunten(v, false, false));
+  pad(veldHoekPunten(v, true,  false));
+  pad(veldHoekPunten(v, false, true));
+  pad(veldHoekPunten(v, true,  true));
+  // Spelers
+  var posities=FORMATIES_DATA[formatie]||FORMATIES_DATA["4-3-3A"];
+  posities.forEach(function(pos){
+    var px=FL+(pos.x/100)*FW, py=FT+(pos.y/100)*FH;
+    var sp=toewijzing[pos.id], heeft=sp&&sp.naam;
+    ctx.beginPath(); ctx.arc(px,py,28,0,2*Math.PI);
+    ctx.fillStyle=heeft?"#004aad":"#266e26"; ctx.fill();
+    ctx.strokeStyle="white"; ctx.lineWidth=3; ctx.stroke();
+    ctx.fillStyle="white"; ctx.textAlign="center";
+    ctx.font="bold 18px 'Helvetica Neue',Arial";
+    ctx.fillText(pos.l,px,py+6);
+    if(heeft){
+      ctx.fillStyle="rgba(240,248,240,0.95)";
+      ctx.font="bold 16px 'Helvetica Neue',Arial";
+      var vollNaam=(sp.rugnummer?"#"+sp.rugnummer+" ":"")+sp.naam;
+      var nW=vollNaam.split(" ");
+      var nR1=nW.slice(0,Math.ceil(nW.length/2)).join(" ");
+      var nR2=nW.slice(Math.ceil(nW.length/2)).join(" ");
+      if(nR2){ ctx.fillText(nR1,px,py+44); ctx.fillText(nR2,px,py+60); }
+      else { ctx.fillText(nR1,px,py+52); }
+      var iY=py+(nR2?76:68);
+      if(sp.aanvalInstructie||sp.verdedigingInstructie){
+        ctx.font="12px 'Helvetica Neue',Arial"; ctx.fillStyle="rgba(200,235,200,0.9)";
+        if(sp.aanvalInstructie){
+          var aTxt=sp.aanvalInstructie.length>34?sp.aanvalInstructie.slice(0,34)+"...":sp.aanvalInstructie;
+          ctx.fillText("A: "+aTxt,px,iY); iY+=16;
+        }
+        if(sp.verdedigingInstructie){
+          var vTxt=sp.verdedigingInstructie.length>34?sp.verdedigingInstructie.slice(0,34)+"...":sp.verdedigingInstructie;
+          ctx.fillText("V: "+vTxt,px,iY);
+        }
+      }
+    }
+  });
+  // Footer
+  ctx.fillStyle="#002873"; ctx.fillRect(0,CH-60,CW,60);
+  ctx.fillStyle="rgba(170,205,255,0.9)"; ctx.textAlign="center";
+  ctx.font="16px 'Helvetica Neue',Arial";
+  var datum=new Date().toLocaleDateString("nl-NL");
+  ctx.fillText(teamNaamVol()+"  ·  Seizoen "+inst().seizoen+"  ·  "+datum,CW/2,CH-20);
+  // Delen als PNG
+  canvas.toBlob(function(blob){
+    var bestand=new File([blob],"fc-harlingen-opstelling.png",{type:"image/png"});
+    if(navigator.canShare&&navigator.canShare({files:[bestand]})){
+      navigator.share({title:teamNaamVol()+" – opstelling",text:"Opstelling: "+opstellingNaam,files:[bestand]}).catch(function(){});
+    } else {
+      var url=URL.createObjectURL(blob);
+      var a=document.createElement("a");
+      a.href=url; a.download="fc-harlingen-opstelling.png"; a.click();
+      URL.revokeObjectURL(url);
+    }
+  },"image/png");
+}
+
+function exporteerTekeningPDF(naam, canvasEl, info) {
+  if (!window.jspdf) { meldFout("PDF-bibliotheek nog niet geladen. Probeer het zo nog eens."); return; }
+  if (!canvasEl) { meldFout("Tekening kon niet gemaakt worden."); return; }
+  const { jsPDF } = window.jspdf;
+  /* Staand papier: de tekening bovenaan, de uitleg eronder */
+  const doc = new jsPDF({ orientation:"portrait", unit:"mm", format:"a4" });
+  const W = 210, H = 297, M = 16;
+  const gegevens = info || {};
+
+  /* ── Kop ── */
+  doc.setFillColor(6,47,110);
+  doc.rect(0, 0, W, 30, "F");
+  doc.setFillColor(56,182,255);
+  doc.rect(0, 28, W, 2, "F");
+  var tekstX = pdfWapen(doc, M, 6, 16);
+  doc.setTextColor(255,255,255);
+  doc.setFont("helvetica","bold"); doc.setFontSize(14);
+  doc.text(String(naam || "Oefening"), tekstX, 13);
+  doc.setFont("helvetica","normal"); doc.setFontSize(9);
+  doc.setTextColor(170,205,255);
+  var kopRegels = [];
+  if (gegevens.type) kopRegels.push(String(gegevens.type));
+  if (gegevens.doel) kopRegels.push(String(gegevens.doel));
+  if (gegevens.duur) kopRegels.push(gegevens.duur + " min");
+  if (gegevens.aantalSpelers) kopRegels.push(gegevens.aantalSpelers + " spelers");
+  if (gegevens.leeftijd) kopRegels.push(String(gegevens.leeftijd));
+  doc.text(kopRegels.join("   ·   ") || teamNaamVol(), tekstX, 21);
+
+  /* ── Tekening ── */
+  var y = 38;
+  try {
+    var imgData = canvasEl.toDataURL("image/png");
+    var aspect = canvasEl.width / canvasEl.height;
+    var beschB = W - 2*M;
+    var beschH = 108;                       // ruimte reserveren voor de tekst eronder
+    var imgB = beschB, imgH = beschB / aspect;
+    if (imgH > beschH) { imgH = beschH; imgB = imgH * aspect; }
+    doc.setFillColor(20,85,20);
+    doc.roundedRect((W-imgB)/2 - 2, y - 2, imgB + 4, imgH + 4, 2, 2, "F");
+    doc.addImage(imgData, "PNG", (W-imgB)/2, y, imgB, imgH);
+    y += imgH + 10;
+  } catch(err) {
+    doc.setTextColor(120,120,120); doc.setFontSize(10);
+    doc.text("De tekening kon niet worden meegenomen.", M, y);
+    y += 10;
+  }
+
+  /* ── Blokken met tekst ── */
+  function blok(titel, tekst, accent) {
+    if (!tekst || !String(tekst).trim()) return;
+    var regels = doc.splitTextToSize(String(tekst).trim(), W - 2*M - 6);
+    var hoogte = regels.length * 4.6 + 12;
+    if (y + hoogte > H - 22) { doc.addPage(); y = M; }
+    doc.setFillColor(accent ? 255 : 246, accent ? 247 : 248, accent ? 234 : 251);
+    doc.roundedRect(M, y, W - 2*M, hoogte, 2, 2, "F");
+    doc.setFillColor.apply(doc, accent ? [253,126,20] : [0,74,173]);
+    doc.rect(M, y, 1.6, hoogte, "F");
+    doc.setFont("helvetica","bold"); doc.setFontSize(8.5);
+    doc.setTextColor.apply(doc, accent ? [140,70,10] : [0,58,138]);
+    doc.text(titel.toUpperCase(), M + 6, y + 6);
+    doc.setFont("helvetica","normal"); doc.setFontSize(10);
+    doc.setTextColor(35,40,50);
+    doc.text(regels, M + 6, y + 12);
+    y += hoogte + 5;
+  }
+
+  /* Praktische gegevens als één regel */
+  var praktisch = [];
+  if (gegevens.veldGrootte) praktisch.push("Veld: " + gegevens.veldGrootte);
+  if (gegevens.materialen)  praktisch.push("Materialen: " + gegevens.materialen);
+  if (gegevens.aantalSpelers) praktisch.push("Spelers: " + gegevens.aantalSpelers);
+  if (praktisch.length) blok("Benodigdheden", praktisch.join("\n"));
+
+  blok("Uitleg", gegevens.beschrijving);
+  blok("Aandachtspunten", gegevens.aandachtspunten, true);
+  blok("Notities", gegevens.notities);
+
+  if (!praktisch.length && !gegevens.beschrijving && !gegevens.aandachtspunten) {
+    doc.setFont("helvetica","normal"); doc.setFontSize(9);
+    doc.setTextColor(140,148,160);
+    doc.text("Bij deze oefening staat nog geen uitleg of materiaal ingevuld.", M, y + 4);
+  }
+
+  /* ── Voet ── */
+  var pag = doc.getNumberOfPages();
+  for (var p = 1; p <= pag; p++) {
+    doc.setPage(p);
+    doc.setDrawColor(225,229,234); doc.setLineWidth(0.3);
+    doc.line(M, H-14, W-M, H-14);
+    pdfVoet(doc, W, H, {marge:M, pagina:p, paginas:pag});
+  }
+
+  var bestand = String(naam || "oefening").replace(/[^a-z0-9\-_ ]/gi,"").trim().replace(/\s+/g,"-").toLowerCase();
+  doc.save((bestand || "oefening") + ".pdf");
+  meldGoed("PDF opgeslagen als " + (bestand || "oefening") + ".pdf");
+}
+
+function deelTekeningAlsPNG(canvasEl, naam) {
+  if (!canvasEl) { meldFout("Tekening kon niet gemaakt worden."); return; }
+  var bestandsnaam = String(naam||"tekening").replace(/[^a-z0-9\-_ ]/gi,"").trim().replace(/\s+/g,"-").toLowerCase() + ".png";
+  canvasEl.toBlob(function(blob) {
+    deelOfDownload(blob, bestandsnaam, teamNaamVol()+" – "+(naam||"Tekening"), function(hoe){
+      meldGoed(hoe==="gedeeld" ? "Afbeelding gedeeld" : "Opgeslagen als "+bestandsnaam+" in Downloads");
+    });
+  }, "image/png");
+}
+
+function maakOpstellingCanvas(naam, formatie, toewijzing, tenue) {
+  var posities = FORMATIES_DATA[formatie] || FORMATIES_DATA["4-3-3A"];
+  var t = tenue || STANDAARD_TENUE;
+  var B = 700, kop = 96, voet = 46, veldH = 1050;
+  var c = document.createElement("canvas");
+  c.width = B; c.height = kop + veldH + voet;
+  var x = c.getContext("2d");
+
+  x.fillStyle = "#f4f6f9"; x.fillRect(0,0,c.width,c.height);
+  var grad = x.createLinearGradient(0,0,B,kop);
+  grad.addColorStop(0,"#004aad"); grad.addColorStop(1,"#0063cc");
+  x.fillStyle = grad; x.fillRect(0,0,B,kop);
+  var logo = logoAfbeelding();
+  var tekstX = 26;
+  if (logo) {
+    var lh = 60, lb = Math.round(logo.naturalWidth/logo.naturalHeight*lh);
+    if (lb > 90) { lb = 90; lh = Math.round(logo.naturalHeight/logo.naturalWidth*lb); }
+    try { x.drawImage(logo, 24, (kop-lh)/2, lb, lh); tekstX = 24 + lb + 16; } catch(e) {}
+  }
+  x.fillStyle = "#ffffff";
+  x.font = "bold 30px 'Helvetica Neue',Arial,sans-serif"; x.textBaseline = "middle";
+  x.fillText(naam||"Opstelling", tekstX, 38);
+  x.font = "16px 'Helvetica Neue',Arial,sans-serif";
+  x.fillStyle = "rgba(255,255,255,.8)";
+  x.fillText(teamNaamVol(), tekstX, 68);
+  x.textAlign = "right";
+  x.font = "bold 34px 'Helvetica Neue',Arial,sans-serif";
+  x.fillStyle = "#38b6ff"; x.fillText(formatie, B-26, 50);
+  x.textAlign = "left";
+
+  var s = B/200, oy = kop;
+  x.fillStyle = "#2e8b2e"; x.fillRect(0,oy,B,veldH);
+  for (var i=0;i<6;i++) {
+    x.fillStyle = i%2===0 ? "rgba(0,0,0,0.045)" : "rgba(255,255,255,0.022)";
+    x.fillRect(0, oy+i*(veldH/6), B, veldH/6);
+  }
+  function lijn(a){ x.strokeStyle="rgba(255,255,255,"+a+")"; }
+  x.lineWidth = 2.2*s/1.6;
+  lijn(0.5);
+  x.strokeRect(10*s, oy+8*s, 180*s, 284*s);
+  x.beginPath(); x.moveTo(10*s, oy+150*s); x.lineTo(190*s, oy+150*s); x.stroke();
+  x.beginPath(); x.arc(100*s, oy+150*s, 28*s, 0, Math.PI*2); x.stroke();
+  x.fillStyle="rgba(255,255,255,.6)";
+  x.beginPath(); x.arc(100*s, oy+150*s, 2.5*s, 0, Math.PI*2); x.fill();
+  lijn(0.45);
+  x.strokeRect(47*s, oy+8*s, 106*s, 52*s);
+  x.strokeRect(72*s, oy+8*s, 56*s, 20*s);
+  x.strokeRect(47*s, oy+240*s, 106*s, 52*s);
+  x.strokeRect(72*s, oy+272*s, 56*s, 20*s);
+  lijn(0.7);
+  x.strokeRect(83*s, oy+1*s, 34*s, 7*s);
+  x.strokeRect(83*s, oy+292*s, 34*s, 7*s);
+  x.fillStyle="rgba(255,255,255,.55)";
+  x.beginPath(); x.arc(100*s, oy+42*s, 2.5*s, 0, Math.PI*2); x.fill();
+  x.beginPath(); x.arc(100*s, oy+258*s, 2.5*s, 0, Math.PI*2); x.fill();
+  lijn(0.45);
+  x.beginPath(); x.arc(100*s, oy+42*s, 28*s, 0.32*Math.PI, 0.68*Math.PI); x.stroke();
+  x.beginPath(); x.arc(100*s, oy+258*s, 28*s, 1.32*Math.PI, 1.68*Math.PI); x.stroke();
+
+  posities.forEach(function(p){
+    var cx = (p.x/100)*B, cy = oy + (p.y/100)*veldH;
+    var r = 30, isK = p.id==="GK";
+    var sp = toewijzing[p.id];
+    x.save();
+    x.beginPath(); x.arc(cx, cy, r, 0, Math.PI*2); x.closePath();
+    var set = tenueVoor(t, t.keuze || "thuis", isK);
+    if (!sp || !sp.naam) { x.fillStyle = "rgba(255,255,255,0.22)"; x.fill(); }
+    else {
+      /* Hetzelfde patroon als in de ontwerper, geschaald naar de bol.
+         Het wordt hier niet opnieuw uitgetekend: dan zou een nieuw
+         patroon op twee plekken moeten worden bijgehouden en zou de
+         gedeelde afbeelding stilletjes achterlopen. */
+      x.clip();
+      x.fillStyle = set.shirt; x.fillRect(cx-r, cy-r, 2*r, 2*r);
+      var sx = 2*r/108, sy = 2*r/82;
+      /* Het vel van de ontwerper op de bol leggen: één omrekening,
+         waarna zowel het snelpatroon als de opgelegde lagen in hun
+         eigen coördinaten kunnen worden getekend. */
+      var opVel = function(doe){
+        x.save();
+        x.translate(cx - r, cy - r); x.scale(sx, sy); x.translate(-6, -8);
+        doe();
+        x.restore();
+      };
+      tenuePatroonDelen(set).forEach(function(d){
+        x.fillStyle = d.kleur;
+        if (d.vorm === "rect") {
+          x.fillRect(cx - r + (d.x-6)*sx, cy - r + (d.y-8)*sy, d.b*sx, d.h*sy);
+        } else if (typeof Path2D === "function") {
+          opVel(function(){ x.fill(new Path2D(d.d)); });
+        }
+      });
+      if (typeof Path2D === "function") tenueKleineLagen(set).forEach(function(l){
+        var plek = tenueLaagPlaats(l, "shirt"), vak = tenueVak("shirt");
+        var v = tenueVorm(l.vorm), regel = (v && v.regel === "evenodd") ? "evenodd" : "nonzero";
+        opVel(function(){
+          if (plek.vullend) { x.translate(vak.x, vak.y); x.scale(vak.b/100, vak.h/100); }
+          else {
+            x.translate(plek.cx, plek.cy);
+            x.rotate(l.hoek * Math.PI / 180);
+            x.scale(plek.breed / 100 * (l.spiegel ? -1 : 1),
+                    plek.hoog / 100 * (l.spiegelV ? -1 : 1));
+            x.translate(-50, -50);
+          }
+          x.globalAlpha = l.doorzicht;
+          x.fillStyle = l.kleur;
+          tenueVormDelen(l.vorm).forEach(function(d){
+            if (d.d) x.fill(new Path2D(d.d), regel);
+            else x.fillRect(d.x, d.y, d.b, d.h);
+          });
+          x.globalAlpha = 1;
+        });
+      });
+    }
+    x.restore();
+    x.beginPath(); x.arc(cx, cy, r, 0, Math.PI*2);
+    x.strokeStyle = "rgba(255,255,255,0.92)"; x.lineWidth = 3; x.stroke();
+
+    x.textAlign = "center"; x.textBaseline = "middle";
+    if (sp && sp.naam) {
+      x.fillStyle = set.tekst || "#ffffff";
+      x.font = "bold 20px 'Helvetica Neue',Arial,sans-serif";
+      x.fillText(String(sp.rugnummer||p.l), cx, cy+1);
+    } else {
+      x.fillStyle = "rgba(255,255,255,.85)";
+      x.font = "bold 15px 'Helvetica Neue',Arial,sans-serif";
+      x.fillText(p.l, cx, cy+1);
+    }
+
+    var label = sp && sp.naam ? sp.naam.split(" ")[0] : p.l;
+    x.font = "bold 15px 'Helvetica Neue',Arial,sans-serif";
+    var bw = x.measureText(label).width + 14;
+    x.fillStyle = "rgba(0,0,0,0.5)";
+    x.fillRect(cx-bw/2, cy+r+5, bw, 22);
+    x.fillStyle = "#ffffff";
+    x.fillText(label, cx, cy+r+17);
+    x.textAlign = "left"; x.textBaseline = "alphabetic";
+  });
+
+  x.fillStyle = "#6c757d";
+  x.font = "14px 'Helvetica Neue',Arial,sans-serif";
+  x.fillText(new Date().toLocaleDateString("nl-NL",{day:"numeric",month:"long",year:"numeric"}), 26, kop+veldH+29);
+  x.textAlign = "right";
+  x.fillText(teamNaamVol(), B-26, kop+veldH+29);
+  x.textAlign = "left";
+  return c;
+}

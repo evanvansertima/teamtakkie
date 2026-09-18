@@ -21,32 +21,45 @@
    function/const-declaraties in JavaScript er niet toe doet: alles
    is hoe dan ook pas bekend als de app draait, niet in leesvolgorde.
 
-   Dit bestand gebruikt een aantal dingen die in src/app.jsx blijven
-   staan omdat ze breder gebruikt worden dan alleen hier — bijvoorbeeld
-   in JSX-componenten die pas ná dit bestand geparst worden:
-     - WEDSTRIJD_ROLLEN, VLAG_ROLLEN (spelersrollen-schermen)
-     - BESCHIKBAARHEID, TEGEN_TENUE (de spelerskaart en het opstellingsveld)
-     - LEEG_SPELER (het spelersformulier)
-     - standMetPunten, laadJson (gedeelde helpers)
+   Dit bestand gebruikt een aantal dingen die niet hier staan omdat ze
+   breder gebruikt worden dan alleen hier — bijvoorbeeld in JSX-
+   componenten die pas ná dit bestand geparst worden:
+     - BESCHIKBAARHEID (het spelersformulier, spelers.jsx)
+     - LEEG_SPELER (het spelersformulier, spelers.jsx)
+     - standMetPunten, laadJson (gedeelde helpers, blijven in app.jsx)
    Dat werkt ondanks de plakvolgorde omdat function-declaraties in
    dezelfde scope pas bij aánroep worden opgezocht, niet bij het
    inladen — en tegen de tijd dat bijvoorbeeld toernooiStand()
-   daadwerkelijk draait, is heel app.jsx al geparst. Hetzelfde principe
+   daadwerkelijk draait, is alles al geparst. Hetzelfde principe
    als bij boetepotActief() en huidigSeizoen() in src/domein/boetepot.js.
+
+   BIJGEWERKT BIJ P4 STAP 8 (18 september 2026) — een eerdere versie van
+   deze comment zei dat WEDSTRIJD_ROLLEN, VLAG_ROLLEN, TEGEN_TENUE en
+   LEEG_WEDSTRIJD (en hun opslag: TAKEN_KEY/laadTaken/STANDAARD_TAKEN,
+   TOERNOOIEN_KEY/laadToernooien/LEEG_TOERNOOI) in app.jsx bleven omdat
+   ze "gebruikt worden door React-componenten die niets met dit bestand
+   te maken hebben." Dat was waar op het moment dat P3 dit schreef —
+   toen stonden nog tientallen componenten verspreid door app.jsx. Nu
+   bijna alle schermmodules van P4 zijn verplaatst, is dat nagerekend:
+   alle gebruiksplekken van deze vijf/zes bleken binnen de wedstrijden-
+   module te liggen, en ze staan sinds P4 stap 8 in
+   src/schermen/wedstrijden.jsx — nergens anders meer. Werkt nog steeds
+   ondanks de plakvolgorde, om dezelfde reden als hierboven: de functies
+   in dit bestand die ze aanroepen (rolNaarLabel, vlagAantal e.d.) doen
+   dat pas bij een gebruikersactie, ruim ná het laden van alle scripts.
 
    Wat hier NIET staat, met opzet:
      - berekenSpelerStats blijft (voorlopig) in src/app.jsx — dat is
        voor een latere stap (src/domein/statistieken.js);
-     - WEDSTRIJD_ROLLEN, VLAG_ROLLEN, BESCHIKBAARHEID, OPGAVE_OPTIES,
-       TEGEN_TENUE, LEEG_SPELER blijven in src/app.jsx: ze worden ook
-       gebruikt door React-componenten die niets met dit bestand te
-       maken hebben, en horen dus niet exclusief bij de wedstrijdlogica;
-     - TAKEN_KEY/laadTaken/STANDAARD_TAKEN en TOERNOOIEN_KEY/
-       laadToernooien/LEEG_TOERNOOI blijven in src/app.jsx: dat is
-       opslag, geen berekening;
+     - BESCHIKBAARHEID, OPGAVE_OPTIES, LEEG_SPELER blijven in src/app.jsx:
+       BESCHIKBAARHEID en LEEG_SPELER worden ook gebruikt door
+       spelers.jsx en horen dus niet exclusief bij de wedstrijdlogica;
+       OPGAVE_OPTIES heeft bij narekenen voor stap 8 geen enkele
+       aanroeper meer opgeleverd (mogelijk verouderd) en is met rust
+       gelaten — dat opruimen is geen onderdeel van dit plan;
      - de React-componenten rond wedstrijden, rollen, taken, gasten en
-       toernooien blijven in src/app.jsx — alleen de losse rekenfuncties
-       errond zijn verhuisd.
+       toernooien staan sinds P4 stap 8 in src/schermen/wedstrijden.jsx
+       — alleen de losse rekenfuncties errond stonden al hier.
    ══════════════════════════════════════════════════════════════ */
 
 /* ── SCORE & UITSLAG ── */

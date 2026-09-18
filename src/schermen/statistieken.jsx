@@ -1480,3 +1480,219 @@ function GrafiekLegenda({ items }) {
     </div>
   );
 }
+
+
+/* ══════════════════════════════════════════════════════════════
+   ACHTERSTAND VAN STAP 3, INGELOPEN BIJ STAP 8
+   ─────────────────────────────────────────────────────────────
+   exporteerPresentiePDF, hexNaarRgb, ACTIE_CATEGORIEEN, ALLE_ACTIES,
+   getActieInfo en VELD_ZONES stonden ná P4 stap 3 (17 september 2026)
+   nog in src/app.jsx — ze vielen destijds buiten het toen behandelde
+   regelbereik en zijn blijven liggen (opstellingen.jsx, stap 7,
+   documenteerde deze achterstand al bij het narekenen van dát bereik,
+   zonder hem zelf op te lossen: dat hoorde niet bij die stap). exporteer-
+   PresentiePDF wordt gebruikt vanuit TeamStatistieken's presentietab
+   hierboven; hexNaarRgb is zijn interne kleurhulpje (ook gebruikt door
+   tekenDSMBord in src/schermen/wedstrijden.jsx — werkt via gedeelde
+   scope, geen probleem). ACTIE_CATEGORIEEN, ALLE_ACTIES, getActieInfo
+   en VELD_ZONES worden gebruikt door LiveAnalyse hierboven.
+
+   vandaagISO — het zevende, oorspronkelijk ook als "statistieken-
+   achterstand" genoemde symbool — is NIET hierheen verplaatst: bij
+   narekenen bleek dat LiveAnalyse/TeamStatistieken hem helemaal niet
+   aanroepen. Zijn enige echte gebruikers zijn spelers.jsx en
+   src/domein/opkomst.js — hij is daarom naar src/schermen/spelers.jsx
+   verplaatst, niet naar hier. Zie de bestandskop daar. */
+
+/* ═══════════════════════════════════════════════════════════
+   COMPACTE SPELERSTATUS (opgave & aanwezigheid)
+═══════════════════════════════════════════════════════════ */
+/* PRESENTIE_SOORTEN, presentieUitOpstelling, presentieGebeurtenissen en
+   presentieTabel staan sinds stap 4 (17 september 2026) in
+   src/domein/opkomst.js. */
+
+/* ── Presentieoverzicht als PDF, liggend zodat de kolommen passen ── */
+function exporteerPresentiePDF(gebeurtenissen, tabel, filterLabel) {
+  if (!window.jspdf) { meldFout("PDF-bibliotheek nog niet geladen. Probeer het zo nog eens."); return; }
+  if (!gebeurtenissen.length) { meldFout("Er is nog niets om te tonen."); return; }
+  var jsPDF = window.jspdf.jsPDF;
+  var doc = new jsPDF({orientation:"landscape", unit:"mm", format:"a4"});
+  var W = 297, H = 210, M = 12;
+
+  /* Hoeveel kolommen passen er? De rest gaat naar een volgende pagina. */
+  var naamB = 52, pctB = 22;
+  var ruimte = W - 2*M - naamB - pctB;
+  var kolB = Math.max(8, Math.min(13, ruimte / Math.max(1, gebeurtenissen.length)));
+  var perPagina = Math.floor(ruimte / kolB);
+  var blokken = [];
+  for (var i = 0; i < gebeurtenissen.length; i += perPagina) {
+    blokken.push({van:i, tot:Math.min(i+perPagina, gebeurtenissen.length)});
+  }
+
+  blokken.forEach(function(blok, bi){
+    if (bi > 0) doc.addPage();
+    var y = M;
+
+    /* Kop */
+    doc.setFillColor(6,47,110);
+    doc.rect(0, 0, W, 24, "F");
+    doc.setFillColor(56,182,255);
+    doc.rect(0, 22, W, 2, "F");
+    var tx = pdfWapen(doc, M, 4.5, 14);
+    doc.setTextColor(255,255,255);
+    doc.setFont("helvetica","bold"); doc.setFontSize(8);
+    doc.text("PRESENTIEOVERZICHT", tx, 9);
+    doc.setFontSize(13);
+    doc.text(teamNaamVol(), tx, 16.5);
+    doc.setFont("helvetica","normal"); doc.setFontSize(8.5);
+    doc.setTextColor(180,212,244);
+    var kopMeta = [filterLabel, gebeurtenissen.length + " gebeurtenissen"];
+    if (tabel.gemiddelde !== null) kopMeta.push("gemiddelde opkomst " + tabel.gemiddelde + "%");
+    if (blokken.length > 1) kopMeta.push("deel " + (bi+1) + " van " + blokken.length);
+    doc.text(kopMeta.join("   ·   "), tx, 21);
+    y = 32;
+
+    /* Kolomkoppen: datum verticaal opgedeeld in dag en maand */
+    doc.setFont("helvetica","bold"); doc.setFontSize(6.5);
+    doc.setTextColor(110,116,128);
+    doc.text("SPELER", M, y - 2);
+    for (var k = blok.van; k < blok.tot; k++) {
+      var g = gebeurtenissen[k];
+      var d = parseerDatum(g.datum);
+      var cx = M + naamB + (k - blok.van) * kolB + kolB/2;
+      doc.setTextColor(110,116,128);
+      doc.text(d ? String(d.getDate()) : "?", cx, y - 5.5, {align:"center"});
+      doc.setFontSize(5.5);
+      doc.text(d ? MAANDEN_VOL[d.getMonth()].slice(0,3) : "", cx, y - 2, {align:"center"});
+      doc.setFontSize(6.5);
+      /* streepje in de kleur van de soort */
+      var kleur = g.soort==="wedstrijd" ? [0,74,173] : g.soort==="training" ? [56,182,255] : [139,92,246];
+      doc.setFillColor(kleur[0], kleur[1], kleur[2]);
+      doc.rect(cx - kolB/2 + 1, y - 1, kolB - 2, 1, "F");
+    }
+    doc.setTextColor(110,116,128); doc.setFontSize(6.5);
+    doc.text("OPKOMST", W - M, y - 2, {align:"right"});
+    y += 3;
+
+    /* Rijen */
+    doc.setFontSize(7.5);
+    tabel.rijen.forEach(function(r, ri){
+      if (y > H - 22) {
+        doc.addPage(); y = M + 8;
+        doc.setFont("helvetica","bold"); doc.setFontSize(6.5);
+        doc.setTextColor(110,116,128);
+        doc.text("SPELER  (vervolg)", M, y - 2);
+        y += 3;
+        doc.setFontSize(7.5);
+      }
+      if (ri % 2 === 0) {
+        doc.setFillColor(248,249,251);
+        doc.rect(M - 2, y - 3.6, W - 2*M + 4, 5.6, "F");
+      }
+      doc.setFont("helvetica","normal"); doc.setTextColor(25,30,38);
+      var naam = (r.speler.rugnummer ? r.speler.rugnummer + "  " : "") + r.speler.naam;
+      doc.text(doc.splitTextToSize(naam, naamB - 3)[0], M, y);
+
+      for (var k2 = blok.van; k2 < blok.tot; k2++) {
+        var c = r.cellen[k2];
+        var cx2 = M + naamB + (k2 - blok.van) * kolB + kolB/2;
+        if (!c) {
+          doc.setTextColor(190,194,200);
+          doc.text("·", cx2, y, {align:"center"});
+          continue;
+        }
+        var rgb = hexNaarRgb(c.kleur);
+        doc.setFillColor(rgb[0], rgb[1], rgb[2]);
+        /* Loopt dezelfde periode door naar links of rechts, dan wordt
+           het vakje tot aan de buur doorgetrokken: één balk in plaats
+           van losse blokjes. */
+        var pid2 = c.periode ? c.periode.id : null;
+        var vor  = r.cellen[k2-1], vol = r.cellen[k2+1];
+        var uitL = (pid2 && k2 > blok.van && vor && vor.periode && vor.periode.id===pid2) ? 1.2 : 0;
+        var uitR = (pid2 && k2 < blok.tot-1 && vol && vol.periode && vol.periode.id===pid2) ? 1.2 : 0;
+        doc.roundedRect(cx2 - kolB/2 + 1.2 - uitL, y - 3.2,
+                        kolB - 2.4 + uitL + uitR, 4.6,
+                        (uitL||uitR) ? 0 : 0.8, (uitL||uitR) ? 0 : 0.8, "F");
+        var op = hexNaarRgb(c.op);
+        doc.setTextColor(op[0], op[1], op[2]);
+        doc.setFont("helvetica","bold"); doc.setFontSize(5.8);
+        doc.text(c.letter, cx2, y - 0.2, {align:"center"});
+        doc.setFont("helvetica","normal"); doc.setFontSize(7.5);
+      }
+
+      doc.setFont("helvetica","bold");
+      var pk = r.pct === null ? [130,136,146]
+             : r.pct >= 85 ? [15,110,86] : r.pct >= 70 ? [186,117,23] : [163,45,45];
+      doc.setTextColor(pk[0], pk[1], pk[2]);
+      doc.text(r.pct === null ? "–" : r.pct + "%", W - M, y, {align:"right"});
+      doc.setFont("helvetica","normal");
+      y += 5.6;
+    });
+
+    /* Opkomst per gebeurtenis onderaan */
+    y += 2;
+    doc.setDrawColor(210,214,220); doc.setLineWidth(0.3);
+    doc.line(M, y - 3, W - M, y - 3);
+    doc.setFont("helvetica","bold"); doc.setFontSize(6.5);
+    doc.setTextColor(110,116,128);
+    doc.text("OPKOMST", M, y + 0.5);
+    doc.setFontSize(6);
+    for (var k3 = blok.van; k3 < blok.tot; k3++) {
+      var pk3 = tabel.perKolom[k3];
+      var cx3 = M + naamB + (k3 - blok.van) * kolB + kolB/2;
+      doc.setTextColor(60,66,76);
+      doc.text(pk3.pct === null ? "–" : pk3.pct + "%", cx3, y + 0.5, {align:"center"});
+    }
+    if (tabel.gemiddelde !== null) {
+      doc.setFontSize(7.5);
+      doc.setTextColor(0,74,173);
+      doc.text(tabel.gemiddelde + "%", W - M, y + 0.5, {align:"right"});
+    }
+    y += 8;
+
+    /* Legenda */
+    doc.setFont("helvetica","normal"); doc.setFontSize(6);
+    var lx = M;
+    /* Alleen de periodesoorten die echt in deze tabel staan, anders
+       vult de legenda de halve regel met dingen die er niet zijn. */
+    var gebruikt = {};
+    tabel.rijen.forEach(function(rr){
+      rr.cellen.forEach(function(cc){ if (cc && cc.periode) gebruikt[cc.periode.soort] = true; });
+    });
+    var legenda = AANWEZIG_KEUZES.concat(
+      AFWEZIGHEID_SOORTEN.filter(function(s){ return gebruikt[s.id]; })
+        .map(function(s){ return Object.assign({}, s, {label:s.label+" (periode)"}); })
+    );
+    legenda.forEach(function(kz){
+      /* Past het niet meer op deze regel, dan begint de legenda
+         een nieuwe in plaats van van het blad af te lopen. */
+      var breedte = 8 + doc.getTextWidth(kz.label) + 6;
+      if (lx + breedte > W - M) { lx = M; y += 5; }
+      var rgb2 = hexNaarRgb(kz.kleur);
+      doc.setFillColor(rgb2[0], rgb2[1], rgb2[2]);
+      doc.roundedRect(lx, y - 2.6, 6, 3.6, 0.6, 0.6, "F");
+      var op2 = hexNaarRgb(kz.op);
+      doc.setTextColor(op2[0], op2[1], op2[2]);
+      doc.setFont("helvetica","bold");
+      doc.text(kz.letter, lx + 3, y, {align:"center"});
+      doc.setFont("helvetica","normal");
+      doc.setTextColor(90,96,106);
+      doc.text(kz.label, lx + 7.5, y);
+      lx += breedte;
+    });
+
+    pdfVoet(doc, W, H, {marge:M});
+  });
+
+  var bestand = "presentie-" + filterLabel.toLowerCase().replace(/[^a-z0-9]+/g,"-") + "-" +
+                new Date().toISOString().slice(0,10);
+  doc.save(bestand + ".pdf");
+  meldGoed("Presentieoverzicht opgeslagen als " + bestand + ".pdf");
+}
+
+/* Kleurcode naar losse waarden voor jsPDF */
+function hexNaarRgb(hex) {
+  var c = String(hex || "#000000").replace("#","");
+  if (c.length === 3) c = c[0]+c[0]+c[1]+c[1]+c[2]+c[2];
+  return [parseInt(c.slice(0,2),16) || 0, parseInt(c.slice(2,4),16) || 0, parseInt(c.slice(4,6),16) || 0];
+}

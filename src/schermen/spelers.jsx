@@ -67,6 +67,24 @@
    Selectie-scherm maar horen bij stap 7 — die moeten door een zuivere
    verplaatsing als deze ongemoeid blijven.
 
+   BIJGEWERKT BIJ P4 STAP 8 (18 september 2026) — TWEE VONDSTEN
+   1. RapportTab hierboven roept WerkVenster aan (2x) — een generiek
+      modaalvenster dat sinds stap 8 in src/schermen/wedstrijden.jsx
+      staat (5x gebruikt binnen WedstrijdDetail, dus qua verhouding
+      hoort hij daar). Niet eerder gemeld in het stappenplan. Werkt
+      gewoon via gedeelde scope (hoisting): wedstrijden.jsx laadt ná dit
+      bestand, maar de aanroep vanuit RapportTab gebeurt pas bij het
+      renderen, ruim ná het laden van alle scripts.
+   2. vandaagISO is bij diezelfde stap hierheen verplaatst (staat nu aan
+      het eind van dit bestand, bij BENEN/beenInfo). Hij stond sinds P4
+      stap 3/4 nog in src/app.jsx met het label "statistieken-
+      achterstand", maar bleek bij narekenen helemaal niet door
+      statistieken.jsx gebruikt te worden — zijn enige echte gebruikers
+      zijn componenten in déze module (AfwezigheidFormulier,
+      ReviewFormulier, Dashboard e.a.) en src/domein/opkomst.js, dat
+      hem al sinds stap 4 over de bestandsgrens heen aanroept (blijft
+      werken, zelfde principe: function-declaraties hoisten).
+
    Zie docs/p4-stappenplan.md §1 (stap 5) en §3 voor de volledige
    redenering. */
 
@@ -2595,3 +2613,12 @@ const BENEN = [
   {id:"Beide",  label:"Beide",  kant:"beide"}
 ];
 function beenInfo(v) { return BENEN.filter(function(b){ return b.id===v; })[0] || null; }
+
+/* vandaagISO stond sinds P4 stap 3/4 nog in src/app.jsx (gemerkt als
+   "statistieken-achterstand"); bij narekenen voor stap 8 bleek hij daar
+   niet gebruikt te worden, wel hier en in src/domein/opkomst.js. Zie de
+   bestandskop hierboven. */
+function vandaagISO() {
+  var d = new Date();
+  return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
+}

@@ -2049,3 +2049,170 @@ function afwezigheidNaarStatus(soort) {
   if (soort.id==="werk")      return "werk";
   return "afwezig";
 }
+
+
+/* ══════════════════════════════════════════════════════════════
+   ACHTERSTAND VAN STAP 4, INGELOPEN BIJ STAP 8
+   ─────────────────────────────────────────────────────────────
+   deelTraining, deelVariantenTraining en het hele ICS-agendabestand-
+   gereedschap (icsOntsnap, icsVouw, icsStempel, icsPlus, maakICS,
+   deelICS — oorspronkelijke sectiekop "IN MIJN AGENDA") stonden ná P4
+   stap 4 (17 september 2026) nog in src/app.jsx, verweven tussen de
+   wedstrijden-eigen deelfuncties (deelWedstrijdVooraf/-Uitslag) die pas
+   bij stap 8 aan de beurt waren. Bij het narekenen van stap 8 bleek deze
+   cluster uitsluitend door dit bestand te worden gebruikt (deelTraining/
+   deelVariantenTraining via de deelknop, deelICS via de agendaknop) —
+   nul treffers in de wedstrijdenmodule of elders. whatsappLink, waOpmaak,
+   zonderEmoji, berichtUitRegels en DEEL_STREEP blijven in src/app.jsx:
+   die zijn ook nodig voor DeelVenster in gedeeld.jsx en voor
+   wedstrijden.jsx's eigen deelfuncties. Puur een verhuizing, geen
+   herschrijving: dezelfde tekst, dezelfde comments (inclusief de
+   oorspronkelijke sectiekop bij het ICS-gereedschap hieronder). */
+
+/* ── Training ── */
+function deelTraining(t, uitgebreid) {
+  var telling = dagenTot(t.datum);
+  var eind = t.tijd && t.duur ? tijdVerschoven(t.tijd, Number(t.duur)||0) : "";
+  var regels = [
+    "🏃 *"+teamNaamVol()+"*",
+    DEEL_STREEP,
+    "📣 *TRAINING*" + (telling ? "  ·  "+telling : ""),
+    "",
+    t.datum ? "📅 "+datumLang(t.datum) : null,
+    t.tijd ? "⏰ "+t.tijd+(eind?" – "+eind:"")+" uur"+(t.duur?"  ("+t.duur+" min)":"") : null,
+    t.locatie ? "📍 "+t.locatie : null
+  ];
+
+  if(!uitgebreid) {
+    return berichtUitRegels(regels.concat([
+      t.materialen ? "🎒 Meenemen: "+t.materialen : null,
+      "", "Tot dan! 💪"
+    ]));
+  }
+
+  if(t.doelstellingen) regels = regels.concat(["", "🎯 *Waar werken we aan*", t.doelstellingen.trim()]);
+
+  var od = t.onderdelen||[];
+  if(od.length) {
+    regels = regels.concat(["", "📋 *Programma*"], od.map(function(o,i){
+      return (i+1)+". "+o.naam+(o.duur?"  ("+o.duur+"')":"");
+    }));
+  }
+
+  if(t.materialen) regels = regels.concat(["", "🎒 Meenemen: "+t.materialen]);
+
+  /* Per status de namen erbij, zodat het team ziet wie er niet is en waarom.
+     Stond eerder op "blessure" terwijl de status "geblesseerd" heet: dat vond nooit iets. */
+  var perStatus = {};
+  (t.aanwezigheid||[]).forEach(function(a){
+    if (teltAlsAanwezig(a.status) || !a.naam) return;
+    (perStatus[a.status] = perStatus[a.status] || []).push(a.naam);
+  });
+  var tekens = {afwezig:"❌", geenbericht:"⛔", ziek:"🤒", geblesseerd:"🩹", werk:"💼"};
+  AANWEZIG_KEUZES.forEach(function(k){
+    var namen = perStatus[k.id];
+    if (!namen || !namen.length) return;
+    regels = regels.concat(["", (tekens[k.id]||"•")+" *"+k.label+":* "+namen.join(", ")]);
+  });
+  regels = regels.concat(["", "❗ Kun je niet? Meld je op tijd af."]);
+
+  if(t.notities) regels = regels.concat(["", "📝 "+t.notities]);
+  return berichtUitRegels(regels.concat(["", "Tot "+(telling==="vandaag"?"zo":"dan")+"! 💪"]));
+}
+
+function deelVariantenTraining(t) {
+  return [
+    {id:"lang", label:"Uitgebreid", tekst: deelTraining(t, true)},
+    {id:"kort", label:"Kort",       tekst: deelTraining(t, false)}
+  ];
+}
+
+/* ═══════════════════════════════════════════════════════════
+   IN MIJN AGENDA
+   Een agendabestand van één gebeurtenis, zodat spelers en ouders
+   hem in hun eigen agenda kunnen zetten. Het formaat is streng:
+   regels langer dan 75 tekens moeten gevouwen worden en komma's,
+   puntkomma's en backslashes moeten ontsnapt.
+═══════════════════════════════════════════════════════════ */
+function icsOntsnap(t) {
+  return String(t == null ? "" : t)
+    .replace(/\\/g, "\\\\")
+    .replace(/;/g, "\\;")
+    .replace(/,/g, "\\,")
+    .replace(/\r?\n/g, "\\n");
+}
+/* Regels van maximaal 75 tekens; het vervolg begint met een spatie */
+function icsVouw(regel) {
+  if (regel.length <= 75) return regel;
+  var uit = [regel.slice(0, 75)], rest = regel.slice(75);
+  while (rest.length > 74) { uit.push(" " + rest.slice(0, 74)); rest = rest.slice(74); }
+  if (rest.length) uit.push(" " + rest);
+  return uit.join("\r\n");
+}
+/* Datum en tijd als lokale tijd, zonder tijdzone: dan neemt de agenda
+   van de ontvanger gewoon de tijd over die er staat. */
+function icsStempel(datum, tijd) {
+  var d = parseerDatum(datum);
+  if (!d) return null;
+  var uur = 12, min = 0;
+  if (tijd && /^\d{1,2}:\d{2}$/.test(tijd)) {
+    var delen = tijd.split(":");
+    uur = Number(delen[0]); min = Number(delen[1]);
+  }
+  function tw(n){ return (n<10?"0":"")+n; }
+  return d.getFullYear() + tw(d.getMonth()+1) + tw(d.getDate()) +
+         "T" + tw(uur) + tw(min) + "00";
+}
+/* Zoveel minuten optellen bij een stempel */
+function icsPlus(stempel, minuten) {
+  if (!stempel) return null;
+  var d = new Date(
+    Number(stempel.slice(0,4)), Number(stempel.slice(4,6))-1, Number(stempel.slice(6,8)),
+    Number(stempel.slice(9,11)), Number(stempel.slice(11,13)));
+  d.setMinutes(d.getMinutes() + minuten);
+  function tw(n){ return (n<10?"0":"")+n; }
+  return d.getFullYear() + tw(d.getMonth()+1) + tw(d.getDate()) +
+         "T" + tw(d.getHours()) + tw(d.getMinutes()) + "00";
+}
+/* g = {titel, datum, tijd, duur (minuten), locatie, uitleg, id} */
+function maakICS(g) {
+  var begin = icsStempel(g.datum, g.tijd);
+  if (!begin) return null;
+  var eind = icsPlus(begin, Number(g.duur) || 90);
+  var nu = new Date();
+  function tw(n){ return (n<10?"0":"")+n; }
+  var gemaakt = nu.getUTCFullYear() + tw(nu.getUTCMonth()+1) + tw(nu.getUTCDate()) +
+                "T" + tw(nu.getUTCHours()) + tw(nu.getUTCMinutes()) + tw(nu.getUTCSeconds()) + "Z";
+  var regels = [
+    "BEGIN:VCALENDAR",
+    "VERSION:2.0",
+    "PRODID:-//" + ONTWERPER.studio + "//" + teamNaamVol() + "//NL",
+    "CALSCALE:GREGORIAN",
+    "METHOD:PUBLISH",
+    "BEGIN:VEVENT",
+    "UID:" + (g.id || Date.now()) + "@fc-harlingen",
+    "DTSTAMP:" + gemaakt,
+    "DTSTART:" + begin,
+    "DTEND:" + eind,
+    "SUMMARY:" + icsOntsnap(g.titel)
+  ];
+  if (g.locatie)  regels.push("LOCATION:" + icsOntsnap(g.locatie));
+  if (g.uitleg)   regels.push("DESCRIPTION:" + icsOntsnap(g.uitleg));
+  if (g.heleDag !== true) {
+    /* Een uur van tevoren een seintje */
+    regels.push("BEGIN:VALARM", "TRIGGER:-PT60M", "ACTION:DISPLAY",
+                "DESCRIPTION:" + icsOntsnap(g.titel), "END:VALARM");
+  }
+  regels.push("END:VEVENT", "END:VCALENDAR");
+  return regels.map(icsVouw).join("\r\n") + "\r\n";
+}
+function deelICS(g) {
+  var tekst = maakICS(g);
+  if (!tekst) { meldFout("Deze gebeurtenis heeft nog geen datum."); return; }
+  var naam = String(g.titel || "afspraak").replace(/[^a-z0-9]/gi, "-")
+    .replace(/-+/g, "-").replace(/^-|-$/g, "").toLowerCase() + ".ics";
+  var blob = new Blob([tekst], {type:"text/calendar;charset=utf-8"});
+  deelOfDownload(blob, naam, g.titel, function(hoe){
+    meldGoed(hoe === "gedeeld" ? "Afspraak gedeeld" : "Opgeslagen als " + naam + " in Downloads");
+  });
+}
