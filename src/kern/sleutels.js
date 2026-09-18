@@ -1,3 +1,4 @@
+// @ts-check
 /* ══════════════════════════════════════════════════════════════
    KERN: sleutels, seizoenen, teams
    ─────────────────────────────────────────────────────────────
@@ -41,6 +42,28 @@
    erin — dat zou later opnieuw uit elkaar getrokken moeten worden.
    ══════════════════════════════════════════════════════════ */
 
+/** Eén item uit de teamlijst. LET OP — bekend, niet opgelost punt uit
+ * de typenproef van 18 september 2026 (P5): dit object krijgt via twee
+ * routes een net ANDER veldenpakket. maakTeam() zet {id, naam, club,
+ * gemaakt} neer; teamsVerhuizing() zet {id, naam, seizoen, speelduur,
+ * locatie, gemaakt} neer — géén club, wél drie velden die maakTeam()
+ * nooit vult. Beide routes leveren dus een team op waar de andere drie
+ * (of het ene) veld(en) ontbreken. Vandaar dat hieronder alles behalve
+ * id/naam/gemaakt optioneel (met [ ]) staat: dat is de eerlijke
+ * beschrijving van wat er al gebeurt, geen keuze om het recht te
+ * praten. Rechttrekken (één van de twee routes aanpassen, of het
+ * object normaliseren) is een echte gedragswijziging en dus geen
+ * P5-typenklus — al aan Evan gemeld, geen actie hier.
+ * @typedef {Object} Team
+ * @property {string} id
+ * @property {string} naam
+ * @property {string} [club]
+ * @property {string} gemaakt   ISO-datumtekst
+ * @property {string} [seizoen]    alleen gezet door teamsVerhuizing()
+ * @property {number} [speelduur]  alleen gezet door teamsVerhuizing()
+ * @property {string} [locatie]    alleen gezet door teamsVerhuizing()
+ */
+
 const TEAMS_KEY   = "tt_teams_v1";      /* de lijst met teams */
 const ACTIEF_KEY  = "tt_actief_v1";     /* welk team je nu bekijkt */
 const VOORKEUR_KEY = "tt_voorkeuren_v1"; /* taal, thema, clubwapen */
@@ -69,6 +92,7 @@ const SEIZOENACTIEF_KEY = "tt_seizoenactief_v1"; /* welk seizoen je per team bek
    uitslag op de spelregelquiz en het sportpark van de club. Die
    gelden over al je teams heen; ze per team bijhouden zou betekenen
    dat je hetzelfde complex vijftien keer moet bouwen. */
+/** @type {string[]} sleutels die NOOIT met team/seizoen worden voorvoegd. */
 const GEDEELDE_SLEUTELS = [
   "fch_instellingen_v1",   /* je voorkeuren; het teamdeel gaat apart */
   "fch_oefeningen_v1",     /* je oefeningenbibliotheek */
@@ -85,6 +109,12 @@ const GEDEELDE_SLEUTELS = [
    en nog niet is verhuisd — blijft alles staan waar het stond. Dat
    maakt de bijwerking onschadelijk: gaat er iets mis met de
    verhuizing, dan werkt de app gewoon zoals gisteren. */
+/**
+ * @param {string} basis  een van de vaste opslagsleutels (bijv. "fch_spelers_v1")
+ * @returns {string} de sleutel zoals die echt in localStorage staat —
+ *   ongewijzigd voor gedeelde sleutels of zolang er nog geen team is,
+ *   anders voorzien van team- (en, zodra bekend, seizoen-)voorvoegsel.
+ */
 function sleutelVoor(basis) {
   if (!basis || GEDEELDE_SLEUTELS.indexOf(basis) >= 0) return basis;
   var t = _actiefTeam;
@@ -125,16 +155,25 @@ function sleutelVoor(basis) {
    de tekst wordt alleen langer.
    ══════════════════════════════════════════════════════════ */
 
-/* In welk seizoen valt deze datum? Het voetbalseizoen loopt van juli
-   tot en met juni. Een wedstrijd in mei 2027 hoort dus bij 2026/2027. */
+/**
+ * In welk seizoen valt deze datum? Het voetbalseizoen loopt van juli
+ * tot en met juni. Een wedstrijd in mei 2027 hoort dus bij 2026/2027.
+ * @param {Date} [d]  standaard: nu
+ * @returns {string} seizoen-id, bijv. "2026-2027"
+ */
 function seizoenVanDatum(d) {
   d = d || new Date();
   var jaar = d.getFullYear();
   if (d.getMonth() < 6) jaar -= 1;
   return jaar + "-" + (jaar + 1);
 }
-/* "2026/2027" en "2026-2027" zijn hetzelfde seizoen. In de sleutel mag
-   geen schuine streep staan, op het scherm hoort hij juist wel. */
+/**
+ * "2026/2027" en "2026-2027" zijn hetzelfde seizoen. In de sleutel mag
+ * geen schuine streep staan, op het scherm hoort hij juist wel.
+ * @param {string} [tekst]  vrije tekst, bijv. "2026/2027" of "2026-2027"
+ * @returns {string|null} seizoen-id met koppelteken, of null als de
+ *   tekst geen geldig seizoen beschrijft
+ */
 function seizoenId(tekst) {
   var m = String(tekst || "").match(/(\d{4})\s*[\/\-–]\s*(\d{2,4})/);
   if (!m) return null;
@@ -143,18 +182,32 @@ function seizoenId(tekst) {
   if (b !== a + 1) return null;
   return a + "-" + b;
 }
+/**
+ * @param {string} [id]  seizoen-id, bijv. "2026-2027"
+ * @returns {string} leesbaar label, bijv. "2026/2027"
+ */
 function seizoenLabel(id) {
   var s = String(id || "");
   return s.indexOf("-") > 0 ? s.replace("-", "/") : s;
 }
+/**
+ * @param {string} [id]  seizoen-id, bijv. "2026-2027"
+ * @returns {string} het eerstvolgende seizoen-id; bij een onherkenbaar
+ *   of ontbrekend id valt dit terug op het seizoen van vandaag
+ */
 function seizoenVolgend(id) {
   var m = String(id || "").match(/^(\d{4})-(\d{4})$/);
   if (!m) return seizoenVanDatum();
   var a = parseInt(m[1], 10) + 1;
   return a + "-" + (a + 1);
 }
-/* De twee helften van een sleutel. Staat er geen ::, dan komt de
-   sleutel van vóór de seizoenen en hoort hij nergens bij. */
+/**
+ * De twee helften van een sleutel. Staat er geen ::, dan komt de
+ * sleutel van vóór de seizoenen en hoort hij nergens bij.
+ * @param {string} s  het deel van een localStorage-sleutel ná "tt_<team>__"
+ * @returns {string|null} het seizoen-id vóór de "::", of null als er
+ *   geen "::" in zit of de kop geen geldig seizoen is
+ */
 function seizoenUitSleutel(s) {
   var i = String(s || "").indexOf("::");
   if (i < 0) return null;
@@ -165,15 +218,23 @@ function seizoenUitSleutel(s) {
   var kop = String(s).slice(0, i);
   return /^\d{4}-\d{4}$/.test(kop) ? kop : null;
 }
-/* Zit er überhaupt een laag voor deze sleutel? Dit is iets anders dan de
-   vraag hierboven: een geparkeerde laag is geen seizoen, maar de sleutel
-   is wél al verhuisd en moet met rust worden gelaten. */
+/**
+ * Zit er überhaupt een laag voor deze sleutel? Dit is iets anders dan de
+ * vraag hierboven: een geparkeerde laag is geen seizoen, maar de sleutel
+ * is wél al verhuisd en moet met rust worden gelaten.
+ * @param {string} s
+ * @returns {boolean}
+ */
 function heeftLaag(s) {
   return String(s || "").indexOf("::") >= 0;
 }
-/* In welk seizoen valt deze datum, als tekst? Zelfde rekensom als
-   seizoenVanDatum, maar zonder Date — deze wordt aangeroepen tijdens de
-   verhuizing, en die draait voordat de helft van de app bestaat. */
+/**
+ * In welk seizoen valt deze datum, als tekst? Zelfde rekensom als
+ * seizoenVanDatum, maar zonder Date — deze wordt aangeroepen tijdens de
+ * verhuizing, en die draait voordat de helft van de app bestaat.
+ * @param {string} [d]  datumtekst die begint met "JJJJ-MM" (bijv. "2026-09-08")
+ * @returns {string|null} seizoen-id, of null als d geen bruikbare datum is
+ */
 function seizoenVanDatumTekst(d) {
   var m = String(d || "").match(/^(\d{4})-(\d{2})/);
   if (!m) return null;
@@ -188,12 +249,19 @@ function seizoenVanDatumTekst(d) {
    lijst over twee seizoenen, dan wordt hij gesplitst. Valt er niets te
    verdelen — geen lijst, of geen enkel item met een bruikbare datum —
    dan blijft het blok heel en gaat het naar de terugval. */
+/**
+ * @param {string} tekst     opgeslagen JSON-tekst (meestal een array)
+ * @param {string} terugval  seizoen-id om te gebruiken als er niets te
+ *   verdelen valt of geen enkel item een bruikbare datum heeft
+ * @returns {Object<string,string>} per seizoen-id de bijbehorende JSON-tekst
+ */
 function verdeelOverSeizoenen(tekst, terugval) {
+  /** @type {Object<string,string>} */
   var uit = {}, lijst = null;
   try { lijst = JSON.parse(tekst); } catch(e) { lijst = null; }
   if (!Array.isArray(lijst) || !lijst.length) { uit[terugval] = tekst; return uit; }
 
-  var metDatum = 0, groepen = {};
+  var metDatum = 0, /** @type {Object<string,any[]>} */ groepen = {};
   lijst.forEach(function (item) {
     var s = item ? seizoenVanDatumTekst(item.datum || item.date) : null;
     if (s) metDatum++; else s = terugval;
@@ -206,6 +274,11 @@ function verdeelOverSeizoenen(tekst, terugval) {
   if (!Object.keys(uit).length) uit[terugval] = tekst;
   return uit;
 }
+/**
+ * @param {string} s
+ * @returns {string} het deel van de sleutel ná de "::" (of s zelf als
+ *   er geen laag in zit)
+ */
 function basisUitSleutel(s) {
   var i = String(s || "").indexOf("::");
   return i < 0 ? s : s.slice(i + 2);
@@ -218,9 +291,13 @@ function basisUitSleutel(s) {
    en die bovendien apart zou moeten worden bijgehouden op elk apparaat.
    Nu verschijnt een seizoen op je tablet zodra de gegevens ervan
    binnenkomen, zonder dat daar iets voor geregeld hoeft te worden. */
+/**
+ * @param {string} [id]  team-id
+ * @returns {string[]} seizoen-ids van dit team, nieuwste eerst
+ */
 function seizoenenVan(id) {
   if (!id) return [];
-  var voor = "tt_" + id + "__", gezien = {};
+  var voor = "tt_" + id + "__", /** @type {Object<string,boolean>} */ gezien = {};
   try {
     for (var i = 0; i < localStorage.length; i++) {
       var k = localStorage.key(i);
@@ -236,6 +313,7 @@ function seizoenenVan(id) {
    deze wordt een paar keer per scherm gelezen en dat is te weinig om er
    een tweede waarheid voor in de lucht te houden die uit de pas kan
    lopen met wat er werkelijk staat. */
+/** @returns {Object<string,string>} per team-id het gekozen seizoen-id */
 function seizoenKeuzes() {
   try {
     var o = JSON.parse(localStorage.getItem(SEIZOENACTIEF_KEY) || "{}");
@@ -251,6 +329,10 @@ function seizoenKeuzes() {
    Een gekozen seizoen telt altijd, ook als er nog niets in staat. Anders
    zou je een nieuw seizoen nooit kunnen beginnen: het bestaat pas als er
    iets in staat, en er komt pas iets in te staan als je erin kijkt. */
+/**
+ * @param {string} [team]  team-id; standaard het actieve team
+ * @returns {string|null} seizoen-id, of null als er geen (actief) team is
+ */
 function seizoenNu(team) {
   var t = team || _actiefTeam;
   if (!t) return null;
@@ -259,6 +341,12 @@ function seizoenNu(team) {
   var alle = seizoenenVan(t);
   return alle.length ? alle[0] : seizoenVanDatum();
 }
+/**
+ * @param {string} id      te kiezen seizoen-id
+ * @param {string} [team]  team-id; standaard het actieve team
+ * @returns {string|null} het gekozen seizoen-id, of het huidige seizoen
+ *   als er geen team of geen id is
+ */
 function kiesSeizoen(id, team) {
   var t = team || _actiefTeam;
   if (!t || !id) return seizoenNu();
@@ -268,13 +356,17 @@ function kiesSeizoen(id, team) {
   return id;
 }
 
-/* Een nieuw teamnummer. Lang genoeg om nooit tweemaal hetzelfde te
-   krijgen, ook niet als twee apparaten los van elkaar een team
-   aanmaken en die later samenkomen in één database. */
+/**
+ * Een nieuw teamnummer. Lang genoeg om nooit tweemaal hetzelfde te
+ * krijgen, ook niet als twee apparaten los van elkaar een team
+ * aanmaken en die later samenkomen in één database.
+ * @returns {string}
+ */
 function nieuwTeamId() {
   return "t" + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
 }
 
+/** @returns {Team[]} */
 function _leesTeams() {
   try {
     var r = localStorage.getItem(TEAMS_KEY);
@@ -282,7 +374,10 @@ function _leesTeams() {
     return Array.isArray(l) ? l.filter(function(t){ return t && t.id; }) : [];
   } catch(e) { return []; }
 }
+/** @type {Team[]} de teamlijst, in het geheugen gehouden zodat teams()
+ * niet bij elke aanroep localStorage hoeft te lezen. */
 var _teams = _leesTeams();
+/** @type {string|null} het id van het team dat nu bekeken wordt. */
 var _actiefTeam = (function(){
   try {
     var id = localStorage.getItem(ACTIEF_KEY);
@@ -292,6 +387,7 @@ var _actiefTeam = (function(){
   } catch(e) { return null; }
 })();
 
+/** @returns {{id:string,op:string}[]} weggegooide teams met het moment van weggooien */
 function teamsWeg() {
   try {
     var r = localStorage.getItem(TEAMSWEG_KEY);
@@ -299,9 +395,11 @@ function teamsWeg() {
     return Array.isArray(l) ? l.filter(function (g) { return g && g.id; }) : [];
   } catch(e) { return []; }
 }
+/** @param {string} id @returns {boolean} */
 function teamIsWeg(id) {
   return teamsWeg().some(function (g) { return g.id === id; });
 }
+/** @param {string} id @returns {void} */
 function noteerTeamWeg(id) {
   if (!id || teamIsWeg(id)) return;
   var l = teamsWeg().concat([{id: id, op: new Date().toISOString()}]);
@@ -310,17 +408,25 @@ function noteerTeamWeg(id) {
 /* Weg is weg: zodra de server het ook als verwijderd kent, hoeft de
    grafsteen hier niet te blijven staan. Vanaf dat moment is de server
    degene die het onthoudt, en zou hij het team niet meer terugsturen. */
+/** @param {string} id @returns {void} */
 function vergeetTeamWeg(id) {
   var l = teamsWeg().filter(function (g) { return g.id !== id; });
   try { localStorage.setItem(TEAMSWEG_KEY, JSON.stringify(l)); } catch(e) {}
 }
 
+/** @returns {Team[]} */
 function teams() { return _teams; }
+/** @returns {string|null} het id van het actieve team */
 function teamId() { return _actiefTeam; }
+/** @returns {Team|null} het actieve team zelf, of null als er geen is */
 function teamNu() {
   for (var i = 0; i < _teams.length; i++) if (_teams[i].id === _actiefTeam) return _teams[i];
   return null;
 }
+/**
+ * @param {Team[]} lijst  de volledige, nieuwe teamlijst
+ * @returns {Team[]} de opgeslagen lijst (na filtering op geldige items)
+ */
 function slaTeamsOp(lijst) {
   _teams = (lijst || []).filter(function(t){ return t && t.id; });
   try { localStorage.setItem(TEAMS_KEY, JSON.stringify(_teams)); } catch(e) {}
@@ -331,6 +437,10 @@ function slaTeamsOp(lijst) {
     zetActiefTeam(_teams.length ? _teams[0].id : null);
   return _teams;
 }
+/**
+ * @param {string|null} [id]  team-id, of null/niets om het actieve team op te heffen
+ * @returns {string|null} het nieuwe actieve team-id
+ */
 function zetActiefTeam(id) {
   _actiefTeam = id || null;
   try {
@@ -352,6 +462,7 @@ function zetActiefTeam(id) {
 
    Het adres van de server blijft staan — dat is geen gegeven van jou
    maar een instelling van de app. */
+/** @returns {number} het aantal weggehaalde localStorage-sleutels */
 function wisAllesLokaal() {
   var weg = [];
   try {
@@ -371,6 +482,10 @@ function wisAllesLokaal() {
   return weg.length;
 }
 
+/**
+ * @param {string} id  team-id om naar over te schakelen
+ * @returns {string|null} het (eventueel ongewijzigde) actieve team-id
+ */
 function kiesTeam(id) {
   if (!id || id === _actiefTeam) return _actiefTeam;
   if (!_teams.some(function(t){ return t.id === id; })) return _actiefTeam;
@@ -378,6 +493,11 @@ function kiesTeam(id) {
   herlaadInstellingen();
   return _actiefTeam;
 }
+/**
+ * @param {string} [naam]
+ * @param {string} [club]
+ * @returns {Team} het nieuw aangemaakte team
+ */
 function maakTeam(naam, club) {
   var team = {id: nieuwTeamId(),
               naam: (naam || "").trim() || "Nieuw team",
@@ -397,6 +517,10 @@ function maakTeam(naam, club) {
    Dit staat hier en niet in het scherm omdat het te belangrijk is om
    alleen met de hand te controleren: gaat het mis, dan is iemand zijn
    halve seizoen kwijt op het moment dat hij voor het eerst inlogt. */
+/**
+ * @param {string} [naam]  gewenste naam voor het (eventueel verhuisde) team
+ * @returns {Team} het eerste team, nieuw of verhuisd
+ */
 function maakEersteTeam(naam) {
   var team = teamEigenSleutels().length ? teamsVerhuizing() : null;
   if (team) { kiesTeam(team.id); hernoemTeam(team.id, naam); return team; }
@@ -404,6 +528,11 @@ function maakEersteTeam(naam) {
   kiesTeam(team.id);
   return team;
 }
+/**
+ * @param {string} id
+ * @param {string} [naam]  lege of ontbrekende naam wordt genegeerd
+ * @returns {Team[]} de bijgewerkte teamlijst
+ */
 function hernoemTeam(id, naam) {
   var n = (naam || "").trim();
   if (!n) return _teams;
@@ -416,6 +545,10 @@ function hernoemTeam(id, naam) {
 /* Een team weggooien haalt ook zijn gegevens weg. Laat je die staan,
    dan blijft er een berg spelers en wedstrijden achter waar niemand
    meer bij kan, en loopt de opslag op een telefoon een keer vol. */
+/**
+ * @param {string} id  team-id om weg te gooien, met al zijn gegevens
+ * @returns {Team[]} de teamlijst zonder dit team
+ */
 function wisTeam(id) {
   noteerTeamWeg(id);
   try {
@@ -476,12 +609,15 @@ function wisTeam(id) {
    heeft gedaan. Per team zegt hij alleen wat hij werkelijk heeft
    afgehandeld. */
 const VERHUISD_VOOR = "tt_verhuisd_v1_";
+/** @param {string} id @returns {boolean} */
 function isVerhuisd(id) {
   try { return !!localStorage.getItem(VERHUISD_VOOR + id); } catch(e) { return false; }
 }
+/** @param {string} id @returns {void} */
 function zetVerhuisd(id) {
   try { localStorage.setItem(VERHUISD_VOOR + id, new Date().toISOString()); } catch(e) {}
 }
+/** @returns {number} het aantal sleutels dat naar een seizoenslaag is verhuisd */
 function seizoenVerhuizing() {
   var verhuisd = 0;
   _teams.forEach(function (team) {
@@ -515,9 +651,17 @@ function seizoenVerhuizing() {
 
        Pas als er in het hele team geen enkele datum te vinden is, komt
        het oude tekstveld alsnog aan bod. */
+    /** @type {Object<string,number>} stemmen per seizoen-id */
     var stemmen = {};
     oud.forEach(function (basis) {
       var lijst = null;
+      /* BEKEND, NIET OPGELOST — typenproef 18 september 2026 (P5):
+         localStorage.getItem() geeft string|null, en JSON.parse() wil
+         een string. tsc meldt dit dus als typefout. Onschadelijk in de
+         praktijk: JSON.parse(null) gooit geen uitzondering (null wordt
+         eerst naar de tekst "null" omgezet, en dat parseert weer terug
+         tot null), en de try/catch hierboven vangt eventuele andere
+         fouten alsnog op. Geen actie hier — al aan Evan gemeld. */
       try { lijst = JSON.parse(localStorage.getItem(voor + basis)); } catch(e) {}
       if (!Array.isArray(lijst)) return;
       lijst.forEach(function (item) {
@@ -543,6 +687,14 @@ function seizoenVerhuizing() {
         var waarde = localStorage.getItem(van);
         if (waarde === null) return;
 
+        /* tsc meldt hier "string | null" voor terugval, ook al is
+           terugval hierboven altijd op een niet-lege string gezet
+           vóór deze forEach begint: terugval wordt van búiten deze
+           geneste functie meegenomen (een closure), en tsc vertrouwt
+           een controle op zo'n meegenomen variabele niet — hij zou in
+           theorie tussen het zetten en dit gebruik kunnen veranderen.
+           Geen echt risico hier (terugval verandert daarna niet meer),
+           puur een grens van wat tsc kan navolgen. */
         var delen = verdeelOverSeizoenen(waarde, terugval);
         var lagen = Object.keys(delen);
 
@@ -600,6 +752,7 @@ function seizoenVerhuizing() {
    aaneenschakeling in tools/bouw.js werkt die aanroep gewoon, want
    teamsVerhuizing() staat dan al vóór hem in dezelfde scope. */
 
+/** @returns {string[]} localStorage-sleutels van vóór de teams die bij het eerste team horen */
 function teamEigenSleutels() {
   var uit = [];
   try {
@@ -614,8 +767,16 @@ function teamEigenSleutels() {
   } catch(e) {}
   return uit;
 }
+/**
+ * De eenmalige verhuizing van vóór-teams-sleutels naar het eerste team.
+ * Zie het typedef Team hierboven voor het bekende veldverschil met
+ * maakTeam(): dit is de route die seizoen/speelduur/locatie zet.
+ * @returns {Team|null} het nieuwe eerste team, of null als er al teams
+ *   zijn of de verhuizing halverwege mislukte
+ */
 function teamsVerhuizing() {
   if (_teams.length) return null;          /* al gebeurd */
+  /** @type {Object<string,any>} het oude, vrije instellingenblok van vóór teams */
   var oudeInst = {};
   try {
     var ri = localStorage.getItem("fch_instellingen_v1");
@@ -631,6 +792,8 @@ function teamsVerhuizing() {
     gemaakt: new Date().toISOString()
   };
   var voor = "tt_" + team.id + "__";
+  /** @type {string[]} sleutels die al gezet zijn — nodig om bij een
+   * mislukte verhuizing precies deze weer terug te draaien. */
   var gezet = [];
   try {
     teamEigenSleutels().forEach(function (k) {
@@ -645,6 +808,7 @@ function teamsVerhuizing() {
         throw new Error("niet aangekomen: " + k);
     });
     /* De vier velden die bij het team horen gaan naar het team zelf */
+    /** @type {Object<string,any>} */
     var teamDeel = {};
     ["teamNaam", "seizoen", "speelduur", "locatie"].forEach(function (v) {
       if (oudeInst[v] !== undefined) teamDeel[v] = oudeInst[v];
@@ -652,6 +816,7 @@ function teamsVerhuizing() {
     localStorage.setItem(voor + TEAMINST_KEY, JSON.stringify(teamDeel));
     /* En uit het gedeelde blok halen, zodat er niet twee versies van
        de teamnaam blijven rondslingeren die uit elkaar kunnen lopen. */
+    /** @type {Object<string,any>} */
     var restInst = {};
     Object.keys(oudeInst).forEach(function (v) {
       if (["teamNaam", "seizoen", "speelduur", "locatie"].indexOf(v) < 0)
