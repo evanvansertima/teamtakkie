@@ -1,3 +1,4 @@
+// @ts-check
 /* ══════════════════════════════════════════════════════════════
    DOMEIN: de boetepot
    ─────────────────────────────────────────────────────────────
@@ -39,6 +40,17 @@
 
 const BOETETARIEF_KEY = "fch_boetetarieven_v1";
 
+/** @typedef {Object} BoeteReden  één regel uit BOETE_REDENEN hieronder
+ * @property {string} id
+ * @property {string} label
+ * @property {"presentie"|"kaart"|"hand"} bron
+ * @property {string} [status]   alleen bij bron "presentie": welke AANWEZIG_KEUZES-status deze reden afvangt
+ * @property {string} [kaart]    alleen bij bron "kaart": "geel" of "rood"
+ * @property {number} standaard  standaardbedrag in centen
+ * @property {string} icoon      Font Awesome-klasse
+ * @property {string} kleur
+ */
+/** @type {BoeteReden[]} */
 const BOETE_REDENEN = [
   {id:"telaat",      label:"Te laat",        bron:"presentie", status:"telaat",
    standaard:250,  icoon:"fa-solid fa-clock",        kleur:"#84cc16"},
@@ -51,16 +63,36 @@ const BOETE_REDENEN = [
   {id:"overig",      label:"Handmatig",      bron:"hand",
    standaard:250,  icoon:"fa-solid fa-pen",          kleur:"#64748b"}
 ];
+/**
+ * @param {string} id
+ * @returns {BoeteReden} de bijbehorende reden, of "overig" (de laatste
+ *   in de lijst) als id onbekend is
+ */
 function boeteReden(id) {
   return BOETE_REDENEN.filter(function(r){ return r.id===id; })[0] || BOETE_REDENEN[BOETE_REDENEN.length-1];
 }
-/* Tarieven, eigen redenen, en per seizoen of de pot überhaupt
-   geldt. Een boetepot is een afspraak die je maakt, dus hij staat
-   standaard uit: pas als je hem voor dit seizoen aanvinkt gaat er
-   iets gerekend worden. */
+/** @typedef {Object} EigenBoeteReden  een zelfbedachte reden in tarieven.eigen
+ * @property {string} id
+ * @property {string} label
+ * @property {number} bedrag  in centen
+ * @property {boolean} aan
+ */
+/**
+ * De opgeslagen boete-instellingen. Dit object heeft geen vast aantal
+ * velden: naast de vaste sleutels "eigen" (EigenBoeteReden[]) en
+ * "seizoenen" (Object<string,boolean>) krijgt elke BOETE_REDENEN.id
+ * hier een eigen {bedrag, aan}-vakje — dat gebeurt dynamisch in de
+ * forEach hieronder, dus het object leent zich niet voor een vaste
+ * @typedef zonder een indexvorm die de twee vaste velden in de weg
+ * zou zitten (zelfde afweging als bij Team in sleutels.js: een eerlijke
+ * beschrijving in plaats van een vorm die niet klopt).
+ * @returns {Object<string,any>}
+ */
 function laadBoeteTarieven() {
+  /** @type {Object<string,any>} */
   var opgeslagen = {};
   try { var r = localStorage.getItem(sleutelVoor(BOETETARIEF_KEY)); if (r) opgeslagen = JSON.parse(r) || {}; } catch(e) {}
+  /** @type {Object<string,any>} */
   var uit = {};
   BOETE_REDENEN.forEach(function(reden){
     var eigen = opgeslagen[reden.id] || {};
@@ -81,35 +113,64 @@ function laadBoeteTarieven() {
     ? opgeslagen.seizoenen : {};
   return uit;
 }
-/* Geldt de pot dit seizoen? Zonder vinkje niet. */
+/**
+ * Geldt de pot dit seizoen? Zonder vinkje niet.
+ * @param {Object<string,any>} tarieven  zie laadBoeteTarieven()
+ * @param {string} [seizoen]  standaard: het huidige seizoen
+ * @returns {boolean}
+ */
 function boetepotActief(tarieven, seizoen) {
   if (!tarieven || !tarieven.seizoenen) return false;
   return tarieven.seizoenen[seizoen || huidigSeizoen()] === true;
 }
 
-/* Een eigen reden opzoeken; onbekende redenen vallen terug op
-   "handmatig", zodat een oude boete leesbaar blijft als je de
-   reden later weghaalt. */
+/**
+ * Een eigen reden opzoeken; onbekende redenen vallen terug op
+ * "handmatig", zodat een oude boete leesbaar blijft als je de
+ * reden later weghaalt.
+ * @param {Object<string,any>} tarieven  zie laadBoeteTarieven()
+ * @param {string} id
+ * @returns {EigenBoeteReden|null}
+ */
 function eigenReden(tarieven, id) {
-  return ((tarieven && tarieven.eigen) || []).filter(function(e){ return e.id===id; })[0] || null;
+  /** @type {EigenBoeteReden[]} */
+  var eigen = (tarieven && tarieven.eigen) || [];
+  return eigen.filter(function(e){ return e.id===id; })[0] || null;
 }
+/**
+ * @param {Object<string,any>} tarieven  zie laadBoeteTarieven()
+ * @param {Boete} regel
+ * @returns {string} het label zoals dat op het scherm moet staan
+ */
 function boeteRedenLabel(tarieven, regel) {
   var eig = eigenReden(tarieven, regel.reden);
   if (eig) return eig.label;
   return boeteReden(regel.reden).label;
 }
+/**
+ * @param {Object<string,any>} t  zie laadBoeteTarieven()
+ * @returns {void}
+ */
 function bewaarBoeteTarieven(t) {
   try { localStorage.setItem(sleutelVoor(BOETETARIEF_KEY), JSON.stringify(t)); } catch(e) {}
 }
 
 /* ── Geld ── */
+/**
+ * @param {number} c  bedrag in centen
+ * @returns {string} bedrag als "€ 12,50" (of "-€ 12,50" bij een negatief bedrag)
+ */
 function centenNaarTekst(c) {
   var n = Math.round(Number(c) || 0);
   var min = n < 0 ? "-" : "";
   n = Math.abs(n);
   return min + "€ " + Math.floor(n/100) + "," + String(n%100).padStart(2,"0");
 }
-/* "12,50" of "12.5" of "€ 12,50" wordt 1250 cent */
+/**
+ * "12,50" of "12.5" of "€ 12,50" wordt 1250 cent
+ * @param {string} s
+ * @returns {number} bedrag in centen (0 als s niets bruikbaars bevat)
+ */
 function tekstNaarCenten(s) {
   var schoon = String(s == null ? "" : s).replace(/[^0-9,.-]/g, "").replace(",", ".");
   var g = parseFloat(schoon);
@@ -120,13 +181,36 @@ function tekstNaarCenten(s) {
 /* ── Alle boetes bij elkaar: automatisch én handmatig ──
    Elke regel krijgt een eigen sleutel, zodat je hem kunt herkennen
    en er niet per ongeluk twee keer dezelfde in de lijst staat. */
+/** @typedef {Object} Boete  één regel in de boetelijst, automatisch of met de hand ingevoerd
+ * @property {string} id          uniek binnen de lijst (herkomst + wedstrijd/training-id + speler + reden, of "h"+boete-id)
+ * @property {any} spelerId
+ * @property {string} datum       ISO-datum, of "" als onbekend
+ * @property {string} reden       een BoeteReden.id, of een EigenBoeteReden.id
+ * @property {number} bedrag      in centen
+ * @property {string} [wat]       omschrijving (titel van training/wedstrijd, of de handmatige omschrijving)
+ * @property {boolean} automatisch
+ * @property {"training"|"activiteit"|"wedstrijd"|"hand"} herkomst
+ * @property {any} [bronId]       alleen bij handmatige regels: het id van de brontransactie
+ */
+/**
+ * @param {any[]} spelers      de selectie; wie er niet (meer) bij hoort krijgt geen boete
+ * @param {any[]} wedstrijden
+ * @param {any[]} trainingen
+ * @param {any[]} activiteiten
+ * @param {any[]} handmatig    de losse, met de hand ingevoerde boetes
+ * @param {Object<string,any>} [tarieven]  standaard: laadBoeteTarieven()
+ * @param {boolean} [actief]   staat de boetepot dit seizoen aan? bij false: lege lijst
+ * @returns {Boete[]}  nieuwste datum eerst
+ */
 function boeteRegels(spelers, wedstrijden, trainingen, activiteiten, handmatig, tarieven, actief) {
   var tar = tarieven || laadBoeteTarieven();
   /* Geldt de pot dit seizoen niet, dan wordt er niets berekend. De
      administratie blijft gewoon staan voor als je hem later aanzet. */
   if (actief === false) return [];
+  /** @type {Object<string,any>} */
   var bekend = {};
   (spelers||[]).forEach(function(s){ bekend[s.id] = s; });
+  /** @type {Boete[]} */
   var uit = [];
 
   /* `herkomst` zegt waar een regel vandaan komt: training, activiteit,
@@ -139,6 +223,16 @@ function boeteRegels(spelers, wedstrijden, trainingen, activiteiten, handmatig, 
      zou je dat uit de sleutel moeten raden ("begint met een t"), en
      dat is precies het soort afspraak dat een halfjaar later stilletjes
      breekt zodra iemand de sleutel anders opbouwt. */
+  /**
+   * @param {"training"|"activiteit"|"wedstrijd"} herkomst
+   * @param {string} sleutel
+   * @param {any} spelerId
+   * @param {string} datum
+   * @param {string} redenId
+   * @param {number} bedrag
+   * @param {string} wat
+   * @returns {void}
+   */
   function voegToe(herkomst, sleutel, spelerId, datum, redenId, bedrag, wat) {
     /* Een gastspeler staat niet in de selectie en krijgt dus ook
        geen boete: hij is hier te gast. */
@@ -149,6 +243,15 @@ function boeteRegels(spelers, wedstrijden, trainingen, activiteiten, handmatig, 
   }
 
   /* Uit de presentielijsten van trainingen en activiteiten */
+  /**
+   * @param {"training"|"activiteit"|"wedstrijd"} herkomst
+   * @param {string} soort   voorvoegsel voor de sleutel: "t", "a" of "w"
+   * @param {any} id         id van de training/activiteit/wedstrijd
+   * @param {string} datum
+   * @param {string} titel
+   * @param {any[]} lijst    de presentielijst van dat ene item
+   * @returns {void}
+   */
   function uitLijst(herkomst, soort, id, datum, titel, lijst) {
     (lijst||[]).forEach(function(a){
       BOETE_REDENEN.forEach(function(reden){
@@ -169,7 +272,9 @@ function boeteRegels(spelers, wedstrijden, trainingen, activiteiten, handmatig, 
     uitLijst("wedstrijd", "w", w.id, w.datum, "vs. "+(w.tegenstander||"tegenstander"), w.aanwezigheid);
     /* En de kaarten uit gespeelde wedstrijden */
     if (w.status !== "gespeeld") return;
-    (w.kaarten||[]).forEach(function(k, i){
+    /** @type {any[]} */
+    var kaarten = w.kaarten || [];
+    kaarten.forEach(function(k, i){
       BOETE_REDENEN.forEach(function(reden){
         if (reden.bron !== "kaart" || k.type !== reden.kaart) return;
         if (!tar[reden.id].aan) return;
@@ -212,10 +317,16 @@ function boeteRegels(spelers, wedstrijden, trainingen, activiteiten, handmatig, 
    bedrag. Met die twee getallen kan het scherm één vergrendelde
    regel tonen die het verschil tussen de lijst en het totaal
    uitlegt, zonder één datum of één trainingsnaam prijs te geven. */
+/**
+ * @param {Boete[]} regels
+ * @returns {{zichtbaar:Boete[], verborgen:number, verborgenBedrag:number}}
+ */
 function boeteRegelsGesplitst(regels) {
   var alle = regels || [];
   if (magModule("trainingen")) return {zichtbaar: alle, verborgen: 0, verborgenBedrag: 0};
-  var zichtbaar = [], verborgen = 0, bedrag = 0;
+  /** @type {Boete[]} */
+  var zichtbaar = [];
+  var verborgen = 0, bedrag = 0;
   alle.forEach(function (r) {
     if (r.herkomst === "training") { verborgen++; bedrag += r.bedrag || 0; return; }
     zichtbaar.push(r);
@@ -223,8 +334,28 @@ function boeteRegelsGesplitst(regels) {
   return {zichtbaar: zichtbaar, verborgen: verborgen, verborgenBedrag: bedrag};
 }
 
+/** @typedef {Object} BoeteStandRij
+ * @property {any} speler
+ * @property {number} verschuldigd  totaal in centen
+ * @property {number} betaald       totaal in centen
+ * @property {number} open          verschuldigd - betaald, in centen
+ * @property {number} aantal        aantal boeteregels
+ */
+/** @typedef {Object} BoeteStand
+ * @property {BoeteStandRij[]} rijen  alleen spelers met verschuldigd of betaald > 0, hoogst open eerst
+ * @property {number} totaal   in centen
+ * @property {number} betaald  in centen
+ * @property {number} open     in centen
+ */
 /* De stand per speler en van de pot als geheel */
+/**
+ * @param {any[]} spelers
+ * @param {Boete[]} regels
+ * @param {any[]} betalingen
+ * @returns {BoeteStand}
+ */
 function boeteStand(spelers, regels, betalingen) {
+  /** @type {Object<string,BoeteStandRij>} */
   var perSpeler = {};
   (spelers||[]).forEach(function(s){
     perSpeler[s.id] = {speler:s, verschuldigd:0, betaald:0, open:0, aantal:0};
@@ -256,7 +387,11 @@ function boeteStand(spelers, regels, betalingen) {
   return {rijen:rijen, totaal:totaal, betaald:betaald, open: totaal - betaald};
 }
 
-/* Een bericht met wie er nog openstaat */
+/**
+ * Een bericht met wie er nog openstaat
+ * @param {BoeteStand} stand
+ * @returns {string} kant-en-klare tekst voor WhatsApp
+ */
 function deelBoetepot(stand) {
   var open = stand.rijen.filter(function(p){ return p.open > 0; });
   var regels = [

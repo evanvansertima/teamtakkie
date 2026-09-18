@@ -4910,7 +4910,8 @@ function boetepotActief(tarieven, seizoen) {
   return tarieven.seizoenen[seizoen || huidigSeizoen()] === true;
 }
 function eigenReden(tarieven, id) {
-  return (tarieven && tarieven.eigen || []).filter(function(e) {
+  var eigen = tarieven && tarieven.eigen || [];
+  return eigen.filter(function(e) {
     return e.id === id;
   })[0] || null;
 }
@@ -4985,7 +4986,8 @@ function boeteRegels(spelers, wedstrijden, trainingen, activiteiten, handmatig, 
   (wedstrijden || []).forEach(function(w) {
     uitLijst("wedstrijd", "w", w.id, w.datum, "vs. " + (w.tegenstander || "tegenstander"), w.aanwezigheid);
     if (w.status !== "gespeeld") return;
-    (w.kaarten || []).forEach(function(k, i) {
+    var kaarten = w.kaarten || [];
+    kaarten.forEach(function(k, i) {
       BOETE_REDENEN.forEach(function(reden) {
         if (reden.bron !== "kaart" || k.type !== reden.kaart) return;
         if (!tar[reden.id].aan) return;
@@ -5022,7 +5024,8 @@ function boeteRegels(spelers, wedstrijden, trainingen, activiteiten, handmatig, 
 function boeteRegelsGesplitst(regels) {
   var alle = regels || [];
   if (magModule("trainingen")) return { zichtbaar: alle, verborgen: 0, verborgenBedrag: 0 };
-  var zichtbaar = [], verborgen = 0, bedrag = 0;
+  var zichtbaar = [];
+  var verborgen = 0, bedrag = 0;
   alle.forEach(function(r) {
     if (r.herkomst === "training") {
       verborgen++;
