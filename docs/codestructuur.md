@@ -1,4 +1,15 @@
-# TEAMTAKKIE — codestructuur
+# TEAMTAKKIE — codestructuur (historisch, 10 september 2026)
+
+> **Dit document is achterhaald.** Het beschrijft `online/index.html` van
+> vóór de bouwstap: één bestand, geen modules, geen tests. Sinds P1-P5
+> (16-18 september 2026) is de bron opgesplitst in `src/kern/`,
+> `src/domein/` en `src/schermen/`, gebouwd met `node tools/bouw.js`, en
+> voorzien van 298 tests plus een gouden origineel. **Lees
+> [`docs/architectuur.md`](architectuur.md) voor de actuele situatie.**
+> Dit bestand blijft staan als momentopname van de analyse die tot dat
+> hele traject heeft geleid — de redenering erin (waarom babel-standalone
+> traag is, waarom `magPagina()` een probleem was) is nog steeds juist,
+> alleen de regelnummers en de bestandsindeling niet meer.
 
 **Datum:** 10 september 2026 · versie V34
 **Afgeleid uit:** `online/index.html` (33.781 regels), de repo op commit `14c2538`
