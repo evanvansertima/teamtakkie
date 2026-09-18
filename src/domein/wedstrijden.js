@@ -1,3 +1,4 @@
+// @ts-check
 /* ══════════════════════════════════════════════════════════════
    DOMEIN: wedstrijden
    ─────────────────────────────────────────────────────────────
@@ -62,18 +63,95 @@
        — alleen de losse rekenfuncties errond stonden al hier.
    ══════════════════════════════════════════════════════════════ */
 
+/** @typedef {Object} Speler  losjes: een rij uit de selectie. Dit bestand
+ * gebruikt maar een klein deel van wat een speler in werkelijkheid heeft
+ * (skills, rapporten, doelen, enz. — zie src/domein/statistieken.js);
+ * hier staat alleen wat de wedstrijdlogica zelf nodig heeft.
+ * @property {any} id
+ * @property {string} [naam]
+ * @property {string} [rugnummer]
+ * @property {string} [positie]
+ * @property {boolean} [gast]      alleen gezet door maakGast()
+ * @property {string} [vanTeam]    alleen gezet door maakGast()
+ */
+/** @typedef {Object} TegenSpeler  één ingevulde tegenstander-speler in TegenAnalyse.spelers
+ * @property {string} [naam]
+ * @property {string} [nummer]
+ */
+/** @typedef {Object} TegenAnalyse
+ * @property {string} formatie
+ * @property {Object<string,TegenSpeler>} spelers  per plek-code de ingevulde tegenstander
+ * @property {string[]} uitgelicht
+ * @property {string} sterk
+ * @property {string} zwak
+ * @property {string} afspraken
+ */
+/** @typedef {Object} OpgaveRegel  wat een speler vóór de wedstrijd heeft opgegeven
+ * @property {any} spelerId
+ * @property {string} [naam]
+ * @property {string} status
+ */
+/** @typedef {Object} UitleenRegel
+ * @property {string} naar
+ * @property {string} [opmerking]
+ * @property {any} [bronTeamId]
+ * @property {any} [bronWedstrijdId]
+ */
+/**
+ * Eén wedstrijd. Dit is, net als Team in src/kern/sleutels.js, een
+ * eerlijke beschrijving van wat er in de praktijk in zit — niet elk veld
+ * is op elk moment gezet (een geplande wedstrijd heeft bijvoorbeeld nog
+ * geen scorers of kaarten), vandaar dat bijna alles hieronder optioneel
+ * is. Sub-objecten die dit bestand zelf niet inhoudelijk hoeft te
+ * ontleden (scorers, kaarten, opstelling, aanwezigheid) staan als any[]:
+ * hun vorm hoort bij src/domein/statistieken.js en de schermmodules.
+ * Velden hieronder zonder [ ] staan ook echt altijd in LEEG_WEDSTRIJD
+ * (src/schermen/wedstrijden.jsx); wat daar niet in staat (taken, uitleen,
+ * aanwezigheid) is genuine optioneel.
+ * @typedef {Object} Wedstrijd
+ * @property {any} id
+ * @property {"gepland"|"gespeeld"} status
+ * @property {string} datum        ISO-datum
+ * @property {string} tegenstander
+ * @property {boolean} thuis
+ * @property {string} soort        een WEDSTRIJD_SOORTEN.id
+ * @property {{fch:number, teg:number}} score
+ * @property {TegenAnalyse|null} [tegen]
+ * @property {Object<string,any>} [rollen]   per WEDSTRIJD_ROLLEN.id de toegewezen speler/naam
+ * @property {Object<string,any>} [taken]    per teamtaak-id de toegewezen speler
+ * @property {OpgaveRegel[]} [opgave]
+ * @property {Object<string,UitleenRegel>} [uitleen]  per spelerId
+ * @property {Speler[]} [gasten]
+ * @property {any[]} [opstelling]
+ * @property {any[]} [scorers]
+ * @property {any[]} [kaarten]
+ * @property {any} [motm]             spelerId van de man of the match
+ * @property {Object<string,number>} [beoordelingen]  per spelerId een cijfer
+ * @property {any[]} [aanwezigheid]   handmatige presentielijst (anders afgeleid uit opstelling)
+ */
+
 /* ── SCORE & UITSLAG ── */
-/* Op een scorebord staat de thuisploeg links. Bij een uitwedstrijd is
+/**
+ * Op een scorebord staat de thuisploeg links. Bij een uitwedstrijd is
    dat dus de tegenstander. De cijfers zelf blijven "wij" en "zij" —
    alleen de volgorde op het scherm draait om, zodat een ingevulde
    uitslag nooit van betekenis verandert.
-   Geeft twee vakken terug, van links naar rechts. */
+   Geeft twee vakken terug, van links naar rechts.
+ * @param {boolean} [thuis]
+ * @param {string} [eigenNaam]
+ * @param {string} [tegenNaam]
+ * @returns {{kant:string, naam:string, eigenTeam:boolean}[]}
+ */
 function scoreVolgorde(thuis, eigenNaam, tegenNaam) {
   var eigen = {kant:"fch",  naam: eigenNaam  || "Wij",           eigenTeam:true};
   var tegen = {kant:"teg",  naam: tegenNaam  || "Tegenstander",  eigenTeam:false};
   return (thuis === false) ? [tegen, eigen] : [eigen, tegen];
 }
 
+/**
+ * @param {Wedstrijd} w
+ * @returns {"gepland"|"winst"|"verlies"|"gelijk"}
+ */
 function resultaat(w) {
   if(w.status!=="gespeeld") return "gepland";
   if(w.score.fch>w.score.teg) return "winst";
@@ -81,7 +159,11 @@ function resultaat(w) {
   return "gelijk";
 }
 
-/* De uitslag zoals je hem opschrijft: altijd wij eerst */
+/**
+ * De uitslag zoals je hem opschrijft: altijd wij eerst
+ * @param {Wedstrijd} w
+ * @returns {string} bijv. "3 – 1"
+ */
 function uitslagTekst(w) {
   return (Number(w.score && w.score.fch)||0) + " – " + (Number(w.score && w.score.teg)||0);
 }
@@ -102,13 +184,25 @@ const WEDSTRIJD_SOORTEN = [
   {id:"toernooi",   label:"Toernooi",       kort:"Toern.", kleur:"#b45309", telt:false,
    uitleg:"Telt niet mee, ook niet voor de spelers"}
 ];
+/**
+ * @param {Wedstrijd|string} w  een wedstrijd, of rechtstreeks een WEDSTRIJD_SOORTEN.id
+ * @returns {{id:string,label:string,kort:string,kleur:string,telt:boolean,uitleg:string}}
+ */
 function wedstrijdSoort(w) {
   var id = (w && typeof w === "object") ? w.soort : w;
   return WEDSTRIJD_SOORTEN.filter(function(s){ return s.id===id; })[0] || WEDSTRIJD_SOORTEN[0];
 }
-/* Telt deze wedstrijd mee in de cijfers? */
+/**
+ * Telt deze wedstrijd mee in de cijfers?
+ * @param {Wedstrijd|string} w
+ * @returns {boolean}
+ */
 function wedstrijdTelt(w) { return wedstrijdSoort(w).telt; }
-/* Alleen de wedstrijden die meetellen, gespeeld en wel */
+/**
+ * Alleen de wedstrijden die meetellen, gespeeld en wel
+ * @param {Wedstrijd[]} lijst
+ * @returns {Wedstrijd[]}
+ */
 function tellendeWedstrijden(lijst) {
   return (lijst||[]).filter(function(w){ return w.status==="gespeeld" && wedstrijdTelt(w); });
 }
@@ -119,12 +213,21 @@ function tellendeWedstrijden(lijst) {
    hoe ze spelen, op wie je moet letten, en wat er de vorige keer
    gebeurde — dat laatste haalt de app zelf op.
 ═══════════════════════════════════════════════════════════ */
+/** @type {TegenAnalyse} */
 const LEEG_TEGEN = { formatie:"4-3-3A", spelers:{}, uitgelicht:[], sterk:"", zwak:"", afspraken:"" };
 
+/**
+ * @param {Wedstrijd} [wedstrijd]
+ * @returns {TegenAnalyse}
+ */
 function tegenAnalyse(wedstrijd) {
   return Object.assign({}, LEEG_TEGEN, (wedstrijd && wedstrijd.tegen) || {});
 }
-/* Hoeveel is er ingevuld? Voor het tellertje op de knop. */
+/**
+ * Hoeveel is er ingevuld? Voor het tellertje op de knop.
+ * @param {Wedstrijd} [wedstrijd]
+ * @returns {number}
+ */
 function tegenIngevuld(wedstrijd) {
   var t = tegenAnalyse(wedstrijd);
   var n = 0;
@@ -132,11 +235,16 @@ function tegenIngevuld(wedstrijd) {
     var s = t.spelers[k]; return s && ((s.naam||"").trim() || (s.nummer||"").trim());
   }).length ? 1 : 0;
   n += (t.uitgelicht||[]).length ? 1 : 0;
-  ["sterk","zwak","afspraken"].forEach(function(v){ if ((t[v]||"").trim()) n++; });
+  ["sterk","zwak","afspraken"].forEach(function(v){ if ((t[/** @type {"sterk"|"zwak"|"afspraken"} */(v)]||"").trim()) n++; });
   return n;
 }
-/* De opstelling omzetten naar de vorm die het veld verwacht */
+/**
+ * De opstelling omzetten naar de vorm die het veld verwacht
+ * @param {TegenAnalyse} analyse
+ * @returns {Object<string,{id:string,naam:string,rugnummer:string}>}
+ */
 function tegenToewijzing(analyse) {
+  /** @type {Object<string,{id:string,naam:string,rugnummer:string}>} */
   var uit = {};
   Object.keys(analyse.spelers||{}).forEach(function(k){
     var s = analyse.spelers[k];
@@ -147,8 +255,14 @@ function tegenToewijzing(analyse) {
   });
   return uit;
 }
-/* Eerder tegen deze club gespeeld? Op naam vergelijken, want een
-   tegenstander is bij ons geen apart record. */
+/**
+ * Eerder tegen deze club gespeeld? Op naam vergelijken, want een
+ * tegenstander is bij ons geen apart record.
+ * @param {Wedstrijd[]} wedstrijden
+ * @param {string} tegenstander
+ * @param {any} [negeerId]
+ * @returns {Wedstrijd[]}  nieuwste eerst
+ */
 function eerdereOntmoetingen(wedstrijden, tegenstander, negeerId) {
   var naam = String(tegenstander||"").toLowerCase().trim();
   if (!naam) return [];
@@ -163,26 +277,48 @@ function eerdereOntmoetingen(wedstrijden, tegenstander, negeerId) {
    Rollen die niet meer bestaan maar wel in oude wedstrijden staan. Wie
    in september "vt-16" invulde, hoort in mei niet naar een leeg vakje te
    kijken: die keuze verhuist naar de rol die ervoor in de plaats kwam. */
+/** @type {Object<string,string>} */
 const ROL_OPGEVOLGD = {"vt-16":"vrije-trap", "vt-lang":"vrije-trap", "vt-kort":"vrije-trap"};
+/**
+ * @param {Object<string,any>} [rollen]
+ * @returns {Object<string,any>}
+ */
 function rollenNu(rollen) {
+  var ingevuld = rollen || {};
+  /** @type {Object<string,any>} */
   var uit = {};
-  Object.keys(rollen || {}).forEach(function (r) {
+  Object.keys(ingevuld).forEach(function (r) {
     var naar = ROL_OPGEVOLGD[r] || r;
     /* Stond er meer dan één oude vrije trap, dan wint de eerste. Twee
        namen in één vakje kan niet, en gokken is erger dan kiezen. */
-    if (uit[naar] === undefined) uit[naar] = rollen[r];
+    if (uit[naar] === undefined) uit[naar] = ingevuld[r];
   });
   return uit;
 }
 
-/* De twee vlaghelften tellen samen, zodat het eerlijk rouleert */
+/**
+ * De twee vlaghelften tellen samen, zodat het eerlijk rouleert
+ * @param {any} spelerId
+ * @param {Wedstrijd[]} wedstrijden
+ * @returns {number}
+ */
 function vlagTelling(spelerId, wedstrijden) {
   return (wedstrijden||[]).reduce(function(t,w){
     if (!w.rollen) return t;
-    return t + VLAG_ROLLEN.filter(function(r){ return w.rollen[r]===spelerId; }).length;
+    /* Een eigen, nooit-herschreven naam: tsc volgt de "w.rollen bestaat"-
+       controle hierboven niet door tot in de geneste .filter (zelfde
+       truc als "sessie" in src/kern/server.js). */
+    var rollen = w.rollen;
+    return t + VLAG_ROLLEN.filter(function(r){ return rollen[r]===spelerId; }).length;
   }, 0);
 }
-/* Wie is het minst vaak aan de beurt geweest? */
+/**
+ * Wie is het minst vaak aan de beurt geweest?
+ * @param {Speler[]} spelers
+ * @param {Wedstrijd[]} wedstrijden
+ * @param {any[]} [alBezet]
+ * @returns {Speler|null}
+ */
 function volgendeVlagger(spelers, wedstrijden, alBezet) {
   var bezet = alBezet || [];
   var vrij = (spelers||[]).filter(function(s){ return bezet.indexOf(s.id)<0; });
@@ -195,6 +331,10 @@ function volgendeVlagger(spelers, wedstrijden, alBezet) {
   });
   return beste;
 }
+/**
+ * @param {string} id
+ * @returns {{id:string,label:string,icoon?:string}}  zie WEDSTRIJD_ROLLEN in src/schermen/wedstrijden.jsx
+ */
 function rolInfo(id) {
   return WEDSTRIJD_ROLLEN.filter(function(r){ return r.id===id; })[0] || WEDSTRIJD_ROLLEN[0];
 }
@@ -210,46 +350,94 @@ function rolInfo(id) {
    het vakje staan. Staat er een spelersnummer, dan is het een speler;
    staat er iets anders, dan is het een naam. Eén vakje, één waarheid, en
    alles wat er al in stond blijft werken. */
+/** @typedef {Object} RolPersoon
+ * @property {any} id           null als het een vrij ingetypte naam is
+ * @property {string} naam
+ * @property {string} rugnummer
+ * @property {Speler|null} speler
+ */
+/**
+ * @param {any} waarde   de ruwe inhoud van het rolvakje: een spelerId, een
+ *   vrij ingetypte naam, of leeg
+ * @param {Speler[]} spelers
+ * @returns {RolPersoon|null}
+ */
 function rolPersoon(waarde, spelers) {
   if (waarde === null || waarde === undefined || waarde === "") return null;
   var s = (spelers || []).filter(function (p) { return String(p.id) === String(waarde); })[0];
-  if (s) return {id: s.id, naam: s.naam, rugnummer: s.rugnummer, speler: s};
+  if (s) return {id: s.id, naam: s.naam || "", rugnummer: s.rugnummer || "", speler: s};
   var naam = String(waarde).trim();
   return naam ? {id: null, naam: naam, rugnummer: "", speler: null} : null;
 }
-/* Alle rollen van één speler in deze wedstrijd */
+/**
+ * Alle rollen van één speler in deze wedstrijd
+ * @param {Wedstrijd} wedstrijd
+ * @param {any} spelerId
+ * @returns {{id:string,label:string,icoon?:string}[]}
+ */
 function rollenVanSpeler(wedstrijd, spelerId) {
   var r = rollenNu((wedstrijd && wedstrijd.rollen) || {});
   return WEDSTRIJD_ROLLEN.filter(function(rol){ return r[rol.id]===spelerId; });
 }
-/* Hoe vaak had deze speler deze rol al, zodat je kunt afwisselen */
+/**
+ * Hoe vaak had deze speler deze rol al, zodat je kunt afwisselen
+ * @param {string} rolId
+ * @param {any} spelerId
+ * @param {Wedstrijd[]} wedstrijden
+ * @returns {number}
+ */
 function rolTelling(rolId, spelerId, wedstrijden) {
   return (wedstrijden||[]).filter(function(w){
     return w.rollen && w.rollen[rolId]===spelerId;
   }).length;
 }
-/* De laatst gespeelde wedstrijd waarin rollen zijn ingevuld */
+/**
+ * De laatst gespeelde wedstrijd waarin rollen zijn ingevuld
+ * @param {Wedstrijd[]} wedstrijden
+ * @param {any} [behalveId]
+ * @returns {Wedstrijd|null}
+ */
 function laatsteRollen(wedstrijden, behalveId) {
   var kandidaten = (wedstrijden||[])
-    .filter(function(w){ return w.id!==behalveId && w.rollen && Object.keys(w.rollen).some(function(k){ return w.rollen[k]; }); })
-    .sort(function(a,b){ return new Date(b.datum) - new Date(a.datum); });
+    .filter(function(w){
+      if (w.id===behalveId || !w.rollen) return false;
+      /* Zelfde truc als in vlagTelling hierboven: een eigen naam zodat
+         tsc de "w.rollen bestaat"-controle ook in de geneste .some ziet. */
+      var rollen = w.rollen;
+      return Object.keys(rollen).some(function(k){ return rollen[k]; });
+    })
+    .sort(function(a,b){ return new Date(b.datum).getTime() - new Date(a.datum).getTime(); });
   return kandidaten.length ? kandidaten[0] : null;
 }
 
-/* ── TEAMTAKEN ──
-   Hoe vaak deed deze speler deze taak al? */
+/* ── TEAMTAKEN ── */
+/**
+ * Hoe vaak deed deze speler deze taak al?
+ * @param {string} taakId
+ * @param {any} spelerId
+ * @param {Wedstrijd[]} wedstrijden
+ * @returns {number}
+ */
 function taakTelling(taakId, spelerId, wedstrijden) {
   return (wedstrijden||[]).filter(function(w){
     return w.taken && w.taken[taakId]===spelerId;
   }).length;
 }
-/* Eerlijk verdelen: wie het minst vaak aan de beurt was, en het langst geleden */
+/**
+ * Eerlijk verdelen: wie het minst vaak aan de beurt was, en het langst geleden
+ * @param {string} taakId
+ * @param {Speler[]} spelers
+ * @param {Wedstrijd[]} wedstrijden
+ * @param {any[]} [alToegewezen]
+ * @returns {any} het id van de gekozen speler, of null als er geen kandidaat is
+ */
 function volgendeVoorTaak(taakId, spelers, wedstrijden, alToegewezen) {
   var bezet = alToegewezen || [];
   var kandidaten = (spelers||[]).filter(function(s){ return bezet.indexOf(s.id)<0; });
   if (kandidaten.length===0) kandidaten = (spelers||[]).slice();
   if (kandidaten.length===0) return null;
-  var gesorteerd = (wedstrijden||[]).slice().sort(function(a,b){ return new Date(b.datum)-new Date(a.datum); });
+  var gesorteerd = (wedstrijden||[]).slice().sort(function(a,b){ return new Date(b.datum).getTime()-new Date(a.datum).getTime(); });
+  /** @param {any} spelerId @returns {number} */
   function laatstGeleden(spelerId) {
     for (var i=0;i<gesorteerd.length;i++) {
       var w = gesorteerd[i];
@@ -257,8 +445,16 @@ function volgendeVoorTaak(taakId, spelers, wedstrijden, alToegewezen) {
     }
     return 9999;
   }
-  var beste = null, besteScore = null;
+  /* De inline cast (in plaats van een @type-regel boven de declaratie) is
+     hier geen stijlkeuze: tsc narrowt "var beste = null" anders tot de
+     letterlijke waarde null, en zou "beste.id" hieronder dan altijd als
+     onbereikbaar (never) aanmerken — ook al wijst de .forEach hierboven
+     hem wel degelijk een speler toe. Puur voor de typecontrole, geen
+     gedragswijziging. */
+  var beste = /** @type {Speler|null} */ (null);
+  var besteScore = /** @type {[number,number]|null} */ (null);
   kandidaten.forEach(function(s){
+    /** @type {[number,number]} */
     var score = [taakTelling(taakId, s.id, wedstrijden), -laatstGeleden(s.id)];
     if (besteScore===null || score[0]<besteScore[0] || (score[0]===besteScore[0] && score[1]<besteScore[1])) {
       beste = s; besteScore = score;
@@ -268,15 +464,30 @@ function volgendeVoorTaak(taakId, spelers, wedstrijden, alToegewezen) {
 }
 
 /* ── BESCHIKBAARHEID ── */
+/**
+ * @param {string} id
+ * @returns {{id:string,label:string}}  zie BESCHIKBAARHEID in src/app.jsx
+ */
 function beschikbaarheidInfo(id) {
   return BESCHIKBAARHEID.find(function(b){return b.id===id;}) || BESCHIKBAARHEID[0];
 }
 
 /* ── OPGAVE: aanwezigheid vooraf ── */
+/**
+ * @param {OpgaveRegel[]} lijst
+ * @param {any} spelerId
+ * @returns {string} de opgegeven status, of "onbekend" als er niets is opgegeven
+ */
 function opgaveVanSpeler(lijst, spelerId) {
   var r = (lijst||[]).find(function(o){return o.spelerId===spelerId;});
   return r ? r.status : "onbekend";
 }
+/**
+ * @param {OpgaveRegel[]} lijst
+ * @param {Speler} speler
+ * @param {string} status
+ * @returns {OpgaveRegel[]}
+ */
 function zetOpgave(lijst, speler, status) {
   var bestaat = (lijst||[]).some(function(o){return o.spelerId===speler.id;});
   if (bestaat) {
@@ -301,6 +512,11 @@ function zetOpgave(lijst, speler, status) {
    — hij heeft gespeeld, alleen niet hier. Daarom is het antwoord op
    "hoeveel minuten?" een streepje en geen getal.
    ══════════════════════════════════════════════════════════ */
+/**
+ * @param {Wedstrijd} bron
+ * @param {any} spelerId
+ * @returns {UitleenRegel|null}
+ */
 function uitleenVan(bron, spelerId) {
   /* Eén opzoeking, geen twee. Na een reis over de server zijn de sleutels
      tekst geworden en de spelersnummers nog getallen — maar JavaScript
@@ -310,6 +526,12 @@ function uitleenVan(bron, spelerId) {
      er wel: bij het vergelijken van twee waarden, verderop. */
   return ((bron && bron.uitleen) || {})[spelerId] || null;
 }
+/**
+ * @param {Wedstrijd} bron
+ * @param {any} spelerId
+ * @param {Partial<UitleenRegel>|null} gegevens  null om de uitleen weer op te heffen
+ * @returns {Object<string,UitleenRegel>}
+ */
 function zetUitleen(bron, spelerId, gegevens) {
   var alle = Object.assign({}, (bron && bron.uitleen) || {});
   if (!gegevens) delete alle[spelerId];
@@ -317,16 +539,26 @@ function zetUitleen(bron, spelerId, gegevens) {
     {naar: "", opmerking: "", bronTeamId: null, bronWedstrijdId: null}, gegevens);
   return alle;
 }
-/* Was deze speler bij deze wedstrijd uitgeleend? Dat is de vraag die
-   elke telling moet stellen voordat hij een nul opschrijft. */
+/**
+ * Was deze speler bij deze wedstrijd uitgeleend? Dat is de vraag die
+ * elke telling moet stellen voordat hij een nul opschrijft.
+ * @param {Wedstrijd} wedstrijd
+ * @param {any} spelerId
+ * @returns {boolean}
+ */
 function isUitgeleend(wedstrijd, spelerId) {
   if (!wedstrijd) return false;
-  if (opgaveVanSpeler(wedstrijd.opgave, spelerId) === "uitgeleend") return true;
+  if (opgaveVanSpeler(wedstrijd.opgave || [], spelerId) === "uitgeleend") return true;
   return !!uitleenVan(wedstrijd, spelerId);
 }
-/* Iedereen die bij deze wedstrijd is uitgeleend, als lijst nummers. */
+/**
+ * Iedereen die bij deze wedstrijd is uitgeleend, als lijst nummers.
+ * @param {Wedstrijd} wedstrijd
+ * @returns {any[]}
+ */
 function uitgeleendIn(wedstrijd) {
   if (!wedstrijd) return [];
+  /** @type {any[]} */
   var uit = [];
   ((wedstrijd.opgave) || []).forEach(function (o) {
     if (o && o.status === "uitgeleend") uit.push(o.spelerId);
@@ -336,12 +568,23 @@ function uitgeleendIn(wedstrijd) {
   });
   return uit;
 }
-/* Waar speelde hij dan? Voor op het scherm, en later voor de koppeling. */
+/**
+ * Waar speelde hij dan? Voor op het scherm, en later voor de koppeling.
+ * @param {Wedstrijd} wedstrijd
+ * @param {any} spelerId
+ * @returns {string}
+ */
 function uitleenNaar(wedstrijd, spelerId) {
   var r = uitleenVan(wedstrijd, spelerId);
   return (r && String(r.naar || "").trim()) || "";
 }
 
+/**
+ * @param {OpgaveRegel[]} lijst
+ * @param {Speler[]} spelers
+ * @param {string} status
+ * @returns {number}
+ */
 function telOpgave(lijst, spelers, status) {
   return (spelers||[]).filter(function(s){ return opgaveVanSpeler(lijst, s.id)===status; }).length;
 }
@@ -355,8 +598,12 @@ function telOpgave(lijst, spelers, status) {
    laadSpelers(), dus hij valt er vanzelf buiten.
 ═══════════════════════════════════════════════════════════ */
 var _gastTeller = 0;
-/* Negatief nummer, zodat het nooit botst met een echte speler —
-   die krijgt Date.now(), en dat is altijd positief. */
+/**
+ * Negatief nummer, zodat het nooit botst met een echte speler —
+ * die krijgt Date.now(), en dat is altijd positief.
+ * @param {{naam?:string, rugnummer?:string, positie?:string, vanTeam?:string}} velden
+ * @returns {Speler}
+ */
 function maakGast(velden) {
   _gastTeller++;
   return Object.assign({}, LEEG_SPELER, {
@@ -368,31 +615,49 @@ function maakGast(velden) {
     vanTeam: (velden.vanTeam||"").trim()
   });
 }
+/** @param {Wedstrijd} [wedstrijd] @returns {Speler[]} */
 function gastenVan(wedstrijd) { return (wedstrijd && wedstrijd.gasten) || []; }
-/* De selectie plus de gasten van déze wedstrijd */
+/**
+ * De selectie plus de gasten van déze wedstrijd
+ * @param {Speler[]} spelers
+ * @param {Wedstrijd} [wedstrijd]
+ * @returns {Speler[]}
+ */
 function spelersMetGasten(spelers, wedstrijd) {
   return (spelers||[]).concat(gastenVan(wedstrijd));
 }
-/* Deed de gast echt mee? Anders kun je hem zonder gedoe weghalen. */
+/**
+ * Deed de gast echt mee? Anders kun je hem zonder gedoe weghalen.
+ * @param {Wedstrijd} wedstrijd
+ * @param {any} id
+ * @returns {boolean}
+ */
 function gastInGebruik(wedstrijd, id) {
   if ((wedstrijd.opstelling||[]).some(function(r){ return r.spelerId===id; })) return true;
   if ((wedstrijd.scorers||[]).some(function(s){ return s.spelerId===id || s.assist===id; })) return true;
   if ((wedstrijd.kaarten||[]).some(function(k){ return k.spelerId===id; })) return true;
   if (wedstrijd.motm === id) return true;
-  if (Object.keys(wedstrijd.rollen||{}).some(function(k){ return wedstrijd.rollen[k]===id; })) return true;
+  var rollen = wedstrijd.rollen || {};
+  if (Object.keys(rollen).some(function(k){ return rollen[k]===id; })) return true;
   return false;
 }
 
-/* ── TOERNOOIEN ──
-   Halve competitie volgens de cirkelmethode: iedereen één keer tegen elkaar */
+/* ── TOERNOOIEN ── */
+/**
+ * Halve competitie volgens de cirkelmethode: iedereen één keer tegen elkaar
+ * @param {any[]} teamIds
+ * @returns {Array<Array<[any,any]>>}  per ronde de paren [thuis,uit]
+ */
 function maakPouleSchema(teamIds) {
   var ids = teamIds.slice();
   if (ids.length < 2) return [];
   if (ids.length % 2 === 1) ids.push(null); // vrijloter
   var n = ids.length;
   var lijst = ids.slice();
+  /** @type {Array<Array<[any,any]>>} */
   var rondes = [];
   for (var r = 0; r < n-1; r++) {
+    /** @type {Array<[any,any]>} */
     var paren = [];
     for (var i = 0; i < n/2; i++) {
       var a = lijst[i], b = lijst[n-1-i];
@@ -407,6 +672,11 @@ function maakPouleSchema(teamIds) {
   return rondes;
 }
 
+/**
+ * @param {string} tijd  "UU:MM" (bij een lege of onherkenbare waarde: "09:00")
+ * @param {number} minuten  mag ook negatief zijn
+ * @returns {string} "UU:MM", rondgerekend binnen een etmaal
+ */
 function tijdPlusMinuten(tijd, minuten) {
   var d = String(tijd||"09:00").split(":");
   var totaal = (Number(d[0])||0)*60 + (Number(d[1])||0) + minuten;
@@ -415,9 +685,29 @@ function tijdPlusMinuten(tijd, minuten) {
   return (u<10?"0":"")+u+":"+(m<10?"0":"")+m;
 }
 
-/* Rondes over velden en tijdsloten verdelen */
+/** @typedef {Object} ToernooiWedstrijd  één duel binnen een zelfgepland toernooi —
+ * een ander, veel kaler object dan Wedstrijd hierboven: geen eigen club-
+ * wedstrijd, maar een regel in het toernooischema.
+ * @property {string} id
+ * @property {any} thuisId  een teamId uit teamIds/toernooiStand
+ * @property {any} uitId
+ * @property {number} veld
+ * @property {string} tijd
+ * @property {{thuis:number, uit:number}} score
+ * @property {boolean} gespeeld
+ */
+/**
+ * Rondes over velden en tijdsloten verdelen
+ * @param {Array<Array<[any,any]>>} rondes
+ * @param {number} aantalVelden
+ * @param {string} starttijd
+ * @param {number} speelduur
+ * @param {number} pauze
+ * @returns {ToernooiWedstrijd[]}
+ */
 function planToernooi(rondes, aantalVelden, starttijd, speelduur, pauze) {
   var velden = Math.max(1, Number(aantalVelden)||1);
+  /** @type {ToernooiWedstrijd[]} */
   var wedstrijden = [];
   var slot = 0;
   rondes.forEach(function(ronde){
@@ -438,11 +728,23 @@ function planToernooi(rondes, aantalVelden, starttijd, speelduur, pauze) {
   return wedstrijden;
 }
 
-/* Stand binnen een toernooi, uit de gespeelde wedstrijden */
+/** @typedef {Object} ToernooiTeam  een team zoals dat in een zelfgepland toernooi meedoet
+ * @property {any} id
+ * @property {string} naam
+ * @property {boolean} [eigen]  is dit het eigen team?
+ */
+/**
+ * Stand binnen een toernooi, uit de gespeelde wedstrijden.
+ * @param {ToernooiTeam[]} teams
+ * @param {ToernooiWedstrijd[]} wedstrijden
+ * @returns {any[]}  de rijen van teams, met punten/saldo toegevoegd door
+ *   standMetPunten() (src/domein/statistieken.js)
+ */
 function toernooiStand(teams, wedstrijden) {
   var rijen = (teams||[]).map(function(t){
     return {id:t.id, naam:t.naam, eigen:t.eigen, gespeeld:0, winst:0, gelijk:0, verlies:0, doelVoor:0, doelTegen:0};
   });
+  /** @param {any} id */
   function zoek(id){ return rijen.find(function(r){return r.id===id;}); }
   (wedstrijden||[]).filter(function(w){return w.gespeeld;}).forEach(function(w){
     var t = zoek(w.thuisId), u = zoek(w.uitId);

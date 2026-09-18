@@ -5169,7 +5169,10 @@ function tegenIngevuld(wedstrijd) {
   }).length ? 1 : 0;
   n += (t2.uitgelicht || []).length ? 1 : 0;
   ["sterk", "zwak", "afspraken"].forEach(function(v) {
-    if ((t2[v] || "").trim()) n++;
+    if ((t2[
+      /** @type {"sterk"|"zwak"|"afspraken"} */
+      v
+    ] || "").trim()) n++;
   });
   return n;
 }
@@ -5195,18 +5198,20 @@ function eerdereOntmoetingen(wedstrijden, tegenstander, negeerId) {
 }
 const ROL_OPGEVOLGD = { "vt-16": "vrije-trap", "vt-lang": "vrije-trap", "vt-kort": "vrije-trap" };
 function rollenNu(rollen) {
+  var ingevuld = rollen || {};
   var uit = {};
-  Object.keys(rollen || {}).forEach(function(r) {
+  Object.keys(ingevuld).forEach(function(r) {
     var naar = ROL_OPGEVOLGD[r] || r;
-    if (uit[naar] === void 0) uit[naar] = rollen[r];
+    if (uit[naar] === void 0) uit[naar] = ingevuld[r];
   });
   return uit;
 }
 function vlagTelling(spelerId, wedstrijden) {
   return (wedstrijden || []).reduce(function(t2, w) {
     if (!w.rollen) return t2;
+    var rollen = w.rollen;
     return t2 + VLAG_ROLLEN.filter(function(r) {
-      return w.rollen[r] === spelerId;
+      return rollen[r] === spelerId;
     }).length;
   }, 0);
 }
@@ -5237,7 +5242,7 @@ function rolPersoon(waarde, spelers) {
   var s = (spelers || []).filter(function(p) {
     return String(p.id) === String(waarde);
   })[0];
-  if (s) return { id: s.id, naam: s.naam, rugnummer: s.rugnummer, speler: s };
+  if (s) return { id: s.id, naam: s.naam || "", rugnummer: s.rugnummer || "", speler: s };
   var naam = String(waarde).trim();
   return naam ? { id: null, naam, rugnummer: "", speler: null } : null;
 }
@@ -5254,11 +5259,13 @@ function rolTelling(rolId, spelerId, wedstrijden) {
 }
 function laatsteRollen(wedstrijden, behalveId) {
   var kandidaten = (wedstrijden || []).filter(function(w) {
-    return w.id !== behalveId && w.rollen && Object.keys(w.rollen).some(function(k) {
-      return w.rollen[k];
+    if (w.id === behalveId || !w.rollen) return false;
+    var rollen = w.rollen;
+    return Object.keys(rollen).some(function(k) {
+      return rollen[k];
     });
   }).sort(function(a, b) {
-    return new Date(b.datum) - new Date(a.datum);
+    return new Date(b.datum).getTime() - new Date(a.datum).getTime();
   });
   return kandidaten.length ? kandidaten[0] : null;
 }
@@ -5275,7 +5282,7 @@ function volgendeVoorTaak(taakId, spelers, wedstrijden, alToegewezen) {
   if (kandidaten.length === 0) kandidaten = (spelers || []).slice();
   if (kandidaten.length === 0) return null;
   var gesorteerd = (wedstrijden || []).slice().sort(function(a, b) {
-    return new Date(b.datum) - new Date(a.datum);
+    return new Date(b.datum).getTime() - new Date(a.datum).getTime();
   });
   function laatstGeleden(spelerId) {
     for (var i = 0; i < gesorteerd.length; i++) {
@@ -5284,7 +5291,14 @@ function volgendeVoorTaak(taakId, spelers, wedstrijden, alToegewezen) {
     }
     return 9999;
   }
-  var beste = null, besteScore = null;
+  var beste = (
+    /** @type {Speler|null} */
+    null
+  );
+  var besteScore = (
+    /** @type {[number,number]|null} */
+    null
+  );
   kandidaten.forEach(function(s) {
     var score = [taakTelling(taakId, s.id, wedstrijden), -laatstGeleden(s.id)];
     if (besteScore === null || score[0] < besteScore[0] || score[0] === besteScore[0] && score[1] < besteScore[1]) {
@@ -5330,7 +5344,7 @@ function zetUitleen(bron, spelerId, gegevens) {
 }
 function isUitgeleend(wedstrijd, spelerId) {
   if (!wedstrijd) return false;
-  if (opgaveVanSpeler(wedstrijd.opgave, spelerId) === "uitgeleend") return true;
+  if (opgaveVanSpeler(wedstrijd.opgave || [], spelerId) === "uitgeleend") return true;
   return !!uitleenVan(wedstrijd, spelerId);
 }
 function uitgeleendIn(wedstrijd) {
@@ -5382,8 +5396,9 @@ function gastInGebruik(wedstrijd, id) {
     return k.spelerId === id;
   })) return true;
   if (wedstrijd.motm === id) return true;
-  if (Object.keys(wedstrijd.rollen || {}).some(function(k) {
-    return wedstrijd.rollen[k] === id;
+  var rollen = wedstrijd.rollen || {};
+  if (Object.keys(rollen).some(function(k) {
+    return rollen[k] === id;
   })) return true;
   return false;
 }
