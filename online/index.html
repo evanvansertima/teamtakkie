@@ -3006,7 +3006,7 @@ window.addEventListener("error", function(e){
 });
 </script>
 <script>
-const APP_VERSIE = "4a53d88";
+const APP_VERSIE = "3abd8ad";
 const TEAMS_KEY = "tt_teams_v1";
 const ACTIEF_KEY = "tt_actief_v1";
 const VOORKEUR_KEY = "tt_voorkeuren_v1";
@@ -4879,6 +4879,9 @@ function syncEen(tabel, waar, volle, sleutel, server, uitslag) {
     apparaatId()
   );
   if (typeof alleenKijken === "function" && alleenKijken()) {
+    if (besluit !== "haal") return Promise.resolve();
+  }
+  if (tabel === "gegevens" && typeof pakketNu === "function" && pakketNu().id === "free") {
     if (besluit !== "haal") return Promise.resolve();
   }
   if (besluit === "niets") return Promise.resolve();

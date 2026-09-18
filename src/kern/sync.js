@@ -794,6 +794,18 @@ function syncEen(tabel, waar, volle, sleutel, server, uitslag) {
     if (besluit !== "haal") return Promise.resolve();
   }
 
+  /* Idem voor een Free-club, maar alleen op "gegevens": de server
+     weigert daar sinds server/17-free-serverdata.sql (18 september
+     2026) elke nieuwe of gewijzigde rij van een club die nog nooit
+     heeft betaald ("Free komt helemaal niet op de server",
+     docs/pakketten-besluit.md). Zonder deze afslag zou de app dat bij
+     elke sync opnieuw proberen en telkens hetzelfde rode lampje geven
+     voor iets dat geen fout is. "persoonlijk" blijft hier buiten: die
+     tabel is niet aan een pakket gekoppeld (zie server/17, kop). */
+  if (tabel === "gegevens" && typeof pakketNu === "function" && pakketNu().id === "free") {
+    if (besluit !== "haal") return Promise.resolve();
+  }
+
   if (besluit === "niets") return Promise.resolve();
   if (besluit === "haal") {
     if (!server) return Promise.resolve();
