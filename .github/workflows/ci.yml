@@ -1,14 +1,41 @@
 # CI voor TEAMTAKKIE — draait bij elke push en elke pull request.
 #
-# Wat hier WEL in zit, en waarom dat genoeg is om rood te vertrouwen:
-#   - de drie tests in tests/*.test.js, met kale node — geen npm install.
-#     Dat is dezelfde harde regel als op Evans eigen Mac: als dit een
-#     installatiestap nodig had, zou niemand hem ooit draaien.
-#   - tools/check.py — de syntaxcontrole op online/index.html zelf.
+# Bijgewerkt op 18 september 2026, ná de verhuizing naar
+# github.com/evanvansertima/teamtakkie. Deze workflow dateerde van vóór
+# de bouwstap (P1) en miste sindsdien drie testbestanden (opheffen,
+# opkomst, foutmeldingen-client) én de "npm install"-stap die
+# tools/check.py sinds P1 nodig heeft (zie hieronder) — dat liet elke
+# push hier rood worden, altijd binnen twintig seconden, om een reden
+# die niets met een echte fout in de code te maken had. Precies het
+# "rood dat niemand kan vertrouwen"-probleem dat deze workflow zelf al
+# probeerde te vermijden.
 #
-# Wat hier NIET in zit: het gouden origineel
-# (tools/gouden-origineel.js). Dat is met opzet weggelaten, niet
-# vergeten:
+# Wat hier WEL in zit:
+#   - alle acht tests in tests/*.test.js, kale node.
+#   - tools/check.py — syntaxcontrole op de bron (src/app.jsx, src/kern/,
+#     src/domein/, src/schermen/), én of online/index.html nog actueel
+#     is ten opzichte daarvan (via `node tools/bouw.js --controleer`).
+#
+# Wat hier NIET in zit, met opzet: node tools/typen-check.js (P5). Die
+# geeft vandaag altijd exit-code 1 — niet door een echte fout, maar
+# doordat src/kern/ en src/domein/ nog verwijzen naar identifiers in
+# src/app.jsx, dat zelf nog geen // @ts-check heeft (zie docs/
+# architectuur.md §6). Hem hier verplicht maken zou CI permanent rood
+# maken om precies de reden die deze workflow wil vermijden. Pas
+# toevoegen zodra src/app.jsx (en eventueel src/schermen/) ook getypeerd
+# zijn, of als losse, niet-blokkerende stap (`continue-on-error: true`)
+# als je hem eerder al zichtbaar wilt hebben.
+#
+# Waarom nu wél "npm install --prefix tools" nodig is, in tegenstelling
+# tot wat hier eerder stond ("kale node, geen installatiestap"): sinds
+# de bouwstap (P1) roept check.py zelf `node tools/bouw.js --controleer`
+# aan om te bevestigen dat online/index.html nog bij de bron hoort, en
+# dat script heeft esbuild nodig (tools/node_modules). Zonder deze stap
+# crasht die aanroep in elke verse checkout — dat was exact de fout in
+# de eerste CI-run op deze repo.
+#
+# Wat hier NIET in zit: het gouden origineel (tools/gouden-origineel.js).
+# Dat is met opzet weggelaten, niet vergeten:
 #   1. Het stuurt op Evans Mac de eigen Chrome van die Mac aan
 #      (channel: "chrome" in het script). Een GitHub-runner heeft een
 #      andere Chrome, op Linux in plaats van macOS.
@@ -21,7 +48,7 @@
 #      het script vergelijkt DOM én schermafdruk in één stap
 #      (--vergelijk) en heeft geen los "alleen DOM"-schakelaar. Zo'n
 #      schakelaar toevoegen is een wijziging aan tools/, en dat is voor
-#      deze opdracht uitdrukkelijk niet toegestaan.
+#      deze workflow niet toegestaan.
 #
 # Een CI die op een andere machine rood wordt om een reden die niets met
 # een echte fout te maken heeft, leert iedereen om rood te negeren. Dat
@@ -54,10 +81,19 @@ jobs:
       - name: Code ophalen
         uses: actions/checkout@v4
 
-      - name: Node vastzetten (geen npm install nodig — kale node)
+      - name: Node vastzetten
         uses: actions/setup-node@v4
         with:
           node-version: "20"
+
+      # Nodig sinds P1: check.py's bouw-actualiteitscontrole roept zelf
+      # `node tools/bouw.js --controleer` aan, en dat heeft esbuild
+      # nodig. typen-check.js heeft op zijn beurt typescript nodig.
+      # playwright-core (voor het gouden origineel) komt hier ook mee
+      # binnen maar wordt in deze workflow nergens gebruikt — dat is
+      # onschuldig, alleen een paar seconden extra downloadtijd.
+      - name: npm install --prefix tools
+        run: npm install --prefix tools
 
       - name: node tests/seizoen.test.js
         run: node tests/seizoen.test.js
@@ -80,6 +116,15 @@ jobs:
       # disciplinepagina vastlegde als "zo hoort het".
       - name: node tests/vulling.test.js
         run: node tests/vulling.test.js
+
+      - name: node tests/opheffen.test.js
+        run: node tests/opheffen.test.js
+
+      - name: node tests/opkomst.test.js
+        run: node tests/opkomst.test.js
+
+      - name: node tests/foutmeldingen-client.test.js
+        run: node tests/foutmeldingen-client.test.js
 
       - name: Python vastzetten
         uses: actions/setup-python@v5
