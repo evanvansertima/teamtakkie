@@ -1,3 +1,4 @@
+// @ts-check
 /* ══════════════════════════════════════════════════════════════
    KERN: opslag — laadJson, slaJson, back-up en terugzetten
    ─────────────────────────────────────────────────────────────
@@ -38,6 +39,11 @@
    aaneenschakeling gewoon door.
    ══════════════════════════════════════════════════════════════ */
 
+/**
+ * @param {string} key  een van de vaste opslagsleutels (bijv. SPELERS_KEY)
+ * @returns {any} de opgeslagen waarde, of een lege array als er niets
+ *   staat of de opslag onleesbaar is
+ */
 const laadJson = key => { try{ const r=localStorage.getItem(sleutelVoor(key)); return r?JSON.parse(r):[]; }catch{return[];} };
 /* ── Wanneer is er echt iets veranderd? ──────────────────────
    Op 5 september 2026 ging hier een middag werk verloren. De tablet
@@ -63,6 +69,12 @@ const STEMPEL = "_g";
    volgorde van de velden of van onze eigen tijdstempels. Dat laatste
    is het punt: een record dat alleen een nieuw stempel heeft, is
    inhoudelijk niet veranderd. */
+/**
+ * @param {any} w
+ * @returns {string} een tekstweergave die onafhankelijk is van
+ *   veldvolgorde en van het STEMPEL-veld — twee waarden zijn
+ *   inhoudelijk gelijk als deze tekst gelijk is
+ */
 function stabiel(w) {
   if (w === null || typeof w !== "object") return JSON.stringify(w) || "null";
   if (Array.isArray(w)) return "[" + w.map(stabiel).join(",") + "]";
@@ -74,8 +86,15 @@ function stabiel(w) {
 /* Elk record dat is bijgekomen of veranderd krijgt de tijd van nu.
    Wat gelijk is gebleven houdt zijn oude stempel, zodat een lijst die
    je alleen maar opent niet in zijn geheel vers lijkt. */
+/**
+ * @param {any} nieuw  de nieuw te schrijven waarde
+ * @param {any} oud    de vorige waarde (voor vergelijking op record-id)
+ * @returns {any} nieuw, ongewijzigd als het geen array is, anders met
+ *   bijgewerkte of behouden STEMPEL-velden per record
+ */
 function stempelLijst(nieuw, oud) {
   if (!Array.isArray(nieuw)) return nieuw;
+  /** @type {Object<string, any>} */
   var was = {};
   (Array.isArray(oud) ? oud : []).forEach(function (r) {
     if (r && typeof r === "object" && r.id !== undefined && r.id !== null) was[r.id] = r;
@@ -101,6 +120,11 @@ function stempelLijst(nieuw, oud) {
 /* Eén melding per keer dat de opslag vol zit, niet één per toetsaanslag.
    Wie tien velden invult zou anders tien identieke rode balken krijgen. */
 var _volGemeld = 0;
+/**
+ * @param {string} volle    de volle (met team/seizoen voorvoegde) sleutel
+ * @param {number} lengte   lengte van de tekst die niet paste
+ * @returns {void}
+ */
 function meldOpslagVol(volle, lengte) {
   var nu = Date.now();
   if (nu - _volGemeld < 15000) return;
@@ -113,6 +137,11 @@ function meldOpslagVol(volle, lengte) {
   else if (typeof console !== "undefined") console.warn(tekst, volle, lengte);
 }
 
+/**
+ * @param {string} key   een van de vaste opslagsleutels
+ * @param {any} data     de te bewaren waarde
+ * @returns {void}
+ */
 const slaJson  = (key,data) => {
   var volle = sleutelVoor(key);
   var eruit = data;
@@ -149,6 +178,7 @@ const slaJson  = (key,data) => {
 };
 
 /* ── BACK-UP: export & import van alle data ── */
+/** @returns {string[]} alle losse (niet-team-specifieke) sleutels die in een back-up van de oude soort horen */
 function alleDataKeys() {
   return [SPELERS_KEY,WEDSTRIJDEN_KEY,TRAININGEN_KEY,EVENTS_KEY,"fch_formaties_v1","fch_tactieken_v1","fch_stand_v1",OEFENINGEN_KEY,DOELEN_KEY,REVIEWS_KEY,SEIZOEN_KEY,TOERNOOIEN_KEY,TAKEN_KEY,ACTIVITEITEN_KEY,AFWEZIGHEDEN_KEY,BOETES_KEY,BETALINGEN_KEY,SPORTPARK_KEY,SPORTPARKEN_KEY,
     /* Zonder deze twee raak je bij het terugzetten je clubnaam, logo, thema en tenuekleuren kwijt */
@@ -163,8 +193,13 @@ function alleDataKeys() {
    of om te zetten. Dat is niet alleen eenvoudiger, het is ook
    veiliger: er kan niets sneuvelen op iets wat ik vandaag nog niet
    ken. Komt er ooit een sleutel bij, dan gaat die vanzelf mee. */
+/**
+ * @param {string} id  team-id
+ * @returns {Object<string,string|null>} per sleutel (zonder team-voorvoegsel) de rauwe opgeslagen tekst
+ */
 function teamGegevens(id) {
   var voor = "tt_" + id + "__";
+  /** @type {Object<string,string|null>} */
   var uit = {};
   try {
     for (var i = 0; i < localStorage.length; i++) {
@@ -174,7 +209,16 @@ function teamGegevens(id) {
   } catch(e) {}
   return uit;
 }
+/** @typedef {Object} Backup
+ * @property {string} app
+ * @property {number} versie
+ * @property {string} geexporteerd  ISO-tijdstip van export
+ * @property {Object<string,string>} gedeeld  jouw eigen (niet-team) sleutels, rauwe tekst
+ * @property {{team:any, gegevens:Object<string,string|null>}[]} teams
+ */
+/** @returns {Backup} */
 function maakBackup() {
+  /** @type {Backup} */
   var data = { app:APP_NAAM, versie:3, geexporteerd:new Date().toISOString(),
                gedeeld:{}, teams:[] };
   GEDEELDE_SLEUTELS.forEach(function (k) {
@@ -193,6 +237,7 @@ function maakBackup() {
   /* Heeft de verhuizing niet plaatsgevonden, dan staat alles nog los.
      Ook dan moet een back-up compleet zijn. */
   if (!data.teams.length) {
+    /** @type {Object<string,string|null>} */
     var los = {};
     teamEigenSleutels().forEach(function (k) {
       try { los[k] = localStorage.getItem(k); } catch(e) {}
@@ -202,6 +247,7 @@ function maakBackup() {
   }
   return data;
 }
+/** @returns {void} start een download van een volledige back-up als JSON-bestand */
 function exporteerAlleData() {
   var data = maakBackup();
   var blob = new Blob([JSON.stringify(data,null,2)],{type:"application/json"});
@@ -212,10 +258,19 @@ function exporteerAlleData() {
   document.body.appendChild(a); a.click(); document.body.removeChild(a);
   setTimeout(function(){URL.revokeObjectURL(url);},1500);
 }
+/**
+ * @param {any} data  een back-up, van de nieuwe soort (Backup) of de oude
+ *   soort (een los object met arrays onder de vaste sleutels)
+ * @returns {number} het totaal aantal items erin
+ */
 function telBackupItems(data) {
   var n = 0;
   if (data && Array.isArray(data.teams)) {
-    data.teams.forEach(function (t) {
+    /* data is met opzet any (oude én nieuwe back-upsoort door elkaar):
+       tsc kan de callback-parameter dan niet uit de aanroep afleiden
+       (een methode-aanroep op any levert geen contextueel type op),
+       vandaar de expliciete any hieronder. */
+    data.teams.forEach(function (/** @type {any} */ t) {
       Object.keys(t.gegevens || {}).forEach(function (k) {
         try { var v = JSON.parse(t.gegevens[k]); if (Array.isArray(v)) n += v.length; } catch(e) {}
       });
@@ -229,6 +284,7 @@ function telBackupItems(data) {
    bestand staan worden overschreven; teams die er niet in staan
    blijven ongemoeid. Anders zou het terugzetten van één team de rest
    van je seizoenen wissen. */
+/** @param {Backup} data @returns {void} */
 function zetBackupTerug(data) {
   Object.keys(data.gedeeld || {}).forEach(function (k) {
     try { localStorage.setItem(k, data.gedeeld[k]); } catch(e) {}
@@ -250,6 +306,15 @@ function zetBackupTerug(data) {
          geparkeerde laag draagt al een kop, ook al is dat geen seizoen.
          Die hoort niet nóg een keer voorzien te worden. */
       var sleutel = heeftLaag(k) ? k : (terugSeizoen + "::" + k);
+      /* BEKEND, NIET OPGELOST — typenproef 18 september 2026 (P5): het
+         Backup-typedef zegt hier terecht string|null (zo levert
+         teamGegevens() het ook op), en localStorage.setItem() wil een
+         string. In de praktijk levert een backupbestand hier altijd
+         een string: een null zou alleen ontstaan als iemand het JSON-
+         bestand met de hand bewerkt en er "null" in typt. Gebeurt dat
+         toch, dan wordt de tekst "null" weggeschreven in plaats van de
+         sleutel over te slaan — onschuldig maar niet fraai. Zelfde
+         soort punt als bij sleutels.js; geen actie hier, al gemeld. */
       try { localStorage.setItem(voor + sleutel, bewaard.gegevens[k]); } catch(e) {}
     });
     if (!lijst.some(function (t) { return t.id === id; }))
@@ -257,10 +322,22 @@ function zetBackupTerug(data) {
   });
   slaTeamsOp(lijst);
 }
+/**
+ * @param {File} bestand
+ * @param {(fout: string|null, aantal?: number) => void} klaar
+ * @returns {void}
+ */
 function importeerAlleData(bestand, klaar) {
   var lezer = new FileReader();
   lezer.onload = function(ev){
     try {
+      /* BEKEND, NIET OPGELOST — typenproef 18 september 2026 (P5): de
+         DOM-types laten ev.target en .result breder toe dan wat hier
+         ooit gebeurt (readAsText geeft altijd een string terug op een
+         niet-lege FileReader). Gaat het toch mis, dan gooit JSON.parse
+         of de toegang op een niet-bestaand target een fout, en die
+         wordt hieronder al opgevangen door de catch — dus onschadelijk,
+         geen actie hier. */
       var data = JSON.parse(ev.target.result);
       /* De nieuwe soort: alles van al je teams */
       if (data && Array.isArray(data.teams)) {
