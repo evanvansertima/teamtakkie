@@ -1,0 +1,35 @@
+# TEAMTAKKIE — beveiligingsheaders voor Netlify
+# ══════════════════════════════════════════════════════════════
+# Toegevoegd op 18 september 2026, naar aanleiding van een
+# beveiligingsaudit. Dit bestand wordt alleen gelezen door Netlify
+# zelf (bij het uitrollen van de map online/) — lokaal testen met
+# een gewone webserver of file:// laat dit bestand links liggen,
+# dus dit is met geen enkele lokale test uit tools/ te controleren.
+# Dat is precies waarom de Content-Security-Policy hieronder bewust
+# nog in "report only"-vorm staat: die blokkeert niets, hij meldt
+# alleen (in de browserconsole van wie de site bezoekt) wat hij zou
+# hebben tegengehouden. Zo kan Evan na het uitrollen echt controleren
+# of de lijst met toegestane bronnen klopt, vóórdat hij ooit iets
+# blokkeert. Pas als een tijdje niemand meldingen ziet die niet
+# horen bij een echte aanvaller, kan "-Report-Only" eraf.
+#
+# Waarom niet gewoon script-src 'self': de hele app is één stuk
+# JavaScript, rechtstreeks in online/index.html geplakt door
+# tools/bouw.js — geen los .js-bestand. Een CSP zonder 'unsafe-inline'
+# in script-src laat dan géén enkele regel van de app meer draaien
+# (een wit scherm voor iedereen). Dat écht dichten vraagt om de
+# bouwstap zelf aan te passen (de app als los bestand uitleveren, of
+# per bouw een hash van de inline-scriptblok meesturen) — dat is een
+# aparte, grotere beslissing, geen headerbestand.
+#
+# Waarom https://*.supabase.co in plaats van één vast adres: onder
+# Instellingen kan een club een eigen Supabase-project invullen (zie
+# src/schermen/onboarding.jsx, "Server instellen") — dat adres ligt
+# dus niet vast op het project van FC Harlingen.
+
+/*
+  X-Frame-Options: DENY
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: geolocation=(), camera=(), microphone=(), payment=()
+  Content-Security-Policy-Report-Only: default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://fonts.googleapis.com; font-src https://fonts.gstatic.com https://cdnjs.cloudflare.com; img-src 'self' data: blob: https://cdnjs.cloudflare.com; connect-src 'self' https://*.supabase.co; frame-ancestors 'none'; base-uri 'self'; form-action 'self'

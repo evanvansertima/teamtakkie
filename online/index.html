@@ -13,7 +13,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;600&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" crossorigin="anonymous" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" integrity="sha384-t1nt8BQoYMLFN5p42tRAtuAAFQaCQODekUVeKKZrEnEyp4H2R0RHFz0KWpmj7i8g" crossorigin="anonymous" />
   <script>
   /* Thema direct zetten, vóór de eerste paint (voorkomt witte flits) */
   (function(){
@@ -69,10 +69,14 @@
     } catch(e) {}
   })();
   </script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js" integrity="sha384-tMH8h3BGESGckSAVGZ82T9n90ztNXxvdwvdM6UoR56cYcf+0iGXBliJ29D+wZ/x8" crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js" integrity="sha384-bm7MnzvK++ykSwVJ2tynSE5TRdN+xL418osEVF2DE/L/gfWHj91J2Sphe582B1Bh" crossorigin="anonymous"></script>
+  <!-- Geen integrity hier: tools/bouw.js herkent en verwijdert deze kale
+       scriptregel uit het bouwproduct (zie regel 251 aldaar). Extra
+       attributen zouden die herkenning breken, en de regel wordt toch
+       niet uitgeleverd. -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" integrity="sha384-JcnsjUPPylna1s1fvi1u12X5qjY5OL56iySh75FdtrwhO/SWXgMjoVqcKyIIWOLk" crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js" integrity="sha384-CI3ELBVUz9XQO+97x6nwMDPosPR5XvsxW2ua7N1Xeygeh1IxtgqtCkGfQY9WWdHu" crossorigin="anonymous"></script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     html[data-thema="donker"] {
@@ -3002,7 +3006,7 @@ window.addEventListener("error", function(e){
 });
 </script>
 <script>
-const APP_VERSIE = "6dfe96d";
+const APP_VERSIE = "4a53d88";
 const TEAMS_KEY = "tt_teams_v1";
 const ACTIEF_KEY = "tt_actief_v1";
 const VOORKEUR_KEY = "tt_voorkeuren_v1";
@@ -4768,14 +4772,16 @@ function duwTeamsWeg() {
     return serverVraag(pad, {
       methode: "PATCH",
       lichaam: { verwijderd_op: graf.op || (/* @__PURE__ */ new Date()).toISOString() },
-      koppen: { "Prefer": "return=minimal" }
+      koppen: { "Prefer": "return=representation" }
     }).then(function(r) {
       if (!r.ok) return;
+      var geraakt = Array.isArray(r.gegevens) ? r.gegevens : [];
+      if (!geraakt.length) return;
       return serverVraag(
         "/rest/v1/gegevens?team_id=eq." + encodeURIComponent(graf.id),
         { methode: "DELETE", koppen: { "Prefer": "return=minimal" } }
-      ).then(function() {
-        vergeetTeamWeg(graf.id);
+      ).then(function(d) {
+        if (d && d.ok) vergeetTeamWeg(graf.id);
       });
     });
   }).then(function() {
