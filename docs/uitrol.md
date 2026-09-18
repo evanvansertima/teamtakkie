@@ -89,7 +89,7 @@ iets verandert. Sluit het tabblad en probeer het later opnieuw.
    repository" of "Link site to Git", soms bij "Continuous deployment").
 3. Kies **GitHub** en geef Netlify toestemming als daarom gevraagd wordt.
    **Wat je moet zien:** een lijst met je GitHub-repositories.
-4. Kies `evanvansertima/fc-harlingen`.
+4. Kies `evanvansertima/teamtakkie`.
    **Wat je moet zien:** een scherm met instellingen voor deze
    koppeling: welke branch, een bouwcommando en een publicatiemap.
 

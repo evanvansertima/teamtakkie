@@ -17,8 +17,8 @@ zonder account (alles lokaal in de browser); een account met Supabase
 erbij geeft synchronisatie tussen apparaten en tussen mensen in dezelfde
 club.
 
-Gebouwd vanuit FC Harlingen JO19-2. De repo heet nog naar dat team
-(`fc-harlingen`); de app heet TEAMTAKKIE.
+Gebouwd vanuit FC Harlingen JO19-2. De repo (`github.com/evanvansertima/
+teamtakkie`) heette tot 18 september 2026 nog naar dat team.
 
 ## 2. De bouwstap
 

@@ -15,7 +15,7 @@ eigenaar; de nieuwe persoon wordt toegevoegd, niet in jouw plaats gezet.
 
 ## 1. GitHub — de code
 
-De repo staat op `github.com/evanvansertima/fc-harlingen`, onder jouw
+De repo staat op `github.com/evanvansertima/teamtakkie`, onder jouw
 persoonlijke account.
 
 1. Ga naar de repo → **Settings → Collaborators and teams**.

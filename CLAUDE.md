@@ -30,8 +30,8 @@ vaktermen uit in gewone taal, de eerste keer dat je ze gebruikt. Zeg nooit
 | `backend/`, `frontend/`, `caddy/`, `docker-compose.yml` | Een afgebroken poging tot een AdonisJS + React-versie (augustus 2026). **Niet in gebruik.** Raak dit niet aan tenzij Evan er expliciet om vraagt. |
 | `Claude outputs/`, `Back-ups/` | Niet in git (zie `.gitignore`) |
 
-Git: `github.com/evanvansertima/fc-harlingen` — de repo heet nog naar het
-eerste team, de app heet TEAMTAKKIE.
+Git: `github.com/evanvansertima/teamtakkie` (sinds 18 september 2026 —
+daarvoor `fc-harlingen`, naar het eerste team waarvoor de app gebouwd is).
 
 ## Hoe het technisch in elkaar zit
 

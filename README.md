@@ -21,8 +21,9 @@ legt het waarom uit) en een overzicht van wie waarvoor te porren is.
 | `legacy/` | Het allereerste prototype, één bestand. Alleen ter referentie. | nee |
 | `backend/`, `frontend/`, `caddy/`, `docker-compose.yml` | Een afgebroken poging tot een AdonisJS + React-versie (augustus 2026) | **Nee — niet aankomen** |
 
-De repo heet nog naar het eerste team (`fc-harlingen`); de app zelf heet
-TEAMTAKKIE.
+Repo: [`github.com/evanvansertima/teamtakkie`](https://github.com/evanvansertima/teamtakkie)
+(sinds 18 september 2026 — daarvoor stond dezelfde geschiedenis in een
+repo die naar het eerste team heette, `fc-harlingen`).
 
 ## Hoe het in elkaar zit
 
