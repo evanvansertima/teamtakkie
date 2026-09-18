@@ -112,7 +112,15 @@ begin
   if not public.is_beheerder() then
     raise exception 'Alleen voor beheerders';
   end if;
-  if nieuw not in ('free','basic','pro','max') then
+  -- Dezelfde drie namen als de check op abonnementen (01-schema.sql
+  -- regel 108, opnieuw gezet in 06-pakketten.sql) en als wat de app
+  -- verstuurt (src/kern/rollen.js, zetPakketVan()). Stonden hier tot
+  -- 18 september 2026 nog als free/basic/pro/max: de hernoeming van
+  -- 11 september was langs deze functie heen gegaan, waardoor een
+  -- beheerder niemand meer kon opwaarderen. Loopt dit lijstje ooit
+  -- weer uit de pas, dan valt tests/zet-pakket.test.sql (scenario 8)
+  -- daar meteen over.
+  if nieuw not in ('free','coach','club') then
     raise exception 'Onbekend pakket: %', nieuw;
   end if;
   insert into public.abonnementen (club_id, pakket, geldig_tot)
