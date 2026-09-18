@@ -75,6 +75,9 @@ praktijk uitziet (map naar Netlify slepen, `sw.js`'s `VERSIE` ophogen).
   minderjarigen in de database).
 - [`docs/uitrol.md`](docs/uitrol.md) — het plan om van handmatig slepen
   naar een git-gekoppelde Netlify-uitrol te gaan (nog niet uitgevoerd).
+- [`docs/toegang.md`](docs/toegang.md) — checklist voor het moment dat
+  er een tweede ontwikkelaar bij komt: wie waar toegang toe krijgt
+  (GitHub, Supabase, Netlify, de domeinnaam) en met welke rol.
 - [`docs/codestructuur.md`](docs/codestructuur.md) — een momentopname van
   vóór de bouwstap (10 september 2026). Historisch: de regelnummers en de
   beschrijving "één bestand, geen modules" kloppen niet meer.
