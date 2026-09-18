@@ -3006,7 +3006,7 @@ window.addEventListener("error", function(e){
 });
 </script>
 <script>
-const APP_VERSIE = "3abd8ad";
+const APP_VERSIE = "45053c2";
 const TEAMS_KEY = "tt_teams_v1";
 const ACTIEF_KEY = "tt_actief_v1";
 const VOORKEUR_KEY = "tt_voorkeuren_v1";
@@ -32843,7 +32843,19 @@ function WedstrijdDetail({ wedstrijd, spelers: vasteSelectie, onTerug, onBewerke
     return /* @__PURE__ */ React.createElement("div", { className: "briefje-vak " + v[0], key: v[0] }, /* @__PURE__ */ React.createElement("div", { className: "briefje-kop", style: { color: v[3] } }, /* @__PURE__ */ React.createElement("i", { className: v[2] }), " ", v[1]), regels.map(function(r) {
       return /* @__PURE__ */ React.createElement("div", { key: r.id, className: "briefje-regel" + (r.af ? " af" : "") }, /* @__PURE__ */ React.createElement("span", { style: { paddingLeft: 2 } }, r.tekst));
     }));
-  }))), wedstrijd.notities && /* @__PURE__ */ React.createElement("div", { className: "kaart detail-sectie" }, /* @__PURE__ */ React.createElement("div", { className: "kaart-titel" }, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-note-sticky" }), " Notities"), /* @__PURE__ */ React.createElement("p", { style: { fontSize: 14, fontWeight: 400, lineHeight: 1.5 } }, wedstrijd.notities)))), sectie === "rondom" && /* @__PURE__ */ React.createElement("div", { className: "w-kolommen" }, /* @__PURE__ */ React.createElement("div", { className: "w-kolom" }, (wedstrijd.scheids || wedstrijd.assistent) && /* @__PURE__ */ React.createElement("div", { className: "kaart detail-sectie" }, /* @__PURE__ */ React.createElement("div", { className: "kaart-titel" }, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-user-tie" }), " Leiding"), wedstrijd.scheids && /* @__PURE__ */ React.createElement("div", { className: "account-rij" }, /* @__PURE__ */ React.createElement("span", null, "Scheidsrechter"), /* @__PURE__ */ React.createElement("b", null, wedstrijd.scheids)), wedstrijd.assistent && /* @__PURE__ */ React.createElement("div", { className: "account-rij" }, /* @__PURE__ */ React.createElement("span", null, "Assistent"), /* @__PURE__ */ React.createElement("b", null, wedstrijd.assistent))), !gespeeld && spelers.length > 0 && /* @__PURE__ */ React.createElement("div", { className: "kaart detail-sectie" }, /* @__PURE__ */ React.createElement("div", { className: "kaart-titel" }, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-clipboard-check" }), " Wie kan er spelen?"), /* @__PURE__ */ React.createElement(
+  }))), wedstrijd.notities && /* @__PURE__ */ React.createElement("div", { className: "kaart detail-sectie" }, /* @__PURE__ */ React.createElement("div", { className: "kaart-titel" }, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-note-sticky" }), " Notities"), /* @__PURE__ */ React.createElement("p", { style: { fontSize: 14, fontWeight: 400, lineHeight: 1.5 } }, wedstrijd.notities)))), sectie === "rondom" && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("div", { className: "deel-rij", style: { marginTop: 12, marginBottom: 0 } }, /* @__PURE__ */ React.createElement(
+    "button",
+    {
+      className: "knop pdf-knop",
+      style: { flex: "0 1 260px", justifyContent: "center" },
+      title: "Opstelling, spelersrollen en tactiek in \xE9\xE9n document",
+      onClick: function() {
+        exporteerWedstrijdplanPDF(wedstrijd, spelers, false, alleWedstrijden);
+      }
+    },
+    /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-file-pdf" }),
+    " Wedstrijdplan als PDF"
+  )), /* @__PURE__ */ React.createElement("div", { className: "w-kolommen" }, /* @__PURE__ */ React.createElement("div", { className: "w-kolom" }, (wedstrijd.scheids || wedstrijd.assistent) && /* @__PURE__ */ React.createElement("div", { className: "kaart detail-sectie" }, /* @__PURE__ */ React.createElement("div", { className: "kaart-titel" }, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-user-tie" }), " Leiding"), wedstrijd.scheids && /* @__PURE__ */ React.createElement("div", { className: "account-rij" }, /* @__PURE__ */ React.createElement("span", null, "Scheidsrechter"), /* @__PURE__ */ React.createElement("b", null, wedstrijd.scheids)), wedstrijd.assistent && /* @__PURE__ */ React.createElement("div", { className: "account-rij" }, /* @__PURE__ */ React.createElement("span", null, "Assistent"), /* @__PURE__ */ React.createElement("b", null, wedstrijd.assistent))), !gespeeld && spelers.length > 0 && /* @__PURE__ */ React.createElement("div", { className: "kaart detail-sectie" }, /* @__PURE__ */ React.createElement("div", { className: "kaart-titel" }, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-clipboard-check" }), " Wie kan er spelen?"), /* @__PURE__ */ React.createElement(
     SpelerStatusRaster,
     {
       spelers,
@@ -32961,7 +32973,7 @@ function WedstrijdDetail({ wedstrijd, spelers: vasteSelectie, onTerug, onBewerke
       alleWedstrijden,
       onOpslaan: bewaarEnMeld
     }
-  ), /* @__PURE__ */ React.createElement(GastenSectie, { wedstrijd, onOpslaan: bewaarEnMeld }))))), opstellingOpen && /* @__PURE__ */ React.createElement(
+  ), /* @__PURE__ */ React.createElement(GastenSectie, { wedstrijd, onOpslaan: bewaarEnMeld })))))), opstellingOpen && /* @__PURE__ */ React.createElement(
     WerkVenster,
     {
       breed: true,

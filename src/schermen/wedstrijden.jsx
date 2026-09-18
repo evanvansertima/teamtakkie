@@ -5885,6 +5885,33 @@ function WedstrijdDetail({ wedstrijd, spelers: vasteSelectie, onTerug, onBewerke
           )}
 
           {sectie === "rondom" && (
+            <React.Fragment>
+              {/* ── Het wedstrijdplan hoort op papier vóór de wedstrijd ──
+                  Deze knop bestond al, maar stond alleen bij de Uitslag,
+                  en dat tabblad verschijnt pas als er gespeeld is. Precies
+                  andersom dus: een plan print of presenteer je vrijdags in
+                  de kleedkamer, niet zaterdagavond na afloop.
+
+                  Daarom staat hij nu óók hier, bovenaan de voorbereiding,
+                  en met opzet zonder de voorwaarde "gespeeld" — dit
+                  tabblad is juist van de week ervóór. Loop je er ná de
+                  wedstrijd nog eens langs, dan werkt de knop gewoon;
+                  exporteerWedstrijdplanPDF maakt daar geen onderscheid in.
+
+                  De knop bij de Uitslag blijft staan waar hij stond: daar
+                  dient hij om het plan er achteraf nog eens bij te pakken,
+                  en dat is een ander moment dan dit. */}
+              <div className="deel-rij" style={{marginTop:12,marginBottom:0}}>
+                {/* Geen volle breedte (flex-grow 0): een rode balk over het
+                    hele scherm leest als een waarschuwing, en dit is een
+                    aanbod. Krimpen mag wél, zodat hij op een telefoon in
+                    staande stand niet buiten beeld valt. */}
+                <button className="knop pdf-knop" style={{flex:"0 1 260px",justifyContent:"center"}}
+                  title="Opstelling, spelersrollen en tactiek in één document"
+                  onClick={function(){ exporteerWedstrijdplanPDF(wedstrijd, spelers, false, alleWedstrijden); }}>
+                  <i className="fa-solid fa-file-pdf"/> Wedstrijdplan als PDF
+                </button>
+              </div>
             <div className="w-kolommen">
               <div className="w-kolom">
                       {/* ── Wie fluit er ──
@@ -6077,6 +6104,7 @@ function WedstrijdDetail({ wedstrijd, spelers: vasteSelectie, onTerug, onBewerke
                 <GastenSectie wedstrijd={wedstrijd} onOpslaan={bewaarEnMeld} />
               </div>
             </div>
+            </React.Fragment>
           )}
         </div>
       </div>
