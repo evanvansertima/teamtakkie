@@ -1,3 +1,4 @@
+// @ts-check
 /* ══════════════════════════════════════════════════════════════
    KERN: synchroniseren — syncEen, voegSamen, het vangnet
    ─────────────────────────────────────────────────────────────
@@ -73,8 +74,15 @@
    niets samengevoegd worden. Daar wint de nieuwste, en krijg je het
    te zien.
    ══════════════════════════════════════════════════════════ */
+/** @typedef {Object} SyncStaat
+ * @property {string|null} gezien   het bijgewerkt_op-tijdstip zoals de server het laatst gaf
+ * @property {boolean} schoon       is dit apparaat sinds "gezien" ongewijzigd?
+ * @property {boolean} [heeftLokaal]  alleen gezet vlak vóór syncBesluit(), zie daar
+ */
+
 const SYNC_STAAT_KEY = "tt_syncstaat_v1";   /* wat we van de server weten */
 
+/** @returns {Object<string,SyncStaat>} */
 function _leesSyncStaat() {
   try {
     var r = localStorage.getItem(SYNC_STAAT_KEY);
@@ -82,13 +90,17 @@ function _leesSyncStaat() {
     return (o && typeof o === "object") ? o : {};
   } catch(e) { return {}; }
 }
+/** @type {Object<string,SyncStaat>} per volle sleutel wat we van de server weten */
 var _syncStaat = _leesSyncStaat();
+/** @returns {void} */
 function _schrijfSyncStaat() {
   try { localStorage.setItem(SYNC_STAAT_KEY, JSON.stringify(_syncStaat)); } catch(e) {}
 }
+/** @param {string} volle @returns {SyncStaat} */
 function syncStaat(volle) {
   return _syncStaat[volle] || {gezien: null, schoon: true};
 }
+/** @param {string} volle @param {SyncStaat} staat @returns {void} */
 function zetSyncStaat(volle, staat) {
   _syncStaat[volle] = staat;
   _schrijfSyncStaat();
@@ -96,6 +108,7 @@ function zetSyncStaat(volle, staat) {
 /* Er is hier iets veranderd. Dit wordt vanuit slaJson aangeroepen,
    want dat is de enige plek waar de app iets wegschrijft — en dus de
    enige plek waar je zeker weet dat je niets mist. */
+/** @param {string} volle @returns {void} */
 function meldWijziging(volle) {
   var s = _syncStaat[volle] || {gezien: null, schoon: true};
   if (!s.schoon) { if (typeof syncStraks === "function") syncStraks(); return; }
@@ -120,26 +133,39 @@ function meldWijziging(volle) {
    de app wegklikt (dan leg je hem weg en pak je straks de andere),
    en zodra er weer bereik is. Bij dat laatste geldt: langs de lijn
    zakt het netwerk weg, en dan moet het gewoon later alsnog. */
+/** @typedef {"rustig"|"open"|"bezig"|"mislukt"} SyncStand */
+
 const SYNC_WACHT_MS = 4000;         /* na de laatste wijziging */
 const SYNC_OPNIEUW_MS = 30000;      /* na een mislukte poging */
 const SYNC_OPNIEUW_MAX = 300000;    /* en niet vaker dan om de vijf minuten */
+/** @type {ReturnType<typeof setTimeout>|null} */
 var _syncStraksTimer = null;
 var _syncOpnieuwNa = SYNC_OPNIEUW_MS;
-var _syncStand = "rustig";          /* rustig | open | bezig | mislukt */
+/** @type {SyncStand} */
+var _syncStand = "rustig";
 var _syncBinnen = 0;                /* hoe vaak er iets van buiten binnenkwam */
+/** @type {((s: SyncStand) => void)[]} */
 var _syncStandLuisteraars = [];
 var _syncVanzelfAan = true;
 
+/** @returns {SyncStand} */
 function syncStand() { return _syncStand; }
+/** @returns {number} */
 function syncBinnenTeller() { return _syncBinnen; }
 /* Staat er een poging gepland? Na een mislukking hoort dat zo te zijn:
    dat is het verschil tussen "het komt goed" en "het blijft liggen". */
+/** @returns {boolean} */
 function syncGepland() { return _syncStraksTimer !== null; }
+/** @param {SyncStand} s @returns {void} */
 function zetSyncStand(s) {
   if (_syncStand === s) return;
   _syncStand = s;
   _syncStandLuisteraars.forEach(function (f) { try { f(s); } catch(e) {} });
 }
+/**
+ * @param {(s: SyncStand) => void} f
+ * @returns {() => void} functie om weer te stoppen met luisteren
+ */
 function volgSyncStand(f) {
   _syncStandLuisteraars.push(f);
   return function () {
@@ -149,6 +175,7 @@ function volgSyncStand(f) {
 }
 /* Staat er nog iets klaar dat niet is verstuurd? Dat is precies wat je
    wilt weten voordat je je tablet in de tas doet. */
+/** @returns {boolean} */
 function ietsOpen() {
   var open = false;
   Object.keys(_syncStaat).forEach(function (k) {
@@ -156,11 +183,13 @@ function ietsOpen() {
   });
   return open;
 }
+/** @returns {boolean} */
 function kanSynchroniseren() {
   return !!(serverAan() && ingelogd() && clubIdNu());
 }
 /* Straks, als het even stil is. Elke nieuwe wijziging schuift het
    moment op, zodat er één keer wordt verstuurd in plaats van tien. */
+/** @param {number} [vertraging]  ms; standaard SYNC_WACHT_MS @returns {void} */
 function syncStraks(vertraging) {
   if (!_syncVanzelfAan || !kanSynchroniseren()) return;
   if (_syncStraksTimer) { clearTimeout(_syncStraksTimer); _syncStraksTimer = null; }
@@ -176,6 +205,7 @@ function syncStraks(vertraging) {
 /* Uitwisselen zonder er iets over te zeggen. Mislukt het, dan gaat de
    app het vanzelf nog eens proberen; daar hoeft niemand iets van te
    merken en al helemaal geen rode balk voor te zien. */
+/** @returns {Promise<ServerUitkomst|null>} */
 function syncStil() {
   if (!_syncVanzelfAan || !kanSynchroniseren()) return Promise.resolve(null);
   if (_syncBezig) { syncStraks(1500); return Promise.resolve(null); }
@@ -199,10 +229,12 @@ function syncStil() {
   });
 }
 /* Meteen, zonder wachten. Voor het moment waarop je de app wegklikt. */
+/** @returns {Promise<ServerUitkomst|null>} */
 function syncNu() {
   if (_syncStraksTimer) { clearTimeout(_syncStraksTimer); _syncStraksTimer = null; }
   return syncStil();
 }
+/** @returns {void} */
 function syncLuisterMee() {
   if (typeof window === "undefined" || !window.addEventListener) return;
   /* Weggeklikt of van app gewisseld: nú versturen. Dit is het moment
@@ -220,11 +252,25 @@ function syncLuisterMee() {
   window.addEventListener("pagehide", function () { if (ietsOpen()) syncNu(); });
 }
 
+/** @typedef {Object} ServerRij  één regel uit de tabellen "gegevens" of "persoonlijk"
+ * @property {string} sleutel
+ * @property {any} waarde
+ * @property {string} bijgewerkt_op
+ * @property {string} [apparaat]
+ */
+/** @typedef {"niets"|"duw"|"haal"|"samen"} SyncBesluit */
+
 /* Wat er moet gebeuren met één soort gegevens.
      duw    wij hebben iets nieuws, de server niet
      haal   de server heeft iets nieuws, wij niet
      samen  allebei iets, en die moeten bij elkaar
      niets  gelijk, of aan geen van beide kanten iets */
+/**
+ * @param {(SyncStaat & {heeftLokaal?:boolean})|null} staat
+ * @param {ServerRij|null} server
+ * @param {string} ditApparaat
+ * @returns {SyncBesluit}
+ */
 function syncBesluit(staat, server, ditApparaat) {
   var schoon = !staat || staat.schoon !== false;
   var gezien = staat ? staat.gezien : null;
@@ -258,6 +304,12 @@ function syncBesluit(staat, server, ditApparaat) {
    Heeft geen van beide er een — oude gegevens van vóór vandaag — dan
    valt hij terug op wie er volgens zijn eigen boekhouding aan het werk
    was. Dat is de oude regel, en die geldt alleen nog daar. */
+/**
+ * @param {any} mijn
+ * @param {any} hun
+ * @param {boolean} mijnWint  wie er wint als geen van beide een stempel heeft
+ * @returns {any} mijn of hun, welke er ook wint
+ */
 function nieuwsteVan(mijn, hun, mijnWint) {
   var a = mijn && mijn[STEMPEL];
   var b = hun && hun[STEMPEL];
@@ -266,6 +318,12 @@ function nieuwsteVan(mijn, hun, mijnWint) {
   if (b) return hun;
   return mijnWint ? mijn : hun;
 }
+/**
+ * @param {any} mijn
+ * @param {any} hun
+ * @param {boolean} mijnWint
+ * @returns {{lijst:any[], erbij:number, overschreven:number}}
+ */
 function voegLijstenSamen(mijn, hun, mijnWint) {
   var a = Array.isArray(mijn) ? mijn : [];
   var b = Array.isArray(hun) ? hun : [];
@@ -273,11 +331,14 @@ function voegLijstenSamen(mijn, hun, mijnWint) {
   var tweede = mijnWint ? b : a;
   /* De tegenhanger van elk record opzoeken, zodat we per stuk kunnen
      kiezen in plaats van per lijst. */
+  /** @type {Object<string, any>} */
   var anders = {};
   tweede.forEach(function (r) {
     if (r && typeof r === "object" && r.id !== undefined && r.id !== null) anders[r.id] = r;
   });
+  /** @type {Object<string, boolean>} */
   var gezien = {};
+  /** @type {any[]} */
   var uit = [];
   var erbij = 0;
   var overschreven = 0;
@@ -305,6 +366,12 @@ function voegLijstenSamen(mijn, hun, mijnWint) {
 /* Samenvoegen van wat er ook maar staat. Alleen lijsten met id's
    kunnen echt worden samengevoegd; van al het andere wint de
    nieuwste, en dan hoort de gebruiker dat te weten. */
+/**
+ * @param {any} mijn
+ * @param {any} hun
+ * @param {boolean} mijnWint
+ * @returns {{waarde:any, samengevoegd:boolean, erbij:number, overschreven:number}}
+ */
 function voegSamen(mijn, hun, mijnWint) {
   if (Array.isArray(mijn) && Array.isArray(hun)) {
     var r = voegLijstenSamen(mijn, hun, mijnWint);
@@ -320,19 +387,25 @@ function voegSamen(mijn, hun, mijnWint) {
 const CLUB_KEY = "tt_club_v1";
 const SYNC_LAATST_KEY = "tt_synclaatst_v1";
 
+/** @returns {string|null} */
 function clubIdNu() { try { return localStorage.getItem(CLUB_KEY) || null; } catch(e) { return null; } }
+/** @param {string|null} [id] @returns {string|null|undefined} ongewijzigd teruggegeven, geen enkele aanroeper gebruikt dit */
 function zetClubId(id) {
   try { if (id) localStorage.setItem(CLUB_KEY, id); else localStorage.removeItem(CLUB_KEY); } catch(e) {}
   return id;
 }
+/** @returns {string|null} */
 function laatstGesynct() {
   try { return localStorage.getItem(SYNC_LAATST_KEY) || null; } catch(e) { return null; }
 }
+/** @param {string} t @returns {void} */
 function zetLaatstGesynct(t) { try { localStorage.setItem(SYNC_LAATST_KEY, t); } catch(e) {} }
 
 /* Welke sleutels hangen er onder dit team op dit apparaat? */
+/** @param {string} id @returns {string[]} */
 function teamSleutelsVan(id) {
   var voor = "tt_" + id + "__";
+  /** @type {string[]} */
   var uit = [];
   try {
     for (var i = 0; i < localStorage.length; i++) {
@@ -345,16 +418,19 @@ function teamSleutelsVan(id) {
 /* Wat er persoonlijk wordt uitgewisseld. De teamlijst gaat niet mee —
    die staat in zijn eigen tabel — en het pakket ook niet, want dat
    komt juist van de server. */
+/** @returns {string[]} */
 function persoonlijkeSleutels() {
   return GEDEELDE_SLEUTELS.filter(function (k) {
     return k !== TEAMS_KEY && k !== ACTIEF_KEY && k !== LICENTIE_KEY;
   });
 }
 
+/** @param {string} volle @returns {any} */
 function _lees(volle) {
   try { var r = localStorage.getItem(volle); return r === null ? null : JSON.parse(r); }
   catch(e) { return null; }
 }
+/** @param {string} volle @param {any} waarde @returns {void} */
 function _schrijf(volle, waarde) {
   try { localStorage.setItem(volle, JSON.stringify(waarde)); } catch(e) {}
 }
@@ -376,6 +452,15 @@ const TERUG_KEY = "tt_terug_v1";
 const TERUG_MAX = 20;
 const TERUG_DAGEN = 21;
 
+/** @typedef {Object} TerugRegel
+ * @property {string} id
+ * @property {string} tijd     ISO-tijdstip
+ * @property {string} sleutel  de volle sleutel die werd overschreven
+ * @property {string} reden
+ * @property {any} waarde      wat er stond vóór het overschrijven
+ */
+
+/** @returns {TerugRegel[]} */
 function terugLijst() {
   try {
     var r = localStorage.getItem(TERUG_KEY);
@@ -383,6 +468,7 @@ function terugLijst() {
     return Array.isArray(l) ? l : [];
   } catch(e) { return []; }
 }
+/** @param {TerugRegel[]} lijst @returns {void} */
 function _schrijfTerug(lijst) {
   try { localStorage.setItem(TERUG_KEY, JSON.stringify(lijst)); }
   catch(e) {
@@ -391,9 +477,16 @@ function _schrijfTerug(lijst) {
     if (lijst.length > 2) _schrijfTerug(lijst.slice(0, Math.floor(lijst.length / 2)));
   }
 }
+/**
+ * @param {string} volle
+ * @param {any} oud       de waarde vóór het overschrijven; null/undefined slaat niets op
+ * @param {string} [reden]
+ * @returns {string|null} het id van de nieuwe vangnetregel, of null als er niets te bewaren viel
+ */
 function bewaarVoorTerug(volle, oud, reden) {
   if (oud === null || oud === undefined) return null;
   var nu = Date.now();
+  /** @type {TerugRegel} */
   var regel = {
     id: "t" + nu + "-" + Math.random().toString(36).slice(2, 7),
     tijd: new Date(nu).toISOString(),
@@ -412,6 +505,7 @@ function bewaarVoorTerug(volle, oud, reden) {
    de server, anders komt het bij de volgende ronde weer weg. En wat je
    daarmee overschrijft gaat óók in het vangnet — je kunt je vergissen
    in welke versie je wilde. */
+/** @param {string} id  id van een TerugRegel @returns {boolean} */
 function zetTerug(id) {
   var regel = terugLijst().filter(function (r) { return r.id === id; })[0];
   if (!regel) return false;
@@ -420,9 +514,11 @@ function zetTerug(id) {
   if (typeof meldWijziging === "function") meldWijziging(regel.sleutel);
   return true;
 }
+/** @returns {void} */
 function wisTerug() { try { localStorage.removeItem(TERUG_KEY); } catch(e) {} }
 /* Van "tt_abc123__fch_wedstrijden_v1" naar iets waar een mens iets aan
    heeft. */
+/** @type {Object<string,string>} */
 const TERUG_NAMEN = {
   "fch_wedstrijden_v1": "Wedstrijden", "fch_spelers_v1": "Spelers",
   "fch_trainingen_v1": "Trainingen", "fch_events_v1": "Agenda",
@@ -433,24 +529,32 @@ const TERUG_NAMEN = {
   "fch_sportpark_v1": "Sportpark", "fch_formaties_v1": "Formaties",
   "fch_taken_v1": "Taken", "fch_activiteiten_v1": "Activiteiten"
 };
+/** @param {string} volle @returns {string} leesbare naam, bijv. "Wedstrijden" */
 function terugNaam(volle) {
   var kaal = basisUitSleutel(String(volle || "").replace(/^tt_[^_]+__/, ""));
   return TERUG_NAMEN[kaal] || kaal.replace(/^fch_|_v1$/g, "").replace(/_/g, " ");
 }
 /* Uit welk seizoen kwam dit? In het vangnet kan iets van vorig jaar
    staan, en dan wil je dat zien voordat je het terugzet. */
+/** @param {string} volle @returns {string|null} */
 function terugSeizoen(volle) {
   var s = seizoenUitSleutel(String(volle || "").replace(/^tt_[^_]+__/, ""));
   return s ? seizoenLabel(s) : null;
 }
+/** @param {string} volle @returns {string|null} de naam van het team waar deze sleutel bij hoort */
 function terugTeam(volle) {
   var m = String(volle || "").match(/^tt_([^_]+)__/);
   if (!m) return null;
-  var t = teams().filter(function (x) { return x.id === m[1]; })[0];
+  /* Eigen const nodig zodat tsc de "m is niet null"-controle hierboven
+     meeneemt in de geneste .filter-functie (zelfde truc als eerder in
+     dit bestand en in server.js). */
+  const gevonden = m;
+  var t = teams().filter(function (x) { return x.id === gevonden[1]; })[0];
   return t ? t.naam : null;
 }
 /* Hoeveel er in zat. Een lijst van twaalf spelers terugzetten is iets
    anders dan een lege lijst terugzetten, en dat wil je zien. */
+/** @param {any} waarde @returns {number|null} */
 function terugOmvang(waarde) {
   if (Array.isArray(waarde)) return waarde.length;
   if (waarde && typeof waarde === "object") return Object.keys(waarde).length;
@@ -471,6 +575,7 @@ function terugOmvang(waarde) {
 
    De gegevens gaan wél echt weg. Daar zit het gewicht, en niemand kan
    er nog bij. */
+/** @returns {Promise<{ok:boolean}>} */
 function duwTeamsWeg() {
   var lijst = teamsWeg();
   if (!lijst.length) return Promise.resolve({ok:true});
@@ -501,6 +606,18 @@ function duwTeamsWeg() {
    maakt het verschil tussen het lege team dat de app bij installeren
    aanmaakt (weg ermee) en een team dat je zelf hebt gevuld terwijl de
    server nog van niets weet (blijven staan). */
+/** @typedef {Object} ServerTeam
+ * @property {string} id
+ * @property {string} naam
+ * @property {string|null} [verwijderd_op]
+ */
+/**
+ * @param {Team[]} [lokaal]
+ * @param {ServerTeam[]} [vanServer]
+ * @param {string[]} [hierWeg]
+ * @param {(id: string) => boolean} [heeftGegevens]
+ * @returns {{lijst: Team[], erbij: number}}
+ */
 function teamlijstSamen(lokaal, vanServer, hierWeg, heeftGegevens) {
   lokaal    = lokaal || [];
   vanServer = vanServer || [];
@@ -536,6 +653,7 @@ function teamlijstSamen(lokaal, vanServer, hierWeg, heeftGegevens) {
   return {lijst: lijst, erbij: erbij};
 }
 
+/** @param {string} clubId @returns {Promise<ServerUitkomst>} */
 function syncTeams(clubId) {
   /* Eerst kijken wat er al staat, en pas daarna versturen. Andersom
      zou het lege team dat bij het installeren wordt aangemaakt als
@@ -569,9 +687,26 @@ function syncTeams(clubId) {
   });
 }
 
+/** @typedef {Object} SyncUitslag
+ * @property {number} geduwd
+ * @property {number} gehaald
+ * @property {number} samengevoegd
+ * @property {{sleutel:string, samengevoegd:boolean, erbij:number}[]} botsingen
+ * @property {string[]} fouten
+ */
+
 /* Eén soort gegevens van één team of van jou persoonlijk. Alles wat
    hier gebeurt volgt uit syncBesluit; deze functie voert alleen uit.
    Dat scheelt: het denkwerk staat op één plek en is los te testen. */
+/**
+ * @param {string} tabel          "gegevens" of "persoonlijk"
+ * @param {Object<string,string>} waar  vaste velden voor de rij (team_id of gebruiker_id)
+ * @param {string} volle          de volle (met team/seizoen voorvoegde) sleutel
+ * @param {string} sleutel        de sleutel zoals de server hem kent (zonder team-voorvoegsel)
+ * @param {ServerRij|null} server
+ * @param {SyncUitslag} uitslag   wordt hier bijgewerkt
+ * @returns {Promise<void>}
+ */
 function syncEen(tabel, waar, volle, sleutel, server, uitslag) {
   var staat = syncStaat(volle);
   var mijn = _lees(volle);
@@ -604,6 +739,12 @@ function syncEen(tabel, waar, volle, sleutel, server, uitslag) {
 
   var waarde = mijn;
   if (besluit === "samen") {
+    /* syncBesluit() geeft "samen" per zijn eigen logica nooit terug
+       zonder een server-rij (kijk naar de "if (!server) return..."
+       vroeg in die functie) — maar tsc kan dat niet over de
+       functiegrens heen navolgen. Dezelfde soort vangnet-regel als
+       hierboven bij "haal", puur voor de typecontrole. */
+    if (!server) return Promise.resolve();
     /* De nieuwste wint bij gelijke id's. Wij zijn nieuwer als we na
        de laatste uitwisseling nog iets hebben veranderd — en dat is
        precies wat "niet schoon" betekent. */
@@ -636,18 +777,26 @@ function syncEen(tabel, waar, volle, sleutel, server, uitslag) {
 /* Een aantal soorten achter elkaar in plaats van tegelijk. Twintig
    verzoeken tegelijk vanaf een telefoon met één streepje bereik
    levert twintig mislukkingen op; één voor één komt er wel doorheen. */
+/**
+ * @template T
+ * @param {T[]} lijst
+ * @param {(item: T) => Promise<any>} doe
+ * @returns {Promise<void>}
+ */
 function opEenRij(lijst, doe) {
   return lijst.reduce(function (rij, item) {
     return rij.then(function () { return doe(item); });
   }, Promise.resolve());
 }
 
+/** @param {Team} team @param {SyncUitslag} uitslag @returns {Promise<ServerUitkomst>} */
 function syncTeamGegevens(team, uitslag) {
   var voor = "tt_" + team.id + "__";
   return serverVraag("/rest/v1/gegevens?select=sleutel,waarde,bijgewerkt_op,apparaat&team_id=eq." +
                      encodeURIComponent(team.id))
     .then(function (r) {
       if (!r.ok) return r;
+      /** @type {Object<string,ServerRij>} */
       var opServer = {};
       (Array.isArray(r.gegevens) ? r.gegevens : []).forEach(function (g) { opServer[g.sleutel] = g; });
       /* Alles wat hier staat plus alles wat daar staat: anders mist
@@ -673,19 +822,25 @@ function syncTeamGegevens(team, uitslag) {
     });
 }
 
+/** @param {SyncUitslag} uitslag @returns {Promise<ServerUitkomst>} */
 function syncPersoonlijk(uitslag) {
   var gebruiker = gebruikerNu();
   var uid = gebruiker && gebruiker.id;
   if (!uid) return Promise.resolve({ok:true});
+  /* Eigen const nodig zodat tsc de "uid is niet leeg"-controle
+     hierboven meeneemt in de geneste opEenRij-functie verderop
+     (zelfde truc als eerder in dit bestand). */
+  const gebruikerId = uid;
   return serverVraag("/rest/v1/persoonlijk?select=sleutel,waarde,bijgewerkt_op,apparaat")
     .then(function (r) {
       if (!r.ok) return r;
+      /** @type {Object<string,ServerRij>} */
       var opServer = {};
       (Array.isArray(r.gegevens) ? r.gegevens : []).forEach(function (g) { opServer[g.sleutel] = g; });
       var alles = persoonlijkeSleutels().slice();
       Object.keys(opServer).forEach(function (s) { if (alles.indexOf(s) < 0) alles.push(s); });
       return opEenRij(alles, function (sleutel) {
-        return syncEen("persoonlijk", {gebruiker_id: uid}, sleutel,
+        return syncEen("persoonlijk", {gebruiker_id: gebruikerId}, sleutel,
                        sleutel, opServer[sleutel] || null, uitslag);
       }).then(function () { return {ok:true}; });
     });
@@ -693,6 +848,7 @@ function syncPersoonlijk(uitslag) {
 
 /* Het pakket komt van de server en nergens anders vandaan. In de
    browser is elk slot te openen; in de database niet. */
+/** @param {string} clubId @returns {Promise<ServerUitkomst>} */
 function syncPakket(clubId) {
   return serverVraag("/rest/v1/abonnementen?select=pakket,geldig_tot&club_id=eq." + clubId)
     .then(function (r) {
@@ -704,12 +860,14 @@ function syncPakket(clubId) {
 }
 
 var _syncBezig = false;
+/** @returns {Promise<ServerUitkomst>} */
 function synchroniseer() {
   if (!serverAan()) return Promise.resolve(serverFout("geen-server", "Er is nog geen server ingesteld."));
   if (!ingelogd()) return Promise.resolve(serverFout("aanmelding", "Je bent niet ingelogd."));
   if (_syncBezig) return Promise.resolve(serverFout("bezig", "Er wordt al gesynchroniseerd."));
   _syncBezig = true;
 
+  /** @type {SyncUitslag} */
   var uitslag = {geduwd:0, gehaald:0, samengevoegd:0, botsingen:[], fouten:[]};
   return zorgVoorClub()
     .then(function (r) {

@@ -4566,8 +4566,9 @@ function terugSeizoen(volle) {
 function terugTeam(volle) {
   var m = String(volle || "").match(/^tt_([^_]+)__/);
   if (!m) return null;
+  const gevonden = m;
   var t2 = teams().filter(function(x) {
-    return x.id === m[1];
+    return x.id === gevonden[1];
   })[0];
   return t2 ? t2.naam : null;
 }
@@ -4689,6 +4690,7 @@ function syncEen(tabel, waar, volle, sleutel, server, uitslag) {
   }
   var waarde = mijn;
   if (besluit === "samen") {
+    if (!server) return Promise.resolve();
     var samen = voegSamen(mijn, server.waarde, true);
     waarde = samen.waarde;
     if (mijn !== null && stabiel(mijn) !== stabiel(waarde))
@@ -4754,6 +4756,7 @@ function syncPersoonlijk(uitslag) {
   var gebruiker = gebruikerNu();
   var uid = gebruiker && gebruiker.id;
   if (!uid) return Promise.resolve({ ok: true });
+  const gebruikerId = uid;
   return serverVraag("/rest/v1/persoonlijk?select=sleutel,waarde,bijgewerkt_op,apparaat").then(function(r) {
     if (!r.ok) return r;
     var opServer = {};
@@ -4767,7 +4770,7 @@ function syncPersoonlijk(uitslag) {
     return opEenRij(alles, function(sleutel) {
       return syncEen(
         "persoonlijk",
-        { gebruiker_id: uid },
+        { gebruiker_id: gebruikerId },
         sleutel,
         sleutel,
         opServer[sleutel] || null,
