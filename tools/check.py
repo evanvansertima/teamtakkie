@@ -339,7 +339,17 @@ if os.path.abspath(BESTAND) == os.path.abspath(STANDAARD_BRON) and os.path.exist
         # heeft gezet; anders is dat de echte reden.
         fout_stderr = r.stderr.strip()
         if fout_stderr:
-            alles.append("de bouw-actualiteitscontrole kon niet draaien -- " + fout_stderr.splitlines()[-1])
+            # De laatste regel van een Node-crash is meestal alleen het
+            # versienummer ("Node.js v20.x.x"), niet de echte fout -- dat
+            # bleek meteen bij de eerste keer dat dit pad echt afging
+            # (ontbrekende esbuild-installatie meldde zich als "Node.js
+            # v24.21.0", onbruikbaar). Zoek in plaats daarvan de eerste
+            # regel die op een JS-foutmelding lijkt ("Error: ...", of een
+            # eigen foutklasse zoals "TypeError:"); val terug op de
+            # laatste regel als zo'n patroon nergens voorkomt.
+            regels = fout_stderr.splitlines()
+            echte_regel = next((r2 for r2 in regels if re.match(r'^\s*\w*Error:', r2)), regels[-1])
+            alles.append("de bouw-actualiteitscontrole kon niet draaien -- " + echte_regel.strip())
         else:
             alles.append("online/index.html is verouderd t.o.v. src/app.jsx -- draai node tools/bouw.js")
 print()
