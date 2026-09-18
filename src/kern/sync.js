@@ -574,7 +574,22 @@ function terugOmvang(waarde) {
    opnieuw aanmaken. Nu ziet dat apparaat de datum en gooit het ook weg.
 
    De gegevens gaan wél echt weg. Daar zit het gewicht, en niemand kan
-   er nog bij. */
+   er nog bij.
+
+   Dezelfde PostgREST-eigenaardigheid als bij hefClubOp() in
+   src/app.jsx: een door RLS tegengehouden PATCH is geen fout. Hij
+   raakt nul rijen en meldt gewoon 2xx — "gelukt, niets te melden".
+   Voor een trainer die geen eigenaar is, of bij een policy die er
+   (nog) niet is, is dat precies wat hier terugkomt. Kijken naar r.ok
+   alleen is dus niet genoeg; daarom vragen we de geraakte rij terug
+   (return=representation) en geldt een lege lijst als MISLUKT.
+
+   Anders dan bij duwSeizoenenWeg() hieronder is nul rijen hier
+   ondubbelzinnig een weigering. Dat een team op de server bestaat is
+   de voorwaarde om het daar te kunnen markeren: staat de rij er niet,
+   dan is er van dit team ook nooit iets omhoog gegaan en had die
+   grafsteen hier helemaal niets te zoeken. Nul rijen betekent hier dus
+   altijd "iemand hield dit tegen". */
 /** @returns {Promise<{ok:boolean}>} */
 function duwTeamsWeg() {
   var lijst = teamsWeg();
@@ -583,14 +598,32 @@ function duwTeamsWeg() {
     var pad = "/rest/v1/teams?id=eq." + encodeURIComponent(graf.id);
     return serverVraag(pad, {methode:"PATCH",
         lichaam:{verwijderd_op: graf.op || new Date().toISOString()},
-        koppen:{"Prefer":"return=minimal"}})
+        koppen:{"Prefer":"return=representation"}})
       .then(function (r) {
-        /* Staat het team er helemaal niet meer, dan is het doel ook
-           bereikt. Alleen bij een echte storing blijft de grafsteen. */
+        /* Alleen bij een echte storing blijft de grafsteen staan, voor
+           de volgende sync-poging. */
         if (!r.ok) return;
+        /* En net zo goed bij een stille weigering. Zonder grafsteen is
+           er niets meer dat het ooit nog eens probeert: het team blijft
+           dan stil op de server staan terwijl deze app denkt dat het
+           weg is. Liever elke sync opnieuw proberen dan dat verschil. */
+        var geraakt = Array.isArray(r.gegevens) ? r.gegevens : [];
+        if (!geraakt.length) return;
         return serverVraag("/rest/v1/gegevens?team_id=eq." + encodeURIComponent(graf.id),
                            {methode:"DELETE", koppen:{"Prefer":"return=minimal"}})
-          .then(function () { vergeetTeamWeg(graf.id); });
+          .then(function (d) {
+            /* Pas als ook de gegevens echt weg zijn mag de grafsteen
+               weg. Mislukt deze DELETE (bereik weg, storing), dan zou
+               het vergeten van de grafsteen de gegevens van een
+               weggegooid team voorgoed op de server achterlaten —
+               onzichtbaar voor iedereen, en zonder dat er nog iets is
+               dat ze opruimt. Hier telt alleen d.ok: een lege lijst
+               betekent bij deze DELETE niet "geweigerd" maar kan net zo
+               goed "er stond al niets" zijn (zelfde afweging als bij
+               duwSeizoenenWeg hieronder), en met return=minimal komt er
+               sowieso geen lijst terug. */
+            if (d && d.ok) vergeetTeamWeg(graf.id);
+          });
       });
   }).then(function () { return {ok:true}; });
 }
