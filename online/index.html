@@ -2969,6 +2969,28 @@ window.addEventListener("error", function(e){
     '<div style="font-size:11px;color:#9aa1aa;margin-top:14px;font-family:monospace;' +
     'word-break:break-word;">' + String((e && e.message) || "onbekende fout") + '</div>' +
     '</div></div>';
+
+  /* Deze fout ook naar public.foutmeldingen sturen (server/16-foutrapportage.sql),
+     als stuurFoutmelding() al bestaat. Die functie staat in
+     src/kern/foutmeldingen.js, dat pas verderop in het tweede
+     <script>-blok hieronder wordt geladen — bij de klassieke reden dat
+     déze handler bestaat (een syntaxfout die het HELE gebouwde bestand
+     laat mislukken) is dat blok nooit tot uitvoering gekomen, en dus
+     bestaat de functie dan nog niet. In dat geval blijft het bij de
+     melding hierboven: die is voor de gebruiker al zichtbaar, en
+     tools/check.py vangt zo'n syntaxfout bovendien al vóór het
+     uitrollen. Vandaar de typeof-check in plaats van er blindelings
+     van uit te gaan dat de functie er al is. */
+  try {
+    if (typeof stuurFoutmelding === "function") {
+      stuurFoutmelding({
+        bericht: String((e && e.message) || "onbekende fout"),
+        stack: (e && e.error && e.error.stack) ? String(e.error.stack) : undefined,
+        scherm: "onbekend",      /* de app is nog niet eens gestart, er is nog geen scherm gekozen */
+        fouttype: "opstartfout"
+      });
+    }
+  } catch (foutBijMelden) { /* nooit een tweede fout bovenop de eerste */ }
 });
 </script>
 <script>
@@ -3867,6 +3889,102 @@ function gebruikSessie() {
     };
   }, []);
   return waarde;
+}
+const FOUT_APPARAAT_KEY = "ttf_apparaat_v1";
+function _nieuwFoutApparaatId() {
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+    return crypto.randomUUID();
+  }
+  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, function(c) {
+    var r = Math.random() * 16 | 0;
+    var v = c === "x" ? r : r & 3 | 8;
+    return v.toString(16);
+  });
+}
+function apparaatIdFout() {
+  try {
+    var bestaand = localStorage.getItem(FOUT_APPARAAT_KEY);
+    if (bestaand) return bestaand;
+    var nieuw = _nieuwFoutApparaatId();
+    localStorage.setItem(FOUT_APPARAAT_KEY, nieuw);
+    return nieuw;
+  } catch (e) {
+    return null;
+  }
+}
+const _FOUT_LABELS = ["speler\\s+", "naam\\s*:\\s*", "speler\\s*:\\s*", "e-?mail\\s*:\\s*", "telefoon\\s*:\\s*"];
+const _FOUT_WAARDE = "[A-Za-z\xC0-\xD6\xD8-\xF6\xF8-\xFF'-]+(?:[ \\t][A-Za-z\xC0-\xD6\xD8-\xF6\xF8-\xFF'-]+)*";
+const _FOUT_LABEL_PATROON = new RegExp("(" + _FOUT_LABELS.join("|") + ")(" + _FOUT_WAARDE + ")", "gi");
+const _FOUT_EMAIL_PATROON = /[^\s@]+@[^\s@]+\.[^\s@]+/g;
+const _FOUT_TELEFOON_PATROON = /\d{8,}/g;
+function ontdoeVanPersoonsgegevens(tekst, maxLengte) {
+  var uit = String(tekst === void 0 || tekst === null ? "" : tekst);
+  uit = uit.replace(_FOUT_LABEL_PATROON, function(_heel, label) {
+    return label + "[VERWIJDERD]";
+  });
+  uit = uit.replace(_FOUT_EMAIL_PATROON, "[E-MAIL]");
+  uit = uit.replace(_FOUT_TELEFOON_PATROON, "[TELEFOON]");
+  if (uit.length > maxLengte) uit = uit.slice(0, maxLengte);
+  return uit;
+}
+function herkenBrowserInfo(ua) {
+  var tekst = String(ua === void 0 || ua === null ? "" : ua);
+  var browser = "onbekend";
+  if (/Edg\//i.test(tekst)) browser = "Edge";
+  else if (/OPR\//i.test(tekst) || /Opera/i.test(tekst)) browser = "Opera";
+  else if (/CriOS\//i.test(tekst)) browser = "Chrome";
+  else if (/FxiOS\//i.test(tekst)) browser = "Firefox";
+  else if (/Chrome\//i.test(tekst) && !/Chromium/i.test(tekst)) browser = "Chrome";
+  else if (/Firefox\//i.test(tekst)) browser = "Firefox";
+  else if (/Safari\//i.test(tekst) && /Version\//i.test(tekst)) browser = "Safari";
+  var os = "overig";
+  if (/Windows/i.test(tekst)) os = "Windows";
+  else if (/iPhone|iPad|iPod/i.test(tekst)) os = "iOS";
+  else if (/Mac OS X/i.test(tekst)) os = "Mac";
+  else if (/Android/i.test(tekst)) os = "Android";
+  else if (/Linux/i.test(tekst)) os = "Linux";
+  return (browser + " / " + os).slice(0, 100);
+}
+const FOUT_APP_VERSIE = "onbekend";
+var _foutmeldingSessieTeller = 0;
+var _foutmeldingLaatsteTijd = (
+  /** @type {Object<string,number>} */
+  {}
+);
+const FOUTMELDING_MAX_PER_SESSIE = 5;
+const FOUTMELDING_HERHAAL_MS = 10 * 1e3;
+function _magFoutmeldingVersturen(bericht, scherm, nu) {
+  if (_foutmeldingSessieTeller >= FOUTMELDING_MAX_PER_SESSIE) return false;
+  var tijdstip = nu === void 0 ? Date.now() : nu;
+  var sleutel = String(bericht) + "|" + String(scherm || "");
+  var vorigeKeer = _foutmeldingLaatsteTijd[sleutel];
+  if (vorigeKeer !== void 0 && tijdstip - vorigeKeer < FOUTMELDING_HERHAAL_MS) return false;
+  _foutmeldingLaatsteTijd[sleutel] = tijdstip;
+  _foutmeldingSessieTeller++;
+  return true;
+}
+function stuurFoutmelding(opts) {
+  try {
+    var ruwBericht = opts && opts.bericht ? String(opts.bericht) : "onbekende fout";
+    var bericht = ontdoeVanPersoonsgegevens(ruwBericht, 300);
+    var scherm = opts && opts.scherm ? String(opts.scherm).slice(0, 50) : null;
+    if (!_magFoutmeldingVersturen(bericht, scherm)) return;
+    if (!serverAan()) return;
+    var apparaatId2 = apparaatIdFout();
+    if (!apparaatId2) return;
+    var lichaam = {
+      bericht,
+      apparaat_id: apparaatId2,
+      fouttype: String(opts && opts.fouttype || "onbekend").slice(0, 30),
+      app_versie: FOUT_APP_VERSIE,
+      browser_info: herkenBrowserInfo(typeof navigator !== "undefined" ? navigator.userAgent : "")
+    };
+    if (opts && opts.stack) lichaam.stack = ontdoeVanPersoonsgegevens(String(opts.stack), 2e3);
+    if (scherm) lichaam.scherm = scherm;
+    _haalOp("/rest/v1/foutmeldingen", { methode: "POST", lichaam }).catch(function() {
+    });
+  } catch (fout) {
+  }
 }
 const ROL_KEY = "tt_rol_v1";
 const ROLLEN = [
@@ -34721,6 +34839,9 @@ function App() {
     }
   }, [i.taal]);
   useEffect(function() {
+    _huidigeSchermVoorFoutmelding = pagina;
+  }, [pagina]);
+  useEffect(function() {
     pasThemaToe(i.thema);
     if (i.thema !== "systeem" || !window.matchMedia) return;
     var mq = window.matchMedia("(prefers-color-scheme: dark)");
@@ -34930,7 +35051,73 @@ function App() {
     );
   })));
 }
-ReactDOM.createRoot(document.getElementById("root")).render(/* @__PURE__ */ React.createElement(App, null));
+var _huidigeSchermVoorFoutmelding = "onbekend";
+window.addEventListener("unhandledrejection", function(e) {
+  try {
+    var reden = e && e.reason;
+    var bericht = reden && reden.message ? reden.message : String(reden);
+    var stack = reden && reden.stack ? String(reden.stack) : void 0;
+    stuurFoutmelding({
+      bericht,
+      stack,
+      scherm: _huidigeSchermVoorFoutmelding,
+      fouttype: "onafgehandelde-promise"
+    });
+  } catch (fout) {
+  }
+});
+class FoutOpvang extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { fout: null };
+  }
+  static getDerivedStateFromError(fout) {
+    return { fout };
+  }
+  componentDidCatch(fout, info) {
+    try {
+      stuurFoutmelding({
+        bericht: fout && fout.message || String(fout),
+        stack: fout && fout.stack ? String(fout.stack) : void 0,
+        scherm: _huidigeSchermVoorFoutmelding,
+        fouttype: "render-fout"
+      });
+    } catch (foutBijMelden) {
+    }
+  }
+  render() {
+    if (!this.state.fout) return this.props.children;
+    return /* @__PURE__ */ React.createElement("div", { style: {
+      minHeight: "100vh",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      padding: 24,
+      fontFamily: "'Helvetica Neue',Arial,sans-serif",
+      background: "#f6f7f9",
+      color: "#191e26"
+    } }, /* @__PURE__ */ React.createElement("div", { style: { maxWidth: 460, textAlign: "center" } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 34, marginBottom: 10 } }, "\u26A0\uFE0F"), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 17, fontWeight: 800 } }, "Er ging iets mis"), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13, color: "#6c757d", marginTop: 8, lineHeight: 1.6 } }, "Probeer de pagina opnieuw te laden. Blijft dit gebeuren, geef dan door wat je deed toen het misging."), /* @__PURE__ */ React.createElement(
+      "button",
+      {
+        onClick: function() {
+          window.location.reload();
+        },
+        style: {
+          marginTop: 16,
+          padding: "10px 20px",
+          borderRadius: 10,
+          border: "none",
+          background: "#191e26",
+          color: "#fff",
+          fontWeight: 700,
+          cursor: "pointer"
+        }
+      },
+      "Probeer opnieuw"
+    )));
+  }
+}
+ReactDOM.createRoot(document.getElementById("root")).render(/* @__PURE__ */ React.createElement(FoutOpvang, null, /* @__PURE__ */ React.createElement(App, null)));
 </script>
 </body>
 </html>

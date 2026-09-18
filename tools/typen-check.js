@@ -84,7 +84,7 @@ const TSC = path.join(__dirname, "node_modules", ".bin", "tsc");
    maakt de volgorde zelf niets uit (alle bestanden gaan sowieso
    samen het programma in) — maar uit elkaar laten lopen is verwarrend
    bij het lezen. */
-const KERN_VOLGORDE = ["sleutels.js", "server.js", "rollen.js", "opslag.js", "sync.js"];
+const KERN_VOLGORDE = ["sleutels.js", "server.js", "foutmeldingen.js", "rollen.js", "opslag.js", "sync.js"];
 const DOMEIN_VOLGORDE = ["boetepot.js", "wedstrijden.js", "statistieken.js", "opkomst.js"];
 
 function bestaandeBestanden(map, volgorde) {

@@ -65,7 +65,7 @@ const SCHERM_MAP  = path.join(WORTEL, "src", "schermen");
    deze lijst. Een module die nog niet bestaat wordt overgeslagen —
    zo werkt bouw.js ook halverwege P2, met drie modules wel en twee
    nog niet geknipt. */
-const KERN_VOLGORDE = ["sleutels.js", "server.js", "rollen.js", "opslag.js", "sync.js"];
+const KERN_VOLGORDE = ["sleutels.js", "server.js", "foutmeldingen.js", "rollen.js", "opslag.js", "sync.js"];
 
 /* Sinds P3 (professionaliseringsplan.md) komt daar een tweede laag
    bovenop: de domeinlogica onder src/domein/ — berekeningen en

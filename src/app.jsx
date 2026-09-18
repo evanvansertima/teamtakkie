@@ -1830,6 +1830,16 @@ function App() {
     try { document.documentElement.setAttribute("lang", taalNu()); } catch(e) {}
   }, [i.taal]);
 
+  /* Een kopie van "pagina" buiten React bijhouden, voor de twee
+     foutopvangplekken die geen React-state kunnen lezen: de
+     unhandledrejection-listener en FoutOpvang (de ErrorBoundary)
+     staan allebei buiten deze component en worden pas ná een fout
+     geraadpleegd — dan is een module-brede variabele de eenvoudigste
+     weg, in plaats van "pagina" ergens via een prop of een eigen
+     luisteraarlijst naar buiten te reiken zoals _sessieLuisteraars
+     dat voor de sessie doet. */
+  useEffect(function(){ _huidigeSchermVoorFoutmelding = pagina; }, [pagina]);
+
   useEffect(function(){
     pasThemaToe(i.thema);
     if (i.thema!=="systeem" || !window.matchMedia) return;
@@ -2059,4 +2069,85 @@ function App() {
   );
 }
 
-ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+/* Buiten App() bijgehouden, want zowel de unhandledrejection-listener
+   hieronder als FoutOpvang worden pas aangeroepen op het moment dat er
+   toevallig een fout optreedt — lang ná de render waarin App() deze
+   waarde voor het laatst zette (zie de useEffect op "pagina" hierboven).
+   "onbekend" tot de eerste keer dat die effect draait. */
+var _huidigeSchermVoorFoutmelding = "onbekend";
+
+/* Een onafgehandelde promise-afwijzing (bijvoorbeeld een vergeten
+   .catch() op een serveraanroep) verschijnt normaal alleen als rode
+   ruis in de devtools-console — de gebruiker ziet niets, maar de fout
+   is wél echt. In tegenstelling tot de foutopvang in src/index.html
+   (die stopt zodra #root een kind heeft) moet dit ALTIJD actief zijn,
+   dus dit staat los van App en wordt precies één keer aangemeld, bij
+   het laden van dit bestand. */
+window.addEventListener("unhandledrejection", function (e) {
+  try {
+    var reden = e && e.reason;
+    var bericht = (reden && reden.message) ? reden.message : String(reden);
+    var stack = (reden && reden.stack) ? String(reden.stack) : undefined;
+    stuurFoutmelding({
+      bericht: bericht,
+      stack: stack,
+      scherm: _huidigeSchermVoorFoutmelding,
+      fouttype: "onafgehandelde-promise"
+    });
+  } catch (fout) { /* een foutmelding mag nooit zelf een nieuwe fout geven */ }
+});
+
+/* React staat een ErrorBoundary niet toe als function-component: alleen
+   een class-component kent de twee levenscyclusmethoden hieronder
+   (getDerivedStateFromError/componentDidCatch), en hooks (useState,
+   useEffect) bestaan niet voor classes. Dit is daarom de enige plek in
+   de hele app waar een class in plaats van een function nodig is — geen
+   ouderwetse gewoonte die is blijven hangen, maar een eis van React
+   zelf: er is geen hooks-equivalent voor "vang een renderfout in mijn
+   kinderen op". */
+class FoutOpvang extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { fout: null };
+  }
+  static getDerivedStateFromError(fout) {
+    return { fout: fout };
+  }
+  componentDidCatch(fout, info) {
+    try {
+      stuurFoutmelding({
+        bericht: (fout && fout.message) || String(fout),
+        stack: (fout && fout.stack) ? String(fout.stack) : undefined,
+        scherm: _huidigeSchermVoorFoutmelding,
+        fouttype: "render-fout"
+      });
+    } catch (foutBijMelden) { /* nooit een tweede fout bovenop de eerste */ }
+  }
+  render() {
+    if (!this.state.fout) return this.props.children;
+    /* Zelfde toon en stijl als de foutmelding in src/index.html: rustig,
+       kort, en met precies één vervolgstap — hier kán die vervolgstap
+       ook echt iets doen (een herlaad), in tegenstelling tot een
+       kapotte build waar niets aan te doen valt tot de volgende uitrol. */
+    return (
+      <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",padding:24,
+        fontFamily:"'Helvetica Neue',Arial,sans-serif",background:"#f6f7f9",color:"#191e26"}}>
+        <div style={{maxWidth:460,textAlign:"center"}}>
+          <div style={{fontSize:34,marginBottom:10}}>⚠️</div>
+          <div style={{fontSize:17,fontWeight:800}}>Er ging iets mis</div>
+          <div style={{fontSize:13,color:"#6c757d",marginTop:8,lineHeight:1.6}}>
+            Probeer de pagina opnieuw te laden. Blijft dit gebeuren, geef dan door wat je deed
+            toen het misging.
+          </div>
+          <button onClick={function(){ window.location.reload(); }}
+            style={{marginTop:16,padding:"10px 20px",borderRadius:10,border:"none",
+              background:"#191e26",color:"#fff",fontWeight:700,cursor:"pointer"}}>
+            Probeer opnieuw
+          </button>
+        </div>
+      </div>
+    );
+  }
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<FoutOpvang><App /></FoutOpvang>);

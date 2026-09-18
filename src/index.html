@@ -2970,6 +2970,28 @@ window.addEventListener("error", function(e){
     '<div style="font-size:11px;color:#9aa1aa;margin-top:14px;font-family:monospace;' +
     'word-break:break-word;">' + String((e && e.message) || "onbekende fout") + '</div>' +
     '</div></div>';
+
+  /* Deze fout ook naar public.foutmeldingen sturen (server/16-foutrapportage.sql),
+     als stuurFoutmelding() al bestaat. Die functie staat in
+     src/kern/foutmeldingen.js, dat pas verderop in het tweede
+     <script>-blok hieronder wordt geladen — bij de klassieke reden dat
+     déze handler bestaat (een syntaxfout die het HELE gebouwde bestand
+     laat mislukken) is dat blok nooit tot uitvoering gekomen, en dus
+     bestaat de functie dan nog niet. In dat geval blijft het bij de
+     melding hierboven: die is voor de gebruiker al zichtbaar, en
+     tools/check.py vangt zo'n syntaxfout bovendien al vóór het
+     uitrollen. Vandaar de typeof-check in plaats van er blindelings
+     van uit te gaan dat de functie er al is. */
+  try {
+    if (typeof stuurFoutmelding === "function") {
+      stuurFoutmelding({
+        bericht: String((e && e.message) || "onbekende fout"),
+        stack: (e && e.error && e.error.stack) ? String(e.error.stack) : undefined,
+        scherm: "onbekend",      /* de app is nog niet eens gestart, er is nog geen scherm gekozen */
+        fouttype: "opstartfout"
+      });
+    }
+  } catch (foutBijMelden) { /* nooit een tweede fout bovenop de eerste */ }
 });
 </script>
 <script>
