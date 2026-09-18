@@ -32,6 +32,10 @@
 --  Scenario 10 meldt zolang "overgeslagen": die kan pas iets zeggen
 --  als de kolom bestaat.
 --
+--  Scenario 11 (bijgekomen op 18 september 2026) hoort óók nog rood te
+--  zijn: die hoort bij de coulance-regeling, en daarvan bestaat op dit
+--  moment alleen het ontwerp. Zie tests/coulance-60-dagen.test.sql.
+--
 --  Alle andere scenario's horen NU AL groen te zijn en moeten dat
 --  ná de reparatie blijven. Dat tweede deel is het belangrijkste
 --  van dit bestand: het gaat over public.gegevens, de tabel waar
@@ -73,7 +77,38 @@
 --
 --  Daarom toetst dit bestand twee dingen tegelijk:
 --    · scenario 1-2  — wie NOOIT betaalde, komt er niet in
---    · scenario 5    — wie ÓÓIT betaalde, blijft erin
+--    · scenario 5    — wie ÓÓIT betaalde, blijft erin, MAAR NIET
+--                      EEUWIG (zie hieronder)
+--
+--  ─────────────────────────────────────────────────────────────
+--  WAT ER OP 18 SEPTEMBER 2026 AAN SCENARIO 5 IS VERANDERD
+--
+--  Tot die dag beloofde scenario 5 iets dat te ruim was: "ooit betaald
+--  = voor altijd mogen schrijven". De verlopen abonnementen in de
+--  opbouw stonden op 1 januari 2020 — ruim zes jaar terug — en de test
+--  eiste dat die verenigingen nog gewoon konden opslaan.
+--
+--  Bij de betaalmuur hoort een besluit dat dat inperkt. Evan, 18
+--  september 2026: een vereniging waarvan het abonnement afloopt mag
+--  nog ZESTIG DAGEN IN TOTAAL naar de server schrijven (de bestaande
+--  veertien dagen respijt plus zesenveertig dagen coulance). Daarna
+--  stopt het schrijven. Lezen, exporteren en verwijderen blijven voor
+--  altijd werken — zie docs/avg-inventaris.md 8.8.
+--
+--  Daarom staan de verlopen abonnementen in scenario 5 nu op dertig
+--  dagen geleden in plaats van op 2020: ruim binnen de coulance, zodat
+--  scenario 5 nog steeds bewaakt waarvoor het bedoeld is (een mislukte
+--  incasso mag een klant niet meteen buitensluiten) zonder een belofte
+--  te doen die niet meer geldt.
+--
+--  Scenario 11 is de andere kant van diezelfde grens: na eenenzestig
+--  dagen houdt het op. Zonder die toevoeging zou dit bestand een
+--  groene test op een verouderde afspraak zijn geworden — en dat is
+--  het ergste soort test, want niemand gaat er nog naar kijken.
+--
+--  Het rekenwerk zelf (welke dag precies, en wat er gebeurt met een
+--  vereniging die van Evan onbeperkt toegang heeft) staat in een eigen
+--  bestand: tests/coulance-60-dagen.test.sql.
 --
 --  Scenario 5 bestaat in twee smaken, en dat is met opzet:
 --    5a/5b  het pakket is ooit via zet_pakket() op coach gezet
@@ -104,17 +139,23 @@ declare
   u_negen      uuid := '7ea1f7ee-0000-4000-a000-000000000008';
   u_beheerder  uuid := '7ea1f7ee-0000-4000-a000-000000000009';
   u_kijkbetaal uuid := '7ea1f7ee-0000-4000-a000-00000000000a';
+  u_overzakte  uuid := '7ea1f7ee-0000-4000-a000-00000000000b';
+  u_overhand   uuid := '7ea1f7ee-0000-4000-a000-00000000000c';
 
   c_nooit uuid; c_coach uuid; c_club uuid; c_zakte uuid; c_hand uuid; c_negen uuid;
+  c_overzakte uuid; c_overhand uuid;
 
   t_nooit constant text := 'tt-free-team-nooit';
   t_coach constant text := 'tt-free-team-coach';
   t_club  constant text := 'tt-free-team-club';
   t_zakte constant text := 'tt-free-team-zakte';
   t_hand  constant text := 'tt-free-team-hand';
+  t_overzakte constant text := 'tt-free-team-over-zakte';
+  t_overhand  constant text := 'tt-free-team-over-hand';
 
   geraakt  int;
   kolom_er boolean;
+  coulance_er boolean;
   vlag     boolean;
   pk       text;
   afwijkingen int := 0;
@@ -138,7 +179,9 @@ begin
       (u_vreemde,   'test-free-vreemde@teamtakkie.test'),
       (u_negen,     'test-free-negen@teamtakkie.test'),
       (u_beheerder, 'test-free-beheerder@teamtakkie.test'),
-      (u_kijkbetaal,'test-free-kijker-betaald@teamtakkie.test');
+      (u_kijkbetaal,'test-free-kijker-betaald@teamtakkie.test'),
+      (u_overzakte, 'test-free-over-zakte@teamtakkie.test'),
+      (u_overhand,  'test-free-over-hand@teamtakkie.test');
 
     insert into public.beheerders (gebruiker_id, notitie)
       values (u_beheerder, 'test-beheerder (free-server-afscherming)');
@@ -172,6 +215,16 @@ begin
     perform set_config('request.jwt.claim.sub', u_negen::text, true);
     c_negen := public.nieuwe_club('Testclub voor scenario 9', 'Eigenaar negen');
 
+    -- De twee verenigingen van scenario 11: precies dezelfde twee wegen
+    -- als bij scenario 5, alleen langer geleden verlopen.
+    perform set_config('request.jwt.claim.sub', u_overzakte::text, true);
+    c_overzakte := public.nieuwe_club('Testclub 61 dagen verlopen (zet_pakket)', 'Eigenaar over 1');
+    insert into public.teams (id, club_id, naam) values (t_overzakte, c_overzakte, 'Team over 1');
+
+    perform set_config('request.jwt.claim.sub', u_overhand::text, true);
+    c_overhand := public.nieuwe_club('Testclub 61 dagen verlopen (met de hand)', 'Eigenaar over 2');
+    insert into public.teams (id, club_id, naam) values (t_overhand, c_overhand, 'Team over 2');
+
     reset role;
 
     -- De kijker bij de free-vereniging. Met de hand, want leden_toevoegen
@@ -190,17 +243,33 @@ begin
     update public.abonnementen set pakket = 'club',  geldig_tot = null where club_id = c_club;
 
     -- c_hand: ooit met de hand op coach gezet, en die einddatum ligt
-    -- inmiddels jaren achter ons — ruim voorbij de respijtperiode van
-    -- veertien dagen uit pakket_instellingen. pakket_van_club() geeft
-    -- hier dus 'free' terug, terwijl deze club wel degelijk klant was.
-    update public.abonnementen set pakket = 'coach', geldig_tot = date '2020-01-01'
+    -- dertig dagen achter ons — voorbij de respijtperiode van veertien
+    -- dagen uit pakket_instellingen, maar binnen de zestig dagen
+    -- coulance. pakket_van_club() geeft hier dus 'free' terug, terwijl
+    -- deze club wel degelijk klant was én nog mag schrijven.
+    --
+    -- Dit stond tot 18 september 2026 op 1 januari 2020. Die datum kan
+    -- niet blijven staan: met de coulance-regeling is zes jaar geleden
+    -- niet meer "mag nog schrijven" maar "mag niet meer". Zie de uitleg
+    -- bovenaan dit bestand en scenario 11 hieronder.
+    update public.abonnementen set pakket = 'coach', geldig_tot = current_date - 30
       where club_id = c_hand;
 
     -- c_zakte: zelfde situatie, maar netjes via zet_pakket() gezet —
     -- de weg die het beheerscherm gebruikt.
     perform set_config('request.jwt.claim.sub', u_beheerder::text, true);
     set local role authenticated;
-    perform public.zet_pakket(c_zakte, 'coach', date '2020-01-01');
+    perform public.zet_pakket(c_zakte, 'coach', current_date - 30);
+    reset role;
+
+    -- En dezelfde twee, maar eenenzestig dagen geleden verlopen: één
+    -- dag voorbij de coulance. Scenario 11 kijkt naar deze twee.
+    update public.abonnementen set pakket = 'coach', geldig_tot = current_date - 61
+      where club_id = c_overhand;
+
+    perform set_config('request.jwt.claim.sub', u_beheerder::text, true);
+    set local role authenticated;
+    perform public.zet_pakket(c_overzakte, 'coach', current_date - 61);
     reset role;
 
     -- Bestaande gegevensrijen om op te wijzigen, te verwijderen en te
@@ -214,7 +283,9 @@ begin
       (t_coach, 'fch_spelers_v1',   '[]'::jsonb),
       (t_club,  'fch_spelers_v1',   '[]'::jsonb),
       (t_zakte, 'fch_spelers_v1',   '[]'::jsonb),
-      (t_hand,  'fch_spelers_v1',   '[]'::jsonb);
+      (t_hand,  'fch_spelers_v1',   '[]'::jsonb),
+      (t_overzakte, 'fch_spelers_v1', '[]'::jsonb),
+      (t_overhand,  'fch_spelers_v1', '[]'::jsonb);
 
     -- Controle op de opbouw zelf. Klopt dit niet, dan meet de rest
     -- van de test iets anders dan hij denkt te meten.
@@ -318,22 +389,28 @@ begin
       r := array_append(r, ('4b§club: bestaande gegevens wijzigen§onverwachte fout: ' || sqlerrm || '§WIJKT AF'));
     end;
 
-    -- ══ 5. ÓÓIT BETAALD, NU VERLOPEN — moet blijven werken ═══
+    -- ══ 5. ÓÓIT BETAALD, NET VERLOPEN — moet blijven werken ══
     --  Dit is het scenario waar een te haastige reparatie op stukloopt.
     --  Deze twee verenigingen staan volgens pakket_van_club() op 'free',
     --  precies zoals de vereniging in scenario 1 — en toch horen ze
     --  wél te mogen schrijven. Het verschil is niet in pakket_van_club()
     --  te zien; daar is een apart merkteken voor nodig.
     --
+    --  LET OP: "net verlopen" is sinds 18 september 2026 een wezenlijk
+    --  deel van dit scenario. Beide verenigingen zijn dertig dagen over
+    --  de einddatum: voorbij de veertien dagen respijt, ruim binnen de
+    --  zestig dagen coulance. Scenario 11 doet hetzelfde met
+    --  eenenzestig dagen en verwacht dan het tegenovergestelde.
+    --
     --  5a/5b: het pakket is via zet_pakket() gezet (het beheerscherm).
     perform set_config('request.jwt.claim.sub', u_zakte::text, true);
     begin
       insert into public.gegevens (team_id, sleutel, waarde)
         values (t_zakte, 'tt_nieuw_v1', '[{"naam":"Afgezakt"}]'::jsonb);
-      r := array_append(r, '5a§ooit coach via zet_pakket(), nu verlopen: nieuwe gegevens§GELUKT§ZOALS VERWACHT');
+      r := array_append(r, '5a§ooit coach via zet_pakket(), 30 dagen verlopen: nieuwe gegevens§GELUKT§ZOALS VERWACHT');
     exception when others then
       afwijkingen := afwijkingen + 1;
-      r := array_append(r, ('5a§ooit coach via zet_pakket(), nu verlopen: nieuwe gegevens§MISLUKT: ' || sqlerrm || '§WIJKT AF — mislukte incasso sluit een echte klant buiten'));
+      r := array_append(r, ('5a§ooit coach via zet_pakket(), 30 dagen verlopen: nieuwe gegevens§MISLUKT: ' || sqlerrm || '§WIJKT AF — mislukte incasso sluit een echte klant buiten'));
     end;
 
     begin
@@ -341,14 +418,14 @@ begin
         where team_id = t_zakte and sleutel = 'fch_spelers_v1';
       get diagnostics geraakt = row_count;
       if geraakt = 1 then
-        r := array_append(r, '5b§ooit coach via zet_pakket(), nu verlopen: wijzigen§GELUKT (1 rij)§ZOALS VERWACHT');
+        r := array_append(r, '5b§ooit coach via zet_pakket(), 30 dagen verlopen: wijzigen§GELUKT (1 rij)§ZOALS VERWACHT');
       else
         afwijkingen := afwijkingen + 1;
-        r := array_append(r, ('5b§ooit coach via zet_pakket(), nu verlopen: wijzigen§' || geraakt || ' rijen geraakt§WIJKT AF — mislukte incasso sluit een echte klant buiten'));
+        r := array_append(r, ('5b§ooit coach via zet_pakket(), 30 dagen verlopen: wijzigen§' || geraakt || ' rijen geraakt§WIJKT AF — mislukte incasso sluit een echte klant buiten'));
       end if;
     exception when others then
       afwijkingen := afwijkingen + 1;
-      r := array_append(r, ('5b§ooit coach via zet_pakket(), nu verlopen: wijzigen§onverwachte fout: ' || sqlerrm || '§WIJKT AF'));
+      r := array_append(r, ('5b§ooit coach via zet_pakket(), 30 dagen verlopen: wijzigen§onverwachte fout: ' || sqlerrm || '§WIJKT AF'));
     end;
 
     --  5c/5d: het pakket is MET DE HAND in Supabase gezet. Dat is
@@ -359,10 +436,10 @@ begin
     begin
       insert into public.gegevens (team_id, sleutel, waarde)
         values (t_hand, 'tt_nieuw_v1', '[{"naam":"Handmatig"}]'::jsonb);
-      r := array_append(r, '5c§ooit coach met de hand gezet, nu verlopen: nieuwe gegevens§GELUKT§ZOALS VERWACHT');
+      r := array_append(r, '5c§ooit coach met de hand gezet, 30 dagen verlopen: nieuwe gegevens§GELUKT§ZOALS VERWACHT');
     exception when others then
       afwijkingen := afwijkingen + 1;
-      r := array_append(r, ('5c§ooit coach met de hand gezet, nu verlopen: nieuwe gegevens§MISLUKT: ' || sqlerrm || '§WIJKT AF — abonnementen wordt met de hand bijgehouden, die weg telt dus ook'));
+      r := array_append(r, ('5c§ooit coach met de hand gezet, 30 dagen verlopen: nieuwe gegevens§MISLUKT: ' || sqlerrm || '§WIJKT AF — abonnementen wordt met de hand bijgehouden, die weg telt dus ook'));
     end;
 
     begin
@@ -370,14 +447,14 @@ begin
         where team_id = t_hand and sleutel = 'fch_spelers_v1';
       get diagnostics geraakt = row_count;
       if geraakt = 1 then
-        r := array_append(r, '5d§ooit coach met de hand gezet, nu verlopen: wijzigen§GELUKT (1 rij)§ZOALS VERWACHT');
+        r := array_append(r, '5d§ooit coach met de hand gezet, 30 dagen verlopen: wijzigen§GELUKT (1 rij)§ZOALS VERWACHT');
       else
         afwijkingen := afwijkingen + 1;
-        r := array_append(r, ('5d§ooit coach met de hand gezet, nu verlopen: wijzigen§' || geraakt || ' rijen geraakt§WIJKT AF — abonnementen wordt met de hand bijgehouden, die weg telt dus ook'));
+        r := array_append(r, ('5d§ooit coach met de hand gezet, 30 dagen verlopen: wijzigen§' || geraakt || ' rijen geraakt§WIJKT AF — abonnementen wordt met de hand bijgehouden, die weg telt dus ook'));
       end if;
     exception when others then
       afwijkingen := afwijkingen + 1;
-      r := array_append(r, ('5d§ooit coach met de hand gezet, nu verlopen: wijzigen§onverwachte fout: ' || sqlerrm || '§WIJKT AF'));
+      r := array_append(r, ('5d§ooit coach met de hand gezet, 30 dagen verlopen: wijzigen§onverwachte fout: ' || sqlerrm || '§WIJKT AF'));
     end;
 
     -- ══ 6. VERWIJDEREN BLIJFT VOOR IEDEREEN ══════════════════
@@ -572,6 +649,71 @@ begin
     else
       r := array_append(r, '10§bestaande betaalde abonnementen hebben het merkteken (zegt alleen iets op productie)§'
         || 'niet te toetsen: de kolom bestaat niet§overgeslagen');
+    end if;
+
+    -- ══ 11. MAAR NIET EEUWIG — NA ZESTIG DAGEN STOPT HET ═════
+    --  De tegenhanger van scenario 5, en de reden dat scenario 5 op
+    --  18 september 2026 moest veranderen. Zie de uitleg bovenaan dit
+    --  bestand.
+    --
+    --  Dit zijn dezelfde twee wegen als bij scenario 5 — via
+    --  zet_pakket() en met de hand in de tabel — maar met een einddatum
+    --  van eenenzestig dagen terug: precies één dag voorbij de veertien
+    --  dagen respijt plus zesenveertig dagen coulance.
+    --
+    --  Waarom allebei die wegen ook hier: de coulance-grens rekent met
+    --  abonnementen.betaald_tot, en die kolom moet langs élke weg naar
+    --  binnen gevuld worden — net als ooit_betaald. Een uitbreiding die
+    --  alleen in zet_pakket() bijhoudt tot wanneer er betaald is, mist
+    --  precies de weg die vandaag het meest gebruikt wordt, en dan
+    --  slaagt 11a wel en 11b niet.
+    --
+    --  Het fijnere rekenwerk — de grens van precies zestig dagen, en de
+    --  vereniging die van Evan onbeperkt toegang heeft — staat in
+    --  tests/coulance-60-dagen.test.sql. Hier staat alleen de kant die
+    --  scenario 5 anders te ruim zou maken.
+    reset role;
+    select exists (select 1 from information_schema.columns
+                   where table_schema = 'public' and table_name = 'abonnementen'
+                     and column_name = 'betaald_tot')
+           and exists (select 1 from public.pakket_instellingen
+                       where sleutel = 'coulance_dagen')
+      into coulance_er;
+
+    if not coulance_er then
+      afwijkingen := afwijkingen + 2;
+      r := array_append(r, '11a§61 dagen verlopen (via zet_pakket()): schrijven hoort te stoppen§'
+        || 'niet te toetsen: de coulance-regeling bestaat nog niet§WIJKT AF — zie tests/coulance-60-dagen.test.sql');
+      r := array_append(r, '11b§61 dagen verlopen (met de hand gezet): schrijven hoort te stoppen§'
+        || 'niet te toetsen: de coulance-regeling bestaat nog niet§WIJKT AF — zie tests/coulance-60-dagen.test.sql');
+    else
+      perform set_config('request.jwt.claim.sub', u_overzakte::text, true);
+      set local role authenticated;
+      begin
+        insert into public.gegevens (team_id, sleutel, waarde)
+          values (t_overzakte, 'tt_nieuw_v1', '[{"naam":"Te laat"}]'::jsonb);
+        afwijkingen := afwijkingen + 1;
+        r := array_append(r, '11a§61 dagen verlopen (via zet_pakket()): schrijven hoort te stoppen§GELUKT§<< dit hoort te mislukken — de zestig dagen zijn om');
+      exception when insufficient_privilege then
+        r := array_append(r, '11a§61 dagen verlopen (via zet_pakket()): schrijven hoort te stoppen§GEWEIGERD door de beveiligingsregel§ZOALS VERWACHT');
+      when others then
+        afwijkingen := afwijkingen + 1;
+        r := array_append(r, ('11a§61 dagen verlopen (via zet_pakket()): schrijven hoort te stoppen§mislukt om de VERKEERDE reden: ' || sqlerrm || '§WIJKT AF'));
+      end;
+
+      perform set_config('request.jwt.claim.sub', u_overhand::text, true);
+      begin
+        insert into public.gegevens (team_id, sleutel, waarde)
+          values (t_overhand, 'tt_nieuw_v1', '[{"naam":"Te laat 2"}]'::jsonb);
+        afwijkingen := afwijkingen + 1;
+        r := array_append(r, '11b§61 dagen verlopen (met de hand gezet): schrijven hoort te stoppen§GELUKT§<< dit hoort te mislukken — de zestig dagen zijn om');
+      exception when insufficient_privilege then
+        r := array_append(r, '11b§61 dagen verlopen (met de hand gezet): schrijven hoort te stoppen§GEWEIGERD door de beveiligingsregel§ZOALS VERWACHT');
+      when others then
+        afwijkingen := afwijkingen + 1;
+        r := array_append(r, ('11b§61 dagen verlopen (met de hand gezet): schrijven hoort te stoppen§mislukt om de VERKEERDE reden: ' || sqlerrm || '§WIJKT AF'));
+      end;
+      reset role;
     end if;
 
     reset role;

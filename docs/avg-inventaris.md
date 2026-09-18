@@ -993,9 +993,10 @@ Bij de betaalmuur hoort een besluit dat rechtstreeks aan dit document raakt:
 **wat gebeurt er met de gegevens van een club die stopt met betalen?**
 
 Het besluit van 18 september 2026 is: nadat een abonnement is verlopen mag de
-club nog zestig dagen (bovenop de bestaande veertien dagen respijt) gewoon
-doorwerken en opslaan. Daarna stopt het *schrijven* naar de server. **Lezen,
-exporteren en verwijderen blijven werken — voor altijd.**
+club nog **zestig dagen in totaal** (de bestaande veertien dagen respijt plus
+zesenveertig dagen coulance) gewoon doorwerken en opslaan. Daarna stopt het
+*schrijven* naar de server. **Lezen, exporteren en verwijderen blijven
+werken — voor altijd.**
 
 Dat laatste is voor deze inventaris het punt dat telt. Een club die stopt met
 betalen raakt zijn gegevens niet kwijt en komt er ook niet buiten te staan; hij
