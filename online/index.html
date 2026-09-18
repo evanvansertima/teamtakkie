@@ -6592,7 +6592,7 @@ function presentieGebeurtenissen(wedstrijden, trainingen, activiteiten) {
   });
   (wedstrijden || []).forEach(function(w) {
     if (w.status !== "gespeeld") return;
-    var lijst = (w.aanwezigheid || []).length ? w.aanwezigheid : presentieUitOpstelling(w);
+    var lijst = w.aanwezigheid && w.aanwezigheid.length ? w.aanwezigheid : presentieUitOpstelling(w);
     if (!lijst.length) return;
     uit.push({
       id: "w" + w.id,
@@ -6616,7 +6616,7 @@ function presentieGebeurtenissen(wedstrijden, trainingen, activiteiten) {
     });
   });
   return uit.sort(function(x, y) {
-    return new Date(x.datum) - new Date(y.datum);
+    return new Date(x.datum).getTime() - new Date(y.datum).getTime();
   });
 }
 function presentieTabel(spelers, gebeurtenissen, afwezigheden) {

@@ -1,3 +1,4 @@
+// @ts-check
 /* ══════════════════════════════════════════════════════════════
    DOMEIN: opkomst en aanwezigheid
    ─────────────────────────────────────────────────────────────
@@ -67,7 +68,11 @@ const PRESENTIE_SOORTEN = [
   {id:"activiteit",   label:"Activiteiten", icoon:"fa-solid fa-calendar-day",   kleur:"#8b5cf6"}
 ];
 
-/* Van een wedstrijdopstelling naar dezelfde vorm als een presentielijst */
+/**
+ * Van een wedstrijdopstelling naar dezelfde vorm als een presentielijst
+ * @param {Wedstrijd} wedstrijd
+ * @returns {{spelerId:any, naam:string, status:"afwezig"|"aanwezig"}[]}
+ */
 function presentieUitOpstelling(wedstrijd) {
   return (wedstrijd.opstelling||[]).map(function(r){
     var st = (r.spelStatus||"basis");
@@ -79,8 +84,25 @@ function presentieUitOpstelling(wedstrijd) {
   });
 }
 
-/* Alle gebeurtenissen met een presentielijst, op datum */
+/** @typedef {Object} PresentieGebeurtenis  één training, wedstrijd of
+ * activiteit met een presentielijst — de kolom in presentieTabel()
+ * @property {string} id
+ * @property {"training"|"wedstrijd"|"activiteit"} soort
+ * @property {string} datum
+ * @property {string} titel
+ * @property {string} sub
+ * @property {any[]} lijst      de presentielijst zelf
+ * @property {boolean} [afgeleid]  alleen bij wedstrijd: kwam de lijst uit de opstelling in plaats van een eigen presentielijst?
+ */
+/**
+ * Alle gebeurtenissen met een presentielijst, op datum
+ * @param {Wedstrijd[]} wedstrijden
+ * @param {any[]} [trainingen]
+ * @param {any[]} [activiteiten]
+ * @returns {PresentieGebeurtenis[]}
+ */
 function presentieGebeurtenissen(wedstrijden, trainingen, activiteiten) {
+  /** @type {PresentieGebeurtenis[]} */
   var uit = [];
   (trainingen||[]).forEach(function(t){
     if (!(t.aanwezigheid||[]).length) return;
@@ -90,7 +112,7 @@ function presentieGebeurtenissen(wedstrijden, trainingen, activiteiten) {
   });
   (wedstrijden||[]).forEach(function(w){
     if (w.status!=="gespeeld") return;
-    var lijst = (w.aanwezigheid||[]).length ? w.aanwezigheid : presentieUitOpstelling(w);
+    var lijst = (w.aanwezigheid && w.aanwezigheid.length) ? w.aanwezigheid : presentieUitOpstelling(w);
     if (!lijst.length) return;
     uit.push({id:"w"+w.id, soort:"wedstrijd", datum:w.datum,
               titel:"vs. "+(w.tegenstander||"tegenstander"),
@@ -102,14 +124,36 @@ function presentieGebeurtenissen(wedstrijden, trainingen, activiteiten) {
               titel:a.titel, sub:activiteitSoort(a.soort).label,
               lijst:a.aanwezigheid});
   });
-  return uit.sort(function(x,y){ return new Date(x.datum) - new Date(y.datum); });
+  return uit.sort(function(x,y){ return new Date(x.datum).getTime() - new Date(y.datum).getTime(); });
 }
 
-/* Bouwt de kruistabel: spelers als rijen, gebeurtenissen als kolommen.
-   Een lopende afwezigheidsperiode vult de cel in waar niets is
-   ingevuld. Stond de speler er wél (aanwezig of te laat), dan wint
-   wat jij hebt aangevinkt — hij was er tenslotte gewoon. */
+/** @typedef {Object} PresentieRij
+ * @property {any} speler
+ * @property {any[]} cellen
+ * @property {number} aanw       aantal keer meegeteld als aanwezig
+ * @property {number} meegedaan  aantal cellen dat meetelt
+ * @property {number} buiten     aantal cellen dat niet meetelt (blessure e.d.)
+ * @property {number|null} pct
+ * @property {boolean} [weinigBasis]  gezet ná het sorteren: te weinig cellen voor een eerlijk percentage
+ */
+/** @typedef {Object} PresentieTabel
+ * @property {PresentieRij[]} rijen
+ * @property {{aanwezig:number, totaal:number, pct:number|null}[]} perKolom
+ * @property {number} buiten
+ * @property {number|null} gemiddelde
+ */
+/**
+ * Bouwt de kruistabel: spelers als rijen, gebeurtenissen als kolommen.
+ * Een lopende afwezigheidsperiode vult de cel in waar niets is
+ * ingevuld. Stond de speler er wél (aanwezig of te laat), dan wint
+ * wat jij hebt aangevinkt — hij was er tenslotte gewoon.
+ * @param {any[]} spelers
+ * @param {PresentieGebeurtenis[]} gebeurtenissen
+ * @param {any[]} [afwezigheden]
+ * @returns {PresentieTabel}
+ */
 function presentieTabel(spelers, gebeurtenissen, afwezigheden) {
+  /** @type {PresentieRij[]} */
   var rijen = sorteerOpLinie((spelers||[]).slice()).map(function(s){
     var cellen = gebeurtenissen.map(function(g){
       var r = g.lijst.filter(function(a){ return a.spelerId===s.id; })[0];
@@ -190,18 +234,47 @@ const AANWEZIG_KEUZES = [
   {id:"uitgeleend",  label:"Uitgeleend",       letter:"U",  kort:"Uitgel.", telt:true,
    kleur:"#7c3aed", op:"#ffffff", vlak:"#f3e8ff", icoon:"fa-solid fa-right-left"}
 ];
+/**
+ * @param {string} id
+ * @returns {{id:string,label:string,letter:string,kort:string,telt?:boolean,kleur:string,op:string,vlak:string,icoon:string,snel?:boolean}}
+ */
 function aanwezigInfo(id) {
   return AANWEZIG_KEUZES.filter(function(k){ return k.id===id; })[0] || AANWEZIG_KEUZES[0];
 }
-/* Te laat komen telt gewoon als aanwezig voor de opkomst */
+/**
+ * Te laat komen telt gewoon als aanwezig voor de opkomst
+ * @param {string} status
+ * @returns {boolean}
+ */
 function teltAlsAanwezig(status) {
   var k = AANWEZIG_KEUZES.filter(function(x){ return x.id===status; })[0];
   return !!(k && k.telt);
 }
-/* De opkomst van één training. Wie in een periode zit die niet
-   meetelt (blessure, schorsing) valt uit teller én noemer, anders
-   drukt een revaliderende speler het cijfer van de hele avond. */
+/** @typedef {Object} Opkomst
+ * @property {number} aanwezig
+ * @property {number} totaal
+ * @property {number} pct
+ */
+/**
+ * De opkomst van één training. Wie in een periode zit die niet
+ * meetelt (blessure, schorsing) valt uit teller én noemer, anders
+ * drukt een revaliderende speler het cijfer van de hele avond.
+ *
+ * LET OP (P5, 18 september 2026): dit is de ene, centrale opkomst-
+ * berekening sinds de opkomst-samenvoeging van 17-18 september — meerdere
+ * schermen roepen 'm nu aan (zie de bestandskop hierboven). De logica
+ * hieronder is met opzet ongewijzigd gelaten. `training` is met opzet
+ * `any` getypeerd in plaats van een preciezer object: dat zou op de
+ * `training.datum`-regel verderop een "mogelijk null/undefined"-melding
+ * opleveren die alleen is op te lossen door de functie zelf aan te
+ * passen (bijvoorbeeld een extra controle toevoegen) — en dat is nu
+ * precies wat hier niet mag gebeuren.
+ * @param {any} training
+ * @param {any[]} [afwezigheden]
+ * @returns {Opkomst|null}
+ */
 function opkomstVan(training, afwezigheden) {
+  /** @type {any[]} */
   var lijst = (training && training.aanwezigheid) || [];
   if (!lijst.length) return null;
   var aanw = 0, tot = 0;
@@ -244,19 +317,42 @@ const AFWEZIGHEID_SOORTEN = [
   {id:"overig",    label:"Overig",         letter:"O",  noemer:true,
    icoon:"fa-solid fa-circle-info",      kleur:"#475569", op:"#ffffff", vlak:"#f1f5f9"}
 ];
+/** @typedef {Object} Afwezigheid  een langdurige-afwezigheidsperiode
+ * @property {any} id
+ * @property {any} spelerId
+ * @property {string} soort   een AFWEZIGHEID_SOORTEN.id
+ * @property {string} vanaf   ISO-datum
+ * @property {string} [tot]   ISO-datum; leeg/ontbrekend = tot nader bericht
+ * @property {string} [reden]
+ * @property {boolean|null} [teltMee]  overschrijft het standaardantwoord van de soort
+ */
+/** @type {Afwezigheid} */
 const LEEG_AFWEZIGHEID = { id:null, spelerId:null, soort:"blessure", vanaf:"", tot:"", reden:"", teltMee:null };
 
+/**
+ * @param {string} [id]
+ * @returns {{id:string,label:string,letter:string,noemer:boolean,icoon:string,kleur:string,op:string,vlak:string}}
+ */
 function afwezigheidSoort(id) {
   return AFWEZIGHEID_SOORTEN.filter(function(s){ return s.id===id; })[0] || AFWEZIGHEID_SOORTEN[0];
 }
-/* De soort bepaalt het standaardantwoord, maar je kunt het per
-   periode omzetten: een geschorste speler kan wél trainen. */
+/**
+ * De soort bepaalt het standaardantwoord, maar je kunt het per
+ * periode omzetten: een geschorste speler kan wél trainen.
+ * @param {Afwezigheid} [rec]
+ * @returns {boolean}
+ */
 function afwezigheidTeltMee(rec) {
   if (rec && (rec.teltMee===true || rec.teltMee===false)) return rec.teltMee;
   return afwezigheidSoort(rec && rec.soort).noemer;
 }
-/* Lege einddatum betekent "tot nader bericht": bij een verse
-   blessure weet je nog niet hoe lang het gaat duren. */
+/**
+ * Lege einddatum betekent "tot nader bericht": bij een verse
+ * blessure weet je nog niet hoe lang het gaat duren.
+ * @param {Afwezigheid|null|undefined} rec
+ * @param {string} datum
+ * @returns {boolean}
+ */
 function inAfwezigheid(rec, datum) {
   if (!rec) return false;
   var d = parseerDatum(datum);   if (!d) return false;
@@ -266,8 +362,14 @@ function inAfwezigheid(rec, datum) {
   if (tot && d > tot) return false;
   return true;
 }
-/* Welke periode geldt voor deze speler op deze dag? Overlappen er
-   twee, dan wint degene die niet meetelt — de zwaarste reden. */
+/**
+ * Welke periode geldt voor deze speler op deze dag? Overlappen er
+ * twee, dan wint degene die niet meetelt — de zwaarste reden.
+ * @param {Afwezigheid[]|null|undefined} afwezigheden
+ * @param {any} spelerId
+ * @param {string} datum
+ * @returns {Afwezigheid|null}
+ */
 function afwezigheidOp(afwezigheden, spelerId, datum) {
   var raak = (afwezigheden||[]).filter(function(r){
     return r.spelerId===spelerId && inAfwezigheid(r, datum);
@@ -278,7 +380,12 @@ function afwezigheidOp(afwezigheden, spelerId, datum) {
   });
   return raak[0];
 }
-/* loopt / komt nog / voorbij */
+/**
+ * loopt / komt nog / voorbij
+ * @param {Afwezigheid} rec
+ * @param {string} [vandaag]
+ * @returns {"nu"|"komt"|"voorbij"}
+ */
 function afwezigheidFase(rec, vandaag) {
   var nu = vandaag || vandaagISO();
   if (inAfwezigheid(rec, nu)) return "nu";
@@ -286,13 +393,22 @@ function afwezigheidFase(rec, vandaag) {
   if (van && d && d < van) return "komt";
   return "voorbij";
 }
-/* Hoeveel dagen duurt de periode? Null als er geen einddatum is. */
+/**
+ * Hoeveel dagen duurt de periode? Null als er geen einddatum is.
+ * @param {Afwezigheid} rec
+ * @returns {number|null}
+ */
 function afwezigheidDagen(rec) {
   var van = parseerDatum(rec.vanaf), tot = rec.tot ? parseerDatum(rec.tot) : null;
   if (!van || !tot) return null;
   return Math.round((tot - van) / 86400000) + 1;
 }
-/* Hoeveel dagen nog te gaan? Negatief bestaat niet, dan is het 0. */
+/**
+ * Hoeveel dagen nog te gaan? Negatief bestaat niet, dan is het 0.
+ * @param {Afwezigheid} rec
+ * @param {string} [vandaag]
+ * @returns {number|null}
+ */
 function afwezigheidResterend(rec, vandaag) {
   var tot = rec.tot ? parseerDatum(rec.tot) : null;
   if (!tot) return null;
@@ -300,7 +416,11 @@ function afwezigheidResterend(rec, vandaag) {
   if (!d) return null;
   return Math.max(0, Math.round((tot - d) / 86400000));
 }
-/* Netjes leesbaar: "13 jul. – 26 sep. 2026" of "vanaf 13 jul. 2026" */
+/**
+ * Netjes leesbaar: "13 jul. – 26 sep. 2026" of "vanaf 13 jul. 2026"
+ * @param {Afwezigheid} [rec]
+ * @returns {string}
+ */
 function afwezigheidPeriodeTekst(rec) {
   if (!rec || !rec.vanaf) return "";
   var van = formateerDatum(rec.vanaf);
