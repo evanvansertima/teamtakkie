@@ -330,7 +330,18 @@ if os.path.abspath(BESTAND) == os.path.abspath(STANDAARD_BRON) and os.path.exist
     for regel in r.stdout.splitlines():
         print(regel)
     if r.returncode != 0:
-        alles.append("online/index.html is verouderd t.o.v. src/app.jsx -- draai node tools/bouw.js")
+        # r.stderr werd hier eerder nooit gelezen -- een crash in bouw.js
+        # zelf (bijvoorbeeld een ontbrekende esbuild-installatie, zoals
+        # in een verse checkout zonder "npm install --prefix tools")
+        # kwam dan altijd binnen als hetzelfde misleidende "verouderd",
+        # ook al had dat niets met src/app.jsx te maken. Zie de melding
+        # hieronder pas als "verouderd" als bouw.js zelf niets op stderr
+        # heeft gezet; anders is dat de echte reden.
+        fout_stderr = r.stderr.strip()
+        if fout_stderr:
+            alles.append("de bouw-actualiteitscontrole kon niet draaien -- " + fout_stderr.splitlines()[-1])
+        else:
+            alles.append("online/index.html is verouderd t.o.v. src/app.jsx -- draai node tools/bouw.js")
 print()
 if alles:
     for x in alles[:15]: print("  FOUT  "+x)

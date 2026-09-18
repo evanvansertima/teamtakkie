@@ -359,6 +359,20 @@ async function bouw() {
   console.log("\nKlaar. De map online/ kan naar Netlify.\n");
 }
 
+/* De APP_VERSIE-regel (het git-commitnummer, zie hierboven) verandert
+   bij elke commit, ook als er geen letter code is gewijzigd. Zonder
+   deze uitzondering zou controleerActueel() hieronder na ÉÉN willekeurige
+   commit (zelfs aan een ander bestand, zoals dit commentaar) altijd
+   "verouderd" roepen, want een verse build zou een ander commitnummer
+   bevatten dan wat er al in online/index.html staat — dat gebeurde
+   ook echt, ontdekt vlak na het invoeren van APP_VERSIE zelf. Beide
+   kanten van de vergelijking krijgen daarom hun APP_VERSIE-regel
+   genormaliseerd vóór de vergelijking; alle andere regels (de
+   daadwerkelijke code) moeten nog steeds precies gelijk zijn. */
+function zonderVersieRegel(tekst) {
+  return tekst.replace(/^const APP_VERSIE = "[^"]*";$/m, 'const APP_VERSIE = "";');
+}
+
 /* Voor check.py: bouwt in het geheugen en vergelijkt met wat er al in
    online/index.html staat, zonder dat bestand aan te raken. Dit vangt
    precies één fout: iemand past src/app.jsx aan en vergeet daarna
@@ -369,7 +383,7 @@ async function controleerActueel() {
   const { resultaat } = await bouwInGeheugen();
   if (!fs.existsSync(UITVOER)) fout("online/index.html bestaat niet — draai eerst node tools/bouw.js");
   const huidig = fs.readFileSync(UITVOER, "utf8");
-  if (huidig === resultaat) {
+  if (zonderVersieRegel(huidig) === zonderVersieRegel(resultaat)) {
     console.log("OK    online/index.html is actueel (komt overeen met src/app.jsx en src/index.html)");
     return true;
   }
