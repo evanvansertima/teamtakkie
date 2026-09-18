@@ -2994,6 +2994,7 @@ window.addEventListener("error", function(e){
 });
 </script>
 <script>
+const APP_VERSIE = "ece5fff";
 const TEAMS_KEY = "tt_teams_v1";
 const ACTIEF_KEY = "tt_actief_v1";
 const VOORKEUR_KEY = "tt_voorkeuren_v1";
@@ -3945,7 +3946,6 @@ function herkenBrowserInfo(ua) {
   else if (/Linux/i.test(tekst)) os = "Linux";
   return (browser + " / " + os).slice(0, 100);
 }
-const FOUT_APP_VERSIE = "onbekend";
 var _foutmeldingSessieTeller = 0;
 var _foutmeldingLaatsteTijd = (
   /** @type {Object<string,number>} */
@@ -3976,7 +3976,7 @@ function stuurFoutmelding(opts) {
       bericht,
       apparaat_id: apparaatId2,
       fouttype: String(opts && opts.fouttype || "onbekend").slice(0, 30),
-      app_versie: FOUT_APP_VERSIE,
+      app_versie: typeof APP_VERSIE !== "undefined" ? APP_VERSIE : "onbekend",
       browser_info: herkenBrowserInfo(typeof navigator !== "undefined" ? navigator.userAgent : "")
     };
     if (opts && opts.stack) lichaam.stack = ontdoeVanPersoonsgegevens(String(opts.stack), 2e3);

@@ -6,6 +6,9 @@
    Wat dit doet:
        src/index.html   (het sjabloon: kop, stijl, body, twee inline
                          scriptjes die vóór de app moeten draaien)
+     + APP_VERSIE       (sinds P6: één regel met het huidige git-
+                         commitnummer, voor de foutrapportage — zie
+                         huidigeCommit() hieronder)
      + src/kern/*.js    (sinds P2: de kern-modules, in vaste volgorde
                          — zie KERN_VOLGORDE hieronder)
      + src/domein/*.js  (sinds P3: de domeinlogica, in vaste volgorde
@@ -46,6 +49,7 @@
 const fs = require("fs");
 const path = require("path");
 const esbuild = require("esbuild");
+const { execSync } = require("child_process");
 
 const WORTEL   = path.join(__dirname, "..");
 const SJABLOON = path.join(WORTEL, "src", "index.html");
@@ -215,6 +219,26 @@ const DOMEIN_VOLGORDE = ["boetepot.js", "wedstrijden.js", "statistieken.js", "op
    die bestanden al vanuit hun kant meldden. */
 const SCHERM_VOLGORDE = ["gedeeld.jsx", "onboarding.jsx", "instellingen.jsx", "statistieken.jsx", "trainingen.jsx", "spelers.jsx", "clubhuis.jsx", "opstellingen.jsx", "wedstrijden.jsx"];
 
+/* Het korte git-commitnummer van dit moment, voor de foutrapportage
+   (src/kern/foutmeldingen.js, sinds P6). Geen los bestand in src/: er
+   is nergens anders in de bron een goede, gedeelde bron voor een
+   versienummer (sw.js heeft zijn eigen VERSIE, maar draait in een
+   aparte service-worker-scope die niet wordt meegeplakt). "onbekend"
+   als git niet beschikbaar is (bijvoorbeeld een kale kopie zonder
+   .git-map) — dan blijft foutmeldingen.js's eigen terugval-waarde
+   gelden. Dit blijft de build-determinisme-garantie overeind houden:
+   zolang je tussen twee builds niet opnieuw committeert, verandert
+   deze waarde niet, dus blijven twee builds ná elkaar byte-voor-byte
+   gelijk — precies de controle die tools/check.py bij elke wijziging
+   uitvoert. */
+function huidigeCommit() {
+  try {
+    return execSync("git rev-parse --short HEAD", { cwd: WORTEL }).toString().trim();
+  } catch (e) {
+    return "onbekend";
+  }
+}
+
 /* Het merkteken in src/index.html waar de gebouwde app terechtkomt.
    Bewust een commentaarregel en geen los token: zo blijft het sjabloon
    een geldig HTML-bestand dat je in een browser kunt openen zonder dat
@@ -274,7 +298,8 @@ async function bouwInGeheugen() {
     console.log("  · schermmodules meegenomen: " + schermBestanden.map((p) => path.basename(p)).join(", "));
   }
 
-  const appBron = kernBron + domeinBron + schermBron + fs.readFileSync(APPBRON, "utf8");
+  const versieBron = "const APP_VERSIE = " + JSON.stringify(huidigeCommit()) + ";\n";
+  const appBron = versieBron + kernBron + domeinBron + schermBron + fs.readFileSync(APPBRON, "utf8");
 
   /* ── Babel eruit ────────────────────────────────────────────── */
   const voor = sjabloonRegels.length;

@@ -177,15 +177,22 @@ function herkenBrowserInfo(ua) {
   return (browser + " / " + os).slice(0, 100);
 }
 
-/* Er bestaat vandaag geen versie-constante die src/app.jsx en
-   online/sw.js delen. sw.js heeft zijn eigen VERSIE ("takkie-v34"),
-   maar dat bestand draait als service worker in een eigen, gescheiden
-   scope — het wordt niet door tools/bouw.js meegeplakt met de rest —
-   dus die waarde is hier niet zonder duplicatie over te nemen. Bij
-   gebrek aan een voor de hand liggende gedeelde bron is dit een vaste
-   placeholder; zie het rapport bij deze wijziging voor de open vraag
-   aan Evan of en hoe er één gedeelde versie-constante moet komen. */
-const FOUT_APP_VERSIE = "onbekend";
+/* APP_VERSIE bestaat niet als eigen bestand in src/ — tools/bouw.js zet
+   hem bij elke build vooraan het samengevoegde script, als het korte
+   git-commitnummer van dat moment ("onbekend" als git niet beschikbaar
+   is). Dat blijft de build-determinisme-garantie overeind houden: twee
+   builds ná elkaar, zonder ertussen te committen, geven nog steeds
+   byte-voor-byte hetzelfde bestand, want de commit verandert niet.
+   Bewuste beperking: op het moment van bouwen is de wijziging die je nu
+   maakt meestal nog niet gecommit (bouwen-verifiëren-committen is de
+   volgorde uit CONTRIBUTING.md), dus het meegegeven nummer wijst naar
+   de vórige commit, niet naar de commit die dit bestand straks bevat.
+   Voor "komt deze crash van een oude of een nieuwe build" is dat nog
+   steeds bruikbaar; voor een exacte match niet. `tsc` kent APP_VERSIE
+   niet (hij staat nergens in src/ gedeclareerd) — dat is een bekende,
+   geaccepteerde tsc-melding, geen echte fout, zie tools/typen-check.js.
+   sw.js heeft zijn eigen, aparte VERSIE-string ("takkie-v34") voor
+   cache-versiebeheer; dat is een ander doel en blijft ongemoeid. */
 
 /* ── De twee overspoelingsgrenzen, vóór er ooit een verzoek gaat ──
    Beide in-het-geheugen, met opzet niet in localStorage: ze horen bij
@@ -249,7 +256,7 @@ function stuurFoutmelding(opts) {
       bericht: bericht,
       apparaat_id: apparaatId,
       fouttype: String((opts && opts.fouttype) || "onbekend").slice(0, 30),
-      app_versie: FOUT_APP_VERSIE,
+      app_versie: (typeof APP_VERSIE !== "undefined" ? APP_VERSIE : "onbekend"),
       browser_info: herkenBrowserInfo(typeof navigator !== "undefined" ? navigator.userAgent : "")
     };
     if (opts && opts.stack) lichaam.stack = ontdoeVanPersoonsgegevens(String(opts.stack), 2000);
