@@ -43,7 +43,18 @@ const path = require("path");
    naar src/kern/sleutels.js (stap 1) — hij hoort van oudsher bij de
    seizoenfamilie (bepaalt of een sleutel al een ::seizoen-laag heeft),
    niet bij synchroniseren zelf, maar syncTeamGegevens gebruikt hem
-   wel. Vandaar twee bronnen voor deze ene knip. */
+   wel. Vandaar twee bronnen voor deze ene knip.
+
+   Sinds het verwijderen van een seizoen (18 september 2026) geldt
+   hetzelfde voor nog vier functies uit sleutels.js: seizoenUitSleutel,
+   seizoenenWeg, seizoenIsWeg en vergeetSeizoenWeg. syncTeamGegevens
+   roept nu eerst duwSeizoenenWeg() aan en sluit sleutels van een
+   weggegooid seizoen uit van "alles" — dezelfde soort uitsluiting als
+   heeftLaag() al deed voor blote sleutels, maar dan voor een seizoen
+   waarvan de gebruiker zelf besloten heeft dat het weg moest. Zie
+   tests/seizoen-verwijderen.test.js voor duwSeizoenenWeg() in isolatie;
+   hier gaat het om de vraag of syncTeamGegevens die uitsluiting ook
+   werkelijk toepast. */
 const SYNC = path.join(__dirname, "..", "src", "kern", "sync.js");
 const regels = fs.readFileSync(SYNC, "utf8").split("\n");
 const SLEUTELS = path.join(__dirname, "..", "src", "kern", "sleutels.js");
@@ -60,9 +71,11 @@ function knipUit(bronRegels, bronNaam, naam) {
   return bronRegels.slice(a, e + 1).join("\n");
 }
 function knip(naam) { return knipUit(regels, "src/kern/sync.js", naam); }
+function knipSleutel(naam) { return knipUit(regelsSleutels, "src/kern/sleutels.js", naam); }
 function knipBlok() {
-  return knipUit(regelsSleutels, "src/kern/sleutels.js", "heeftLaag") + "\n" +
-    ["teamSleutelsVan", "opEenRij", "syncTeamGegevens"].map(knip).join("\n");
+  return ["heeftLaag", "seizoenUitSleutel", "seizoenenWeg", "seizoenIsWeg",
+          "noteerSeizoenWeg", "vergeetSeizoenWeg"].map(knipSleutel).join("\n") + "\n" +
+    ["teamSleutelsVan", "opEenRij", "duwSeizoenenWeg", "syncTeamGegevens"].map(knip).join("\n");
 }
 
 /* ── nagebootste browseropslag ─────────────────────────────── */
@@ -74,6 +87,9 @@ global.localStorage = {
   setItem: (k, v) => { kast[k] = String(v); },
   removeItem: (k) => { delete kast[k]; },
 };
+/* Top-level const uit sleutels.js, buiten het bereik van knipUit (die
+   knipt op functies) — nodig omdat seizoenenWeg() e.a. hem lezen. */
+const SEIZOENENWEG_KEY = "tt_seizoenen_weg_v1";
 
 /* ── nagebootste server ────────────────────────────────────────
    Legt elke aanroep vast en geeft terug wat de test heeft klaargezet.
@@ -273,7 +289,48 @@ ok("een antwoord dat helemaal geen rijen is loopt ook niet vast",
    await syncTeamGegevens({ id: "team1" }, UITSLAG()), { ok: true });
 ok("en er valt dan niets uit te wisselen", gesynct.length, 0);
 
-/* ══ 9. niets te doen ══ */
+/* ══ 9. een weggegooid seizoen gaat niet mee ══ */
+groep("een weggegooid seizoen — eerst duwen, dan buiten \"alles\" houden");
+console.log("   grafsteen op team1/2025-2026: die sleutel gaat niet mee,");
+console.log("   ook niet als het wegduwen zelf net is mislukt");
+leeg();
+kast["tt_team1__2026-2027::fch_trainingen_v1"] = "[]";   // ander seizoen, blijft gewoon meedoen
+noteerSeizoenWeg("team1", "2025-2026");
+/* Twee verschillende antwoorden nodig: de DELETE van duwSeizoenenWeg
+   moet mislukken (zodat de grafsteen blijft staan — anders bewijst deze
+   test niets, want dan zou de rij hieronder toch al niet meer bestaan),
+   terwijl de gewone leesvraag daarna gewoon een stale rij van het
+   weggegooide seizoen teruggeeft — precies het geval waarin de
+   uitsluiting het verschil maakt. De gedeelde serverVraag hierboven kent
+   maar één antwoord tegelijk, dus die wordt hier eventjes vervangen. */
+const serverVraagOrigineel = serverVraag;
+serverVraag = function (pad, opties) {
+  vragen.push({ pad: pad, opties: opties || null });
+  if (opties && opties.methode === "DELETE")
+    return Promise.resolve({ ok: false, fout: "server", tekst: "geen bereik" });
+  return Promise.resolve({ ok: true, gegevens: [
+    rij("2025-2026::fch_spelers_v1"), rij("2026-2027::fch_trainingen_v1")
+  ] });
+};
+await syncTeamGegevens({ id: "team1" }, UITSLAG());
+serverVraag = serverVraagOrigineel;
+ok("de grafsteen blijft staan — het wegduwen is mislukt",
+   seizoenIsWeg("team1", "2025-2026"), true);
+ok("duwSeizoenenWeg werd wel geprobeerd (DELETE met het juiste filter)",
+   vragen.some((v) => v.opties && v.opties.methode === "DELETE" &&
+     v.pad.indexOf("sleutel=like.2025-2026::*") >= 0), true);
+ok("de stale rij van het weggegooide seizoen wordt tóch niet opgehaald",
+   uitgewisseld(), ["2026-2027::fch_trainingen_v1"]);
+
+leeg();
+kast["tt_team1__2026-2027::fch_trainingen_v1"] = "[]";
+noteerSeizoenWeg("team1", "2025-2026");
+opServer(rij("2026-2027::fch_trainingen_v1"));   // niets meer van 2025-2026 op de server
+await syncTeamGegevens({ id: "team1" }, UITSLAG());
+ok("lukt het wegduwen wel, dan is de grafsteen weer weg",
+   seizoenIsWeg("team1", "2025-2026"), false);
+
+/* ══ 10. niets te doen ══ */
 groep("een team zonder gegevens");
 leeg();
 ok("meldt zich gewoon klaar", await syncTeamGegevens({ id: "leegteam" }, UITSLAG()), { ok: true });

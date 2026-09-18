@@ -1421,17 +1421,25 @@
        De seizoenen van één team. Een rij per seizoen, het jaartal groot
        genoeg om er met een duim langs de lijn op te mikken. */
     .seizoen-lijst { display:flex; flex-direction:column; gap:6px; }
-    .seizoen-rij { display:flex; align-items:center; gap:10px; width:100%;
-      border:2px solid var(--grijs); border-radius:12px; padding:9px 12px;
-      background:var(--wit); cursor:pointer; font-family:inherit;
-      color:var(--tekst); text-align:left; -webkit-tap-highlight-color:transparent; }
+    /* Sinds het weggooien van een los seizoen (18 september 2026) is dit
+       geen enkele <button> meer maar een rij met twéé klikdoelen — kiezen
+       (seizoen-kies) en, alleen bij een niet-geopend seizoen, verwijderen
+       (hergebruikt .team-knop, zie hieronder bij .team-rij). Vandaar dat
+       het rand/achtergrond-uiterlijk nu op de omhullende rij staat en niet
+       meer op wat ooit de knop zelf was. */
+    .seizoen-rij { display:flex; align-items:center; gap:6px; width:100%;
+      border:2px solid var(--grijs); border-radius:12px; padding:6px 8px 6px 6px;
+      background:var(--wit); }
     .seizoen-rij:hover { border-color:var(--blauw-licht); }
     .seizoen-rij.actief { border-color:var(--blauw); background:var(--vlak-info); }
+    .seizoen-kies { flex:1; min-width:0; display:flex; align-items:center; gap:10px;
+      background:none; border:none; padding:9px 6px; cursor:pointer; text-align:left;
+      font-family:inherit; color:var(--tekst); -webkit-tap-highlight-color:transparent; }
     .seizoen-naam { font-size:15px; font-weight:800; letter-spacing:-.2px;
       font-family:'Helvetica Neue',Arial,sans-serif; }
     .seizoen-bij { flex:1; font-size:12px; color:var(--grijs-donker); font-weight:600; }
     .seizoen-rij.actief .seizoen-bij { color:var(--blauw); }
-    .seizoen-rij > i { color:var(--blauw); font-size:13px; }
+    .seizoen-kies > i { color:var(--blauw); font-size:13px; }
 
     .seizoen-pijl { display:flex; align-items:center; gap:10px; flex-wrap:wrap;
       margin:0 0 18px; }

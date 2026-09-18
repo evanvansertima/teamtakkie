@@ -9,8 +9,8 @@
     "breedte": 1280,
     "hoogte": 900
   },
-  "appBytes": 1893674,
-  "appRegels": 34882,
+  "appBytes": 1907537,
+  "appRegels": 35225,
   "schermen": [
     "dashboard",
     "wedstrijden",
@@ -37,6 +37,7 @@
     "wedstrijd-tactiek-tekenbord",
     "trainingen-oefeningen",
     "instellingen",
+    "instellingen-seizoen-weg",
     "instellingen-opheffen"
   ],
   "paginaFouten": []

@@ -48,6 +48,7 @@ function TeamSheet({ onSluiten, onGewisseld }) {
   const [hernoemt, setHernoemt] = useState(null);
   const [naam, setNaam] = useState("");
   const [weg, setWeg] = useState(null);
+  const [wegSeizoen, setWegSeizoen] = useState(null);
   const [seizoenen, setSeizoenen] = useState(function(){ return seizoenenVan(teamId()); });
   const [seizoenNuId, setSeizoenNuId] = useState(function(){ return seizoenNu(); });
   const [nieuwSeizoen, setNieuwSeizoen] = useState(null);
@@ -103,6 +104,18 @@ function TeamSheet({ onSluiten, onGewisseld }) {
     ververs();
     onGewisseld();
     meldGoed("Team verwijderd");
+  }
+  /* Alleen een niet-geopend seizoen mag hier weg — de knop hieronder
+     staat om die reden niet bij het geopende seizoen (zie de lijst
+     verderop), en wisSeizoen() zelf weigert het nog eens als dat ooit
+     toch zou gebeuren (de dubbele bodem uit src/kern/sleutels.js). */
+  function gooiSeizoenWeg() {
+    var s = wegSeizoen;
+    setWegSeizoen(null);
+    wisSeizoen(nu, s);
+    ververs();
+    onGewisseld();
+    meldGoed("Seizoen " + seizoenLabel(s) + " verwijderd");
   }
 
   return (
@@ -168,12 +181,24 @@ function TeamSheet({ onSluiten, onGewisseld }) {
               .map(function(s){
               const open = s === seizoenNuId;
               return (
-                <button key={s} className={"seizoen-rij"+(open?" actief":"")}
-                  onClick={function(){ naarSeizoen(s); }}>
-                  <span className="seizoen-naam">{seizoenLabel(s)}</span>
-                  <span className="seizoen-bij">{open ? "Nu geopend" : "Bekijken"}</span>
-                  {open && <i className="fa-solid fa-check"/>}
-                </button>
+                <div key={s} className={"seizoen-rij"+(open?" actief":"")}>
+                  <button className="seizoen-kies" onClick={function(){ naarSeizoen(s); }}>
+                    <span className="seizoen-naam">{seizoenLabel(s)}</span>
+                    <span className="seizoen-bij">{open ? "Nu geopend" : "Bekijken"}</span>
+                    {open && <i className="fa-solid fa-check"/>}
+                  </button>
+                  {/* Alleen een niet-geopend seizoen mag weg: voor het
+                      geopende seizoen bestaat deze knop hier niet eens —
+                      dat is de eerste bodem. De tweede zit in wisSeizoen()
+                      zelf (src/kern/sleutels.js), voor het geval dit ooit
+                      per ongeluk toch aanklikbaar zou zijn. */}
+                  {!open && magRol("team") && (
+                    <button className="team-knop weg" title="Seizoen verwijderen"
+                      onClick={function(){ setWegSeizoen(s); }}>
+                      <i className="fa-solid fa-trash"/>
+                    </button>
+                  )}
+                </div>
               );
             })}
           </div>
@@ -235,6 +260,22 @@ function TeamSheet({ onSluiten, onGewisseld }) {
             <div className="bevestig-knoppen">
               <button className="knop lijn" onClick={function(){ setWeg(null); }}>Annuleren</button>
               <button className="knop gevaar" onClick={gooiWeg}>Verwijderen</button>
+            </div>
+          </div></div>
+        )}
+
+        {wegSeizoen && (
+          <div className="bevestig-overlay"><div className="bevestig-kaart">
+            <h3>&ldquo;{seizoenLabel(wegSeizoen)}&rdquo; verwijderen?</h3>
+            <p>
+              Alles van seizoen {seizoenLabel(wegSeizoen)} gaat weg: spelers,
+              wedstrijden, trainingen, boetes en meer. Dit kan niet ongedaan
+              gemaakt worden. Maak eerst een back-up als je het nog wilt
+              kunnen terughalen.
+            </p>
+            <div className="bevestig-knoppen">
+              <button className="knop lijn" onClick={function(){ setWegSeizoen(null); }}>Annuleren</button>
+              <button className="knop gevaar" onClick={gooiSeizoenWeg}>Verwijderen</button>
             </div>
           </div></div>
         )}

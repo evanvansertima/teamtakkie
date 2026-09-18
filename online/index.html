@@ -1420,17 +1420,25 @@
        De seizoenen van één team. Een rij per seizoen, het jaartal groot
        genoeg om er met een duim langs de lijn op te mikken. */
     .seizoen-lijst { display:flex; flex-direction:column; gap:6px; }
-    .seizoen-rij { display:flex; align-items:center; gap:10px; width:100%;
-      border:2px solid var(--grijs); border-radius:12px; padding:9px 12px;
-      background:var(--wit); cursor:pointer; font-family:inherit;
-      color:var(--tekst); text-align:left; -webkit-tap-highlight-color:transparent; }
+    /* Sinds het weggooien van een los seizoen (18 september 2026) is dit
+       geen enkele <button> meer maar een rij met twéé klikdoelen — kiezen
+       (seizoen-kies) en, alleen bij een niet-geopend seizoen, verwijderen
+       (hergebruikt .team-knop, zie hieronder bij .team-rij). Vandaar dat
+       het rand/achtergrond-uiterlijk nu op de omhullende rij staat en niet
+       meer op wat ooit de knop zelf was. */
+    .seizoen-rij { display:flex; align-items:center; gap:6px; width:100%;
+      border:2px solid var(--grijs); border-radius:12px; padding:6px 8px 6px 6px;
+      background:var(--wit); }
     .seizoen-rij:hover { border-color:var(--blauw-licht); }
     .seizoen-rij.actief { border-color:var(--blauw); background:var(--vlak-info); }
+    .seizoen-kies { flex:1; min-width:0; display:flex; align-items:center; gap:10px;
+      background:none; border:none; padding:9px 6px; cursor:pointer; text-align:left;
+      font-family:inherit; color:var(--tekst); -webkit-tap-highlight-color:transparent; }
     .seizoen-naam { font-size:15px; font-weight:800; letter-spacing:-.2px;
       font-family:'Helvetica Neue',Arial,sans-serif; }
     .seizoen-bij { flex:1; font-size:12px; color:var(--grijs-donker); font-weight:600; }
     .seizoen-rij.actief .seizoen-bij { color:var(--blauw); }
-    .seizoen-rij > i { color:var(--blauw); font-size:13px; }
+    .seizoen-kies > i { color:var(--blauw); font-size:13px; }
 
     .seizoen-pijl { display:flex; align-items:center; gap:10px; flex-wrap:wrap;
       margin:0 0 18px; }
@@ -2994,13 +3002,14 @@ window.addEventListener("error", function(e){
 });
 </script>
 <script>
-const APP_VERSIE = "0f9b89e";
+const APP_VERSIE = "6dfe96d";
 const TEAMS_KEY = "tt_teams_v1";
 const ACTIEF_KEY = "tt_actief_v1";
 const VOORKEUR_KEY = "tt_voorkeuren_v1";
 const LICENTIE_KEY = "tt_licentie_v1";
 const TEAMSWEG_KEY = "tt_teams_weg_v1";
 const SEIZOENACTIEF_KEY = "tt_seizoenactief_v1";
+const SEIZOENENWEG_KEY = "tt_seizoenen_weg_v1";
 const GEDEELDE_SLEUTELS = [
   "fch_instellingen_v1",
   /* je voorkeuren; het teamdeel gaat apart */
@@ -3201,6 +3210,39 @@ function vergeetTeamWeg(id) {
   } catch (e) {
   }
 }
+function seizoenenWeg() {
+  try {
+    var r = localStorage.getItem(SEIZOENENWEG_KEY);
+    var l = r ? JSON.parse(r) : [];
+    return Array.isArray(l) ? l.filter(function(g) {
+      return g && g.teamId && g.seizoen;
+    }) : [];
+  } catch (e) {
+    return [];
+  }
+}
+function seizoenIsWeg(teamId2, seizoen) {
+  return seizoenenWeg().some(function(g) {
+    return g.teamId === teamId2 && g.seizoen === seizoen;
+  });
+}
+function noteerSeizoenWeg(teamId2, seizoen) {
+  if (!teamId2 || !seizoen || seizoenIsWeg(teamId2, seizoen)) return;
+  var l = seizoenenWeg().concat([{ teamId: teamId2, seizoen, op: (/* @__PURE__ */ new Date()).toISOString() }]);
+  try {
+    localStorage.setItem(SEIZOENENWEG_KEY, JSON.stringify(l));
+  } catch (e) {
+  }
+}
+function vergeetSeizoenWeg(teamId2, seizoen) {
+  var l = seizoenenWeg().filter(function(g) {
+    return !(g.teamId === teamId2 && g.seizoen === seizoen);
+  });
+  try {
+    localStorage.setItem(SEIZOENENWEG_KEY, JSON.stringify(l));
+  } catch (e) {
+  }
+}
 function teams() {
   return _teams;
 }
@@ -3323,6 +3365,29 @@ function wisTeam(id) {
   herlaadInstellingen();
   if (typeof syncStraks === "function") syncStraks(0);
   return _teams;
+}
+function wisSeizoen(teamId2, seizoen) {
+  if (!teamId2 || !seizoen) return seizoenenVan(teamId2);
+  if (seizoen === seizoenNu(teamId2)) return seizoenenVan(teamId2);
+  noteerSeizoenWeg(teamId2, seizoen);
+  var voor = "tt_" + teamId2 + "__" + seizoen + "::";
+  try {
+    var weg = [];
+    for (var i = 0; i < localStorage.length; i++) {
+      var k = localStorage.key(i);
+      if (k && k.indexOf(voor) === 0) weg.push(k);
+    }
+    weg.forEach(function(k2) {
+      try {
+        localStorage.removeItem(k2);
+      } catch (e) {
+      }
+    });
+  } catch (e) {
+  }
+  herlaadInstellingen();
+  if (typeof syncStraks === "function") syncStraks(0);
+  return seizoenenVan(teamId2);
 }
 const VERHUISD_VOOR = "tt_verhuisd_v1_";
 function isVerhuisd(id) {
@@ -4717,6 +4782,20 @@ function duwTeamsWeg() {
     return { ok: true };
   });
 }
+function duwSeizoenenWeg(teamId2) {
+  var lijst = seizoenenWeg().filter(function(g) {
+    return g.teamId === teamId2;
+  });
+  if (!lijst.length) return Promise.resolve({ ok: true });
+  return opEenRij(lijst, function(graf) {
+    var pad = "/rest/v1/gegevens?team_id=eq." + encodeURIComponent(teamId2) + "&sleutel=like." + encodeURIComponent(graf.seizoen) + "::*";
+    return serverVraag(pad, { methode: "DELETE", koppen: { "Prefer": "return=representation" } }).then(function(r) {
+      if (r.ok) vergeetSeizoenWeg(teamId2, graf.seizoen);
+    });
+  }).then(function() {
+    return { ok: true };
+  });
+}
 function teamlijstSamen(lokaal, vanServer, hierWeg, heeftGegevens) {
   lokaal = lokaal || [];
   vanServer = vanServer || [];
@@ -4846,27 +4925,40 @@ function opEenRij(lijst, doe) {
 }
 function syncTeamGegevens(team, uitslag) {
   var voor = "tt_" + team.id + "__";
-  return serverVraag("/rest/v1/gegevens?select=sleutel,waarde,bijgewerkt_op,apparaat&team_id=eq." + encodeURIComponent(team.id)).then(function(r) {
-    if (!r.ok) return r;
-    var opServer = {};
-    (Array.isArray(r.gegevens) ? r.gegevens : []).forEach(function(g) {
-      opServer[g.sleutel] = g;
-    });
-    var alles = teamSleutelsVan(team.id).filter(heeftLaag);
-    Object.keys(opServer).forEach(function(s) {
-      if (heeftLaag(s) && alles.indexOf(s) < 0) alles.push(s);
-    });
-    return opEenRij(alles, function(sleutel) {
-      return syncEen(
-        "gegevens",
-        { team_id: team.id },
-        voor + sleutel,
-        sleutel,
-        opServer[sleutel] || null,
-        uitslag
-      );
-    }).then(function() {
-      return { ok: true };
+  return duwSeizoenenWeg(team.id).then(function() {
+    return serverVraag("/rest/v1/gegevens?select=sleutel,waarde,bijgewerkt_op,apparaat&team_id=eq." + encodeURIComponent(team.id)).then(function(r) {
+      if (!r.ok) return r;
+      var opServer = {};
+      (Array.isArray(r.gegevens) ? r.gegevens : []).forEach(function(g) {
+        opServer[g.sleutel] = g;
+      });
+      var wegSeizoenen = seizoenenWeg().filter(function(g) {
+        return g.teamId === team.id;
+      }).map(function(g) {
+        return g.seizoen;
+      });
+      function bijWeggegooidSeizoen(s) {
+        var sz = seizoenUitSleutel(s);
+        return sz !== null && wegSeizoenen.indexOf(sz) >= 0;
+      }
+      var alles = teamSleutelsVan(team.id).filter(heeftLaag).filter(function(s) {
+        return !bijWeggegooidSeizoen(s);
+      });
+      Object.keys(opServer).forEach(function(s) {
+        if (heeftLaag(s) && alles.indexOf(s) < 0 && !bijWeggegooidSeizoen(s)) alles.push(s);
+      });
+      return opEenRij(alles, function(sleutel) {
+        return syncEen(
+          "gegevens",
+          { team_id: team.id },
+          voor + sleutel,
+          sleutel,
+          opServer[sleutel] || null,
+          uitslag
+        );
+      }).then(function() {
+        return { ok: true };
+      });
     });
   });
 }
@@ -8226,6 +8318,7 @@ function TeamSheet({ onSluiten, onGewisseld }) {
   const [hernoemt, setHernoemt] = useState(null);
   const [naam, setNaam] = useState("");
   const [weg, setWeg] = useState(null);
+  const [wegSeizoen, setWegSeizoen] = useState(null);
   const [seizoenen, setSeizoenen] = useState(function() {
     return seizoenenVan(teamId());
   });
@@ -8289,6 +8382,14 @@ function TeamSheet({ onSluiten, onGewisseld }) {
     onGewisseld();
     meldGoed("Team verwijderd");
   }
+  function gooiSeizoenWeg() {
+    var s = wegSeizoen;
+    setWegSeizoen(null);
+    wisSeizoen(nu, s);
+    ververs();
+    onGewisseld();
+    meldGoed("Seizoen " + seizoenLabel(s) + " verwijderd");
+  }
   return /* @__PURE__ */ React.createElement("div", { className: "formatie-overlay", onClick: function(e) {
     if (e.target === e.currentTarget) onSluiten();
   } }, /* @__PURE__ */ React.createElement("div", { className: "formatie-sheet", onClick: function(e) {
@@ -8346,19 +8447,19 @@ function TeamSheet({ onSluiten, onGewisseld }) {
     )));
   })), /* @__PURE__ */ React.createElement("div", { className: "kaart", style: { marginTop: 12 } }, /* @__PURE__ */ React.createElement("div", { className: "kaart-titel" }, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-calendar-days" }), " Seizoenen"), /* @__PURE__ */ React.createElement("div", { className: "seizoen-lijst" }, (seizoenen.indexOf(seizoenNuId) < 0 ? [seizoenNuId].concat(seizoenen) : seizoenen).map(function(s) {
     const open = s === seizoenNuId;
-    return /* @__PURE__ */ React.createElement(
+    return /* @__PURE__ */ React.createElement("div", { key: s, className: "seizoen-rij" + (open ? " actief" : "") }, /* @__PURE__ */ React.createElement("button", { className: "seizoen-kies", onClick: function() {
+      naarSeizoen(s);
+    } }, /* @__PURE__ */ React.createElement("span", { className: "seizoen-naam" }, seizoenLabel(s)), /* @__PURE__ */ React.createElement("span", { className: "seizoen-bij" }, open ? "Nu geopend" : "Bekijken"), open && /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-check" })), !open && magRol("team") && /* @__PURE__ */ React.createElement(
       "button",
       {
-        key: s,
-        className: "seizoen-rij" + (open ? " actief" : ""),
+        className: "team-knop weg",
+        title: "Seizoen verwijderen",
         onClick: function() {
-          naarSeizoen(s);
+          setWegSeizoen(s);
         }
       },
-      /* @__PURE__ */ React.createElement("span", { className: "seizoen-naam" }, seizoenLabel(s)),
-      /* @__PURE__ */ React.createElement("span", { className: "seizoen-bij" }, open ? "Nu geopend" : "Bekijken"),
-      open && /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-check" })
-    );
+      /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-trash" })
+    ));
   })), magRol("team") && /* @__PURE__ */ React.createElement(
     "button",
     {
@@ -8401,7 +8502,9 @@ function TeamSheet({ onSluiten, onGewisseld }) {
     }
   ), weg && /* @__PURE__ */ React.createElement("div", { className: "bevestig-overlay" }, /* @__PURE__ */ React.createElement("div", { className: "bevestig-kaart" }, /* @__PURE__ */ React.createElement("h3", null, "\u201C", weg.naam, "\u201D verwijderen?"), /* @__PURE__ */ React.createElement("p", null, "Alles van dit team gaat weg: spelers, wedstrijden, trainingen, beoordelingen en tenues. Dit kan niet ongedaan gemaakt worden. Maak eerst een back-up als je het nog wilt kunnen terughalen."), /* @__PURE__ */ React.createElement("div", { className: "bevestig-knoppen" }, /* @__PURE__ */ React.createElement("button", { className: "knop lijn", onClick: function() {
     setWeg(null);
-  } }, "Annuleren"), /* @__PURE__ */ React.createElement("button", { className: "knop gevaar", onClick: gooiWeg }, "Verwijderen"))))));
+  } }, "Annuleren"), /* @__PURE__ */ React.createElement("button", { className: "knop gevaar", onClick: gooiWeg }, "Verwijderen")))), wegSeizoen && /* @__PURE__ */ React.createElement("div", { className: "bevestig-overlay" }, /* @__PURE__ */ React.createElement("div", { className: "bevestig-kaart" }, /* @__PURE__ */ React.createElement("h3", null, "\u201C", seizoenLabel(wegSeizoen), "\u201D verwijderen?"), /* @__PURE__ */ React.createElement("p", null, "Alles van seizoen ", seizoenLabel(wegSeizoen), " gaat weg: spelers, wedstrijden, trainingen, boetes en meer. Dit kan niet ongedaan gemaakt worden. Maak eerst een back-up als je het nog wilt kunnen terughalen."), /* @__PURE__ */ React.createElement("div", { className: "bevestig-knoppen" }, /* @__PURE__ */ React.createElement("button", { className: "knop lijn", onClick: function() {
+    setWegSeizoen(null);
+  } }, "Annuleren"), /* @__PURE__ */ React.createElement("button", { className: "knop gevaar", onClick: gooiSeizoenWeg }, "Verwijderen"))))));
 }
 function NieuwSeizoenKaart({ van, naar, onNaar, onAnnuleer, onKlaar }) {
   const [mee, setMee] = useState(function() {

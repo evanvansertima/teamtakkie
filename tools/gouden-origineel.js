@@ -596,6 +596,46 @@ const DIEPTES_CLUB = [
        dat dit venster openstaat en geen ander. */
     bewijs: '.formatie-overlay .inst-groep'
   },
+  /* ── Een seizoen verwijderen (18 september 2026) ──
+     Zelfde soort blinde vlek als bij "instellingen-opheffen" hierboven:
+     ook dit bevestigingsscherm zit achter een overlay-in-een-overlay
+     (Instellingen → Mijn teams → de prullenbak bij een oud seizoen) en
+     stond nergens vast. TeamSheet zelf (met de team- én seizoenenlijst)
+     had zelfs nog helemaal geen enkele diepteopname — de trap ernaartoe
+     bestond dus al, alleen de deur zelf was nooit doorgemeten.
+
+     Vereist een NIET-geopend seizoen in de vulling om de prullenbak
+     sowieso te kunnen aanklikken; zie SEIZOEN_OUD in vulling.js.
+
+     MOET vóór "instellingen-opheffen" blijven staan — zie de opmerking
+     daar hierboven over sluitVensters(): die is de allerlaatste, en
+     mag dat ook blijven. */
+  {
+    id: "instellingen-seizoen-weg",
+    label: "Instellingen › Mijn teams › Seizoen verwijderen › bevestigen",
+    begin: "dashboard",
+    stappen: [
+      {wat: 'het tandwiel onderaan het zijmenu',
+       kies: '.zijbalk-voet .zij-item'},
+      /* De knop toont het huidige seizoen als tekst (bijv. "2026/2027")
+         en die tekst hangt af van de vulling; vastpinnen op het label
+         erboven ("Seizoen") is daarom de stabiele weg — zelfde soort
+         keuze als bij het tandwiel hierboven. Dit sluit InstellingenSheet
+         en opent TeamSheet (zie onTeams in src/app.jsx): geen geneste
+         overlay, maar een andere. */
+      {wat: 'de knop "Seizoen" die naar Mijn teams gaat',
+       kies: '.formulier-groep:has-text("Seizoen") button'},
+      /* .team-knop.weg bestaat ook bij elk team in de teamlijst erboven
+         (met title "Team verwijderen") — het title-attribuut van déze
+         knop is wat hem uniek maakt. */
+      {wat: 'de prullenbak bij een niet-geopend seizoen',
+       kies: '.formatie-sheet .team-knop.weg[title="Seizoen verwijderen"]'}
+    ],
+    /* Zelfde afweging als bij "instellingen-opheffen": alleen dát het
+       bevestigingsscherm openstaat. De waarschuwingstekst zelf hoort bij
+       de DOM-vergelijking, niet bij dit bewijs. */
+    bewijs: '.bevestig-overlay .bevestig-kaart'
+  },
   {
     id: "instellingen-opheffen",
     label: "Instellingen › Vereniging opheffen › bevestigen",
@@ -1266,6 +1306,20 @@ async function sluitVensters(page, watDoen) {
   const tot = Date.now() + 20000;
   while (Date.now() < tot) {
     if (await page.locator(".formatie-overlay").count() === 0) return;
+    /* Een bevestig-overlay (een openstaand "…verwijderen?"-scherm van de
+       vórige diepteopname, bijv. "instellingen-seizoen-weg" of
+       "instellingen-opheffen") ligt óver het venster erachter heen en
+       vangt de klik op het kruisje hieronder af — precies de reden dat
+       "instellingen-opheffen" tot 18 september 2026 de laatste
+       diepteopname moest blijven. Eerst annuleren (elke bevestig-kaart
+       in de app heeft die knop, met dat exacte woord), dan pas het
+       kruisje proberen. */
+    const annuleer = page.locator('.bevestig-overlay button:has-text("Annuleren")').first();
+    if (await annuleer.count() > 0) {
+      await annuleer.click();
+      await page.waitForTimeout(250);
+      continue;
+    }
     const kruisje = page.locator(".formatie-overlay .formatie-sheet-header button").first();
     if (await kruisje.count() === 0)
       throw new Error("Er staat een venster open vóór \"" + watDoen + "\" en er zit geen\n" +

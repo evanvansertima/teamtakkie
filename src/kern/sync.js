@@ -595,6 +595,44 @@ function duwTeamsWeg() {
   }).then(function () { return {ok:true}; });
 }
 
+/* Het seizoen-equivalent van duwTeamsWeg() hierboven, maar per team in
+   plaats van globaal: een seizoen-grafsteen hoort altijd bij precies
+   één team (zie SEIZOENENWEG_KEY in src/kern/sleutels.js), dus is er
+   ook niets globaals aan het wegduwen ervan.
+
+   Anders dan bij een team bestaat er voor een seizoen geen aparte
+   servertabel om een "verwijderd_op" op te zetten — het seizoen zit
+   letterlijk in de sleutel van elke rij in "gegevens" (het deel vóór
+   de "::"). Wegduwen is dus meteen de echte verwijdering: alle rijen
+   van dit team wier sleutel met dit seizoen begint.
+
+   Zelfde PostgREST-eigenaardigheid als bij hefClubOp() in src/app.jsx:
+   een door RLS geblokkeerde DELETE geeft ook een 2xx terug, met een
+   lege array. Het verschil met hefClubOp() is wat een lege array daar
+   betekent. Bij het opheffen van een club is vooraf zeker dat er íéts
+   moet staan (de club zelf) — een lege array is daar dus altijd een
+   weigering. Hier is dat niet zeker: een seizoen kan hier ook zijn
+   weggegooid zonder dat er ooit een rij van naar de server ging (geen
+   bereik gehad, of nooit gesynchroniseerd). Nul geraakte rijen is dan
+   gewoon "er stond toch al niets" en geen weigering. Daarom mag de
+   grafsteen hier al bij elk ok-antwoord weg, ongeacht het aantal — een
+   telling zou hier niets kunnen onderscheiden dat de moeite waard is.
+   Alleen bij !r.ok (een echte storing) blijft de grafsteen staan, voor
+   de volgende sync-poging. */
+/** @param {string} teamId @returns {Promise<{ok:boolean}>} */
+function duwSeizoenenWeg(teamId) {
+  var lijst = seizoenenWeg().filter(function (g) { return g.teamId === teamId; });
+  if (!lijst.length) return Promise.resolve({ok:true});
+  return opEenRij(lijst, function (graf) {
+    var pad = "/rest/v1/gegevens?team_id=eq." + encodeURIComponent(teamId)
+             + "&sleutel=like." + encodeURIComponent(graf.seizoen) + "::*";
+    return serverVraag(pad, {methode:"DELETE", koppen:{"Prefer":"return=representation"}})
+      .then(function (r) {
+        if (r.ok) vergeetSeizoenWeg(teamId, graf.seizoen);
+      });
+  }).then(function () { return {ok:true}; });
+}
+
 /* Welke teams horen er te zijn?
 
    Drie lijsten komen samen: wat dit apparaat heeft, wat de server
@@ -792,6 +830,15 @@ function opEenRij(lijst, doe) {
 /** @param {Team} team @param {SyncUitslag} uitslag @returns {Promise<ServerUitkomst>} */
 function syncTeamGegevens(team, uitslag) {
   var voor = "tt_" + team.id + "__";
+  /* Eerst de weggegooide seizoenen van dit team wegduwen — vóór de rest
+     van deze functie zijn sleutellijst opbouwt, om dezelfde reden als
+     duwTeamsWeg() vóór syncTeams() staat: anders gaat een sleutel die we
+     net hebben weggegooid, mogelijk nog één keer mee omhoog of omlaag
+     voordat de server ervan weet. Lukt het duwen niet (geen bereik),
+     dan blijft de grafsteen staan en filtert de code hieronder de
+     bijbehorende sleutels alsnog uit "alles" — zie de reden bij het
+     filter verderop. */
+  return duwSeizoenenWeg(team.id).then(function () {
   return serverVraag("/rest/v1/gegevens?select=sleutel,waarde,bijgewerkt_op,apparaat&team_id=eq." +
                      encodeURIComponent(team.id))
     .then(function (r) {
@@ -799,6 +846,19 @@ function syncTeamGegevens(team, uitslag) {
       /** @type {Object<string,ServerRij>} */
       var opServer = {};
       (Array.isArray(r.gegevens) ? r.gegevens : []).forEach(function (g) { opServer[g.sleutel] = g; });
+      /* Welke seizoenen van dit team staan nog als grafsteen open? Zulke
+         sleutels horen niet in "alles": lokaal zijn ze al weg (wisSeizoen
+         verwijderde ze meteen), en op de server staan ze hooguit nog omdat
+         het wegduwen hierboven net is mislukt. Ze alsnog ophalen of duwen
+         zou de verwijdering ongedaan maken zodra de sync wél weer lukt. */
+      var wegSeizoenen = seizoenenWeg()
+        .filter(function (g) { return g.teamId === team.id; })
+        .map(function (g) { return g.seizoen; });
+      /** @param {string} s @returns {boolean} */
+      function bijWeggegooidSeizoen(s) {
+        var sz = seizoenUitSleutel(s);
+        return sz !== null && wegSeizoenen.indexOf(sz) >= 0;
+      }
       /* Alles wat hier staat plus alles wat daar staat: anders mist
          een nieuw apparaat precies datgene wat het nog niet heeft. */
       /* Sleutels zonder :: komen van vóór de seizoenen. Ze staan nog op de
@@ -811,15 +871,18 @@ function syncTeamGegevens(team, uitslag) {
          Hier houdt die kringloop op. Er wordt niets weggegooid: de rij
          blijft gewoon op de server staan. Hij wordt alleen niet meer
          opgehaald en niet meer geduwd. */
-      var alles = teamSleutelsVan(team.id).filter(heeftLaag);
+      var alles = teamSleutelsVan(team.id).filter(heeftLaag).filter(function (s) {
+        return !bijWeggegooidSeizoen(s);
+      });
       Object.keys(opServer).forEach(function (s) {
-        if (heeftLaag(s) && alles.indexOf(s) < 0) alles.push(s);
+        if (heeftLaag(s) && alles.indexOf(s) < 0 && !bijWeggegooidSeizoen(s)) alles.push(s);
       });
       return opEenRij(alles, function (sleutel) {
         return syncEen("gegevens", {team_id: team.id}, voor + sleutel,
                        sleutel, opServer[sleutel] || null, uitslag);
       }).then(function () { return {ok:true}; });
     });
+  });
 }
 
 /** @param {SyncUitslag} uitslag @returns {Promise<ServerUitkomst>} */

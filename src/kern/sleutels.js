@@ -81,6 +81,12 @@ const LICENTIE_KEY = "tt_licentie_v1";  /* welk pakket je hebt */
    langs de lijn zonder bereik een team weggooit. */
 const TEAMSWEG_KEY = "tt_teams_weg_v1";
 const SEIZOENACTIEF_KEY = "tt_seizoenactief_v1"; /* welk seizoen je per team bekijkt */
+/* Hetzelfde verhaal als TEAMSWEG_KEY hierboven, maar dan één laag dieper:
+   niet een heel team weggegooid, maar één seizoen ervan. Een grafsteen
+   hier moet zowel het team ALS het seizoen dragen — anders zou het
+   weggooien van 2025-2026 bij team X ook 2025-2026 bij team Y raken, of
+   (nog verwarrender) het lopende seizoen van team X zelf. */
+const SEIZOENENWEG_KEY = "tt_seizoenen_weg_v1";
 
 /* Wat hoort bij het team, en wat bij jou?
 
@@ -414,6 +420,35 @@ function vergeetTeamWeg(id) {
   try { localStorage.setItem(TEAMSWEG_KEY, JSON.stringify(l)); } catch(e) {}
 }
 
+/* Dezelfde drie functies als hierboven, maar per team-én-seizoen in
+   plaats van per team. Zie SEIZOENENWEG_KEY voor het waarom van dat
+   tweetal. */
+/** @returns {{teamId:string,seizoen:string,op:string}[]} weggegooide seizoenen met het moment van weggooien */
+function seizoenenWeg() {
+  try {
+    var r = localStorage.getItem(SEIZOENENWEG_KEY);
+    var l = r ? JSON.parse(r) : [];
+    return Array.isArray(l) ? l.filter(function (g) { return g && g.teamId && g.seizoen; }) : [];
+  } catch(e) { return []; }
+}
+/** @param {string} teamId @param {string} seizoen @returns {boolean} */
+function seizoenIsWeg(teamId, seizoen) {
+  return seizoenenWeg().some(function (g) { return g.teamId === teamId && g.seizoen === seizoen; });
+}
+/** @param {string} teamId @param {string} seizoen @returns {void} */
+function noteerSeizoenWeg(teamId, seizoen) {
+  if (!teamId || !seizoen || seizoenIsWeg(teamId, seizoen)) return;
+  var l = seizoenenWeg().concat([{teamId: teamId, seizoen: seizoen, op: new Date().toISOString()}]);
+  try { localStorage.setItem(SEIZOENENWEG_KEY, JSON.stringify(l)); } catch(e) {}
+}
+/* Zie vergeetTeamWeg hierboven voor het waarom: zodra de server het ook
+   weet, hoeft de grafsteen hier niet te blijven staan. */
+/** @param {string} teamId @param {string} seizoen @returns {void} */
+function vergeetSeizoenWeg(teamId, seizoen) {
+  var l = seizoenenWeg().filter(function (g) { return !(g.teamId === teamId && g.seizoen === seizoen); });
+  try { localStorage.setItem(SEIZOENENWEG_KEY, JSON.stringify(l)); } catch(e) {}
+}
+
 /** @returns {Team[]} */
 function teams() { return _teams; }
 /** @returns {string|null} het id van het actieve team */
@@ -571,6 +606,43 @@ function wisTeam(id) {
      keer alsnog mee. */
   if (typeof syncStraks === "function") syncStraks(0);
   return _teams;
+}
+
+/* Eén seizoen weggooien, met al zijn gegevens — een team dat blijft
+   bestaan, minus één hoofdstuk. Evan heeft besloten dat dit alleen mag
+   voor een seizoen dat je niet hebt open staan: daarmee vervalt de
+   vraag waar je moet landen als je eigen scherm net onder je vandaan
+   verdwijnt, en hoeft deze functie niet met seizoenKeuzes() te
+   onderhandelen zoals wisTeam() dat wel met SEIZOENACTIEF_KEY doet.
+
+   De UI verbergt de knop al bij het geopende seizoen (zie TeamSheet in
+   src/schermen/instellingen.jsx). De controle hieronder is de tweede,
+   hardere bodem: mocht die knop ooit per ongeluk toch actief zijn, dan
+   doet deze functie zelf niets. */
+/**
+ * @param {string} teamId
+ * @param {string} seizoen  seizoen-id om weg te gooien, bijv. "2025-2026"
+ * @returns {string[]} de resterende seizoenen van dit team, nieuwste eerst
+ */
+function wisSeizoen(teamId, seizoen) {
+  if (!teamId || !seizoen) return seizoenenVan(teamId);
+  if (seizoen === seizoenNu(teamId)) return seizoenenVan(teamId);
+  noteerSeizoenWeg(teamId, seizoen);
+  var voor = "tt_" + teamId + "__" + seizoen + "::";
+  try {
+    var weg = [];
+    for (var i = 0; i < localStorage.length; i++) {
+      var k = localStorage.key(i);
+      if (k && k.indexOf(voor) === 0) weg.push(k);
+    }
+    weg.forEach(function (k) { try { localStorage.removeItem(k); } catch(e) {} });
+  } catch(e) {}
+  herlaadInstellingen();
+  /* Zelfde voorzichtige aanroep als bij wisTeam(): lukt het niet meteen
+     (geen bereik, niet ingelogd), dan blijft de grafsteen staan en gaat
+     hij de volgende keer alsnog mee. */
+  if (typeof syncStraks === "function") syncStraks(0);
+  return seizoenenVan(teamId);
 }
 
 /* ══ DE VERHUIZING NAAR SEIZOENEN ════════════════════════════

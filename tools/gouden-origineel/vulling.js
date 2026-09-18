@@ -37,6 +37,14 @@ const TAAL       = "nl-NL";
 const TEAM_ID   = "tgoud0001";
 const TEAM2_ID  = "tgoud0002";
 const SEIZOEN   = "2026-2027";
+/* Eén niet-geopend seizoen van TEAM_ID, alleen nodig voor de
+   diepteopname "instellingen-seizoen-weg" (18 september 2026): zonder
+   een tweede seizoen bestaat er geen prullenbak-knop om aan te klikken
+   — seizoenenVan() geeft dan maar één seizoen terug, en dat is meteen
+   het geopende. Verder blijft dit onzichtbaar: geen enkel scherm buiten
+   de seizoenenlijst van TeamSheet vraagt ooit naar meer dan het huidige
+   seizoen (zie seizoenenVan() in src/kern/sleutels.js). */
+const SEIZOEN_OUD = "2025-2026";
 const CLUB_ID   = "00000000-0000-4000-8000-000000000001";
 const APPARAAT  = "agoudenorigineel";
 
@@ -313,6 +321,13 @@ function opslag(pakket) {
      erheen wisselt. */
   zet("tt_" + TEAM2_ID + "__" + SEIZOEN + "::fch_teaminstellingen_v1",
       {teamNaam: "JO13-1", seizoen: "2026/2027", speelduur: 60,
+       locatie: "Sportpark De Verzonnen Kamp"});
+
+  /* Eén niet-geopend seizoen van TEAM_ID — zie SEIZOEN_OUD hierboven.
+     Verder leeg: het gaat er alleen om dát seizoenenVan(TEAM_ID) er twee
+     teruggeeft, niet om wat erin staat. */
+  zet("tt_" + TEAM_ID + "__" + SEIZOEN_OUD + "::fch_teaminstellingen_v1",
+      {teamNaam: "JO19-2", seizoen: "2025/2026", speelduur: 90,
        locatie: "Sportpark De Verzonnen Kamp"});
 
   return o;
