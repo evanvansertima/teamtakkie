@@ -13,7 +13,7 @@
    Verhoog VERSIE als je een nieuwe versie van de app uploadt. Dan
    gooit de browser de oude voorraad weg en haalt hij alles opnieuw. */
 
-const VERSIE = "takkie-v34";
+const VERSIE = "takkie-v35";
 
 /* Wat er sowieso bewaard moet worden. De app zelf staat hier ook in,
    want zonder de app heb je aan de bibliotheken niets. */
@@ -22,7 +22,6 @@ const VOORRAAD = [
   "./index.html",
   "https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js",
   "https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js",
-  "https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js",
   "https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js",
   "https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js",
   "https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css",
