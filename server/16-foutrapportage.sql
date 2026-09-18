@@ -216,10 +216,26 @@ create trigger foutmeldingen_tijd_vast
 --  is hij "security definer", zodat hij dwars door de select-regel
 --  heen mag tellen, terwijl de tabel zelf voor anon nog steeds
 --  potdicht blijft voor gewoon lezen.
+--  "volatile" en niet "stable", en dat is hier geen detail maar de
+--  hele grens. Een stable functie wordt uitgerekend tegen het beeld
+--  dat de database had bij het BEGIN van de lopende opdracht. Bij
+--  één insert met duizend rijen tegelijk (precies wat PostgREST van
+--  een JSON-array maakt) ziet de telling de rijen die diezelfde
+--  opdracht net heeft weggeschreven dus niet: elke rij krijgt
+--  hetzelfde te lage getal te zien en alle duizend komen erdoor.
+--  Volatile dwingt per aanroep een vers beeld af, inclusief wat de
+--  eigen opdracht al geschreven heeft, en dan stuit de batch wél.
+--  Vastgelegd in tests/foutmeldingen.test.sql, scenario 17 en 18.
+--
+--  Gevolg dat je moet kennen: een te grote batch wordt in zijn
+--  geheel geweigerd, niet afgekapt op twintig. Voor deze app geen
+--  bezwaar — de client stuurt één melding per keer (zie
+--  src/kern/foutmeldingen.js). Scenario 19 bewaakt dat een eerlijke
+--  batch van precies twintig gewoon toegestaan blijft.
 create or replace function public.foutmeldingen_recent_aantal(p_apparaat_id uuid)
 returns bigint
 language sql
-stable
+volatile
 security definer
 set search_path = public
 as $$

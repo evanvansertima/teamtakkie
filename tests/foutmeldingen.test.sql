@@ -6,8 +6,13 @@
 --  Run. De uitslag komt als TABEL terug, gewoon in het
 --  resultaatvenster. Je hoeft nergens anders te kijken.
 --
---  Je hoort zestien regels te zien plus een slotregel, en in de
+--  Je hoort negentien regels te zien plus een slotregel, en in de
 --  kolom "oordeel" hoort overal ZOALS VERWACHT te staan.
+--
+--  LET OP — scenario 17 en 18 zijn op 18 september 2026 met opzet
+--  ROOD toegevoegd, vóór de reparatie. Zolang die reparatie er niet
+--  is, hoort de slotsom "2 scenario(s) wijken af" te melden. Zie de
+--  uitleg boven scenario 17.
 --
 --  Een deel van deze scenario's MOET mislukken. Dat is de test: een
 --  snelheidsgrens die niets tegenhoudt is geen snelheidsgrens, en een
@@ -42,6 +47,11 @@ declare
   beheerder        uuid := '7ea11f00-0000-4000-a000-000000000022';
   apparaat_1       uuid := '7ea11f00-0000-4000-a000-0000000000a1';
   apparaat_2       uuid := '7ea11f00-0000-4000-a000-0000000000a2';
+  apparaat_3       uuid := '7ea11f00-0000-4000-a000-0000000000a3';
+  apparaat_4       uuid := '7ea11f00-0000-4000-a000-0000000000a4';
+  apparaat_5       uuid := '7ea11f00-0000-4000-a000-0000000000a5';
+  bulk        json;
+  gezien_21   boolean;
   i           int;
   geraakt     int;
   aantal      int;
@@ -306,6 +316,154 @@ begin
       r := array_append(r, ('16§beheerder ruimt op: 40 dagen oud weg, vers blijft§oud nog ' || aantal || 'x, vers nog ' || geraakt || 'x§WIJKT AF'));
     end if;
 
+    -- ══ Deel 6 — de snelheidsgrens bij een BULK-insert ════════
+    --
+    --  Scenario 1 en 2 hierboven sturen twintig losse inserts: twintig
+    --  aparte SQL-opdrachten. Tussen twee opdrachten door ziet
+    --  foutmeldingen_recent_aantal() netjes wat de vorige heeft
+    --  geschreven, en de grens werkt.
+    --
+    --  Een aanvaller stuurt geen twintig losse verzoeken. Hij stuurt
+    --  één POST naar /rest/v1/foutmeldingen met een JSON-array van
+    --  duizend objecten. PostgREST maakt daar ÉÉN insert-opdracht van.
+    --  De "with check" wordt dan wel per rij uitgerekend, maar de
+    --  telling binnenin kijkt naar de tabel zoals die er bij het BEGIN
+    --  van die ene opdracht uitzag — de rijen die de opdracht zelf op
+    --  dat moment aan het schrijven is, ziet hij niet (dat is het
+    --  snapshot-gedrag van Postgres, MVCC). Elke rij in de batch krijgt
+    --  dus hetzelfde, te lage getal te zien en komt erdoor.
+    --
+    --  RECHTGEZET NA REPARATIE (18 september 2026): hier stond eerst dat
+    --  "stable" → "volatile" dit NIET zou oplossen. Dat was onjuist, en
+    --  is inmiddels twee keer onafhankelijk gemeten (door wie deze
+    --  reparatie bouwde, en daarna nogmaals los gecontroleerd): een
+    --  volatile functie krijgt bij elke aanroep niet alleen een vers
+    --  antwoord, maar ook een vers snapshot — en dát snapshot telt de
+    --  rijen die de lopende opdracht zelf al heeft weggeschreven wél
+    --  mee. Zie server/16-foutrapportage.sql, waar de functie nu
+    --  "volatile" is; scenario 17-19 hieronder bewijzen het verschil.
+    --
+    --  Deze twee scenario's zijn met opzet toegevoegd terwijl ze rood
+    --  waren, zodat bewezen is dat ze het gat vangen.
+    --
+    --  WAT HIER BEWUST NIET WORDT GETOETST, EN WAAROM JE HET TOCH MOET
+    --  WETEN: dezelfde bulk-insert met een VERS apparaat_id per rij
+    --  gaat er hoe dan ook doorheen, en geen enkele reparatie van de
+    --  telling verandert daar iets aan — de grens telt nu eenmaal per
+    --  apparaat_id, en dat nummer verzint de client zelf. Gemeten op
+    --  een kopie van dit schema: 5000 rijen met 5000 eigen uuid's,
+    --  binnen 28 ms weggeschreven. Dat is geen fout in dit bestand
+    --  maar de keerzijde van een bewust aanvaard risico (zie de kop
+    --  van server/16-foutrapportage.sql), en het hoort hier niet als
+    --  rood scenario thuis. Het hoort wel in de afweging: wie dit
+    --  repareert alsof daarmee de tabel beschermd is, houdt een open
+    --  deur over. Een echte bovengrens vraagt om iets dat niet op een
+    --  door de client verzonnen nummer leunt.
+
+    -- ── 17. Eén insert met 25 rijen, zelfde apparaat_id ────────
+    --  Precies de vorm die PostgREST van een JSON-array maakt: één
+    --  opdracht die zijn rijen uit een JSON-verzameling haalt.
+    reset role;
+    select json_agg(json_build_object('bericht', 'bulkmelding ' || g))
+      into bulk from generate_series(1, 25) g;
+    set local role anon;
+    begin
+      insert into public.foutmeldingen (bericht, apparaat_id, fouttype)
+      select x.bericht, apparaat_3, 'render-fout'
+      from json_to_recordset(bulk) as x(bericht text);
+    exception when insufficient_privilege then
+      null;   -- geweigerd worden is hier de gewenste uitkomst
+    when others then
+      afwijkingen := afwijkingen + 1;
+      r := array_append(r, ('17§bulk van 25 rijen in één opdracht, zelfde apparaat§mislukt om de VERKEERDE reden: ' || sqlerrm || '§WIJKT AF'));
+    end;
+    reset role;
+    select count(*) into aantal from public.foutmeldingen where apparaat_id = apparaat_3;
+    if aantal <= 20 then
+      r := array_append(r, ('17§bulk van 25 rijen in één opdracht, zelfde apparaat§' || aantal || ' rijen weggeschreven§ZOALS VERWACHT — de grens hield stand'));
+    else
+      afwijkingen := afwijkingen + 1;
+      r := array_append(r, ('17§bulk van 25 rijen in één opdracht, zelfde apparaat§' || aantal || ' rijen weggeschreven§<< LEK — dit hoort er hoogstens 20 te zijn'));
+    end if;
+
+    -- ── 18. Eén insert met 1000 rijen ──────────────────────────
+    --  Niet om nóg eens hetzelfde te bewijzen, maar om te laten zien
+    --  hoe groot het gat is. Het is geen overschrijding van vijf:
+    --  één verzoek zet weg wat de aanvaller maar wil.
+    select json_agg(json_build_object('bericht', 'bulkmelding ' || g))
+      into bulk from generate_series(1, 1000) g;
+    set local role anon;
+    begin
+      insert into public.foutmeldingen (bericht, apparaat_id, fouttype)
+      select x.bericht, apparaat_4, 'render-fout'
+      from json_to_recordset(bulk) as x(bericht text);
+    exception when insufficient_privilege then
+      null;
+    when others then
+      afwijkingen := afwijkingen + 1;
+      r := array_append(r, ('18§bulk van 1000 rijen in één opdracht§mislukt om de VERKEERDE reden: ' || sqlerrm || '§WIJKT AF'));
+    end;
+    reset role;
+    select count(*) into aantal from public.foutmeldingen where apparaat_id = apparaat_4;
+    if aantal <= 20 then
+      r := array_append(r, ('18§bulk van 1000 rijen in één opdracht§' || aantal || ' rijen weggeschreven§ZOALS VERWACHT — de grens hield stand'));
+    else
+      afwijkingen := afwijkingen + 1;
+      r := array_append(r, ('18§bulk van 1000 rijen in één opdracht§' || aantal || ' rijen weggeschreven§<< LEK — dit hoort er hoogstens 20 te zijn'));
+    end if;
+
+    -- ── 19. Een bulk die er precies in past, en dan één te veel ─
+    --  Dit scenario hoort NU al te slagen, en moet dat blijven doen.
+    --  Het pint twee dingen tegelijk vast:
+    --
+    --    · een batch van precies 20 is gewoon toegestaan — een
+    --      reparatie mag niet zo grof zijn dat hij eerlijke meldingen
+    --      tegenhoudt of bulk in het geheel verbiedt
+    --    · de 21e, in een aparte opdracht, wordt wél geweigerd
+    --
+    --  Blijft dit groen terwijl 17 en 18 rood zijn, dan weet degene
+    --  die dit repareert precies waar hij moet zoeken: de grens is
+    --  niet kapot, hij is blind bínnen één opdracht.
+    --
+    --  Let op: dit scenario gebruikt bewust een eigen apparaat_id en
+    --  hangt niet af van wat 17 en 18 wel of niet hebben geschreven.
+    --  Een reparatie kan die batches namelijk óf gedeeltelijk óf
+    --  helemaal tegenhouden, en dit scenario moet in beide gevallen
+    --  hetzelfde meten.
+    --  Twee aparte begin/exception-blokken, en dat is geen opmaak: een
+    --  plpgsql-blok mét exception-tak is een deeltransactie. Zou de
+    --  eenentwintigste in hetzelfde blok staan als de bulk, dan zou
+    --  diens weigering óók de zojuist geslaagde bulk terugdraaien en
+    --  zou de telling eronder altijd nul geven.
+    reset role;
+    select json_agg(json_build_object('bericht', 'randmelding ' || g))
+      into bulk from generate_series(1, 20) g;
+    set local role anon;
+    begin
+      insert into public.foutmeldingen (bericht, apparaat_id, fouttype)
+      select x.bericht, apparaat_5, 'render-fout'
+      from json_to_recordset(bulk) as x(bericht text);
+    exception when others then null;
+    end;
+    begin
+      insert into public.foutmeldingen (bericht, apparaat_id, fouttype)
+      values ('de eenentwintigste, los', apparaat_5, 'render-fout');
+      gezien_21 := true;
+    exception when others then
+      gezien_21 := false;
+    end;
+    reset role;
+    select count(*) into aantal from public.foutmeldingen where apparaat_id = apparaat_5;
+    if aantal = 20 and not gezien_21 then
+      r := array_append(r, '19§bulk van precies 20, dan nog één los§de 20 kwamen erin, de 21e stuitte§ZOALS VERWACHT — de grens werkt tússen opdrachten');
+    elsif gezien_21 then
+      afwijkingen := afwijkingen + 1;
+      r := array_append(r, ('19§bulk van precies 20, dan nog één los§de 21e kwam er ook nog doorheen (' || aantal || ' rijen)§<< LEK — die hoort te stuiten'));
+    else
+      afwijkingen := afwijkingen + 1;
+      r := array_append(r, ('19§bulk van precies 20, dan nog één los§de bulk van 20 kwam er niet doorheen (' || aantal || ' rijen)§WIJKT AF — de reparatie is te grof: eerlijke meldingen sneuvelen'));
+    end if;
+
     reset role;
 
     -- Hier laten we de deeltransactie expres klappen. Alles wat
@@ -325,7 +483,7 @@ begin
   end loop;
 
   if afwijkingen = 0 then
-    insert into tt_uitslag values ('', '── SLOTSOM ──', 'alle zestien scenario''s zoals verwacht', 'GESLAAGD');
+    insert into tt_uitslag values ('', '── SLOTSOM ──', 'alle negentien scenario''s zoals verwacht', 'GESLAAGD');
   else
     insert into tt_uitslag values ('', '── SLOTSOM ──', afwijkingen || ' scenario(s) wijken af', 'ZIE server/16-foutrapportage.sql');
   end if;
