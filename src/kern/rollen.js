@@ -1,3 +1,4 @@
+// @ts-check
 /* ══════════════════════════════════════════════════════════════
    KERN: rollen, beheerderstatus
    ─────────────────────────────────────────────────────────────
@@ -56,7 +57,16 @@
    verbindingstest — staat hier los van. Dat komt uit een eigen tabel op
    de server en heeft niets met je clubrol te maken.
    ══════════════════════════════════════════════════════════ */
+/** @typedef {Object} Rol
+ * @property {string} id
+ * @property {string} label
+ * @property {string} icoon    Font Awesome-klasse
+ * @property {string} uitleg
+ * @property {string[]} mag    welke rechten deze rol heeft
+ */
+
 const ROL_KEY = "tt_rol_v1";
+/** @type {Rol[]} */
 const ROLLEN = [
   {id:"eigenaar", label:"Eigenaar", icoon:"fa-solid fa-key",
    uitleg:"Beheert de vereniging: teams, seizoenen, clubgegevens en het abonnement.",
@@ -68,12 +78,14 @@ const ROLLEN = [
    uitleg:"Kijkt mee en wijzigt niets.",
    mag:["kijken"]}
 ];
+/** @param {string} id @returns {Rol|null} */
 function rolInfoVan(id) {
   return ROLLEN.filter(function (r) { return r.id === id; })[0] || null;
 }
 /* Zonder server heb je geen clubrol, en dan ben je gewoon de baas over je
    eigen apparaat. Anders zou iemand die de app offline gebruikt nergens
    meer bij kunnen. */
+/** @returns {string} het id van de huidige rol */
 function rolNu() {
   if (typeof ingelogd === "function" && !ingelogd()) return "eigenaar";
   try {
@@ -82,6 +94,7 @@ function rolNu() {
   } catch(e) {}
   return "eigenaar";
 }
+/** @param {string} id @returns {string} de (eventueel ongewijzigde) huidige rol */
 function zetRol(id) {
   try {
     if (rolInfoVan(id)) localStorage.setItem(ROL_KEY, id);
@@ -89,6 +102,7 @@ function zetRol(id) {
   } catch(e) {}
   return rolNu();
 }
+/** @param {string} recht @returns {boolean} */
 function magRol(recht) {
   var r = rolInfoVan(rolNu());
   return !!r && r.mag.indexOf(recht) >= 0;
@@ -96,12 +110,15 @@ function magRol(recht) {
 /* Kijk je alleen mee? Dan hoort daar één keer duidelijk te staan waarom
    je nergens op kunt drukken, in plaats van vijftien knoppen die niets
    doen. */
+/** @returns {boolean} */
 function alleenKijken() { return rolNu() === "kijker"; }
 
 const BEHEER_KEY = "tt_beheerder_v1";
+/** @returns {boolean} */
 function beheerderNu() {
   try { return localStorage.getItem(BEHEER_KEY) === "ja"; } catch(e) { return false; }
 }
+/** @param {boolean} ja @returns {void} */
 function zetBeheerder(ja) {
   try {
     if (ja) localStorage.setItem(BEHEER_KEY, "ja");
@@ -112,6 +129,7 @@ function zetBeheerder(ja) {
    heen alleen jouw eigen regel terug: staat die er, dan ben je het.
    Bestaat de tabel niet (het beheerbestand is nooit gedraaid), dan is
    het antwoord gewoon nee en gaat er verder niets stuk. */
+/** @returns {Promise<boolean>} ben je beheerder? */
 function haalBeheerder() {
   if (!ingelogd()) { zetBeheerder(false); return Promise.resolve(false); }
   return serverVraag("/rest/v1/beheerders?select=gebruiker_id")
@@ -122,6 +140,7 @@ function haalBeheerder() {
     })
     .catch(function () { return beheerderNu(); });
 }
+/** @returns {Promise<ServerUitkomst>} */
 function alleGebruikers() {
   return serverVraag("/rest/v1/rpc/alle_gebruikers", {methode:"POST", lichaam:{}})
     .then(function (r) {
@@ -129,6 +148,12 @@ function alleGebruikers() {
       return {ok:true, gegevens: Array.isArray(r.gegevens) ? r.gegevens : []};
     });
 }
+/**
+ * @param {string} clubId
+ * @param {string} pakket   pakket-id, moet voorkomen in PAKKETTEN (src/app.jsx)
+ * @param {string} [tot]    ISO-datum tot wanneer, of niets voor onbeperkt
+ * @returns {Promise<ServerUitkomst>}
+ */
 function zetPakketVan(clubId, pakket, tot) {
   if (!clubId) return Promise.resolve(serverFout("geen-club", "Dit account hoort nog bij geen enkele vereniging."));
   if (PAKKETTEN.filter(function (p) { return p.id === pakket; }).length === 0) {
@@ -139,6 +164,7 @@ function zetPakketVan(clubId, pakket, tot) {
     lichaam: {doel: clubId, nieuw: pakket, tot: tot || null}
   });
 }
+/** @param {string} gebruikerId @returns {Promise<ServerUitkomst>} */
 function verwijderAccount(gebruikerId) {
   if (!gebruikerId) return Promise.resolve(serverFout("account", "Geen account opgegeven."));
   return serverVraag("/rest/v1/rpc/verwijder_account", {
