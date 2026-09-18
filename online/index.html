@@ -5590,7 +5590,7 @@ const FC_NORM = {
   Aanvaller: { pace: 68, shooting: 70, passing: 57, dribbling: 68, defending: 40, physical: 58 }
 };
 function fcNorm(positie, catId) {
-  var n = FC_NORM[positie];
+  var n = FC_NORM[positie || ""];
   return n && n[catId] !== void 0 ? n[catId] : 58;
 }
 const OVR_GEWICHT = {
@@ -5600,7 +5600,7 @@ const OVR_GEWICHT = {
   Aanvaller: { shooting: 0.33, dribbling: 0.24, pace: 0.18, passing: 0.12, physical: 0.1, defending: 0.03 }
 };
 function ovrGewicht(positie) {
-  return OVR_GEWICHT[positie] || { passing: 0.2, dribbling: 0.2, defending: 0.16, physical: 0.16, shooting: 0.16, pace: 0.12 };
+  return OVR_GEWICHT[positie || ""] || { passing: 0.2, dribbling: 0.2, defending: 0.16, physical: 0.16, shooting: 0.16, pace: 0.12 };
 }
 function fcOvr(speler) {
   var gew = ovrGewicht(speler && speler.positie);
@@ -5627,9 +5627,11 @@ function migreerSkills(speler) {
   if (!speler || heeftSkills(speler)) return speler;
   var oud = speler.vaardigheden;
   if (!oud || !Object.keys(oud).length) return speler;
-  var nieuw = {}, sterren = Object.assign({}, speler.sterren || {});
+  var vaardigheden = oud;
+  var nieuw = {};
+  var sterren = Object.assign({}, speler.sterren || {});
   Object.keys(OUD_NAAR_NIEUW).forEach(function(sleutel) {
-    var v = Number(oud[sleutel]);
+    var v = Number(vaardigheden[sleutel]);
     if (isNaN(v)) return;
     var op99 = Math.max(1, Math.min(99, Math.round(v * 10)));
     OUD_NAAR_NIEUW[sleutel].forEach(function(id) {
@@ -5692,7 +5694,7 @@ function cijferKleur(c) {
 }
 function deelnameVanSpeler(spelerId, wedstrijden) {
   var gespeeld = tellendeWedstrijden(wedstrijden).sort(function(a, b) {
-    return new Date(a.datum) - new Date(b.datum);
+    return new Date(a.datum).getTime() - new Date(b.datum).getTime();
   });
   var rijen = [];
   gespeeld.forEach(function(w) {
@@ -5736,7 +5738,7 @@ function cijfersVanSpeler(spelerId, wedstrijden, reviews) {
     uit.push({ datum: r.datum, cijfer: Number(r.cijfer) });
   });
   return uit.sort(function(a, b) {
-    return new Date(a.datum) - new Date(b.datum);
+    return new Date(a.datum).getTime() - new Date(b.datum).getTime();
   });
 }
 function spelerInzichten(speler, wedstrijden, trainingen, doelen, reviews, afwezigheden) {
@@ -5798,7 +5800,8 @@ function spelerInzichten(speler, wedstrijden, trainingen, doelen, reviews, afwez
     else if (bijdragen === 0 && d.minuten >= 360) voeg("neutraal", "Nog geen doelpunt of assist in " + d.minuten + " minuten.");
   }
   var metOpkomst = (trainingen || []).map(function(t2) {
-    return opkomstVan({ datum: t2.datum, aanwezigheid: (t2.aanwezigheid || []).filter(function(a) {
+    var aanwezigheid = t2.aanwezigheid || [];
+    return opkomstVan({ datum: t2.datum, aanwezigheid: aanwezigheid.filter(function(a) {
       return a.spelerId === speler.id;
     }) }, afwezigheden);
   }).filter(function(o) {
@@ -5832,7 +5835,8 @@ function spelerInzichten(speler, wedstrijden, trainingen, doelen, reviews, afwez
     if (over.length > 0) voeg("aandacht", over.length === 1 ? "Het doel \u201C" + over[0].titel + "\u201D is over de streefdatum." : over.length + " doelen zijn over hun streefdatum.");
   }
   if (heeftSkills(speler) && speler.positie) {
-    var sterk = [], zwak = [];
+    var sterk = [];
+    var zwak = [];
     fcCategorieen(speler).forEach(function(cat) {
       var w = fcCategorieWaarde(speler, cat);
       if (w === null) return;
@@ -5861,7 +5865,7 @@ function reviewsVanSpeler(spelerId, reviews) {
   return (reviews || []).filter(function(r) {
     return r.spelerId === spelerId;
   }).sort(function(a, b) {
-    return new Date(b.datum) - new Date(a.datum);
+    return new Date(b.datum).getTime() - new Date(a.datum).getTime();
   });
 }
 function ontwikkelingsScore(spelerId, doelen) {
@@ -5926,11 +5930,14 @@ function berekenMinuten(opstelling, wissels, speelduur, uitgeleend) {
     if (status === "afwezig") return Object.assign({}, o, { minuten: 0, minutenOnzeker: false });
     if (onzeker[o.spelerId]) return Object.assign({}, o, { minuten: null, minutenOnzeker: true });
     var opHetVeld = status === "basis";
-    var sinds = opHetVeld ? 0 : null;
+    var sinds = opHetVeld ? 0 : (
+      /** @type {number|null} */
+      null
+    );
     var totaal = 0;
     subs.forEach(function(s) {
       var m = Math.max(0, Math.min(duur, Number(s.minuut) || 0));
-      if (s.uitId === o.spelerId && opHetVeld) {
+      if (s.uitId === o.spelerId && opHetVeld && sinds !== null) {
         totaal += Math.max(0, m - sinds);
         opHetVeld = false;
         sinds = null;
@@ -5990,7 +5997,8 @@ const MOTS_PUNTEN = { motm: 3, hoogCijfer: 1, cijferVanaf: 8 };
 function motsRanglijst(spelers, wedstrijden) {
   var telt = tellendeWedstrijden(wedstrijden);
   var rijen = (spelers || []).map(function(s) {
-    var motm = 0, hoog = 0, cijfers = [];
+    var motm = 0, hoog = 0;
+    var cijfers = [];
     telt.forEach(function(w) {
       if (w.motm === s.id) motm++;
       var c = w.beoordelingen ? Number(w.beoordelingen[s.id]) : NaN;
@@ -6033,7 +6041,10 @@ function gemiddeldCijfer(spelerId, wedstrijden) {
   }, 0) / cijfers.length).toFixed(1);
 }
 function zetPlekken(rijen) {
-  var plek = 0, vorige = null;
+  var plek = 0, vorige = (
+    /** @type {number|null} */
+    null
+  );
   (rijen || []).forEach(function(r, i) {
     if (vorige === null || r.punten !== vorige) {
       plek = i + 1;
@@ -6164,7 +6175,8 @@ function positieRang(code) {
   return i < 0 ? 90 : i;
 }
 function veldStand(opstelling, wissels, posWissels, tot) {
-  var op = {}, plek = {};
+  var op = {};
+  var plek = {};
   (opstelling || []).forEach(function(o) {
     op[o.spelerId] = (o.spelStatus || "basis") === "basis";
     plek[o.spelerId] = o.positieLabel || "";
@@ -6219,7 +6231,10 @@ function wisselOpties(spelers, opstelling, wissels, posWissels) {
     if (stand.op[s.id]) return;
     var rij = rijBij[s.id];
     var status = rij ? rij.spelStatus || "basis" : "basis";
-    var eruit = null;
+    var eruit = (
+      /** @type {number|null} */
+      null
+    );
     (wissels || []).forEach(function(w) {
       if (w.uitId !== s.id) return;
       var m = Number(w.minuut) || 0;
@@ -6381,7 +6396,10 @@ function minutenPerPositie(spelerId, opstelling, wissels, posWissels, speelduur)
   });
   var op = (rij.spelStatus || "basis") === "basis";
   var plek = rij.positieLabel || "";
-  var sinds = op ? 0 : null;
+  var sinds = op ? 0 : (
+    /** @type {number|null} */
+    null
+  );
   var uit = {};
   function boek(tot) {
     if (!op || sinds === null) return;
@@ -6414,10 +6432,13 @@ function minutenPerPositie(spelerId, opstelling, wissels, posWissels, speelduur)
   return uit;
 }
 function meestGespeeldePositie(perPositie) {
-  var beste = null, meeste = -1;
+  var beste = (
+    /** @type {string|null} */
+    null
+  ), meeste = -1;
   Object.keys(perPositie || {}).forEach(function(k) {
-    if (perPositie[k] > meeste) {
-      meeste = perPositie[k];
+    if ((perPositie || {})[k] > meeste) {
+      meeste = (perPositie || {})[k];
       beste = k;
     }
   });
@@ -6450,7 +6471,14 @@ function vulFormatieAutomatisch(posities, spelersLijst) {
   volgorde.forEach(function(p) {
     if (vrij.length === 0) return;
     var rol = POSITIECODE_NAAR_ROL[p.l];
-    var beste = null, besteScore = null;
+    var beste = (
+      /** @type {SpelerMetSkills|null} */
+      null
+    );
+    var besteScore = (
+      /** @type {[number,number]|null} */
+      null
+    );
     vrij.forEach(function(s) {
       var score = [positiePassendheid(rol, s.positie), Number(s.rugnummer) || 99];
       if (besteScore === null || score[0] < besteScore[0] || score[0] === besteScore[0] && score[1] < besteScore[1]) {
@@ -6460,8 +6488,9 @@ function vulFormatieAutomatisch(posities, spelersLijst) {
     });
     if (beste) {
       uit[p.id] = beste.id;
+      var gekozen = beste;
       vrij = vrij.filter(function(s) {
-        return s.id !== beste.id;
+        return s.id !== gekozen.id;
       });
     }
   });
@@ -6511,7 +6540,7 @@ function kaartEigenCijfer(speler) {
 function kaartCijfer(speler) {
   var eigen = kaartEigenCijfer(speler);
   if (eigen !== null) return eigen;
-  var weging = KAART_WEGING[speler && speler.positie] || KAART_WEGING.Middenvelder;
+  var weging = KAART_WEGING[speler && speler.positie || ""] || KAART_WEGING.Middenvelder;
   var som = 0, gewicht = 0;
   kaartWaarden(speler).forEach(function(w) {
     var g = weging[w.id];
@@ -6524,7 +6553,7 @@ function kaartCijfer(speler) {
 }
 function kaartPositie(speler) {
   var kort = { Keeper: "KP", Verdediger: "VD", Middenvelder: "MV", Aanvaller: "AV" };
-  return kort[speler && speler.positie] || "SP";
+  return kort[speler && speler.positie || ""] || "SP";
 }
 function kaartCompleet(speler) {
   var w = kaartWaarden(speler);

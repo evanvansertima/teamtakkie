@@ -125,9 +125,13 @@
  * @property {any[]} [opstelling]
  * @property {any[]} [scorers]
  * @property {any[]} [kaarten]
+ * @property {any[]} [wissels]
+ * @property {any[]} [posWissels]
  * @property {any} [motm]             spelerId van de man of the match
  * @property {Object<string,number>} [beoordelingen]  per spelerId een cijfer
  * @property {any[]} [aanwezigheid]   handmatige presentielijst (anders afgeleid uit opstelling)
+ * @property {number} [speelduur]     minuten, standaard 90
+ * @property {number} [helften]       standaard 2
  */
 
 /* ── SCORE & UITSLAG ── */
