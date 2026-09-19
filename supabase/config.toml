@@ -1,0 +1,36 @@
+# ══════════════════════════════════════════════════════════════
+#  TEAMTAKKIE — instellingen voor de Supabase-edge-functions
+#  ─────────────────────────────────────────────────────────────
+#  Dit bestand hoort bij `supabase functions deploy`. Het bepaalt per
+#  functie of Supabase een geldig inlogtoken eist vóórdat de functie
+#  überhaupt aan de beurt komt.
+#
+#  Waarom dat hier staat en niet alleen in een vlaggetje op de
+#  opdrachtregel: `--no-verify-jwt` moet je bij élke uitrol opnieuw
+#  meetypen, en vergeet je het één keer, dan komt er van Mollie geen
+#  enkele melding meer binnen — zonder foutmelding aan onze kant.
+#  Betalingen worden dan wel gedaan maar niet verwerkt. Hier staat het
+#  vast in een bestand dat meegaat in git.
+# ══════════════════════════════════════════════════════════════
+
+project_id = "teamtakkie"
+
+# ── betaling-starten ─────────────────────────────────────────
+#  verify_jwt blijft AAN (dat is ook de standaard; het staat hier
+#  expliciet zodat er geen twijfel over kan bestaan). Zonder inlog valt
+#  er niets te betalen, en de functie heeft het token van de gebruiker
+#  nodig om te kunnen vragen "ben jij de eigenaar van deze club?".
+[functions.betaling-starten]
+verify_jwt = true
+
+# ── betaling-melding ─────────────────────────────────────────
+#  verify_jwt MOET hier UIT. Mollie is geen gebruiker van TEAMTAKKIE en
+#  heeft dus geen inlogtoken; met verify_jwt = true wijst Supabase elke
+#  melding af met 401 vóórdat onze eigen code ook maar één regel draait.
+#
+#  Dit adres staat daarmee open voor iedereen. Dat is opgevangen in de
+#  functie zelf en niet hier: de melding wordt niet geloofd, maar
+#  nagevraagd bij Mollie met onze eigen geheime sleutel. Zie de uitleg
+#  bovenaan supabase/functions/betaling-melding/index.ts.
+[functions.betaling-melding]
+verify_jwt = false
