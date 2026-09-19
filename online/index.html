@@ -3006,7 +3006,7 @@ window.addEventListener("error", function(e){
 });
 </script>
 <script>
-const APP_VERSIE = "e88e0c0";
+const APP_VERSIE = "adb16fb";
 const TEAMS_KEY = "tt_teams_v1";
 const ACTIEF_KEY = "tt_actief_v1";
 const VOORKEUR_KEY = "tt_voorkeuren_v1";
@@ -8639,10 +8639,11 @@ function _overstapFoutTekst(status, gegevens) {
   return "Overstappen lukte nu niet (fout " + status + "). Probeer het zo nog eens.";
 }
 function _overstapVraag(token, clubId, pakket, termijn) {
+  var oorsprong = typeof window !== "undefined" && window.location ? window.location.origin : null;
   return fetch(serverAdres("/functions/v1/betaling-starten"), {
     method: "POST",
     headers: serverKoppen(token),
-    body: JSON.stringify({ club_id: clubId, pakket, termijn })
+    body: JSON.stringify({ club_id: clubId, pakket, termijn, terug_oorsprong: oorsprong })
   }).then(function(antwoord) {
     return antwoord.text().then(function(tekst) {
       var gegevens = null;

@@ -177,14 +177,17 @@ ok("er gaat precies één verzoek uit", verzoeken.length, 1);
 ok("naar de edge function betaling-starten",
    verzoeken[0].url, "https://server.test/functions/v1/betaling-starten");
 ok("als POST", verzoeken[0].opties.method, "POST");
-ok("de body bevat precies drie velden, en geen bedrag",
-   Object.keys(lichaamVan(0)).sort(), ["club_id", "pakket", "termijn"]);
+ok("de body bevat precies vier velden, en geen bedrag",
+   Object.keys(lichaamVan(0)).sort(), ["club_id", "pakket", "termijn", "terug_oorsprong"]);
 ok("met de club waar dit apparaat bij hoort",
    lichaamVan(0).club_id, "11111111-2222-3333-4444-555555555555");
 ok("het gekozen pakket", lichaamVan(0).pakket, "coach");
 ok("en de gekozen termijn", lichaamVan(0).termijn, "jaar");
 console.log("   de prijs komt van de server (PRIJZEN in _gedeeld/mollie.ts);");
 console.log("   wat hier ook in de body zou staan, doet daar niet mee");
+console.log("   terug_oorsprong is alleen een voorstel: de server laat");
+console.log("   alleen een vast lijstje adressen toe (zie betaling-starten),");
+console.log("   dus dit veld kan nooit een omweg naar een vreemde site worden");
 ok("de publieke sleutel gaat mee als apikey",
    !!verzoeken[0].opties.headers["apikey"], true);
 ok("en het token van deze gebruiker als Authorization",

@@ -48,6 +48,34 @@ import { type DbClient, maakDbClient } from "../_gedeeld/supabase.ts";
    app wijst. */
 const STANDAARD_TERUG = "https://app.teamtakkie.nl/?upgrade=terug";
 
+/* Ontdekt op 19 september 2026, tijdens Evans eerste echte testbetaling:
+   een vaste STANDAARD_TERUG stuurt iedereen die vanaf localhost test
+   terug naar de live site — een ander origin, dus een andere
+   localStorage en een andere ingelogde sessie. Geen bug in de betaling
+   zelf (die stond gewoon goed in de database), maar wel in waar de
+   browser na afloop landt.
+
+   Oplossing: de client mag zijn eigen oorsprong meesturen, maar alleen
+   uit deze vaste lijst — anders zou "terug_oorsprong" een open redirect
+   worden (iemand stuurt een clubeigenaar na het betalen naar een eigen
+   phishing-pagina in plaats van naar TEAMTAKKIE). Een bedrag kan de
+   client nooit beïnvloeden (zie hierboven); een terugkeeradres nu ook
+   niet, tenzij het er al met naam en toenaam in deze lijst staat. */
+const TOEGESTANE_TERUG_OORSPRONGEN = [
+  "https://app.teamtakkie.nl",
+  "http://localhost:8000",
+  "http://127.0.0.1:8000",
+];
+
+/** @returns de terug-URL voor dit verzoek: de meegestuurde oorsprong als
+ *  die op de vaste lijst staat, anders de standaard. */
+function terugUrlVoor(oorsprong: unknown, standaard: string): string {
+  if (typeof oorsprong === "string" && TOEGESTANE_TERUG_OORSPRONGEN.includes(oorsprong)) {
+    return oorsprong + "/?upgrade=terug";
+  }
+  return standaard;
+}
+
 /* De vorm van een club-id. Een club_id dat hier niet doorheen komt,
    gaat nooit als filter een database-aanvraag in. */
 const UUID_VORM =
@@ -120,6 +148,7 @@ export async function behandelStart(
   const pakket = typeof body.pakket === "string" ? body.pakket : "";
   const termijn = typeof body.termijn === "string" ? body.termijn : "";
   if (!UUID_VORM.test(clubId)) return fout("Onbekende club", 400);
+  const terugUrl = terugUrlVoor(body.terug_oorsprong, deps.terugUrl);
 
   const gebruikerDb = deps.gebruikerClient(jwt);
   const serviceDb = deps.serviceClient();
@@ -214,7 +243,7 @@ export async function behandelStart(
     const betaling = await mollie.maakBetaling({
       amount: { value: centenNaarBedrag(bedragCent), currency: "EUR" },
       description: `TEAMTAKKIE ${pakket} (per ${termijn})`,
-      redirectUrl: deps.terugUrl,
+      redirectUrl: terugUrl,
       webhookUrl: deps.webhookUrl,
       sequenceType: "first",
       customerId: klantId,

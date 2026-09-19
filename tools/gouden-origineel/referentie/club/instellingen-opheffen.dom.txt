@@ -535,6 +535,9 @@
           <button class="knop lijn" style="width: 100%; justify-content: center;">
             <i class="fa-solid fa-layer-group">
             "Bekijk pakketten"
+          <button class="knop lijn" style="width: 100%; justify-content: center; margin-top: 8px;">
+            <i class="fa-solid fa-circle-xmark">
+            "Opzeggen"
         <div class="inst-groep">
           "Team"
         <div class="kaart" style="margin-top: 4px;">

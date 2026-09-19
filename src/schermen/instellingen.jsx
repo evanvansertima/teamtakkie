@@ -479,10 +479,18 @@ function _overstapFoutTekst(status, gegevens) {
   return "Overstappen lukte nu niet (fout " + status + "). Probeer het zo nog eens.";
 }
 function _overstapVraag(token, clubId, pakket, termijn) {
+  /* terug_oorsprong: zonder dit stuurt Mollie iedereen terug naar de
+     vaste, live TEAMTAKKIE-URL — prima als je die ook gebruikt, maar
+     tijdens lokaal testen (localhost:8000) beland je dan op een heel
+     ander adres, met zijn eigen, andere ingelogde sessie. De server
+     laat alleen een klein, vast lijstje adressen toe (zie
+     TOEGESTANE_TERUG_OORSPRONGEN in betaling-starten/index.ts), dus
+     dit veld kan nooit een omweg naar een vreemde site worden. */
+  var oorsprong = (typeof window !== "undefined" && window.location) ? window.location.origin : null;
   return fetch(serverAdres("/functions/v1/betaling-starten"), {
     method: "POST",
     headers: serverKoppen(token),
-    body: JSON.stringify({club_id: clubId, pakket: pakket, termijn: termijn})
+    body: JSON.stringify({club_id: clubId, pakket: pakket, termijn: termijn, terug_oorsprong: oorsprong})
   }).then(function (antwoord) {
     return antwoord.text().then(function (tekst) {
       var gegevens = null;

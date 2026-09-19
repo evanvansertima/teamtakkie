@@ -526,6 +526,13 @@
                 "TEAMTAKKIE"
               <span class="pakket-naam">
                 "Coach"
+            <div aria-label="Betaaltermijn voor Coach" class="thema-rij" role="group">
+              <button aria-pressed="true" class="thema-optie" style="border-color: var(--blauw); background: var(--blauw); color: rgb(255, 255, 255);">
+                <span>
+                  "Per maand"
+              <button aria-pressed="false" class="thema-optie" style="border-color: var(--grijs); background: var(--wit); color: var(--grijs-donker);">
+                <span>
+                  "Per jaar"
             <div class="pakket-prijs">
               <div class="pakket-prijs-rij">
                 <span class="pakket-prijs-bedrag">
@@ -560,6 +567,13 @@
                 "TEAMTAKKIE"
               <span class="pakket-naam">
                 "Club"
+            <div aria-label="Betaaltermijn voor Club" class="thema-rij" role="group">
+              <button aria-pressed="true" class="thema-optie" style="border-color: var(--blauw); background: var(--blauw); color: rgb(255, 255, 255);">
+                <span>
+                  "Per maand"
+              <button aria-pressed="false" class="thema-optie" style="border-color: var(--grijs); background: var(--wit); color: var(--grijs-donker);">
+                <span>
+                  "Per jaar"
             <div class="pakket-prijs">
               <div class="pakket-prijs-rij">
                 <span class="pakket-prijs-bedrag">

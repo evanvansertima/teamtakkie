@@ -249,6 +249,44 @@ Deno.test("de aanvraag bij Mollie bevat alles wat de melding straks nodig heeft"
   gelijk(body.metadata, { club_id: CLUB, pakket: "coach", termijn: "maand" });
 });
 
+// ── Terug-oorsprong: ontdekt bij Evans eerste echte testbetaling ──
+// (19 september 2026) toen een vaste terugkeer-URL hem vanaf
+// localhost naar de live site stuurde, een ander origin met een
+// andere sessie. Zie het commentaar bij TOEGESTANE_TERUG_OORSPRONGEN.
+
+Deno.test("een toegestane terug_oorsprong wordt gebruikt in plaats van de standaard", async () => {
+  const op = opstelling({ klantId: "cst_kEn1PlbGa" });
+  await behandelStart(
+    verzoek({ club_id: CLUB, pakket: "coach", termijn: "maand", terug_oorsprong: "http://localhost:8000" }),
+    op.deps,
+  );
+  const body = op.mollieAanroepen.find((a) => a.url === "/v2/payments")?.body ?? {};
+  gelijk(body.redirectUrl, "http://localhost:8000/?upgrade=terug");
+});
+
+Deno.test("een onbekende terug_oorsprong wordt genegeerd — geen open redirect", async () => {
+  const op = opstelling({ klantId: "cst_kEn1PlbGa" });
+  await behandelStart(
+    verzoek({
+      club_id: CLUB,
+      pakket: "coach",
+      termijn: "maand",
+      terug_oorsprong: "https://phishing-teamtakkie.evil.example",
+    }),
+    op.deps,
+  );
+  const body = op.mollieAanroepen.find((a) => a.url === "/v2/payments")?.body ?? {};
+  // De standaard uit deps.terugUrl, niet het verzonnen adres.
+  gelijk(body.redirectUrl, "https://app.teamtakkie.nl/?upgrade=terug");
+});
+
+Deno.test("zonder terug_oorsprong blijft de standaard gewoon gelden", async () => {
+  const op = opstelling({ klantId: "cst_kEn1PlbGa" });
+  await behandelStart(verzoek({ club_id: CLUB, pakket: "coach", termijn: "maand" }), op.deps);
+  const body = op.mollieAanroepen.find((a) => a.url === "/v2/payments")?.body ?? {};
+  gelijk(body.redirectUrl, "https://app.teamtakkie.nl/?upgrade=terug");
+});
+
 Deno.test("een club zonder klantnummer krijgt er één, en die wordt bewaard", async () => {
   const op = opstelling({ klantId: null });
   const antwoord = await behandelStart(
