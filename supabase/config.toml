@@ -23,6 +23,16 @@ project_id = "teamtakkie"
 [functions.betaling-starten]
 verify_jwt = true
 
+# ── abonnement-wisselen ──────────────────────────────────────
+#  verify_jwt blijft AAN, net als bij betaling-starten. Deze functie
+#  vraagt met het token van de gebruiker "ben jij de eigenaar van deze
+#  club?", en zonder token is die vraag niet te stellen. Zou hij hier
+#  uit staan, dan kan iedereen die een club_id kent proberen het pakket
+#  van een vreemde vereniging te wijzigen — de eigenaarscontrole zou
+#  dan nergens meer op rusten.
+[functions.abonnement-wisselen]
+verify_jwt = true
+
 # ── betaling-melding ─────────────────────────────────────────
 #  verify_jwt MOET hier UIT. Mollie is geen gebruiker van TEAMTAKKIE en
 #  heeft dus geen inlogtoken; met verify_jwt = true wijst Supabase elke

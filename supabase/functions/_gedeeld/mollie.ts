@@ -167,6 +167,207 @@ export function startDatumVolgendePeriode(
   return d.toISOString().slice(0, 10);
 }
 
+// ══ WISSELEN TUSSEN COACH EN CLUB ════════════════════════════
+//  Twee functies en één getal. Ze staan hier en niet in de edge
+//  function zelf, omdat ze zo op een half A4 te bewijzen zijn: er gaan
+//  feiten in en er komt een uitkomst uit. Geen database, geen Mollie,
+//  geen klok. Zie supabase/functions/_gedeeld/wissel.test.ts.
+
+/* De ondergrens voor een betaalde wissel, in centen.
+   € 2,50 — een besluit van Evan (19 september 2026), geen technische
+   keuze: onder dat bedrag kost een incasso meer gedoe (een
+   betaalscherm, een webhook, een boeking) dan hij opbrengt, dus dan is
+   de upgrade gratis.
+
+   De grens ligt zo: ALLES ONDER 250 cent is gratis, 250 cent zelf
+   wordt geïncasseerd (dus `<` en niet `<=`). Dat is een keuze van één
+   cent; hij staat vast in wissel.test.ts ("de grens zelf: 249 gratis,
+   250 en 251 betaald") zodat hij niet stilzwijgend kan omslaan. */
+export const WISSEL_DREMPEL_CENT = 250;
+
+/* Hoeveel moet deze vereniging bijbetalen om de rest van de lopende
+   periode op het duurdere pakket te zitten?
+
+   Meer doet deze functie niet. Hij weet niet of het mág, hij kent de
+   club niet en hij praat met niemand.
+
+   null betekent "weet ik niet" (onbekend pakket, onbekende termijn,
+   een periode van nul dagen). Dat is met opzet iets ANDERS dan 0
+   ("gratis"): zou hier bij een tikfout 0 uitkomen, dan wordt een
+   onbekend pakket stilletjes een gratis upgrade.
+
+   ALTIJD naar beneden afronden (Math.floor). Het scheelt hoogstens één
+   cent en die valt dan altijd de kant van de club op. Belangrijker is
+   dat er één regel is: half naar boven en half naar beneden afronden
+   levert bedragen op die niemand kan navertellen. */
+export function verrekeningCent(
+  vanPakket: string,
+  naarPakket: string,
+  termijn: string,
+  resterendeDagen: number,
+  totaleDagen: number,
+): number | null {
+  const oud = prijsCent(vanPakket, termijn);
+  const nieuw = prijsCent(naarPakket, termijn);
+  if (oud === null || nieuw === null) return null;
+  if (totaleDagen <= 0) return null;
+  const verschil = nieuw - oud;
+  // Een downgrade levert nooit geld op: 0, nooit een minbedrag. Een
+  // negatief getal zou verderop een terugbetaling worden, en dat is
+  // niet wat er is afgesproken — omlaag gaan is gratis en per direct.
+  if (verschil <= 0) return 0;
+  return Math.floor(verschil * resterendeDagen / totaleDagen);
+}
+
+/* De feiten waarop een wissel wordt beoordeeld. Komen uit
+   public.wissel_gegevens() (server/20-abonnement-wisselen.sql). */
+export interface WisselFeiten {
+  pakket: string; // het huidige pakket: 'free', 'coach' of 'club'
+  termijn: string | null; // 'maand', 'jaar' of niet bekend
+  geldigTot: string | null; // "JJJJ-MM-DD"; leeg = onbeperkt
+  totaleDagen: number | null; // lengte van de lopende periode
+  resterendeDagen: number | null; // daarvan nog over
+  mollieSubscriptionId: string | null; // de doorlopende incasso
+  wisselOnderweg: boolean;
+}
+
+export interface WisselOordeel {
+  mag: boolean;
+  soort: "niets" | "downgrade" | "upgrade_gratis" | "upgrade";
+  bedragCent: number;
+  /* Gevuld zodra mag = false. Deze tekst is bedoeld om aan de club te
+     laten zien, dus hij zegt wat er aan de hand is en niet welke
+     controle het tegenhield. */
+  reden: string;
+}
+
+/* Welk pakket is "hoger"? Met opzet een eigen volgorde en niet de
+   prijs: bij een vereniging met onbeperkte toegang is de termijn niet
+   bekend, en dan geeft prijsCent() null — dan zou de richting van de
+   wissel ineens onbekend zijn terwijl die dat helemaal niet is. */
+const PAKKET_RANG: Record<string, number> = { coach: 1, club: 2 };
+
+/* Mag deze vereniging wisselen, en is het gratis of betaald?
+
+   Alle randgevallen uit Veerles ontwerp (§11) landen hier: free,
+   onbeperkt, verlopen, geen incasso, onbekende termijn, dubbelklik en
+   "er loopt er al een". Ze staan hier en niet in de edge function
+   omdat ze daar alleen te testen zouden zijn door hele verzoeken na te
+   bootsen — en dan wordt zo'n tabel nooit uitgetest. */
+export function beoordeelWissel(
+  feiten: WisselFeiten,
+  naarPakket: string,
+): WisselOordeel {
+  const niets: WisselOordeel = { mag: true, soort: "niets", bedragCent: 0, reden: "" };
+
+  // ── Een dubbelklik is geen fout ────────────────────────────
+  //  Twee keer tikken of het scherm verversen hoort niets te doen en
+  //  vooral geen foutmelding te geven: het pakket staat immers al
+  //  zoals gevraagd.
+  if (naarPakket === feiten.pakket) return niets;
+
+  if (feiten.wisselOnderweg) {
+    return {
+      mag: false,
+      soort: "niets",
+      bedragCent: 0,
+      reden: "Er loopt al een wijziging voor deze vereniging. Wacht tot die klaar is.",
+    };
+  }
+
+  if (naarPakket === "free") {
+    return {
+      mag: false,
+      soort: "niets",
+      bedragCent: 0,
+      reden: "Stoppen met betalen gaat via Opzeggen, niet via wisselen van pakket.",
+    };
+  }
+  if (PAKKET_RANG[naarPakket] === undefined) {
+    return {
+      mag: false,
+      soort: "niets",
+      bedragCent: 0,
+      reden: "Dat pakket kennen we niet.",
+    };
+  }
+  if (PAKKET_RANG[feiten.pakket] === undefined) {
+    // free, of iets onverwachts. Van gratis naar betaald is een gewone
+    // eerste aankoop (iDEAL + machtiging), geen verrekening: er is
+    // geen lopende periode om over te rekenen.
+    return {
+      mag: false,
+      soort: "niets",
+      bedragCent: 0,
+      reden: "Deze vereniging heeft nog geen betaald pakket. Sluit er eerst een af.",
+    };
+  }
+
+  // ── Omlaag: altijd goed ────────────────────────────────────
+  //  Geen enkele voorwaarde. Een vereniging tegenhouden die mínder
+  //  wil betalen is het slechtste antwoord dat er is — ook zonder
+  //  einddatum, ook na afloop, ook zonder doorlopende incasso.
+  if (PAKKET_RANG[naarPakket] < PAKKET_RANG[feiten.pakket]) {
+    return { mag: true, soort: "downgrade", bedragCent: 0, reden: "" };
+  }
+
+  // ── Omhoog: alleen met een lopende, betaalde periode ───────
+  if (feiten.geldigTot === null) {
+    // Onbeperkte toegang, met de hand gezet. Er is geen periode om
+    // over te verrekenen; dit hoort Evan zelf te doen.
+    return {
+      mag: false,
+      soort: "niets",
+      bedragCent: 0,
+      reden: "Deze vereniging heeft toegang zonder einddatum. Neem contact op om te wisselen.",
+    };
+  }
+  if (!feiten.resterendeDagen || feiten.resterendeDagen <= 0) {
+    return {
+      mag: false,
+      soort: "niets",
+      bedragCent: 0,
+      reden: "Het abonnement loopt af of is verlopen. Sluit een nieuw abonnement af.",
+    };
+  }
+  if (!feiten.mollieSubscriptionId) {
+    // Zonder doorlopende incasso valt er na de wissel niets te
+    // wijzigen: de club zou op het oude bedrag blijven hangen.
+    return {
+      mag: false,
+      soort: "niets",
+      bedragCent: 0,
+      reden: "Er loopt nog geen automatische incasso voor deze vereniging. Neem contact op.",
+    };
+  }
+
+  const bedrag = verrekeningCent(
+    feiten.pakket,
+    naarPakket,
+    feiten.termijn ?? "",
+    feiten.resterendeDagen,
+    feiten.totaleDagen ?? 0,
+  );
+  if (bedrag === null) {
+    // "Weet ik niet" mag nooit als "gratis" worden gelezen.
+    return {
+      mag: false,
+      soort: "niets",
+      bedragCent: 0,
+      reden: "We kunnen het verschil niet uitrekenen voor deze periode. Neem contact op.",
+    };
+  }
+
+  if (bedrag < WISSEL_DREMPEL_CENT) {
+    // Onder de drempel: meteen klaar, geen betaalscherm. Het bedrag in
+    // het oordeel is 0 — er wordt niets geïncasseerd — maar wat de
+    // wissel wáárd was staat wel in de boeken (zie start_wissel en
+    // wissel_abonnement in server/20-abonnement-wisselen.sql).
+    return { mag: true, soort: "upgrade_gratis", bedragCent: 0, reden: "" };
+  }
+  return { mag: true, soort: "upgrade", bedragCent: bedrag, reden: "" };
+}
+
 // ── Wat Mollie terugstuurt ───────────────────────────────────
 //  Alleen de velden die wij gebruiken. Met opzet niet compleet: wat
 //  hier niet staat, lezen we ook niet, en wat we niet lezen kan ook
@@ -199,6 +400,16 @@ export interface MollieClient {
   haalBetaling(id: string): Promise<MollieBetaling | null>;
   maakAbonnement(
     klantId: string,
+    gegevens: Record<string, unknown>,
+  ): Promise<MollieAbonnement>;
+  /* Het bedrag (of de omschrijving) van een LOPENDE incasso wijzigen.
+     Nodig bij een wissel van pakket: de doorlopende incasso bestaat
+     dan al en moet vanaf de volgende keer een ander bedrag
+     afschrijven. Een tweede subscription aanmaken zou betekenen dat
+     Mollie elke maand twee keer incasseert. */
+  wijzigAbonnement(
+    klantId: string,
+    abonnementId: string,
     gegevens: Record<string, unknown>,
   ): Promise<MollieAbonnement>;
 }
@@ -291,6 +502,20 @@ export function maakMollie(sleutel: string, fetchFn: Fetcher = fetch): MollieCli
       const pad = `/customers/${klantId}/subscriptions`;
       const { status, data } = await vraag("POST", pad, gegevens);
       eisGelukt(status, "/customers/{id}/subscriptions");
+      const abo = data as MollieAbonnement;
+      if (!abo || typeof abo.id !== "string") {
+        throw new MollieFout("onverwacht", "Mollie gaf geen abonnementsnummer terug");
+      }
+      return abo;
+    },
+
+    async wijzigAbonnement(klantId, abonnementId, gegevens) {
+      // PATCH, niet POST: dit wijzigt de bestaande incasso. Mollie
+      // accepteert hier onder meer amount, description en metadata;
+      // wij sturen alleen mee wat de aanroeper opgeeft.
+      const pad = `/customers/${klantId}/subscriptions/${abonnementId}`;
+      const { status, data } = await vraag("PATCH", pad, gegevens);
+      eisGelukt(status, "/customers/{id}/subscriptions/{id}");
       const abo = data as MollieAbonnement;
       if (!abo || typeof abo.id !== "string") {
         throw new MollieFout("onverwacht", "Mollie gaf geen abonnementsnummer terug");

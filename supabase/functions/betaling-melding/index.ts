@@ -50,6 +50,7 @@ import {
   MollieFout,
   mollieInterval,
   mollieSleutel,
+  prijsCent,
   startDatumVolgendePeriode,
 } from "../_gedeeld/mollie.ts";
 import { type DbClient, maakDbClient } from "../_gedeeld/supabase.ts";
@@ -126,6 +127,50 @@ export async function behandelMelding(
     //  Mollie meldt bij élke statuswijziging: open, canceled, expired,
     //  failed, paid. Alles behalve 'paid' is gewoon nieuws, geen fout.
     if (betaling.status !== "paid") {
+      // ── 3b. EEN MISLUKTE WISSELBETALING GEEFT DE CLAIM VRIJ ──
+      //  Bij een wissel van pakket staat er een claim klaar die deze
+      //  vereniging op slot zet (één wissel tegelijk, zie
+      //  server/20-abonnement-wisselen.sql). Wordt er niet betaald, dan
+      //  hoort dat slot meteen open: anders kan de club pas over zeven
+      //  dagen opnieuw proberen, zonder te weten waarom.
+      //
+      //  Alleen bij een DEFINITIEF einde. 'open' en 'pending' zijn
+      //  onderweg — daar is niets aan de hand en daar blijft de claim
+      //  met opzet staan.
+      //
+      //  WAAROM ER EERST NAAR DE METADATA WORDT GEKEKEN
+      //  Bij élke niet-betaalde melding in de database gaan kijken zou
+      //  betekenen dat dit adres — dat met opzet voor iedereen open
+      //  staat — met onzinmeldingen tot databasewerk is te verleiden.
+      //  De metadata is hier géén bewijs (dat is ze nooit); ze bepaalt
+      //  alleen of het de moeite waard is om het te vrágen. Het enige
+      //  wat er daarna gebeurt is dat een claim die bij een MISLUKTE
+      //  betaling hoort wordt vrijgegeven, en die status komt van
+      //  Mollie zelf.
+      const soortMeta = (betaling.metadata ?? {}) as Record<string, unknown>;
+      if (
+        soortMeta.soort === "wissel" &&
+        (betaling.status === "failed" || betaling.status === "canceled" ||
+          betaling.status === "expired")
+      ) {
+        const claims = await db.selecteer("abonnement_wissels", {
+          select: "id",
+          mollie_betaling_id: "eq." + id,
+          afgerond_op: "is.null",
+          limit: "1",
+        });
+        if (claims.length > 0 && typeof claims[0].id === "string") {
+          await db.bijwerken("abonnement_wissels", { id: "eq." + claims[0].id }, {
+            status: "mislukt",
+            afgerond_op: deps.nu().toISOString(),
+          });
+          deps.log("wisselpoging vrijgegeven", {
+            betaling: id,
+            status: betaling.status,
+          });
+        }
+      }
+
       deps.log("melding zonder betaling", {
         betaling: id,
         status: betaling.status,
@@ -157,6 +202,128 @@ export async function behandelMelding(
     let clubId = typeof meta.club_id === "string" ? meta.club_id : "";
     let pakket = typeof meta.pakket === "string" ? meta.pakket : "";
     let termijn = typeof meta.termijn === "string" ? meta.termijn : "";
+
+    // ── 4a. IS DIT EEN WISSEL VAN PAKKET? ────────────────────
+    //  DE WISSEL EERST, EN NIET OP DE METADATA. Een wisselbetaling ziet
+    //  er bij Mollie precies zo uit als een verlenging; het enige echte
+    //  onderscheid is dat wij er zélf een regel voor hebben klaargezet
+    //  in public.abonnement_wissels. Die regel is dus de wissel, en de
+    //  metadata is hoogstens een aanwijzing.
+    //
+    //  Zou deze melding bij de gewone verwerk_betaling() belanden, dan
+    //  telde die er een hele periode bij op — precies de fout die dit
+    //  hele wisselwerk repareert. Die functie weigert zo'n betaalnummer
+    //  daarom hard; dit is de routering die ervoor zorgt dat het nooit
+    //  zover komt.
+    //
+    //  Met opzet ZONDER "afgerond_op is null": ook een al afgeronde
+    //  wissel hoort hier langs te komen. Anders zou een tweede melding
+    //  (Mollie herhaalt tot hij een 200 krijgt) alsnog bij de gewone
+    //  functie uitkomen, en die weigert dan hard — waarna Mollie het
+    //  eeuwig blijft proberen.
+    const wisselRijen = await db.selecteer("abonnement_wissels", {
+      select: "id,club_id,naar_pakket,termijn,afgerond_op",
+      mollie_betaling_id: "eq." + id,
+      limit: "1",
+    });
+
+    if (wisselRijen.length > 0) {
+      const w = wisselRijen[0];
+      const wisselClub = typeof w.club_id === "string" ? w.club_id : clubId;
+      const wisselPakket = typeof w.naar_pakket === "string" ? w.naar_pakket : "";
+      const wisselTermijn = typeof w.termijn === "string" ? w.termijn : termijn;
+
+      if (
+        !wisselClub || !wisselPakket ||
+        (wisselTermijn !== "maand" && wisselTermijn !== "jaar")
+      ) {
+        // Een claim zonder club, pakket of termijn kan deze keten niet
+        // zelf rechtzetten. 200 (herhalen helpt niet) en een duidelijke
+        // regel in het logboek.
+        deps.log("wisselbetaling met een onvolledige claim — met de hand na te lopen", {
+          betaling: id,
+          club_id: wisselClub,
+          status: "paid",
+        });
+        return kort("wissel onvolledig", 200);
+      }
+
+      // Pakket en termijn komen uit de CLAIM en niet uit de metadata.
+      // De functie zelf controleert dat trouwens nog een keer; dit is
+      // de buitenste van die twee schillen.
+      await db.rpc("verwerk_wissel_betaling", {
+        p_mollie_id: id,
+        p_club: wisselClub,
+        p_pakket: wisselPakket,
+        p_termijn: wisselTermijn,
+        p_betaald_op: betaaldOp,
+        p_bedrag_cent: bedragCent,
+        p_modus: modus,
+        p_mollie_klant: klantId,
+        p_valuta: valuta,
+      });
+
+      deps.log("wisselbetaling verwerkt", {
+        betaling: id,
+        status: "paid",
+        klant: klantId,
+        club_id: wisselClub,
+        naar: wisselPakket,
+      });
+
+      // ── De incasso naar het nieuwe bedrag ──────────────────
+      //  GEEN nieuwe subscription: die bestaat al, en een tweede zou
+      //  betekenen dat Mollie elke maand twee keer incasseert. Wel het
+      //  bedrag ophogen — dit is het enige moment waarop dat kan.
+      //
+      //  Alleen als de wissel ook echt is doorgegaan. Is de betaling
+      //  genegeerd (testmodus, of een bedrag van nul), dan staat het
+      //  pakket nog op het oude en hoort de incasso dat ook te doen.
+      const abo = await db.selecteer("abonnementen", {
+        select: "pakket,mollie_subscription_id",
+        club_id: "eq." + wisselClub,
+        limit: "1",
+      });
+      const pakketNu = abo.length > 0 && typeof abo[0].pakket === "string"
+        ? abo[0].pakket as string
+        : "";
+      const incasso = abo.length > 0 && typeof abo[0].mollie_subscription_id === "string"
+        ? abo[0].mollie_subscription_id as string
+        : "";
+      const nieuwBedrag = prijsCent(wisselPakket, wisselTermijn);
+
+      if (pakketNu !== wisselPakket) {
+        deps.log("wisselbetaling niet toegekend — incasso blijft ongewijzigd", {
+          betaling: id,
+          club_id: wisselClub,
+          pakket_nu: pakketNu,
+        });
+      } else if (!klantId || !incasso || nieuwBedrag === null) {
+        deps.log("LET OP: pakket gewisseld zonder incasso bij te werken", {
+          betaling: id,
+          club_id: wisselClub,
+          incasso: incasso ? "bekend" : "onbekend",
+        });
+      } else {
+        await mollie.wijzigAbonnement(klantId, incasso, {
+          amount: { value: centenNaarBedrag(nieuwBedrag), currency: valuta },
+          description: `TEAMTAKKIE ${wisselPakket} (per ${wisselTermijn})`,
+        });
+        // PAS NA de bevestiging van Mollie. Dit veld betekent "wat
+        // Mollie volgens ons afschrijft"; vooruitlopend invullen maakt
+        // public.wissel_controle() waardeloos.
+        await db.bijwerken("abonnementen", { club_id: "eq." + wisselClub }, {
+          mollie_bedrag_cent: nieuwBedrag,
+        });
+        deps.log("incasso bijgewerkt na wissel", {
+          betaling: id,
+          club_id: wisselClub,
+          abonnement: incasso,
+        });
+      }
+
+      return kort("verwerkt", 200);
+    }
 
     // ── 4b. EEN VERLENGING KOMT ZONDER METADATA BINNEN ───────
     //  Incasseert Mollie zelf via een subscription, dan is er geen
@@ -285,6 +452,16 @@ export async function behandelMelding(
         });
         await db.bijwerken("abonnementen", { club_id: "eq." + clubId }, {
           mollie_subscription_id: abonnement.id,
+        });
+        // En apart: wat Mollie vanaf nu afschrijft. Dat is een ander
+        // feit dan "er ís een incasso" — het eerste is het bestaan
+        // ervan, het tweede het bedrag — en ze worden los weggeschreven
+        // zodat een mislukking van het tweede het eerste niet meeneemt.
+        // Zonder deze regel is mollie_bedrag_cent vanaf dag één leeg
+        // voor iedereen die gewoon een abonnement koopt, en meldt
+        // public.wissel_controle() straks elke club als "onbekend".
+        await db.bijwerken("abonnementen", { club_id: "eq." + clubId }, {
+          mollie_bedrag_cent: bedragCent,
         });
         deps.log("doorlopende incasso aangezet", {
           betaling: id,
