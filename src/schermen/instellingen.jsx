@@ -349,11 +349,301 @@ function NieuwSeizoenKaart({ van, naar, onNaar, onAnnuleer, onKlaar }) {
   );
 }
 
+/* ══ OVERSTAPPEN (de betaling) ════════════════════════════════
+   Wat hier staat is de hele klantkant van één zin: "ik wil Coach, per
+   maand." De app stuurt dat naar de edge function betaling-starten,
+   krijgt één adres terug — de kassa van Mollie — en stuurt de
+   gebruiker daarheen. Meer weet de app niet en meer hoeft de app niet
+   te weten.
+
+   WAT HIER MET OPZET NIET STAAT: een bedrag. De prijs die op de
+   prijskaart staat is er om naar te kijken; wat er werkelijk wordt
+   afgeschreven bepaalt PRIJZEN in de edge function. Zou het bedrag
+   van hier komen, dan is een clubabonnement van één cent een kwestie
+   van de ontwikkelaarsconsole openen. Dat de twee lijstjes hetzelfde
+   zeggen is een afspraak tussen mensen (docs/pakketten-besluit.md),
+   geen mechanisme — en dat is precies goed: wie ze uit elkaar laat
+   lopen, ziet een ander bedrag bij de bank dan op de kaart, en betaalt
+   nog steeds wat de server zegt.
+
+   WAAROM GEEN FORMULIER DAT NAAR MOLLIE POST: online/_headers zet
+   form-action op 'self'. Vandaag staat die regel er nog als
+   Report-Only — hij meldt dus alleen en houdt nog niets tegen — maar
+   dat is nadrukkelijk de bedoeling voor later, en dan zou een <form>
+   naar mollie.com stilzwijgend blijven hangen. "Er gebeurt niets" is
+   de ergste storing die er is, en zeker op de knop waar geld achter
+   zit. window.location.assign() valt niet onder form-action en blijft
+   werken, ook als die kop ooit scherp wordt gezet.
+   ═════════════════════════════════════════════════════════════ */
+
+/* Het briefje dat we achterlaten vlak voordat we iemand naar de bank
+   sturen. Mollie komt terug op één vast adres (APP_TERUG_URL in de
+   edge function, standaard https://app.teamtakkie.nl/?upgrade=terug)
+   en geeft daarbij géén betaalnummer mee. De app weet bij terugkomst
+   dus alleen dát er iemand terugkomt — niet waarvan. Dit briefje is
+   het antwoord op "waarvan": welk pakket, welke termijn, en vanaf welk
+   pakket. Zonder dat zou het wachtscherm niet kunnen zien of er iets
+   veranderd is. */
+const UPGRADE_KEY = "tt_upgrade_onderweg_v1";
+/* De parameter waaraan we een terugkeer herkennen. Deze naam is niet
+   vrij te kiezen: hij staat aan de serverkant in STANDAARD_TERUG
+   (supabase/functions/betaling-starten/index.ts). Wijzigt die, dan
+   hoort deze regel mee te wijzigen — en andersom. */
+const UPGRADE_PARAM = "upgrade";
+/* Een briefje van gisteren gaat over een betaling die nooit is
+   afgemaakt. Dat mag geen "bezig met verwerken" blijven tonen tot het
+   einde der tijden: na een dag is het geen lopende zaak meer maar een
+   afgebroken poging, en die hoort stil op te ruimen. */
+const UPGRADE_BRIEFJE_MAX_MS = 24 * 60 * 60 * 1000;
+/* Hoe lang het wachtscherm blijft draaien voor het iets geruststellends
+   zegt. Mollie's melding is er meestal binnen een paar seconden, maar
+   een bank kan er langer over doen — en dan hoort er geen molentje te
+   blijven draaien waar niemand iets aan heeft. */
+const UPGRADE_GEDULD_MS = 30000;
+const UPGRADE_POLL_MS = 3000;
+
+/** @returns {{pakket:string, termijn:string, vanaf:string, op:number}|null} */
+function upgradeBriefje() {
+  try {
+    var r = localStorage.getItem(UPGRADE_KEY);
+    if (!r) return null;
+    var o = JSON.parse(r);
+    if (!o || !o.pakket) return null;
+    if (!o.op || (Date.now() - o.op) > UPGRADE_BRIEFJE_MAX_MS) { wisUpgradeBriefje(); return null; }
+    return o;
+  } catch(e) { return null; }
+}
+function zetUpgradeBriefje(o) {
+  try { localStorage.setItem(UPGRADE_KEY, JSON.stringify(o)); } catch(e) {}
+  return o;
+}
+function wisUpgradeBriefje() {
+  try { localStorage.removeItem(UPGRADE_KEY); } catch(e) {}
+}
+/** @returns {boolean} komt de gebruiker net terug van de kassa? */
+function upgradeTerugInUrl() {
+  try { return new URLSearchParams(window.location.search).get(UPGRADE_PARAM) === "terug"; }
+  catch(e) { return false; }
+}
+/* De parameter uit de adresbalk halen zodra het wachtscherm klaar is.
+   Anders begint dezelfde vertoning opnieuw bij elke verversing van de
+   pagina — en bij een app die je op je beginscherm hebt staan is dat
+   geen theorie. Het is nadrukkelijk replaceState en geen nieuwe
+   navigatie: de terugknop hoort hier niets van te merken. */
+function upgradeUrlOpruimen() {
+  try {
+    if (!window.history || !window.history.replaceState) return;
+    var u = new URL(window.location.href);
+    u.searchParams.delete(UPGRADE_PARAM);
+    window.history.replaceState(null, "", u.pathname + (u.search || "") + (u.hash || ""));
+  } catch(e) {}
+}
+
+/* Het token voor dit ene verzoek. serverVraag() doet dit al voor alles
+   wat naar /rest/v1 gaat, en dat is ook de reden dat de vernieuwing
+   hier niet nog eens wordt uitgeschreven: tokenVerlopen() en
+   verversAanmelding() uit src/kern/server.js doen het werk, dit is
+   alleen de volgorde.
+
+   Waarom dit verzoek dan tóch niet via serverVraag() loopt: dat is een
+   bewuste, kleine weeffout. serverVraag() gooit bij een fout het
+   antwoord van de server weg en houdt alleen serverBoodschap() over,
+   en die kent de vorm van PostgREST ({message}/{hint}) — niet die van
+   een edge function, die {fout:"..."} teruggeeft. Langs serverVraag()
+   zou "Alleen de eigenaar van de club kan een abonnement afsluiten"
+   veranderen in "De server gaf een fout (403)", en dan staat iemand
+   met precies de verkeerde vraag ("is de app stuk?") bij een antwoord
+   dat hij in tien seconden zelf had kunnen oplossen. Zodra
+   serverBoodschap() ook {fout} leest, mag dit verzoek alsnog door die
+   ene deur. */
+function _overstapToken() {
+  var s = sessieNu();
+  if (!s) return Promise.resolve(null);
+  if (!tokenVerlopen(s)) return Promise.resolve(s.token);
+  return verversAanmelding().then(function (r) {
+    var n = sessieNu();
+    return (r.ok && n) ? n.token : null;
+  });
+}
+/* Wat de server terugzegt als het misgaat. De eigen tekst van de edge
+   function wint altijd: die is in het Nederlands geschreven en zegt
+   wat er te doen valt. Alleen als die er niet is valt dit terug op de
+   status — en ook dan met een zin waar iemand iets mee kan. */
+function _overstapFoutTekst(status, gegevens) {
+  var eigen = gegevens && typeof gegevens === "object"
+    ? (gegevens.fout || gegevens.error || gegevens.message)
+    : (typeof gegevens === "string" && gegevens.length < 200 ? gegevens : null);
+  if (eigen) return String(eigen);
+  if (status === 401) return "Je aanmelding is verlopen. Log opnieuw in en probeer het nog eens.";
+  if (status === 404) return "De betaling is nog niet aangesloten op deze server.";
+  return "Overstappen lukte nu niet (fout " + status + "). Probeer het zo nog eens.";
+}
+function _overstapVraag(token, clubId, pakket, termijn) {
+  return fetch(serverAdres("/functions/v1/betaling-starten"), {
+    method: "POST",
+    headers: serverKoppen(token),
+    body: JSON.stringify({club_id: clubId, pakket: pakket, termijn: termijn})
+  }).then(function (antwoord) {
+    return antwoord.text().then(function (tekst) {
+      var gegevens = null;
+      if (tekst) { try { gegevens = JSON.parse(tekst); } catch(e) { gegevens = tekst; } }
+      if (antwoord.ok && gegevens && gegevens.checkout_url) {
+        return {ok:true, status: antwoord.status, kassa: String(gegevens.checkout_url)};
+      }
+      /* Een 200 zonder adres is net zo goed mislukt. Doorlopen alsof
+         het gelukt is zou hier een lege pagina opleveren. */
+      return {ok:false, status: antwoord.status,
+              tekst: antwoord.ok ? "De server gaf geen betaaladres terug."
+                                 : _overstapFoutTekst(antwoord.status, gegevens)};
+    });
+  });
+}
+/**
+ * Een betaling starten. Geeft {ok:true, kassa} of {ok:false, tekst}.
+ * Werpt niets op: wie langs de lijn staat met halve dekking hoort een
+ * melding te krijgen, geen stilstaande knop.
+ */
+function startOverstap(pakket, termijn) {
+  if (!serverAan())  return Promise.resolve({ok:false, tekst:"Er is nog geen server ingesteld."});
+  if (!ingelogd())   return Promise.resolve({ok:false, tekst:"Log eerst in; een abonnement hoort bij een account."});
+  var clubId = clubIdNu();
+  if (!clubId)       return Promise.resolve({ok:false, tekst:"Je hoort nog niet bij een vereniging."});
+  return _overstapToken().then(function (token) {
+    if (!token) return {ok:false, tekst:"Je aanmelding is verlopen. Log opnieuw in."};
+    return _overstapVraag(token, clubId, pakket, termijn).then(function (r) {
+      if (r.status !== 401) return r;
+      /* Eén keer opnieuw na verversen, net als serverVraag(). Eén keer
+         en niet eindeloos: anders blijft een app met een ongeldig token
+         in een kringetje draaien. */
+      return verversAanmelding().then(function (v) {
+        var n = sessieNu();
+        if (!v.ok || !n) return {ok:false, tekst:"Je aanmelding is verlopen. Log opnieuw in."};
+        return _overstapVraag(n.token, clubId, pakket, termijn);
+      });
+    });
+  }).catch(function (e) {
+    return {ok:false, tekst:"De server was niet te bereiken (" +
+      ((e && (e.message || e.name)) || "onbekend") + "). Controleer je internetverbinding."};
+  });
+}
+
+/* ── Terug van de kassa ──────────────────────────────────────
+   Mollie stuurt de gebruiker terug naar de app op het moment dat híj
+   klaar is, niet op het moment dat de betaling rond is. Die twee
+   kunnen seconden uit elkaar liggen: het pakket komt pas op de server
+   te staan als betaling-melding (de webhook) langs is geweest. Daarom
+   staat hier geen "gelukt!" maar een scherm dat wacht tot de server
+   het zelf zegt.
+
+   Het kijkt dus niet naar wat Mollie de gebruiker vertelde — daar
+   valt in de adresbalk mee te knoeien — maar naar syncPakket(), dat
+   het pakket ophaalt bij de enige partij die erover gaat.
+
+   Na dertig seconden houdt het op met draaien. Niet omdat het dan
+   mis is, maar omdat iemand die dertig seconden naar een molentje
+   heeft gekeken recht heeft op een zin in plaats van nog een molentje.
+   Het briefje blijft dan staan, zodat het abonnementsblok bij
+   Instellingen kan blijven zeggen dat er iets loopt. */
+function UpgradeTerugScherm() {
+  /* Eén keer lezen, bij het opstarten. Daarna is dit scherm er of is
+     het er niet; het hoort niet halverwege een wedstrijd alsnog over
+     iemands beeld te springen omdat er ergens een briefje opdook. */
+  const [briefje, setBriefje] = useState(function () {
+    return upgradeTerugInUrl() ? upgradeBriefje() : null;
+  });
+  const [geduld, setGeduld] = useState(false);
+
+  useEffect(function () {
+    if (!briefje) return;
+    var gestopt = false;
+    function stop() { gestopt = true; clearInterval(tik); clearTimeout(wacht); }
+    function klaar() {
+      stop();
+      wisUpgradeBriefje();
+      upgradeUrlOpruimen();
+      var naam = pakketNu().naam;
+      setBriefje(null);
+      /* Kort en warm, en verder niets. Wat er nu opengegaan is, ziet
+         iemand vanzelf bij de eerstvolgende tik op het menu:
+         magPagina() vraagt het pakket op het moment van klikken. */
+      meldGoed("Welkom bij " + naam + "!");
+    }
+    function kijk() {
+      var clubId = clubIdNu();
+      if (!clubId) return;
+      syncPakket(clubId).then(function (r) {
+        if (gestopt || !r || !r.ok) return;
+        /* Precies het pakket waarvoor betaald is, en niet "iets anders
+           dan eerst". Een club die op hetzelfde moment door Evan op
+           een ander pakket wordt gezet, is geen bevestiging van déze
+           betaling. */
+        if (pakketNu().id === briefje.pakket) klaar();
+      });
+    }
+    var tik = setInterval(kijk, UPGRADE_POLL_MS);
+    var wacht = setTimeout(function () { setGeduld(true); }, UPGRADE_GEDULD_MS);
+    kijk();
+    return stop;
+  }, [briefje]);
+
+  if (!briefje) return null;
+  var pakket = PAKKETTEN.filter(function (p) { return p.id === briefje.pakket; })[0];
+  /* .onboard is het opstartscherm: een volle pagina met één kaart in
+     het midden. Hier ligt het over de app heen in plaats van ervoor,
+     want de app draait al — vandaar de regels over positie die er in
+     het stijlblad niet bij staan. Geen nieuwe klasse: een stijlregel
+     voor één scherm hoort niet in een stijlblad dat iedereen bij elk
+     bezoek binnenhaalt.
+
+     De achtergrondkleur staat er om een reden die de moeite van het
+     opschrijven waard is: .onboard zegt zelf background:var(--achtergrond),
+     en die variabele bestáát niet (hij staat nergens in het stijlblad).
+     Bij de opstartschermen valt dat niet op, want dan is er niets
+     achter en zie je gewoon de achtergrond van body — var(--grijs-licht).
+     Hier zou je dwars door dit scherm heen het dashboard zien, met een
+     kaart die in de lucht hangt. Dezelfde kleur als body dus, met de
+     hand. De echte oplossing is die variabele alsnog benoemen in
+     src/index.html; dat is een aparte wijziging aan een bestand dat
+     elk scherm raakt, en die hoort apart beoordeeld en doorgemeten te
+     worden.
+
+     500 als hoogte in de stapel: boven het zijmenu (210), de onderbalk
+     (200) en de vensters (400/440), en onder de meldingen (600). Dit
+     scherm hoort het enige te zijn wat je ziet — maar een melding die
+     eroverheen komt hoort leesbaar te blijven. */
+  return (
+    <div className="onboard"
+      style={{position:"fixed",inset:0,zIndex:500,background:"var(--grijs-licht)"}}>
+      <div className="onboard-kaart onboard-wacht">
+        {geduld ? (
+          <React.Fragment>
+            <i className="fa-solid fa-clock"/>
+            <p>
+              Dit kan nog even duren — je kunt gewoon verdergaan, we laten
+              het weten zodra {pakket ? pakket.naam : "je pakket"} klaarstaat.
+            </p>
+            <button className="knop lijn onboard-knop"
+              onClick={function(){ upgradeUrlOpruimen(); setBriefje(null); }}>
+              Verder in de app
+            </button>
+          </React.Fragment>
+        ) : (
+          <React.Fragment>
+            <i className="fa-solid fa-circle-notch fa-spin"/>
+            <p>Je betaling wordt verwerkt…</p>
+          </React.Fragment>
+        )}
+      </div>
+    </div>
+  );
+}
+
 /* ══ PAKKETTEN ═══════════════════════════════════════════════
-   Wat elk pakket kan, naast elkaar. Dit is een prijskaart en geen
-   instelling: er valt hier niets te kiezen, want een pakket komt van
-   de server. Wie wil overstappen krijgt straks een knop die naar de
-   betaling gaat; tot die er is staat er wat er nu waar is.
+   Wat elk pakket kan, naast elkaar. Dit is een prijskaart én, sinds
+   19 september 2026, de plek waar je overstapt: op elke kaart die je
+   nog niet hebt staat een keuze tussen per maand en per jaar, en
+   daaronder de knop die de betaling start. Welk pakket je hebt komt
+   nog steeds van de server en van nergens anders.
    ══════════════════════════════════════════════════════════ */
 /* De agenda staat sinds 11 september bij de basis en niet meer bij
    trainingen. Deze twee regels moesten daarin mee: een prijskaart die
@@ -369,8 +659,50 @@ const MODULE_LABEL = {
    op een slotje waar net op getikt is. Via Instellingen komt er niets
    mee en is er dus geen nadruk — daar bekijkt iemand het hele
    overzicht, niet één antwoord. */
+/* De twee termijnen, in de volgorde waarin ze op de kaart staan. Per
+   maand eerst: dat is wat iemand als eerste wil weten en wat er ook nu
+   al groot op de kaart stond. De id's zijn geen vrije keuze — ze gaan
+   zo naar de edge function, die ze opzoekt in PRIJZEN
+   (supabase/functions/_gedeeld/mollie.ts: maand/jaar). */
+const TERMIJNEN = [
+  {id:"maand", label:"Per maand"},
+  {id:"jaar",  label:"Per jaar"}
+];
 function PakkettenSheet({ onSluiten, nadruk }) {
   const nu = pakketNu();
+  /* De termijn per kaart en niet één voor het hele scherm. Iemand die
+     bij Coach op "per jaar" tikt, vraagt zich iets af over Coach — dat
+     hoort niet het bedrag bij Club te laten verspringen terwijl hij
+     ernaar kijkt. */
+  const [termijnen, setTermijnen] = useState({});
+  const [bezig, setBezig] = useState(null);
+  function termijnVan(id) { return termijnen[id] || TERMIJNEN[0].id; }
+  function kiesTermijn(id, t) {
+    setTermijnen(function (v) { var n = Object.assign({}, v); n[id] = t; return n; });
+  }
+
+  /* Van hier gaat het weg. Het briefje wordt pas geschreven als er
+     echt een kassa is: een briefje achterlaten voor een betaling die
+     nooit begonnen is, laat het abonnementsblok straks zeggen dat er
+     iets loopt terwijl er niets loopt. */
+  function overstap(p) {
+    if (bezig) return;
+    var t = termijnVan(p.id);
+    setBezig(p.id);
+    startOverstap(p.id, t).then(function (r) {
+      if (!r || !r.ok) {
+        setBezig(null);
+        meldFout((r && r.tekst) || "Overstappen lukte nu niet.");
+        return;
+      }
+      zetUpgradeBriefje({pakket: p.id, termijn: t, vanaf: nu.id, op: Date.now()});
+      /* Geen setBezig(null): vanaf hier verlaat de browser deze
+         pagina. De knop hoort tot dat moment op slot te blijven — twee
+         keer tikken is twee betalingen bij Mollie. */
+      window.location.assign(r.kassa);
+    });
+  }
+
   return (
     <div className="formatie-overlay" onClick={function(e){ if(e.target===e.currentTarget) onSluiten(); }}>
       <div className="formatie-sheet" onClick={function(e){e.stopPropagation();}}>
@@ -385,6 +717,17 @@ function PakkettenSheet({ onSluiten, nadruk }) {
             /* Een onbekend pakket-id hoort een kaart zonder bedrag op te
                leveren, geen lege regel met een euroteken. */
             const prijs = PAKKET_PRIJS[p.id] || {};
+            /* Betaalt de club al? Dan is dit geen prijskaart meer maar
+               een wisselknop — andere tekst, en Free hoort er niet meer
+               tussen te staan als knop. Terug naar Free doe je door op
+               te zeggen (bij Instellingen › Abonnement), en niet door
+               op een kaart te tikken die eruitziet als een aankoop:
+               dan zet je met één tik je trainingen en statistieken uit
+               zonder dat er ook maar iets over stoppen op je scherm
+               heeft gestaan. */
+            const betaaldNu = nu.id !== "free";
+            const kanKiezen = !dit && !(betaaldNu && p.id === "free");
+            const jaar = kanKiezen && !!prijs.jaar && termijnVan(p.id) === "jaar";
             return (
               <div key={p.id} className={"pakket-kaart"+(dit?" nu":"")+(p.id===nadruk?" nadruk":"")}>
                 {dit && <span className="pakket-vlag">Jouw pakket</span>}
@@ -392,22 +735,53 @@ function PakkettenSheet({ onSluiten, nadruk }) {
                   <span className="pakket-merk">TEAMTAKKIE</span>
                   <span className="pakket-naam">{p.naam}</span>
                 </div>
-                {/* De maandprijs is het getal waar mensen naar kijken, dus
+                {/* De keuze tussen per maand en per jaar staat bovenop de
+                    kaart, en niet in een tussenstapje ná de knop. Wie op
+                    "Overstappen" tikt hoort al te weten wat er wordt
+                    afgeschreven; een scherm dat dáárna nog een vraag stelt
+                    voelt als een verkooptruc. Het bedrag eronder verspringt
+                    meteen mee — dat is de hele bedoeling van deze twee
+                    knoppen. Ze staan alleen op een kaart waar ook een knop
+                    onder staat: een keuze die nergens toe leidt is geen
+                    keuze maar een raadsel.
+
+                    De gekozen prijs is het getal waar mensen naar kijken, dus
                     die staat groot en zwart — geen grijs op grijs, want dat
-                    is buiten in de zon niet te lezen. Het jaarbedrag staat
+                    is buiten in de zon niet te lezen. Het andere bedrag staat
                     eronder als tweede regel: wie het zoekt vindt het, wie
                     het niet zoekt wordt er niet mee opgehouden. Bij Free
                     staat er alleen "Gratis" en verder niets; "per maand"
-                    bij een bedrag van nul is een grap die niemand snapt. */}
+                    bij een bedrag van nul is een grap die niemand snapt.
+
+                    "Twee maanden korting" staat alleen bij de maandstand:
+                    wie al naar het jaarbedrag kijkt hééft die korting, en
+                    hem er dan nog bij zetten leest als een aanbieding die
+                    je misloopt terwijl je hem hebt. */}
+                {kanKiezen && prijs.jaar && (
+                  <div className="thema-rij" role="group"
+                    aria-label={"Betaaltermijn voor " + p.naam}>
+                    {TERMIJNEN.map(function (tm) {
+                      const aan = termijnVan(p.id) === tm.id;
+                      return (
+                        <button key={tm.id} className="thema-optie" aria-pressed={aan}
+                          style={{borderColor:aan?"var(--blauw)":"var(--grijs)",background:aan?"var(--blauw)":"var(--wit)",color:aan?"#fff":"var(--grijs-donker)"}}
+                          onClick={function(){ kiesTermijn(p.id, tm.id); }}>
+                          <span>{tm.label}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
                 {prijs.maand && (
                   <div className="pakket-prijs">
                     <div className="pakket-prijs-rij">
-                      <span className="pakket-prijs-bedrag">{prijs.maand}</span>
-                      {prijs.jaar && <span className="pakket-prijs-per">per maand</span>}
+                      <span className="pakket-prijs-bedrag">{jaar ? prijs.jaar : prijs.maand}</span>
+                      {prijs.jaar && <span className="pakket-prijs-per">{jaar ? "per jaar" : "per maand"}</span>}
                     </div>
                     {prijs.jaar && (
                       <div className="pakket-prijs-jaar">
-                        {"of " + prijs.jaar + " per jaar \u2014 twee maanden korting"}
+                        {jaar ? ("of " + prijs.maand + " per maand")
+                              : ("of " + prijs.jaar + " per jaar \u2014 twee maanden korting")}
                       </div>
                     )}
                   </div>
@@ -427,10 +801,26 @@ function PakkettenSheet({ onSluiten, nadruk }) {
                     );
                   })}
                 </ul>
-                {!dit && (
-                  <button className="knop lijn klein" style={{width:"100%",justifyContent:"center"}}
-                    onClick={function(){ meldGoed("Overstappen kan zodra de betaling klaarstaat."); }}>
-                    Overstappen
+                {/* Wie al betaalt "stapt niet over" maar "wijzigt": dat is
+                    wat er gebeurt, en het is ook het woord waarmee iemand
+                    het zelf zou opschrijven. De regel erboven is er omdat
+                    er nog geen verrekening bestaat — noch bij Mollie, noch
+                    in server/18-betalingen.sql. Dat mag je dan gewoon
+                    zeggen vóórdat iemand tikt, in plaats van erachter te
+                    laten komen op zijn afschrift. */}
+                {kanKiezen && betaaldNu && (
+                  <p style={{fontSize:11.5,color:"var(--grijs-donker)",fontWeight:400,margin:0,lineHeight:1.6}}>
+                    Wat je voor {nu.naam} al hebt betaald, wordt nog niet
+                    automatisch verrekend.
+                  </p>
+                )}
+                {kanKiezen && (
+                  <button className="knop lijn klein" disabled={!!bezig}
+                    style={{width:"100%",justifyContent:"center"}}
+                    onClick={function(){ overstap(p); }}>
+                    {bezig === p.id
+                      ? <React.Fragment><i className="fa-solid fa-circle-notch fa-spin"/> Bezig…</React.Fragment>
+                      : (betaaldNu ? "Wijzigen naar " + p.naam : "Overstappen")}
                   </button>
                 )}
               </div>
@@ -1038,6 +1428,16 @@ function InstellingenSheet({ onSluiten, onGewisseld, onTeams }) {
   const [opheffenOpen, setOpheffenOpen] = useState(false);
   const [opheffenTekst, setOpheffenTekst] = useState("");
   const [opheffenBezig, setOpheffenBezig] = useState(false);
+  const [opzeggenOpen, setOpzeggenOpen] = useState(false);
+  /* Free is geen abonnement maar de afwezigheid ervan: geen einddatum,
+     niets om op te zeggen. Vandaar dat de twee stukken hieronder aan
+     deze ene vraag hangen. */
+  const betaaldPakket = pakketNu().id !== "free";
+  /* Eén keer lezen bij het openen van dit venster. Niet bij elke
+     hertekening: dan zou dit vakje bij elke toetsaanslag in een van de
+     velden hierboven opnieuw uit localStorage komen, terwijl het
+     antwoord alleen verandert door iets wat buiten dit scherm gebeurt. */
+  const [onderweg] = useState(function(){ return upgradeBriefje(); });
   const bestandRef = useRef(null);
   const logoRef = useRef(null);
 
@@ -1167,7 +1567,16 @@ function InstellingenSheet({ onSluiten, onGewisseld, onTeams }) {
           )}
         </div>
 
-        {/* ── Abonnement ── */}
+        {/* ── Abonnement ──
+            Dit blok stond er al als prijskaart-met-knop; sinds
+            19 september 2026 staat hier ook wat je hebt lopen en hoe je
+            ervan af komt. Met opzet op deze kaart en niet op een eigen
+            scherm: "wat heb ik, tot wanneer, en hoe zeg ik op" zijn drie
+            vragen die iemand in één adem stelt, en die horen dan ook
+            binnen één oogopslag beantwoord te worden. Een aparte
+            "Abonnement"-pagina zou er alleen maar een klik tussen zetten
+            — en dat is precies waar mensen boos van worden bij het
+            opzeggen van dingen. */}
         <div className="kaart">
           <div className="kaart-titel"><i className="fa-solid fa-crown"/> Abonnement</div>
           <div className="pakket-nu">
@@ -1180,10 +1589,51 @@ function InstellingenSheet({ onSluiten, onGewisseld, onTeams }) {
               : maxTeams() + (maxTeams() === 1 ? " team" : " teams") + ", " +
                 pakketNu().modules.length + " van de " + MODULES.length + " onderdelen."}
           </p>
+          {/* "Loopt tot" en niet "per maand, loopt tot": public.abonnementen
+              houdt alleen pakket en geldig_tot bij, er is geen kolom waarin
+              staat of er per maand of per jaar wordt afgeschreven (zie
+              server/01-schema.sql). Die termijn staat wél bij elke betaling
+              in public.betalingen, maar dat is de boekhouding en niet wat
+              er nú loopt. Er stond even "per maand" als gok in — dat is
+              eruit gehaald: een verkeerde termijn op je scherm is erger
+              dan geen termijn.
+
+              Staat er geen datum (nog nooit gesynchroniseerd, of de server
+              vulde hem niet in), dan valt deze regel weg. Een lege datum
+              tonen is een vraag oproepen zonder hem te beantwoorden. */}
+          {betaaldPakket && abonnementTot() && (
+            <div className="account-rij">
+              <span>Loopt tot</span><b>{formateerDatum(abonnementTot())}</b>
+            </div>
+          )}
+          {/* Een betaling die onderweg is en nog niet is teruggekomen. Dit
+              is de tweede helft van het wachtscherm: wie daar op "Verder in
+              de app" tikte, of de app tussendoor afsloot, hoort hier terug
+              te vinden wat er aan de hand is — en niet te hoeven raden of
+              zijn geld ergens is blijven hangen. */}
+          {onderweg && (
+            <div className="melding" style={{margin:"0 0 10px"}}>
+              <i className="fa-solid fa-hourglass-half"/>{" "}
+              Bezig met verwerken: je overstap naar{" "}
+              {(PAKKETTEN.filter(function (pk) { return pk.id === onderweg.pakket; })[0] || {}).naam || onderweg.pakket}
+              . Dit kan een paar minuten duren — of probeer het opnieuw.
+            </div>
+          )}
           <button className="knop lijn" style={{width:"100%",justifyContent:"center"}}
             onClick={function(){ setPakkettenOpen(true); }}>
             <i className="fa-solid fa-layer-group"/> Bekijk pakketten
           </button>
+          {/* Opzeggen hoort hier te staan, bij wat je hebt, en niet
+              weggestopt achter een mailadres. Dat het nog niet werkt,
+              verandert daar niets aan: de knop en de vraag staan er al,
+              zodat de plek klopt zodra de serverkant er is. Wat hij nú
+              doet staat hieronder bij de bevestiging. */}
+          {betaaldPakket && (
+            <button className="knop lijn" style={{width:"100%",justifyContent:"center",marginTop:8}}
+              onClick={function(){ setOpzeggenOpen(true); }}>
+              <i className="fa-solid fa-circle-xmark"/> Opzeggen
+            </button>
+          )}
         </div>
 
         {magRol("club") && <div className="inst-groep">Team</div>}
@@ -1455,6 +1905,44 @@ function InstellingenSheet({ onSluiten, onGewisseld, onTeams }) {
               </div>
             </div>
           </div>
+        )}
+
+        {/* Opzeggen krijgt de lichte bevestiging van het verwijderen van
+            een team, en níét het overtypen van "Vereniging opheffen"
+            hieronder. Dat verschil is opzet: bij opheffen gaat alles
+            onherroepelijk weg, bij opzeggen houd je je gegevens en kun je
+            morgen weer overstappen. Een rem die zwaarder is dan wat er
+            gebeurt, leert mensen alleen maar om door rode schermen heen
+            te klikken.
+
+            WAT DEZE KNOP VANDAAG DOET: een melding, meer niet. Er bestaat
+            aan de serverkant nog geen manier om "opgezegd maar loopt nog
+            door" vast te leggen, en ook niet om de doorlopende incasso bij
+            Mollie te stoppen (server/19-mollie-subscription.sql legt het
+            nummer wél vast, maar er is geen functie die hem opzegt). Doen
+            alsof het gelukt is terwijl er volgende maand gewoon weer wordt
+            afgeschreven, is het ergste wat deze knop kan doen — dus zegt
+            hij precies wat er is: nog niet klaar. Zelfde keuze als bij
+            "Overstappen" tot 19 september 2026. */}
+        {opzeggenOpen && (
+          <div className="bevestig-overlay"><div className="bevestig-kaart">
+            <h3>{pakketNu().naam} opzeggen?</h3>
+            <p>
+              Je houdt {pakketNu().naam}{" "}
+              {abonnementTot()
+                ? "tot " + formateerDatum(abonnementTot())
+                : "tot het einde van de periode die je al hebt betaald"}.
+              Daarna gaat je vereniging terug naar Free: één team en alleen
+              de basis. Je gegevens blijven staan.
+            </p>
+            <div className="bevestig-knoppen">
+              <button className="knop lijn" onClick={function(){ setOpzeggenOpen(false); }}>Toch niet</button>
+              <button className="knop gevaar" onClick={function(){
+                setOpzeggenOpen(false);
+                meldGoed("Opzeggen kan zodra dat onderdeel klaar is.");
+              }}>Opzeggen</button>
+            </div>
+          </div></div>
         )}
 
         {/* Hetzelfde bevestigingsscherm als bij "Account verwijderen?" in

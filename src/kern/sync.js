@@ -954,6 +954,27 @@ function syncPersoonlijk(uitslag) {
     });
 }
 
+/* Tot wanneer het huidige abonnement loopt, zoals de server het laatst
+   zei. Alleen om te tónen ("loopt tot 3 maart 2027") in het
+   abonnementsblok bij Instellingen — er hangt geen enkel recht aan.
+   Wat iemand mag blijft hangen aan het pakket, en dat bepaalt de
+   database (06-pakketten.sql), niet deze datum op dit apparaat.
+
+   Waarom een eigen sleutel en niet bij LICENTIE_KEY erin: zetPakket()
+   schrijft dat vakje helemaal opnieuw ({pakket:...}) en staat op drie
+   plekken buiten dit bestand. Een tweede veld erin zou bij elke
+   aanroep daarvan stilletjes verdwijnen, en een datum die soms wel en
+   soms niet verdwijnt is erger dan geen datum. */
+const ABO_TOT_KEY = "tt_abo_tot_v1";
+/** @returns {string|null} de einddatum (jjjj-mm-dd) of null als die onbekend is */
+function abonnementTot() {
+  try { return localStorage.getItem(ABO_TOT_KEY) || null; } catch(e) { return null; }
+}
+/** @param {string|null} [d] @returns {void} */
+function zetAbonnementTot(d) {
+  try { if (d) localStorage.setItem(ABO_TOT_KEY, String(d)); else localStorage.removeItem(ABO_TOT_KEY); } catch(e) {}
+}
+
 /* Het pakket komt van de server en nergens anders vandaan. In de
    browser is elk slot te openen; in de database niet. */
 /** @param {string} clubId @returns {Promise<ServerUitkomst>} */
@@ -963,6 +984,11 @@ function syncPakket(clubId) {
       if (!r.ok) return r;
       var rij = Array.isArray(r.gegevens) ? r.gegevens[0] : null;
       if (rij && rij.pakket) zetPakket(rij.pakket);
+      /* Ook als er géén rij is, of een rij zonder einddatum: dan hoort
+         de datum van gisteren weg. Een "loopt tot" laten staan bij een
+         abonnement dat er niet meer is, is een belofte doen namens een
+         server die niets beloofd heeft. */
+      zetAbonnementTot(rij ? rij.geldig_tot : null);
       return {ok:true};
     });
 }

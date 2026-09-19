@@ -2047,6 +2047,14 @@ function App() {
           Het pakket dat het antwoord geeft staat goud omrand. */}
       {slotPakket && <PakkettenSheet nadruk={slotPakket}
         onSluiten={function(){ setSlotPakket(null); }} />}
+      {/* Terug van de kassa. Dit scherm bepaalt zelf of het er is: staat
+          er geen ?upgrade=terug in de adresbalk en ligt er geen briefje
+          van een gestarte betaling, dan tekent het niets en is deze regel
+          een lege regel. Het staat hier en niet in een venster omdat
+          iemand terugkomt van Mollie op een vers geladen app, waar geen
+          enkel venster openstaat — zie UpgradeTerugScherm in
+          src/schermen/instellingen.jsx. */}
+      <UpgradeTerugScherm />
       <ToastHouder />
       <nav className="bottom-nav">
         {navItems.map(item=>{

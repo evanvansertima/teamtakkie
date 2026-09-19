@@ -3006,7 +3006,7 @@ window.addEventListener("error", function(e){
 });
 </script>
 <script>
-const APP_VERSIE = "45053c2";
+const APP_VERSIE = "e88e0c0";
 const TEAMS_KEY = "tt_teams_v1";
 const ACTIEF_KEY = "tt_actief_v1";
 const VOORKEUR_KEY = "tt_voorkeuren_v1";
@@ -5000,11 +5000,27 @@ function syncPersoonlijk(uitslag) {
     });
   });
 }
+const ABO_TOT_KEY = "tt_abo_tot_v1";
+function abonnementTot() {
+  try {
+    return localStorage.getItem(ABO_TOT_KEY) || null;
+  } catch (e) {
+    return null;
+  }
+}
+function zetAbonnementTot(d) {
+  try {
+    if (d) localStorage.setItem(ABO_TOT_KEY, String(d));
+    else localStorage.removeItem(ABO_TOT_KEY);
+  } catch (e) {
+  }
+}
 function syncPakket(clubId) {
   return serverVraag("/rest/v1/abonnementen?select=pakket,geldig_tot&club_id=eq." + clubId).then(function(r) {
     if (!r.ok) return r;
     var rij = Array.isArray(r.gegevens) ? r.gegevens[0] : null;
     if (rij && rij.pakket) zetPakket(rij.pakket);
+    zetAbonnementTot(rij ? rij.geldig_tot : null);
     return { ok: true };
   });
 }
@@ -8557,6 +8573,175 @@ function NieuwSeizoenKaart({ van, naar, onNaar, onAnnuleer, onKlaar }) {
     );
   })), /* @__PURE__ */ React.createElement("p", { className: "seizoen-blijft" }, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-box-archive" }), " ", "Wedstrijden, trainingen, aanwezigheid, doelpunten, kaarten en de stand blijven staan onder ", seizoenLabel(van), ". Je kunt ze altijd terugkijken, maar ze tellen niet mee in ", seizoenLabel(naar), "."), /* @__PURE__ */ React.createElement("div", { className: "bevestig-knoppen" }, /* @__PURE__ */ React.createElement("button", { className: "knop lijn", onClick: onAnnuleer }, "Annuleren"), /* @__PURE__ */ React.createElement("button", { className: "knop", onClick: begin }, "Seizoen starten"))));
 }
+const UPGRADE_KEY = "tt_upgrade_onderweg_v1";
+const UPGRADE_PARAM = "upgrade";
+const UPGRADE_BRIEFJE_MAX_MS = 24 * 60 * 60 * 1e3;
+const UPGRADE_GEDULD_MS = 3e4;
+const UPGRADE_POLL_MS = 3e3;
+function upgradeBriefje() {
+  try {
+    var r = localStorage.getItem(UPGRADE_KEY);
+    if (!r) return null;
+    var o = JSON.parse(r);
+    if (!o || !o.pakket) return null;
+    if (!o.op || Date.now() - o.op > UPGRADE_BRIEFJE_MAX_MS) {
+      wisUpgradeBriefje();
+      return null;
+    }
+    return o;
+  } catch (e) {
+    return null;
+  }
+}
+function zetUpgradeBriefje(o) {
+  try {
+    localStorage.setItem(UPGRADE_KEY, JSON.stringify(o));
+  } catch (e) {
+  }
+  return o;
+}
+function wisUpgradeBriefje() {
+  try {
+    localStorage.removeItem(UPGRADE_KEY);
+  } catch (e) {
+  }
+}
+function upgradeTerugInUrl() {
+  try {
+    return new URLSearchParams(window.location.search).get(UPGRADE_PARAM) === "terug";
+  } catch (e) {
+    return false;
+  }
+}
+function upgradeUrlOpruimen() {
+  try {
+    if (!window.history || !window.history.replaceState) return;
+    var u = new URL(window.location.href);
+    u.searchParams.delete(UPGRADE_PARAM);
+    window.history.replaceState(null, "", u.pathname + (u.search || "") + (u.hash || ""));
+  } catch (e) {
+  }
+}
+function _overstapToken() {
+  var s = sessieNu();
+  if (!s) return Promise.resolve(null);
+  if (!tokenVerlopen(s)) return Promise.resolve(s.token);
+  return verversAanmelding().then(function(r) {
+    var n = sessieNu();
+    return r.ok && n ? n.token : null;
+  });
+}
+function _overstapFoutTekst(status, gegevens) {
+  var eigen = gegevens && typeof gegevens === "object" ? gegevens.fout || gegevens.error || gegevens.message : typeof gegevens === "string" && gegevens.length < 200 ? gegevens : null;
+  if (eigen) return String(eigen);
+  if (status === 401) return "Je aanmelding is verlopen. Log opnieuw in en probeer het nog eens.";
+  if (status === 404) return "De betaling is nog niet aangesloten op deze server.";
+  return "Overstappen lukte nu niet (fout " + status + "). Probeer het zo nog eens.";
+}
+function _overstapVraag(token, clubId, pakket, termijn) {
+  return fetch(serverAdres("/functions/v1/betaling-starten"), {
+    method: "POST",
+    headers: serverKoppen(token),
+    body: JSON.stringify({ club_id: clubId, pakket, termijn })
+  }).then(function(antwoord) {
+    return antwoord.text().then(function(tekst) {
+      var gegevens = null;
+      if (tekst) {
+        try {
+          gegevens = JSON.parse(tekst);
+        } catch (e) {
+          gegevens = tekst;
+        }
+      }
+      if (antwoord.ok && gegevens && gegevens.checkout_url) {
+        return { ok: true, status: antwoord.status, kassa: String(gegevens.checkout_url) };
+      }
+      return {
+        ok: false,
+        status: antwoord.status,
+        tekst: antwoord.ok ? "De server gaf geen betaaladres terug." : _overstapFoutTekst(antwoord.status, gegevens)
+      };
+    });
+  });
+}
+function startOverstap(pakket, termijn) {
+  if (!serverAan()) return Promise.resolve({ ok: false, tekst: "Er is nog geen server ingesteld." });
+  if (!ingelogd()) return Promise.resolve({ ok: false, tekst: "Log eerst in; een abonnement hoort bij een account." });
+  var clubId = clubIdNu();
+  if (!clubId) return Promise.resolve({ ok: false, tekst: "Je hoort nog niet bij een vereniging." });
+  return _overstapToken().then(function(token) {
+    if (!token) return { ok: false, tekst: "Je aanmelding is verlopen. Log opnieuw in." };
+    return _overstapVraag(token, clubId, pakket, termijn).then(function(r) {
+      if (r.status !== 401) return r;
+      return verversAanmelding().then(function(v) {
+        var n = sessieNu();
+        if (!v.ok || !n) return { ok: false, tekst: "Je aanmelding is verlopen. Log opnieuw in." };
+        return _overstapVraag(n.token, clubId, pakket, termijn);
+      });
+    });
+  }).catch(function(e) {
+    return { ok: false, tekst: "De server was niet te bereiken (" + (e && (e.message || e.name) || "onbekend") + "). Controleer je internetverbinding." };
+  });
+}
+function UpgradeTerugScherm() {
+  const [briefje, setBriefje] = useState(function() {
+    return upgradeTerugInUrl() ? upgradeBriefje() : null;
+  });
+  const [geduld, setGeduld] = useState(false);
+  useEffect(function() {
+    if (!briefje) return;
+    var gestopt = false;
+    function stop() {
+      gestopt = true;
+      clearInterval(tik);
+      clearTimeout(wacht);
+    }
+    function klaar() {
+      stop();
+      wisUpgradeBriefje();
+      upgradeUrlOpruimen();
+      var naam = pakketNu().naam;
+      setBriefje(null);
+      meldGoed("Welkom bij " + naam + "!");
+    }
+    function kijk() {
+      var clubId = clubIdNu();
+      if (!clubId) return;
+      syncPakket(clubId).then(function(r) {
+        if (gestopt || !r || !r.ok) return;
+        if (pakketNu().id === briefje.pakket) klaar();
+      });
+    }
+    var tik = setInterval(kijk, UPGRADE_POLL_MS);
+    var wacht = setTimeout(function() {
+      setGeduld(true);
+    }, UPGRADE_GEDULD_MS);
+    kijk();
+    return stop;
+  }, [briefje]);
+  if (!briefje) return null;
+  var pakket = PAKKETTEN.filter(function(p) {
+    return p.id === briefje.pakket;
+  })[0];
+  return /* @__PURE__ */ React.createElement(
+    "div",
+    {
+      className: "onboard",
+      style: { position: "fixed", inset: 0, zIndex: 500, background: "var(--grijs-licht)" }
+    },
+    /* @__PURE__ */ React.createElement("div", { className: "onboard-kaart onboard-wacht" }, geduld ? /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-clock" }), /* @__PURE__ */ React.createElement("p", null, "Dit kan nog even duren \u2014 je kunt gewoon verdergaan, we laten het weten zodra ", pakket ? pakket.naam : "je pakket", " klaarstaat."), /* @__PURE__ */ React.createElement(
+      "button",
+      {
+        className: "knop lijn onboard-knop",
+        onClick: function() {
+          upgradeUrlOpruimen();
+          setBriefje(null);
+        }
+      },
+      "Verder in de app"
+    )) : /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-circle-notch fa-spin" }), /* @__PURE__ */ React.createElement("p", null, "Je betaling wordt verwerkt\u2026")))
+  );
+}
 const MODULE_LABEL = {
   basis: "Team, spelers, wedstrijden en agenda",
   trainingen: "Trainingen en aanwezigheid",
@@ -8564,8 +8749,38 @@ const MODULE_LABEL = {
   analyse: "Statistieken en live-analyse",
   clubhuis: "Clubhuis, sportpark en tenues"
 };
+const TERMIJNEN = [
+  { id: "maand", label: "Per maand" },
+  { id: "jaar", label: "Per jaar" }
+];
 function PakkettenSheet({ onSluiten, nadruk }) {
   const nu = pakketNu();
+  const [termijnen, setTermijnen] = useState({});
+  const [bezig, setBezig] = useState(null);
+  function termijnVan(id) {
+    return termijnen[id] || TERMIJNEN[0].id;
+  }
+  function kiesTermijn(id, t2) {
+    setTermijnen(function(v) {
+      var n = Object.assign({}, v);
+      n[id] = t2;
+      return n;
+    });
+  }
+  function overstap(p) {
+    if (bezig) return;
+    var t2 = termijnVan(p.id);
+    setBezig(p.id);
+    startOverstap(p.id, t2).then(function(r) {
+      if (!r || !r.ok) {
+        setBezig(null);
+        meldFout(r && r.tekst || "Overstappen lukte nu niet.");
+        return;
+      }
+      zetUpgradeBriefje({ pakket: p.id, termijn: t2, vanaf: nu.id, op: Date.now() });
+      window.location.assign(r.kassa);
+    });
+  }
   return /* @__PURE__ */ React.createElement("div", { className: "formatie-overlay", onClick: function(e) {
     if (e.target === e.currentTarget) onSluiten();
   } }, /* @__PURE__ */ React.createElement("div", { className: "formatie-sheet", onClick: function(e) {
@@ -8580,19 +8795,46 @@ function PakkettenSheet({ onSluiten, nadruk }) {
   )), /* @__PURE__ */ React.createElement("div", { className: "pakket-raster" }, PAKKETTEN.map(function(p) {
     const dit = p.id === nu.id;
     const prijs = PAKKET_PRIJS[p.id] || {};
-    return /* @__PURE__ */ React.createElement("div", { key: p.id, className: "pakket-kaart" + (dit ? " nu" : "") + (p.id === nadruk ? " nadruk" : "") }, dit && /* @__PURE__ */ React.createElement("span", { className: "pakket-vlag" }, "Jouw pakket"), /* @__PURE__ */ React.createElement("div", { className: "pakket-kop" }, /* @__PURE__ */ React.createElement("span", { className: "pakket-merk" }, "TEAMTAKKIE"), /* @__PURE__ */ React.createElement("span", { className: "pakket-naam" }, p.naam)), prijs.maand && /* @__PURE__ */ React.createElement("div", { className: "pakket-prijs" }, /* @__PURE__ */ React.createElement("div", { className: "pakket-prijs-rij" }, /* @__PURE__ */ React.createElement("span", { className: "pakket-prijs-bedrag" }, prijs.maand), prijs.jaar && /* @__PURE__ */ React.createElement("span", { className: "pakket-prijs-per" }, "per maand")), prijs.jaar && /* @__PURE__ */ React.createElement("div", { className: "pakket-prijs-jaar" }, "of " + prijs.jaar + " per jaar \u2014 twee maanden korting")), /* @__PURE__ */ React.createElement("div", { className: "pakket-teams" }, p.teams === Infinity ? "Onbeperkt teams" : p.teams + (p.teams === 1 ? " team" : " teams")), /* @__PURE__ */ React.createElement("ul", { className: "pakket-lijst" }, MODULES.map(function(m) {
+    const betaaldNu = nu.id !== "free";
+    const kanKiezen = !dit && !(betaaldNu && p.id === "free");
+    const jaar = kanKiezen && !!prijs.jaar && termijnVan(p.id) === "jaar";
+    return /* @__PURE__ */ React.createElement("div", { key: p.id, className: "pakket-kaart" + (dit ? " nu" : "") + (p.id === nadruk ? " nadruk" : "") }, dit && /* @__PURE__ */ React.createElement("span", { className: "pakket-vlag" }, "Jouw pakket"), /* @__PURE__ */ React.createElement("div", { className: "pakket-kop" }, /* @__PURE__ */ React.createElement("span", { className: "pakket-merk" }, "TEAMTAKKIE"), /* @__PURE__ */ React.createElement("span", { className: "pakket-naam" }, p.naam)), kanKiezen && prijs.jaar && /* @__PURE__ */ React.createElement(
+      "div",
+      {
+        className: "thema-rij",
+        role: "group",
+        "aria-label": "Betaaltermijn voor " + p.naam
+      },
+      TERMIJNEN.map(function(tm) {
+        const aan = termijnVan(p.id) === tm.id;
+        return /* @__PURE__ */ React.createElement(
+          "button",
+          {
+            key: tm.id,
+            className: "thema-optie",
+            "aria-pressed": aan,
+            style: { borderColor: aan ? "var(--blauw)" : "var(--grijs)", background: aan ? "var(--blauw)" : "var(--wit)", color: aan ? "#fff" : "var(--grijs-donker)" },
+            onClick: function() {
+              kiesTermijn(p.id, tm.id);
+            }
+          },
+          /* @__PURE__ */ React.createElement("span", null, tm.label)
+        );
+      })
+    ), prijs.maand && /* @__PURE__ */ React.createElement("div", { className: "pakket-prijs" }, /* @__PURE__ */ React.createElement("div", { className: "pakket-prijs-rij" }, /* @__PURE__ */ React.createElement("span", { className: "pakket-prijs-bedrag" }, jaar ? prijs.jaar : prijs.maand), prijs.jaar && /* @__PURE__ */ React.createElement("span", { className: "pakket-prijs-per" }, jaar ? "per jaar" : "per maand")), prijs.jaar && /* @__PURE__ */ React.createElement("div", { className: "pakket-prijs-jaar" }, jaar ? "of " + prijs.maand + " per maand" : "of " + prijs.jaar + " per jaar \u2014 twee maanden korting")), /* @__PURE__ */ React.createElement("div", { className: "pakket-teams" }, p.teams === Infinity ? "Onbeperkt teams" : p.teams + (p.teams === 1 ? " team" : " teams")), /* @__PURE__ */ React.createElement("ul", { className: "pakket-lijst" }, MODULES.map(function(m) {
       const aan = p.modules.indexOf(m) >= 0;
       return /* @__PURE__ */ React.createElement("li", { key: m, className: aan ? "aan" : "uit" }, /* @__PURE__ */ React.createElement("i", { className: aan ? "fa-solid fa-check" : "fa-solid fa-minus" }), MODULE_LABEL[m] || m);
-    })), !dit && /* @__PURE__ */ React.createElement(
+    })), kanKiezen && betaaldNu && /* @__PURE__ */ React.createElement("p", { style: { fontSize: 11.5, color: "var(--grijs-donker)", fontWeight: 400, margin: 0, lineHeight: 1.6 } }, "Wat je voor ", nu.naam, " al hebt betaald, wordt nog niet automatisch verrekend."), kanKiezen && /* @__PURE__ */ React.createElement(
       "button",
       {
         className: "knop lijn klein",
+        disabled: !!bezig,
         style: { width: "100%", justifyContent: "center" },
         onClick: function() {
-          meldGoed("Overstappen kan zodra de betaling klaarstaat.");
+          overstap(p);
         }
       },
-      "Overstappen"
+      bezig === p.id ? /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-circle-notch fa-spin" }), " Bezig\u2026") : betaaldNu ? "Wijzigen naar " + p.naam : "Overstappen"
     ));
   }))));
 }
@@ -9094,6 +9336,11 @@ function InstellingenSheet({ onSluiten, onGewisseld, onTeams }) {
   const [opheffenOpen, setOpheffenOpen] = useState(false);
   const [opheffenTekst, setOpheffenTekst] = useState("");
   const [opheffenBezig, setOpheffenBezig] = useState(false);
+  const [opzeggenOpen, setOpzeggenOpen] = useState(false);
+  const betaaldPakket = pakketNu().id !== "free";
+  const [onderweg] = useState(function() {
+    return upgradeBriefje();
+  });
   const bestandRef = useRef(null);
   const logoRef = useRef(null);
   function kiesLogo(e) {
@@ -9211,7 +9458,9 @@ function InstellingenSheet({ onSluiten, onGewisseld, onTeams }) {
     },
     /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-right-to-bracket" }),
     " Inloggen"
-  ))), /* @__PURE__ */ React.createElement("div", { className: "kaart" }, /* @__PURE__ */ React.createElement("div", { className: "kaart-titel" }, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-crown" }), " Abonnement"), /* @__PURE__ */ React.createElement("div", { className: "pakket-nu" }, /* @__PURE__ */ React.createElement("span", { className: "pakket-merk" }, "TEAMTAKKIE"), /* @__PURE__ */ React.createElement("span", { className: "pakket-naam" }, pakketNu().naam)), /* @__PURE__ */ React.createElement("p", { style: { fontSize: 12.5, color: "var(--grijs-donker)", fontWeight: 400, margin: "10px 0", lineHeight: 1.65 } }, maxTeams() === Infinity ? "Onbeperkt teams, alle onderdelen." : maxTeams() + (maxTeams() === 1 ? " team" : " teams") + ", " + pakketNu().modules.length + " van de " + MODULES.length + " onderdelen."), /* @__PURE__ */ React.createElement(
+  ))), /* @__PURE__ */ React.createElement("div", { className: "kaart" }, /* @__PURE__ */ React.createElement("div", { className: "kaart-titel" }, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-crown" }), " Abonnement"), /* @__PURE__ */ React.createElement("div", { className: "pakket-nu" }, /* @__PURE__ */ React.createElement("span", { className: "pakket-merk" }, "TEAMTAKKIE"), /* @__PURE__ */ React.createElement("span", { className: "pakket-naam" }, pakketNu().naam)), /* @__PURE__ */ React.createElement("p", { style: { fontSize: 12.5, color: "var(--grijs-donker)", fontWeight: 400, margin: "10px 0", lineHeight: 1.65 } }, maxTeams() === Infinity ? "Onbeperkt teams, alle onderdelen." : maxTeams() + (maxTeams() === 1 ? " team" : " teams") + ", " + pakketNu().modules.length + " van de " + MODULES.length + " onderdelen."), betaaldPakket && abonnementTot() && /* @__PURE__ */ React.createElement("div", { className: "account-rij" }, /* @__PURE__ */ React.createElement("span", null, "Loopt tot"), /* @__PURE__ */ React.createElement("b", null, formateerDatum(abonnementTot()))), onderweg && /* @__PURE__ */ React.createElement("div", { className: "melding", style: { margin: "0 0 10px" } }, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-hourglass-half" }), " ", "Bezig met verwerken: je overstap naar", " ", (PAKKETTEN.filter(function(pk) {
+    return pk.id === onderweg.pakket;
+  })[0] || {}).naam || onderweg.pakket, ". Dit kan een paar minuten duren \u2014 of probeer het opnieuw."), /* @__PURE__ */ React.createElement(
     "button",
     {
       className: "knop lijn",
@@ -9222,6 +9471,17 @@ function InstellingenSheet({ onSluiten, onGewisseld, onTeams }) {
     },
     /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-layer-group" }),
     " Bekijk pakketten"
+  ), betaaldPakket && /* @__PURE__ */ React.createElement(
+    "button",
+    {
+      className: "knop lijn",
+      style: { width: "100%", justifyContent: "center", marginTop: 8 },
+      onClick: function() {
+        setOpzeggenOpen(true);
+      }
+    },
+    /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-circle-xmark" }),
+    " Opzeggen"
   )), magRol("club") && /* @__PURE__ */ React.createElement("div", { className: "inst-groep" }, "Team"), magRol("club") && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("div", { className: "kaart", style: { marginTop: 4 } }, /* @__PURE__ */ React.createElement("div", { className: "kaart-titel" }, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-image" }), " Clublogo"), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 16 } }, /* @__PURE__ */ React.createElement("div", { style: { width: 66, height: 66, borderRadius: 16, background: "var(--grijs-licht)", border: "1px solid var(--grijs)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, overflow: "hidden" } }, /* @__PURE__ */ React.createElement("img", { src: logoKopbalk(false), alt: "logo", style: { width: "100%", height: "100%", objectFit: "contain", padding: 4 } })), /* @__PURE__ */ React.createElement("div", { style: { flex: 1 } }, /* @__PURE__ */ React.createElement(
     "button",
     {
@@ -9431,7 +9691,12 @@ function InstellingenSheet({ onSluiten, onGewisseld, onTeams }) {
     if (e.target === e.currentTarget) setBevestigImport(null);
   } }, /* @__PURE__ */ React.createElement("div", { className: "bevestig-kaart" }, /* @__PURE__ */ React.createElement("h3", null, "Back-up terugzetten?"), /* @__PURE__ */ React.createElement("p", null, "Alle huidige spelers, wedstrijden, trainingen en tactieken worden vervangen door de inhoud van het back-upbestand. Dit kan niet ongedaan gemaakt worden."), /* @__PURE__ */ React.createElement("div", { className: "bevestig-knoppen" }, /* @__PURE__ */ React.createElement("button", { className: "knop lijn", onClick: function() {
     setBevestigImport(null);
-  } }, "Annuleren"), /* @__PURE__ */ React.createElement("button", { className: "knop gevaar", onClick: voerImportUit }, "Terugzetten")))), opheffenOpen && /* @__PURE__ */ React.createElement("div", { className: "bevestig-overlay" }, /* @__PURE__ */ React.createElement("div", { className: "bevestig-kaart" }, /* @__PURE__ */ React.createElement("h3", null, "Vereniging opheffen?"), /* @__PURE__ */ React.createElement("p", null, "Alles van ", i.clubNaam ? "\u201C" + i.clubNaam + "\u201D" : "je vereniging", " gaat definitief weg: de vereniging zelf met naam en logo, alle leden, en alle teams \u2014 ook de teams die al in de prullenbak stonden. Met die teams verdwijnen hun spelers, wedstrijden, trainingen, opstellingen, tactieken, boetes en het sportpark, en ook het abonnement van de vereniging."), /* @__PURE__ */ React.createElement("p", null, "De accounts van de andere leden blijven gewoon bestaan; alleen hun plek in d\xE9ze vereniging niet. Dit kan niet ongedaan worden gemaakt."), /* @__PURE__ */ React.createElement("p", { style: { fontSize: 12.5, fontWeight: 600, margin: "0 0 6px" } }, "Typ ", "\u201C" + opheffenNaam + "\u201D", " over om te bevestigen:"), /* @__PURE__ */ React.createElement(
+  } }, "Annuleren"), /* @__PURE__ */ React.createElement("button", { className: "knop gevaar", onClick: voerImportUit }, "Terugzetten")))), opzeggenOpen && /* @__PURE__ */ React.createElement("div", { className: "bevestig-overlay" }, /* @__PURE__ */ React.createElement("div", { className: "bevestig-kaart" }, /* @__PURE__ */ React.createElement("h3", null, pakketNu().naam, " opzeggen?"), /* @__PURE__ */ React.createElement("p", null, "Je houdt ", pakketNu().naam, " ", abonnementTot() ? "tot " + formateerDatum(abonnementTot()) : "tot het einde van de periode die je al hebt betaald", ". Daarna gaat je vereniging terug naar Free: \xE9\xE9n team en alleen de basis. Je gegevens blijven staan."), /* @__PURE__ */ React.createElement("div", { className: "bevestig-knoppen" }, /* @__PURE__ */ React.createElement("button", { className: "knop lijn", onClick: function() {
+    setOpzeggenOpen(false);
+  } }, "Toch niet"), /* @__PURE__ */ React.createElement("button", { className: "knop gevaar", onClick: function() {
+    setOpzeggenOpen(false);
+    meldGoed("Opzeggen kan zodra dat onderdeel klaar is.");
+  } }, "Opzeggen")))), opheffenOpen && /* @__PURE__ */ React.createElement("div", { className: "bevestig-overlay" }, /* @__PURE__ */ React.createElement("div", { className: "bevestig-kaart" }, /* @__PURE__ */ React.createElement("h3", null, "Vereniging opheffen?"), /* @__PURE__ */ React.createElement("p", null, "Alles van ", i.clubNaam ? "\u201C" + i.clubNaam + "\u201D" : "je vereniging", " gaat definitief weg: de vereniging zelf met naam en logo, alle leden, en alle teams \u2014 ook de teams die al in de prullenbak stonden. Met die teams verdwijnen hun spelers, wedstrijden, trainingen, opstellingen, tactieken, boetes en het sportpark, en ook het abonnement van de vereniging."), /* @__PURE__ */ React.createElement("p", null, "De accounts van de andere leden blijven gewoon bestaan; alleen hun plek in d\xE9ze vereniging niet. Dit kan niet ongedaan worden gemaakt."), /* @__PURE__ */ React.createElement("p", { style: { fontSize: 12.5, fontWeight: 600, margin: "0 0 6px" } }, "Typ ", "\u201C" + opheffenNaam + "\u201D", " over om te bevestigen:"), /* @__PURE__ */ React.createElement(
     "input",
     {
       type: "text",
@@ -35157,7 +35422,7 @@ function App() {
         setSlotPakket(null);
       }
     }
-  ), /* @__PURE__ */ React.createElement(ToastHouder, null), /* @__PURE__ */ React.createElement("nav", { className: "bottom-nav" }, navItems.map((item) => {
+  ), /* @__PURE__ */ React.createElement(UpgradeTerugScherm, null), /* @__PURE__ */ React.createElement(ToastHouder, null), /* @__PURE__ */ React.createElement("nav", { className: "bottom-nav" }, navItems.map((item) => {
     const open = magPagina(item.id);
     return /* @__PURE__ */ React.createElement(
       "button",
