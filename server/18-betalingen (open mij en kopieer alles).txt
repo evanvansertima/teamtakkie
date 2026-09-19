@@ -20,9 +20,10 @@
 --  ─────────────────────────────────────────────────────────────
 --  WAT DIT WEL IS EN WAT NIET
 --
---  WEL: de tabel waarin elke betaling van Mollie wordt geboekt, de
---  ene functie die zo'n betaling omzet in een pakket, en de
---  zestig-dagen-coulance voor een club waarvan het abonnement afloopt.
+--  WEL: de tabel waarin elke betaling van Mollie wordt geboekt (met
+--  het bedrag erbij, in centen), de ene functie die zo'n betaling
+--  omzet in een pakket, en de zestig-dagen-coulance voor een club
+--  waarvan het abonnement afloopt.
 --
 --  NIET: de twee Supabase Edge Functions (betaling-starten en
 --  betaling-melding) die met Mollie praten en deze functie aanroepen.
@@ -44,10 +45,12 @@
 --  abonnement.
 --
 --  Het ontwerp eromheen komt van Veerle (beveiliging) en is
---  vastgelegd in drie testbestanden van Tess, samen 75 scenario's:
---    · tests/betaling-verwerken.test.sql   (32)
---    · tests/coulance-60-dagen.test.sql    (20)
---    · tests/free-server-afscherming.test.sql (23, scenario 5 en 11)
+--  vastgelegd in drie testbestanden van Tess, samen 89 scenario's
+--  (nageteld op 18 september 2026 aan de uitslagtabellen zelf, niet
+--  overgenomen uit een oudere opmerking):
+--    · tests/betaling-verwerken.test.sql   (46)
+--    · tests/coulance-60-dagen.test.sql    (21)
+--    · tests/free-server-afscherming.test.sql (22, scenario 5 en 11)
 --  Zie ook docs/avg-inventaris.md §8 over wat er van een betaling
 --  bewaard wordt en waarom.
 --
@@ -57,7 +60,7 @@
 --          server/17-free-serverdata.sql server/18-betalingen.sql
 --
 --  ─────────────────────────────────────────────────────────────
---  DE VIER DINGEN DIE HIER MIS KUNNEN GAAN
+--  DE VIJF DINGEN DIE HIER MIS KUNNEN GAAN
 --
 --  1. IEMAND ANDERS ROEPT verwerk_betaling() AAN.
 --     Daar zitten twee onafhankelijke sloten op — zie DEEL 3. Eén
@@ -77,6 +80,13 @@
 --     Precies op het moment dat je hem nodig hebt (een geschil, of de
 --     aangifte over dat jaar). Vandaar "on delete set null" en een
 --     losse kolom met de clubnaam.
+--
+--  5. ER STAAT NIET BIJ HOEVEEL ER BETAALD IS.
+--     Toegevoegd op 18 september 2026. Een betaling zonder bedrag is
+--     een regel zonder getal: bij een geschil ("wij hebben € 49
+--     betaald, geen € 6,99"), bij een terugboeking en bij de aangifte
+--     valt er dan niets aan te wijzen. Vandaar bedrag_cent en valuta
+--     in DEEL 1, en een verplichte p_bedrag_cent in DEEL 3.
 -- ══════════════════════════════════════════════════════════════
 
 
@@ -119,10 +129,24 @@ create table if not exists public.betalingen (
   pakket             text,           -- 'coach' of 'club'
   termijn            text,           -- 'maand' of 'jaar'
 
+  -- ── Hoeveel is er betaald? ─────────────────────────────────
+  --  In CENTEN, als heel getal: 699 is € 6,99 en 49000 is € 490,-.
+  --  Geld als kommagetal opslaan levert vroeg of laat een bedrag van
+  --  € 6,989999999 op; dat is de bekendste rekenfout met geld in een
+  --  database. Mollie rekent er zelf ook zo mee. De melding van Mollie
+  --  bevat "6.99" als tekst; de edge function betaling-melding rekent
+  --  dat om naar centen vóórdat verwerk_betaling() wordt aangeroepen.
+  --
+  --  Leeg mag hier wél (een rij die betaling-starten net heeft
+  --  klaargezet weet het bedrag misschien nog niet), maar
+  --  verwerk_betaling() weigert een melding zónder bedrag — zie DEEL 3.
+  bedrag_cent        int,
+  valuta             text default 'EUR',
+
   -- Vrije tekst, met opzet zonder check: hier komt straks ook de
   -- status van Mollie zelf in te staan (open, paid, failed, expired,
-  -- canceled). Wat deze database zelf schrijft is 'betaald' of
-  -- 'genegeerd_testmodus'.
+  -- canceled). Wat deze database zelf schrijft is 'betaald',
+  -- 'genegeerd_testmodus' of 'genegeerd_geen_bedrag'.
   status             text not null default 'open',
 
   -- 'test' of 'live', uit het antwoord van Mollie — niet uit iets wat
@@ -136,8 +160,21 @@ create table if not exists public.betalingen (
   aangemaakt_op      timestamptz not null default now()
 );
 
+-- ── Bedrag en munteenheid bij een tabel die al bestond ───────
+--  De "create table if not exists" hierboven doet niets meer zodra de
+--  tabel er al staat — op productie dus. Deze twee regels zetten de
+--  kolommen alsnog bij een bestaande boekhouding. Bestaande rijen
+--  houden een leeg bedrag; dat is eerlijk, want van vóór vandaag is
+--  het bedrag hier nooit vastgelegd.
+alter table public.betalingen add column if not exists bedrag_cent int;
+alter table public.betalingen add column if not exists valuta      text default 'EUR';
+
 comment on table public.betalingen is
   'Boekhouding van de betaalketen: één rij per betaling van Mollie. Alleen te beschrijven via public.verwerk_betaling(); alleen te lezen door een beheerder.';
+comment on column public.betalingen.bedrag_cent is
+  'Het betaalde bedrag in CENTEN, als heel getal: 699 is € 6,99. Met opzet geen kommagetal — geld in een float wordt vroeg of laat € 6,989999999. Leeg bij rijen van vóór 18 september 2026.';
+comment on column public.betalingen.valuta is
+  'De munteenheid zoals Mollie hem meldde, standaard EUR. Wordt opgeslagen zoals gemeld en NIET omgerekend: een bedrag in de verkeerde munt is later nergens meer aan te zien.';
 comment on column public.betalingen.verwerkt_op is
   'Leeg zolang deze melding nog geen pakket heeft opgeleverd. Wordt in dezelfde opdracht gezet als de verwerking zelf — dat is de bescherming tegen een dubbele webhook van Mollie.';
 
@@ -233,7 +270,87 @@ create policy betalingen_lezen on public.betalingen for select
 --  session_user: alleen postgres en supabase_admin — dat is Evan zelf
 --  in de SQL Editor — mogen het dan. Deze vorm is door Tess getoetst
 --  en doet hetzelfde in de lokale wegwerpdatabase als op productie.
+--
+--  ─────────────────────────────────────────────────────────────
+--  HET BEDRAG ERBIJ (18 september 2026) — EN WAAROM DE VOLGORDE
+--  VAN DE PARAMETERS NIET VRIJ TE KIEZEN IS
+--
+--  De functie kende tot vandaag het pakket en de termijn, maar niet
+--  het bedrag. Dan is een betaling een regel zonder getal, precies op
+--  de momenten waarop je hem nodig hebt: een club die zegt € 49 te
+--  hebben betaald en geen € 6,99, een terugboeking bij de bank, of de
+--  aangifte over dat jaar.
+--
+--  De nieuwe handtekening:
+--      p_mollie_id, p_club, p_pakket, p_termijn, p_betaald_op,
+--      p_bedrag_cent,                      -- plek 6, VERPLICHT
+--      p_modus, p_mollie_klant,
+--      p_valuta                            -- helemaal ACHTERAAN
+--
+--  p_bedrag_cent staat op plek zes omdat hij verplicht is: in
+--  PostgreSQL moeten alle parameters mét standaardwaarde achteraan
+--  staan, dus dit is de enige plek waar hij kan staan zonder p_modus
+--  of p_mollie_klant hun standaardwaarde af te nemen.
+--
+--  p_valuta staat er ACHTER, en dat is geen smaakkwestie. Zou hij
+--  vóór p_modus komen, dan schuift bij een bestaande aanroep met
+--  zeven argumenten de waarde die 'live' of 'test' hoorde te zijn
+--  stilletjes in p_valuta — en Postgres geeft daar géén fout over,
+--  want 'live' is prima geldige tekst voor een tekstparameter. Dan
+--  boekt de keten maandenlang betalingen in de munteenheid "live".
+--  Tess heeft dat als opzettelijke fout gedraaid: 19 scenario's
+--  vielen stil om. Staat p_valuta achteraan, dan geeft een aanroep
+--  die het bedrag vergeet meteen een harde fout 42883 ("function does
+--  not exist"), want tekst wordt niet vanzelf een getal. Scenario 10i
+--  en 10j in tests/betaling-verwerken.test.sql leggen dat vast.
+--
+--  DRIE REGELS BIJ HET BEDRAG, ELK MET EEN EIGEN REDEN
+--    · GEEN bedrag (null) -> harde weigering. Zelfde soort fout als
+--      bij een onbekende termijn: er ligt echt geld klaar, de melding
+--      deugt niet, en Mollie hoort het opnieuw te proberen zodat de
+--      fout opvalt in plaats van weg te zakken.
+--    · NEGATIEF bedrag -> ook een harde weigering. Mollie stuurt
+--      terugboekingen via een apart bericht, nooit als een betaling
+--      met een minbedrag. Komt er hier tóch een minbedrag binnen, dan
+--      klopt de aanroepende servercode niet.
+--    · NUL -> GEEN fout, maar ook GEEN pakket. Nul is een welgevormde
+--      melding, geen storing; een fout zou Mollie eindeloos opnieuw
+--      laten proberen terwijl er niets te repareren valt. Maar er
+--      bestaat geen pakket dat nul euro kost, dus een maand weggeven
+--      mag hier nooit. De rij komt wél in de boeken, met
+--      status 'genegeerd_geen_bedrag' — hetzelfde patroon als bij een
+--      genegeerde testbetaling.
+--
+--  ─────────────────────────────────────────────────────────────
+--  TWEE OPEN VRAGEN AAN EVAN — HIER IS MET OPZET NIETS OP GEBOUWD
+--
+--  Deze twee zijn door Tess opengelaten en horen door Evan beslist te
+--  worden, niet door de bouwer ingevuld. Zolang er geen antwoord is,
+--  doet deze functie wat hieronder staat en niets meer.
+--
+--  (a) EEN ANDERE MUNTEENHEID DAN EURO.
+--      Nu wordt de munteenheid opgeslagen precies zoals Mollie hem
+--      meldt, en NIET stilzwijgend omgerekend — een bedrag in de
+--      verkeerde munt is later nergens meer aan te zien. Maar er is
+--      geen weigering: een melding in dollars levert gewoon een
+--      pakket op. Vraag: moet een niet-EUR-betaling geweigerd worden?
+--
+--  (b) HET BEDRAG VERGELIJKEN MET DE PRIJS VAN HET PAKKET.
+--      Verleidelijk: 699 hoort bij coach/maand, 49000 bij club/jaar
+--      (docs/pakketten-besluit.md). Maar dan zet een prijswijziging of
+--      een kortingsactie in Mollie de hele betaalketen stil, tenzij
+--      daar aparte logica bij komt. Vraag: moet dat, en wat moet er
+--      dan gebeuren met een bedrag dat niet klopt — weigeren, of wél
+--      boeken en merken?
 -- ══════════════════════════════════════════════════════════════
+
+-- De oude vorm moet eerst weg. "create or replace" kan de
+-- parameterlijst niet wijzigen, dus zonder deze drop zouden er twee
+-- functies náást elkaar bestaan: de nieuwe mét bedrag en de oude
+-- zónder. Een edge function die het bedrag vergeet zou dan gewoon de
+-- oude blijven raken en bedragloze rijen in de boeken schrijven,
+-- zonder dat iemand iets merkt. Scenario 10i meet precies dat.
+drop function if exists public.verwerk_betaling(text, uuid, text, text, timestamptz, text, text);
 
 create or replace function public.verwerk_betaling(
   p_mollie_id    text,
@@ -241,8 +358,10 @@ create or replace function public.verwerk_betaling(
   p_pakket       text,
   p_termijn      text,
   p_betaald_op   timestamptz,
+  p_bedrag_cent  int,                     -- verplicht: geen default
   p_modus        text default 'test',
-  p_mollie_klant text default null
+  p_mollie_klant text default null,
+  p_valuta       text default 'EUR'
 ) returns void
 language plpgsql security definer set search_path = public as $$
 declare
@@ -288,6 +407,18 @@ begin
     raise exception 'verwerk_betaling(): onbekend pakket: %', coalesce(p_pakket, 'niets');
   end if;
 
+  -- ── 1b. EN HETZELFDE VOOR HET BEDRAG ───────────────────────
+  --  Geen bedrag en een minbedrag zijn allebei een melding die niet
+  --  deugt; zie de uitleg bovenaan dit deel. Een bedrag van NUL wordt
+  --  hier met opzet NIET geweigerd — die komt verderop, want dat is
+  --  geen fout maar een boeking zonder pakket.
+  if p_bedrag_cent is null then
+    raise exception 'verwerk_betaling(): geen bedrag meegegeven';
+  end if;
+  if p_bedrag_cent < 0 then
+    raise exception 'verwerk_betaling(): negatief bedrag: % cent', p_bedrag_cent;
+  end if;
+
   -- ── 2. TESTBETALING TERWIJL DE INSTALLATIE LIVE STAAT ──────
   --  Zodra er ÉRGENS in de tabel een verwerkte live-betaling staat,
   --  levert een testbetaling geen pakket meer op. Systeembreed, niet
@@ -302,21 +433,66 @@ begin
   --
   --  Stil weggooien zou het onmogelijk maken om later te zien wat er
   --  gebeurd is, dus de rij komt er wél, herkenbaar als afgehandeld en
-  --  herkenbaar als NIET betaald.
+  --  herkenbaar als NIET betaald. MÉT het bedrag: juist een geweigerde
+  --  poging wil je later kunnen navertellen ("hier is iets geprobeerd,
+  --  voor dit bedrag, en het is niet doorgegaan"). Scenario 3e.
   if p_modus = 'test'
      and exists (select 1 from public.betalingen b
                   where b.modus = 'live' and b.verwerkt_op is not null
                     and b.status = 'betaald') then
     insert into public.betalingen (mollie_betaling_id, club_id, club_naam,
                                    mollie_klant_id, pakket, termijn, modus,
-                                   status, betaald_op, verwerkt_op)
+                                   status, betaald_op, verwerkt_op,
+                                   bedrag_cent, valuta)
     values (p_mollie_id, p_club,
             (select c.naam from public.clubs c where c.id = p_club),
             p_mollie_klant, p_pakket, p_termijn, p_modus,
-            'genegeerd_testmodus', p_betaald_op, now())
+            'genegeerd_testmodus', p_betaald_op, now(),
+            p_bedrag_cent, coalesce(p_valuta, 'EUR'))
     on conflict (mollie_betaling_id) do update
       set status      = 'genegeerd_testmodus',
-          verwerkt_op = coalesce(betalingen.verwerkt_op, now());
+          verwerkt_op = coalesce(betalingen.verwerkt_op, now()),
+          -- Stond de rij er al ONverwerkt (klaargezet door
+          -- betaling-starten), dan wint het bedrag uit deze melding.
+          -- Was hij al wél afgehandeld, dan blijft alles staan: een
+          -- herhaalde webhook mag de boekhouding niet kunnen sturen.
+          bedrag_cent = case when betalingen.verwerkt_op is null
+                             then excluded.bedrag_cent else betalingen.bedrag_cent end,
+          valuta      = case when betalingen.verwerkt_op is null
+                             then excluded.valuta      else betalingen.valuta      end;
+    return;
+  end if;
+
+  -- ── 2b. EEN BETALING VAN NUL ───────────────────────────────
+  --  Geen fout (zie de uitleg bovenaan dit deel: nul is een
+  --  welgevormde melding, en een fout zou Mollie eindeloos opnieuw
+  --  laten proberen), maar ook geen pakket — er bestaat geen pakket
+  --  dat nul euro kost. Exact hetzelfde patroon als hierboven: wél in
+  --  de boeken, herkenbaar als afgehandeld en herkenbaar als niet
+  --  betaald. Scenario 10g.
+  --
+  --  Deze staat ná de testmodus-tak en niet ervoor: staat de
+  --  installatie live en komt er een testbetaling van € 0,- binnen,
+  --  dan is 'genegeerd_testmodus' het informatievere antwoord. Voor
+  --  het resultaat maakt de volgorde niets uit — allebei leveren ze
+  --  geen pakket op en allebei boeken ze de poging.
+  if p_bedrag_cent = 0 then
+    insert into public.betalingen (mollie_betaling_id, club_id, club_naam,
+                                   mollie_klant_id, pakket, termijn, modus,
+                                   status, betaald_op, verwerkt_op,
+                                   bedrag_cent, valuta)
+    values (p_mollie_id, p_club,
+            (select c.naam from public.clubs c where c.id = p_club),
+            p_mollie_klant, p_pakket, p_termijn, p_modus,
+            'genegeerd_geen_bedrag', p_betaald_op, now(),
+            0, coalesce(p_valuta, 'EUR'))
+    on conflict (mollie_betaling_id) do update
+      set status      = 'genegeerd_geen_bedrag',
+          verwerkt_op = coalesce(betalingen.verwerkt_op, now()),
+          bedrag_cent = case when betalingen.verwerkt_op is null
+                             then excluded.bedrag_cent else betalingen.bedrag_cent end,
+          valuta      = case when betalingen.verwerkt_op is null
+                             then excluded.valuta      else betalingen.valuta      end;
     return;
   end if;
 
@@ -330,9 +506,19 @@ begin
   --  twee keer. Het stukje dat het verschil maakt is
   --  "and verwerkt_op is null" in de where hieronder — haal dat niet
   --  weg.
+  --
+  --  LET OP bij bedrag_cent en valuta: dit is met opzet een GEWONE
+  --  toewijzing en geen coalesce(bestaand, nieuw). Wat betaling-starten
+  --  alvast neerzette is het bedrag dat de club op zijn scherm zag —
+  --  een voornemen. Wat Mollie hier meldt is wat er werkelijk is
+  --  afgeschreven, en dat wint. Een herhaalde melding kan hier niets
+  --  meer veranderen: die raakt door "verwerkt_op is null" nul rijen.
+  --  Scenario 10h (de melding wint) en 4d (de tweede melding niet).
   update public.betalingen
      set status      = 'betaald',
          verwerkt_op = now(),
+         bedrag_cent = p_bedrag_cent,
+         valuta      = coalesce(p_valuta, 'EUR'),
          betaald_op  = coalesce(betalingen.betaald_op, p_betaald_op),
          club_id     = coalesce(betalingen.club_id, p_club),
          mollie_klant_id = coalesce(betalingen.mollie_klant_id, p_mollie_klant),
@@ -373,13 +559,19 @@ begin
       return;
     end if;
 
+    -- Het bedrag hoort hier net zo goed bij als in de update hierboven.
+    -- Wie het alleen in de update meeneemt, mist vanaf maand twee élk
+    -- bedrag — want élke verlenging komt langs deze insert — en merkt
+    -- dat pas een jaar later. Scenario 5e.
     insert into public.betalingen (mollie_betaling_id, club_id, club_naam,
                                    mollie_klant_id, pakket, termijn, modus,
-                                   status, betaald_op, verwerkt_op)
+                                   status, betaald_op, verwerkt_op,
+                                   bedrag_cent, valuta)
     values (p_mollie_id, v_club,
             (select c.naam from public.clubs c where c.id = v_club),
             p_mollie_klant, p_pakket, p_termijn, p_modus,
-            'betaald', p_betaald_op, now())
+            'betaald', p_betaald_op, now(),
+            p_bedrag_cent, coalesce(p_valuta, 'EUR'))
     on conflict (mollie_betaling_id) do nothing;
 
     -- Kwam er tóch niets bij, dan was een gelijktijdige melding net
@@ -453,16 +645,27 @@ begin
                                    abonnementen.mollie_klant_id);
 end $$;
 
-comment on function public.verwerk_betaling(text, uuid, text, text, timestamptz, text, text) is
-  'Zet een geslaagde betaling van Mollie om in een pakket. Alleen aan te roepen met de service-sleutel (twee sloten). Verwerkt elke melding hoogstens één keer.';
+comment on function public.verwerk_betaling(text, uuid, text, text, timestamptz, int, text, text, text) is
+  'Zet een geslaagde betaling van Mollie om in een pakket en legt het bedrag (in centen) en de munteenheid vast. Alleen aan te roepen met de service-sleutel (twee sloten). Verwerkt elke melding hoogstens één keer.';
 
 -- ── SLOT 1 — het aanroeprecht ────────────────────────────────
 --  Zie de uitleg bovenaan dit deel. Deze twee regels zijn geen
 --  franje: zonder de revoke mag PUBLIC (dus iedereen, ook zonder
 --  account) deze functie aanroepen.
-revoke execute on function public.verwerk_betaling(text, uuid, text, text, timestamptz, text, text)
+--
+--  EN JUIST NU NIET VERGETEN. Hierboven staat een "drop function"
+--  gevolgd door een "create function", want de parameterlijst is
+--  veranderd en dat kan "create or replace" niet. Een nieuw
+--  aangemaakte functie krijgt in Postgres standaard execute-recht voor
+--  PUBLIC. Zonder deze twee regels stond slot 1 na deze wijziging dus
+--  weer wagenwijd open — zonder foutmelding, zonder dat iemand het
+--  ziet. Let ook op de typen: ze moeten meeveranderen met de nieuwe
+--  handtekening (int op plek zes, text achteraan), anders raakt de
+--  revoke een functie die niet meer bestaat en klapt dit bestand er
+--  met een foutmelding uit.
+revoke execute on function public.verwerk_betaling(text, uuid, text, text, timestamptz, int, text, text, text)
   from public, anon, authenticated;
-grant  execute on function public.verwerk_betaling(text, uuid, text, text, timestamptz, text, text)
+grant  execute on function public.verwerk_betaling(text, uuid, text, text, timestamptz, int, text, text, text)
   to service_role;
 
 
@@ -796,6 +999,53 @@ select 'claimen en verwerken gebeurt in één opdracht (de dubbele webhook)',
                  ~* 'update\s+(public\.)?betalingen(.|\n)*?where(.|\n)*?verwerkt_op\s+is\s+null'
             then 'in orde' else 'LET OP' end
 union all
+select 'de boekhouding legt het bedrag vast (bedrag_cent, heel getal)',
+       coalesce((select data_type from information_schema.columns
+                 where table_schema = 'public' and table_name = 'betalingen'
+                   and column_name = 'bedrag_cent'), 'de kolom ontbreekt'),
+       case when (select data_type from information_schema.columns
+                  where table_schema = 'public' and table_name = 'betalingen'
+                    and column_name = 'bedrag_cent') = 'integer'
+            then 'in orde' else 'LET OP' end
+union all
+select 'en de munteenheid, standaard EUR',
+       coalesce((select coalesce(column_default, 'geen standaardwaarde')
+                 from information_schema.columns
+                 where table_schema = 'public' and table_name = 'betalingen'
+                   and column_name = 'valuta'), 'de kolom ontbreekt'),
+       case when coalesce((select column_default from information_schema.columns
+                           where table_schema = 'public' and table_name = 'betalingen'
+                             and column_name = 'valuta'), '') like '%EUR%'
+            then 'in orde' else 'LET OP' end
+union all
+-- Het bedrag is alleen écht verplicht als er géén standaardwaarde op
+-- staat. "int default null" zou hem in naam verplicht maken en in de
+-- praktijk niet; dan kan de servercode hem gewoon weglaten.
+select 'het bedrag is verplicht bij verwerk_betaling() (zes parameters zonder default)',
+       coalesce((select (p.pronargs - p.pronargdefaults)::text || ' verplicht: '
+                     || array_to_string(p.proargnames, ', ')
+                 from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+                 where n.nspname = 'public' and p.proname = 'verwerk_betaling' limit 1),
+                'de functie bestaat niet'),
+       coalesce((select case when p.pronargs - p.pronargdefaults = 6
+                               and array_to_string(p.proargnames, ', ') =
+                                   'p_mollie_id, p_club, p_pakket, p_termijn, p_betaald_op, p_bedrag_cent, p_modus, p_mollie_klant, p_valuta'
+                             then 'in orde' else 'LET OP' end
+                 from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+                 where n.nspname = 'public' and p.proname = 'verwerk_betaling' limit 1), 'LET OP')
+union all
+-- Er hoort er PRECIES ÉÉN te zijn. Bleef de oude vorm zonder bedrag
+-- ernaast staan, dan raakt een aanroep die het bedrag vergeet gewoon
+-- die oude — en komen er bedragloze rijen in de boeken.
+select 'er is maar één verwerk_betaling() (de oude vorm zonder bedrag is weg)',
+       (select count(*)::text || ' versie(s)' from pg_proc p
+         join pg_namespace n on n.oid = p.pronamespace
+        where n.nspname = 'public' and p.proname = 'verwerk_betaling'),
+       case when (select count(*) from pg_proc p
+                   join pg_namespace n on n.oid = p.pronamespace
+                  where n.nspname = 'public' and p.proname = 'verwerk_betaling') = 1
+            then 'in orde' else 'LET OP' end
+union all
 select 'de instelling coulance_dagen staat op 46',
        coalesce((select getal::text from public.pakket_instellingen where sleutel = 'coulance_dagen'), 'ontbreekt'),
        case when (select getal from public.pakket_instellingen where sleutel = 'coulance_dagen') = 46
@@ -958,6 +1208,8 @@ order by 7, 1;
 -- delete from public.pakket_instellingen where sleutel = 'coulance_dagen';
 --
 -- -- 5. De verwerkfunctie weg. De boekhouding blijft staan.
+-- --    Allebei de vormen, voor het geval er nog een oude naast staat.
+-- drop function if exists public.verwerk_betaling(text, uuid, text, text, timestamptz, int, text, text, text);
 -- drop function if exists public.verwerk_betaling(text, uuid, text, text, timestamptz, text, text);
 --
 -- -- 6. ALLEEN als je de boekhouding écht kwijt wil — lees eerst de
@@ -965,3 +1217,11 @@ order by 7, 1;
 -- -- drop table if exists public.betalingen;
 -- -- alter table public.abonnementen drop column if exists betaald_tot;
 -- -- alter table public.abonnementen drop column if exists mollie_klant_id;
+--
+-- -- 7. ALLEEN het bedrag terugdraaien, zonder de rest van de
+-- --    betaalketen weg te gooien. Ook dit is niet terug te draaien:
+-- --    de vastgelegde bedragen zijn daarna weg. De functie moet dan
+-- --    ook terug naar de oude vorm — draai daarvoor de versie van
+-- --    dit bestand van vóór 18 september 2026.
+-- -- alter table public.betalingen drop column if exists bedrag_cent;
+-- -- alter table public.betalingen drop column if exists valuta;
