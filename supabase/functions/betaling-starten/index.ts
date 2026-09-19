@@ -174,6 +174,35 @@ export async function behandelStart(
       return fout("Alleen de eigenaar van de club kan een abonnement afsluiten", 403);
     }
 
+    // ── 2b. Noodrem, 19 september 2026 ───────────────────────
+    //  Ontdekt door Evan tijdens zijn eigen eerste testbetalingen:
+    //  deze functie start altijd een gloednieuwe periode (sequenceType
+    //  "first") en verwerk_betaling() telt die daarna onvoorwaardelijk
+    //  bij geldig_tot op. Voor wie al Coach of Club heeft en nog
+    //  betaald is, stapelt elke klik dus een extra periode op — geen
+    //  wissel, een tweede (derde, vierde...) abonnement. Tot
+    //  abonnement-wisselen bestaat, is dit de enige rem: weiger een
+    //  nieuwe aankoop zolang er al een lopend, betaald pakket is.
+    const huidig = await serviceDb.selecteer("abonnementen", {
+      select: "pakket,geldig_tot",
+      club_id: "eq." + clubId,
+      limit: "1",
+    });
+    const huidigPakket = huidig.length > 0 && typeof huidig[0].pakket === "string"
+      ? huidig[0].pakket as string
+      : "free";
+    const huidigGeldigTot = huidig.length > 0 && typeof huidig[0].geldig_tot === "string"
+      ? huidig[0].geldig_tot as string
+      : null;
+    const nogGeldig = huidigGeldigTot === null || huidigGeldigTot >= new Date().toISOString().slice(0, 10);
+    if ((huidigPakket === "coach" || huidigPakket === "club") && nogGeldig) {
+      deps.log("betaling geweigerd: al een lopend betaald abonnement", {
+        club_id: clubId,
+        huidig_pakket: huidigPakket,
+      });
+      return fout("Je hebt al een betaald abonnement. Wijzigen van pakket is voorlopig nog niet mogelijk — neem contact op.", 409);
+    }
+
     // ── 3. Wat kost dit? ─────────────────────────────────────
     //  Uit de vaste lijst. Wat er verder in de body stond doet niet
     //  mee — ook niet een veld dat "bedrag" heet.

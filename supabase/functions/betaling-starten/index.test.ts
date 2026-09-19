@@ -49,6 +49,8 @@ function opstelling(o: {
   rol?: "eigenaar" | "trainer" | "kijker" | "geen";
   klantId?: string | null;
   abonnementBestaat?: boolean;
+  huidigPakket?: string;
+  huidigGeldigTot?: string | null;
   mollieAntwoorden?: Record<string, { status?: number; body: unknown }>;
   geenSleutel?: boolean;
 } = {}): Opstelling {
@@ -65,7 +67,14 @@ function opstelling(o: {
 
   const abonnementen = o.abonnementBestaat === false
     ? []
-    : [{ mollie_klant_id: o.klantId ?? null }];
+    : [{
+      mollie_klant_id: o.klantId ?? null,
+      // Standaard: een Free-club die zijn eerste pakket koopt. De
+      // noodrem van 19 september (zie index.ts, ── 2b) leest deze
+      // twee velden om een tweede, stapelende aankoop tegen te houden.
+      pakket: o.huidigPakket ?? "free",
+      geldig_tot: o.huidigGeldigTot !== undefined ? o.huidigGeldigTot : null,
+    }];
   const service = nepDb({
     rijen: {
       abonnementen,
@@ -127,6 +136,65 @@ Deno.test("een kijker van een andere club ook niet", async () => {
   );
   gelijk(antwoord.status, 403);
   gelijk(op.mollieAanroepen.length, 0);
+});
+
+// ── 1b. De noodrem van 19 september 2026 ─────────────────────
+// Ontdekt tijdens Evans eigen eerste testbetalingen: zonder deze
+// controle start elke klik op "Overstappen" een nieuwe periode
+// bóvenop de bestaande, ook voor wie al Coach of Club heeft. Zie de
+// uitleg bij "── 2b." in index.ts.
+
+Deno.test("een club met een lopend, nog geldig betaald pakket krijgt 409, geen nieuwe aankoop", async () => {
+  const morgen = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+  const op = opstelling({ huidigPakket: "coach", huidigGeldigTot: morgen });
+  const antwoord = await behandelStart(
+    verzoek({ club_id: CLUB, pakket: "club", termijn: "maand" }),
+    op.deps,
+  );
+  gelijk(antwoord.status, 409);
+  gelijk(op.mollieAanroepen.length, 0);
+});
+
+Deno.test("hetzelfde geldt als je hetzelfde pakket nog eens probeert te kopen", async () => {
+  const morgen = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+  const op = opstelling({ huidigPakket: "club", huidigGeldigTot: morgen });
+  const antwoord = await behandelStart(
+    verzoek({ club_id: CLUB, pakket: "club", termijn: "maand" }),
+    op.deps,
+  );
+  gelijk(antwoord.status, 409);
+  gelijk(op.mollieAanroepen.length, 0);
+});
+
+Deno.test("een pakket zonder einddatum (onbeperkt, met de hand gezet) telt ook als lopend en geldig", async () => {
+  const op = opstelling({ huidigPakket: "club", huidigGeldigTot: null });
+  const antwoord = await behandelStart(
+    verzoek({ club_id: CLUB, pakket: "coach", termijn: "maand" }),
+    op.deps,
+  );
+  gelijk(antwoord.status, 409);
+  gelijk(op.mollieAanroepen.length, 0);
+});
+
+Deno.test("een verlopen betaald pakket blokkeert een nieuwe aankoop niet", async () => {
+  const gisteren = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+  const op = opstelling({ huidigPakket: "coach", huidigGeldigTot: gisteren, klantId: "cst_bestaand" });
+  const antwoord = await behandelStart(
+    verzoek({ club_id: CLUB, pakket: "coach", termijn: "maand" }),
+    op.deps,
+  );
+  gelijk(antwoord.status, 200);
+  gelijk(op.mollieAanroepen.length > 0, true);
+});
+
+Deno.test("een Free-club (nooit betaald) kan gewoon zijn eerste pakket kopen", async () => {
+  const op = opstelling(); // standaard: huidigPakket "free", geldig_tot null
+  const antwoord = await behandelStart(
+    verzoek({ club_id: CLUB, pakket: "coach", termijn: "maand" }),
+    op.deps,
+  );
+  gelijk(antwoord.status, 200);
+  gelijk(op.mollieAanroepen.length > 0, true);
 });
 
 Deno.test("de eigenaarscontrole vraagt naar de eigen gebruiker én naar de rol", async () => {

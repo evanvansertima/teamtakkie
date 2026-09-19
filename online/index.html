@@ -3006,7 +3006,7 @@ window.addEventListener("error", function(e){
 });
 </script>
 <script>
-const APP_VERSIE = "adb16fb";
+const APP_VERSIE = "5eb52a8";
 const TEAMS_KEY = "tt_teams_v1";
 const ACTIEF_KEY = "tt_actief_v1";
 const VOORKEUR_KEY = "tt_voorkeuren_v1";
@@ -8825,7 +8825,7 @@ function PakkettenSheet({ onSluiten, nadruk }) {
     ), prijs.maand && /* @__PURE__ */ React.createElement("div", { className: "pakket-prijs" }, /* @__PURE__ */ React.createElement("div", { className: "pakket-prijs-rij" }, /* @__PURE__ */ React.createElement("span", { className: "pakket-prijs-bedrag" }, jaar ? prijs.jaar : prijs.maand), prijs.jaar && /* @__PURE__ */ React.createElement("span", { className: "pakket-prijs-per" }, jaar ? "per jaar" : "per maand")), prijs.jaar && /* @__PURE__ */ React.createElement("div", { className: "pakket-prijs-jaar" }, jaar ? "of " + prijs.maand + " per maand" : "of " + prijs.jaar + " per jaar \u2014 twee maanden korting")), /* @__PURE__ */ React.createElement("div", { className: "pakket-teams" }, p.teams === Infinity ? "Onbeperkt teams" : p.teams + (p.teams === 1 ? " team" : " teams")), /* @__PURE__ */ React.createElement("ul", { className: "pakket-lijst" }, MODULES.map(function(m) {
       const aan = p.modules.indexOf(m) >= 0;
       return /* @__PURE__ */ React.createElement("li", { key: m, className: aan ? "aan" : "uit" }, /* @__PURE__ */ React.createElement("i", { className: aan ? "fa-solid fa-check" : "fa-solid fa-minus" }), MODULE_LABEL[m] || m);
-    })), kanKiezen && betaaldNu && /* @__PURE__ */ React.createElement("p", { style: { fontSize: 11.5, color: "var(--grijs-donker)", fontWeight: 400, margin: 0, lineHeight: 1.6 } }, "Wat je voor ", nu.naam, " al hebt betaald, wordt nog niet automatisch verrekend."), kanKiezen && /* @__PURE__ */ React.createElement(
+    })), kanKiezen && betaaldNu && /* @__PURE__ */ React.createElement("p", { style: { fontSize: 11.5, color: "var(--grijs-donker)", fontWeight: 400, margin: 0, lineHeight: 1.6 } }, "Wijzigen tussen Coach en Club kan op dit moment nog niet via de app. Neem contact op als je wilt wisselen."), kanKiezen && !betaaldNu && /* @__PURE__ */ React.createElement(
       "button",
       {
         className: "knop lijn klein",
@@ -8835,7 +8835,7 @@ function PakkettenSheet({ onSluiten, nadruk }) {
           overstap(p);
         }
       },
-      bezig === p.id ? /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-circle-notch fa-spin" }), " Bezig\u2026") : betaaldNu ? "Wijzigen naar " + p.naam : "Overstappen"
+      bezig === p.id ? /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-circle-notch fa-spin" }), " Bezig\u2026") : "Overstappen"
     ));
   }))));
 }

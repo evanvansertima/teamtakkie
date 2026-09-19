@@ -809,26 +809,30 @@ function PakkettenSheet({ onSluiten, nadruk }) {
                     );
                   })}
                 </ul>
-                {/* Wie al betaalt "stapt niet over" maar "wijzigt": dat is
-                    wat er gebeurt, en het is ook het woord waarmee iemand
-                    het zelf zou opschrijven. De regel erboven is er omdat
-                    er nog geen verrekening bestaat — noch bij Mollie, noch
-                    in server/18-betalingen.sql. Dat mag je dan gewoon
-                    zeggen vóórdat iemand tikt, in plaats van erachter te
-                    laten komen op zijn afschrift. */}
+                {/* Noodrem, 19 september 2026: wisselen tussen twee betaalde
+                    pakketten (Coach <-> Club) is met opzet uitgezet. Evan
+                    ontdekte tijdens zijn eigen testbetalingen dat elke klik
+                    hier een gloednieuwe periode start bovenop de bestaande
+                    — geen wissel, een stapeling. De server weigert dit nu
+                    ook (zie server/18-betalingen.sql en betaling-starten,
+                    ── 2b), maar de knop hoort hier niet eens aan te bieden
+                    wat hij niet correct kan. Terug aanzetten zodra
+                    abonnement-wisselen bestaat (Veerles ontwerp, 19
+                    september 2026) — dan ook deze tekst weer vervangen door
+                    een echte prijsopgave. */}
                 {kanKiezen && betaaldNu && (
                   <p style={{fontSize:11.5,color:"var(--grijs-donker)",fontWeight:400,margin:0,lineHeight:1.6}}>
-                    Wat je voor {nu.naam} al hebt betaald, wordt nog niet
-                    automatisch verrekend.
+                    Wijzigen tussen Coach en Club kan op dit moment nog niet
+                    via de app. Neem contact op als je wilt wisselen.
                   </p>
                 )}
-                {kanKiezen && (
+                {kanKiezen && !betaaldNu && (
                   <button className="knop lijn klein" disabled={!!bezig}
                     style={{width:"100%",justifyContent:"center"}}
                     onClick={function(){ overstap(p); }}>
                     {bezig === p.id
                       ? <React.Fragment><i className="fa-solid fa-circle-notch fa-spin"/> Bezig…</React.Fragment>
-                      : (betaaldNu ? "Wijzigen naar " + p.naam : "Overstappen")}
+                      : "Overstappen"}
                   </button>
                 )}
               </div>
