@@ -322,26 +322,26 @@ create policy betalingen_lezen on public.betalingen for select
 --      genegeerde testbetaling.
 --
 --  ─────────────────────────────────────────────────────────────
---  TWEE OPEN VRAGEN AAN EVAN — HIER IS MET OPZET NIETS OP GEBOUWD
+--  TWEE VRAGEN AAN EVAN — BEIDE BESLIST OP 19 SEPTEMBER 2026
 --
---  Deze twee zijn door Tess opengelaten en horen door Evan beslist te
---  worden, niet door de bouwer ingevuld. Zolang er geen antwoord is,
---  doet deze functie wat hieronder staat en niets meer.
+--  Deze twee zijn door Tess opengelaten en zijn inmiddels door Evan
+--  beslist. Wat hieronder staat is dus geen open vraag meer, maar de
+--  reden waarom de functie precies doet wat hij doet.
 --
---  (a) EEN ANDERE MUNTEENHEID DAN EURO.
---      Nu wordt de munteenheid opgeslagen precies zoals Mollie hem
---      meldt, en NIET stilzwijgend omgerekend — een bedrag in de
---      verkeerde munt is later nergens meer aan te zien. Maar er is
---      geen weigering: een melding in dollars levert gewoon een
---      pakket op. Vraag: moet een niet-EUR-betaling geweigerd worden?
+--  (a) EEN ANDERE MUNTEENHEID DAN EURO — besluit: gewoon opslaan.
+--      De munteenheid wordt opgeslagen precies zoals Mollie hem meldt,
+--      en NIET stilzwijgend omgerekend — een bedrag in de verkeerde
+--      munt is later nergens meer aan te zien. Een melding in dollars
+--      levert gewoon een pakket op; dat is bewust zo, met het oog op
+--      een club buiten Nederland zonder dat daar nu al iets voor hoeft
+--      te worden gebouwd.
 --
---  (b) HET BEDRAG VERGELIJKEN MET DE PRIJS VAN HET PAKKET.
---      Verleidelijk: 699 hoort bij coach/maand, 49000 bij club/jaar
---      (docs/pakketten-besluit.md). Maar dan zet een prijswijziging of
---      een kortingsactie in Mollie de hele betaalketen stil, tenzij
---      daar aparte logica bij komt. Vraag: moet dat, en wat moet er
---      dan gebeuren met een bedrag dat niet klopt — weigeren, of wél
---      boeken en merken?
+--  (b) HET BEDRAG VERGELIJKEN MET DE PRIJS VAN HET PAKKET — besluit:
+--      niet doen. Het bedrag komt sowieso van de server zelf bij het
+--      starten van de betaling, nooit van de browser — dat risico is
+--      al klein. Een controle tegen docs/pakketten-besluit.md zou een
+--      toekomstige kortingsactie of prijswijziging in Mollie de hele
+--      betaalketen laten stokken. Vertrouw wat Mollie meldt.
 -- ══════════════════════════════════════════════════════════════
 
 -- De oude vorm moet eerst weg. "create or replace" kan de
