@@ -366,3 +366,563 @@ Deno.test("het logboek bevat nooit naam of rekeningnummer van de betaler", async
     club_id: CLUB,
   });
 });
+
+// ══════════════════════════════════════════════════════════════
+//  9. DE ROUTERING BIJ EEN WISSEL VAN PAKKET
+//  ─────────────────────────────────────────────────────────────
+//  Een wisselbetaling ziet er bij Mollie precies zo uit als een
+//  verlenging. Het enige echte onderscheid is de regel die wij zélf in
+//  public.abonnement_wissels hebben klaargezet. Belandt zo'n melding
+//  bij de gewone verwerk_betaling(), dan telt die er een hele periode
+//  bij op — precies het stapelprobleem dat dit hele wisselwerk
+//  repareert. Deze tests gaan over die kruising.
+// ══════════════════════════════════════════════════════════════
+
+/* Met opzet een ANDER club-id dan wat er in de metadata van de melding
+   staat. Zo is aan de uitkomst te zien wélke van de twee de code echt
+   gebruikt heeft — de claim (goed) of de melding (fout). */
+const CLUB_CLAIM = "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee";
+const WISSEL_ID = "99999999-8888-7777-6666-555555555555";
+const PATCH_PAD = "/v2/customers/cst_kEn1PlbGa/subscriptions/sub_8JfGzs6v3K";
+
+/* Zoals de metadata er bij een wissel uitziet (abonnement-wisselen
+   stap 8). Pakket en termijn wijken hier bewust af van de claim in de
+   tests hieronder: de metadata is nooit het bewijs. */
+function wisselBetaling(over: Record<string, unknown> = {}): Record<string, unknown> {
+  return nepBetaling({
+    metadata: {
+      club_id: CLUB,
+      pakket: "coach",
+      termijn: "maand",
+      soort: "wissel",
+      wissel_id: WISSEL_ID,
+    },
+    ...over,
+  });
+}
+
+/* nepDb geeft altijd álle rijen van een tabel terug, ongeacht de
+   vraag. Voor deze tests is dat te grof: of er wél of geen
+   "afgerond_op is null" in de zoekopdracht staat is hier juist het
+   punt. Deze schil doet daarom na wat PostgREST doet — eq. en is.null
+   — zodat een verkeerd filter ook echt andere rijen oplevert en de
+   test omvalt. */
+function pastBijVraag(
+  rij: Record<string, unknown>,
+  vraag: Record<string, string>,
+): boolean {
+  return Object.entries(vraag ?? {}).every(([naam, waarde]) => {
+    if (naam === "select" || naam === "limit" || naam === "order") return true;
+    if (waarde === "is.null") return rij[naam] === null || rij[naam] === undefined;
+    if (waarde.startsWith("eq.")) return String(rij[naam]) === waarde.slice(3);
+    return true;
+  });
+}
+
+interface WisselOpstelling extends Opstelling {
+  /* Mollie-aanroepen en database-aanroepen door elkaar, op volgorde.
+     Nodig omdat "eerst de incasso bij Mollie, dan pas het bedrag in de
+     database" een volgorde is tussen twee verschillende buitenwerelden
+     — met twee losse lijstjes is die volgorde niet te bewijzen. */
+  tijdlijn: string[];
+}
+
+function wisselOpstelling(o: {
+  mollieAntwoorden?: Record<string, { status?: number; body: unknown }>;
+  rijen?: Record<string, Record<string, unknown>[]>;
+  betaling?: Record<string, unknown>;
+} = {}): WisselOpstelling {
+  const tijdlijn: string[] = [];
+  const nepM = nepMollie(o.mollieAntwoorden ?? {
+    ["GET /v2/payments/" + BETALING]: { body: o.betaling ?? wisselBetaling() },
+    ["PATCH " + PATCH_PAD]: { body: { id: "sub_8JfGzs6v3K" } },
+  });
+  const fetchFn = ((invoer: string | URL | Request, opties?: RequestInit) => {
+    tijdlijn.push("mollie " + (opties?.method ?? "GET").toUpperCase());
+    return nepM.fetchFn(invoer, opties);
+  }) as typeof fetch;
+
+  const db = nepDb({ rijen: o.rijen ?? {} });
+  const echteSelecteer = db.client.selecteer.bind(db.client);
+  db.client.selecteer = async (tabel, vraag) => {
+    tijdlijn.push("db selecteer " + tabel);
+    const rijen = await echteSelecteer(tabel, vraag);
+    return rijen.filter((r) => pastBijVraag(r, vraag));
+  };
+  const echteBijwerken = db.client.bijwerken.bind(db.client);
+  db.client.bijwerken = async (tabel, vraag, velden) => {
+    tijdlijn.push("db bijwerken " + tabel + " " + Object.keys(velden).join(","));
+    await echteBijwerken(tabel, vraag, velden);
+  };
+  const echteRpc = db.client.rpc.bind(db.client);
+  db.client.rpc = async (naam, argumenten) => {
+    tijdlijn.push("db rpc " + naam);
+    return await echteRpc(naam, argumenten);
+  };
+
+  const logboek: { bericht: string; velden: Record<string, unknown> }[] = [];
+  return {
+    mollieAanroepen: nepM.aanroepen,
+    dbAanroepen: db.aanroepen,
+    logboek,
+    tijdlijn,
+    deps: {
+      serviceClient: () => db.client,
+      mollie: () => maakMollie("test_geheim", fetchFn),
+      log: (bericht, velden) => logboek.push({ bericht, velden: velden ?? {} }),
+      nu: () => new Date("2026-09-19T12:00:00Z"),
+    },
+  };
+}
+
+/* Een open claim (nog niet afgerond) die naar 'club' wijst. De termijn
+   staat hier op 'maand' zodat het nieuwe incassobedrag € 49,00 is. */
+function openClaim(over: Record<string, unknown> = {}): Record<string, unknown> {
+  return {
+    id: WISSEL_ID,
+    club_id: CLUB_CLAIM,
+    naar_pakket: "club",
+    termijn: "maand",
+    afgerond_op: null,
+    mollie_betaling_id: BETALING,
+    ...over,
+  };
+}
+
+/* De abonnementsrij van de vereniging UIT DE CLAIM. Het club_id hoort
+   erbij: de code zoekt er met club_id=eq.… op, en zonder dat veld zou
+   deze rij niet gevonden worden. */
+function aboRij(over: Record<string, unknown> = {}): Record<string, unknown> {
+  return {
+    club_id: CLUB_CLAIM,
+    pakket: "club",
+    mollie_subscription_id: "sub_8JfGzs6v3K",
+    ...over,
+  };
+}
+
+// ── 9a. De claim is de waarheid, de metadata niet ────────────
+
+Deno.test("een wisselbetaling gaat naar verwerk_wissel_betaling(), met de waarden UIT DE CLAIM", async () => {
+  const op = wisselOpstelling({
+    rijen: {
+      // Claim: club_id CLUB_CLAIM, naar 'club', per jaar.
+      // Metadata van de melding: CLUB, 'coach', per maand.
+      // Wat er in de aanroep terechtkomt, verraadt welke van de twee
+      // de code gelooft.
+      abonnement_wissels: [openClaim({ naar_pakket: "club", termijn: "jaar" })],
+      abonnementen: [aboRij()],
+    },
+  });
+  const antwoord = await behandelMelding(melding(BETALING), op.deps);
+  gelijk(antwoord.status, 200);
+
+  const rpc = op.dbAanroepen.find((a) => a.soort === "rpc");
+  gelijk(rpc?.naam, "verwerk_wissel_betaling");
+  gelijk(rpc?.argumenten?.p_club, CLUB_CLAIM, "club moet uit de claim komen");
+  gelijk(rpc?.argumenten?.p_pakket, "club", "pakket moet uit de claim komen");
+  gelijk(rpc?.argumenten?.p_termijn, "jaar", "termijn moet uit de claim komen");
+  // En dit komt wél uit het antwoord van Mollie, want dat is het bewijs
+  // van wat er betaald is.
+  gelijk(rpc?.argumenten?.p_mollie_id, BETALING);
+  gelijk(rpc?.argumenten?.p_bedrag_cent, 699);
+  gelijk(rpc?.argumenten?.p_modus, "test");
+  gelijk(rpc?.argumenten?.p_mollie_klant, "cst_kEn1PlbGa");
+
+  // De gewone route mag hier nooit langskomen: die telt er een hele
+  // periode bij op.
+  gelijk(
+    op.dbAanroepen.filter((a) => a.soort === "rpc" && a.naam === "verwerk_betaling").length,
+    0,
+  );
+});
+
+// ── 9b. Een herhaalde melding op een AFGERONDE claim ─────────
+
+Deno.test("een tweede melding op een al afgeronde wissel blijft de wisselroute volgen", async () => {
+  // Mollie herhaalt een melding tot hij een 200 krijgt. Zou de
+  // zoekopdracht "afgerond_op is null" bevatten, dan vindt hij de claim
+  // de tweede keer niet, belandt de melding bij verwerk_betaling() — en
+  // die weigert een wissel-betaalnummer hard. Gevolg: Mollie blijft het
+  // eeuwig proberen.
+  const op = wisselOpstelling({
+    rijen: {
+      abonnement_wissels: [openClaim({ afgerond_op: "2026-09-19T11:00:00+00:00" })],
+      abonnementen: [aboRij()],
+    },
+  });
+  const antwoord = await behandelMelding(melding(BETALING), op.deps);
+  gelijk(antwoord.status, 200);
+
+  const rpc = op.dbAanroepen.find((a) => a.soort === "rpc");
+  gelijk(rpc?.naam, "verwerk_wissel_betaling");
+  gelijk(
+    op.dbAanroepen.filter((a) => a.soort === "rpc" && a.naam === "verwerk_betaling").length,
+    0,
+    "een afgeronde wissel mag NOOIT bij de gewone verwerking uitkomen",
+  );
+
+  // En de reden waarom het werkt, apart vastgelegd: er staat met opzet
+  // géén afgerond_op in de zoekopdracht.
+  const zoek = op.dbAanroepen.find(
+    (a) => a.soort === "selecteer" && a.tabel === "abonnement_wissels",
+  );
+  gelijk(zoek?.vraag?.mollie_betaling_id, "eq." + BETALING);
+  gelijk(
+    zoek?.vraag?.afgerond_op,
+    undefined,
+    "de wisselzoekopdracht mag niet op afgerond_op filteren",
+  );
+});
+
+// ── 9c. Geen claim: gewoon de bestaande weg ──────────────────
+
+Deno.test("een betaling zonder wisselclaim gaat gewoon naar verwerk_betaling()", async () => {
+  const op = wisselOpstelling({
+    mollieAntwoorden: {
+      ["GET /v2/payments/" + BETALING]: { body: nepBetaling() },
+      "POST /v2/customers/cst_kEn1PlbGa/subscriptions": { body: { id: "sub_8JfGzs6v3K" } },
+    },
+    rijen: {
+      abonnement_wissels: [],
+      abonnementen: [{ club_id: CLUB, mollie_subscription_id: null }],
+    },
+  });
+  const antwoord = await behandelMelding(melding(BETALING), op.deps);
+  gelijk(antwoord.status, 200);
+  const rpc = op.dbAanroepen.find((a) => a.soort === "rpc");
+  gelijk(rpc?.naam, "verwerk_betaling");
+  gelijk(rpc?.argumenten?.p_club, CLUB);
+  gelijk(
+    op.dbAanroepen.filter((a) => a.soort === "rpc" && a.naam === "verwerk_wissel_betaling")
+      .length,
+    0,
+  );
+});
+
+// ── 9d. De incasso na een geslaagde wissel ───────────────────
+
+Deno.test("na een doorgevoerde wissel wordt de LOPENDE incasso gewijzigd, niet een tweede aangemaakt", async () => {
+  const op = wisselOpstelling({
+    rijen: {
+      abonnement_wissels: [openClaim()],
+      // Het pakket staat er echt op 'club': de wissel is doorgevoerd.
+      abonnementen: [aboRij()],
+    },
+  });
+  const antwoord = await behandelMelding(melding(BETALING), op.deps);
+  gelijk(antwoord.status, 200);
+
+  const patch = op.mollieAanroepen.find((a) => a.methode === "PATCH");
+  gelijk(patch?.url, PATCH_PAD);
+  // € 49,00: de maandprijs van club uit PRIJZEN, niet het betaalde
+  // verrekenbedrag van € 6,99.
+  gelijk(patch?.body?.amount, { value: "49.00", currency: "EUR" });
+  gelijk(patch?.body?.description, "TEAMTAKKIE club (per maand)");
+
+  // Een tweede subscription zou betekenen dat Mollie elke maand twee
+  // keer incasseert.
+  gelijk(
+    op.mollieAanroepen.filter((a) => a.methode === "POST").length,
+    0,
+    "er mag geen nieuwe subscription bijkomen",
+  );
+
+  const bedrag = op.dbAanroepen.find(
+    (a) => a.soort === "bijwerken" && a.tabel === "abonnementen",
+  );
+  gelijk(bedrag?.velden, { mollie_bedrag_cent: 4900 });
+  gelijk(bedrag?.vraag, { club_id: "eq." + CLUB_CLAIM });
+});
+
+Deno.test("een jaarwissel zet de incasso op het jaarbedrag", async () => {
+  const op = wisselOpstelling({
+    rijen: {
+      abonnement_wissels: [openClaim({ termijn: "jaar" })],
+      abonnementen: [aboRij()],
+    },
+  });
+  await behandelMelding(melding(BETALING), op.deps);
+  const patch = op.mollieAanroepen.find((a) => a.methode === "PATCH");
+  gelijk(patch?.body?.amount, { value: "490.00", currency: "EUR" });
+  const bedrag = op.dbAanroepen.find(
+    (a) => a.soort === "bijwerken" && a.tabel === "abonnementen",
+  );
+  gelijk(bedrag?.velden, { mollie_bedrag_cent: 49000 });
+});
+
+// ── 9e. De wissel is NIET doorgevoerd ────────────────────────
+
+Deno.test("is het pakket niet gewisseld (testmodus), dan blijft de incasso ongemoeid", async () => {
+  const op = wisselOpstelling({
+    rijen: {
+      abonnement_wissels: [openClaim()],
+      // Het pakket staat nog op het oude: verwerk_wissel_betaling()
+      // heeft de betaling genegeerd (testmodus, of bedrag nul).
+      abonnementen: [aboRij({ pakket: "coach" })],
+    },
+  });
+  const antwoord = await behandelMelding(melding(BETALING), op.deps);
+  gelijk(antwoord.status, 200);
+
+  gelijk(
+    op.mollieAanroepen.filter((a) => a.methode === "PATCH").length,
+    0,
+    "geen incassowijziging bij een niet-doorgevoerde wissel",
+  );
+  gelijk(
+    op.dbAanroepen.filter((a) => a.soort === "bijwerken").length,
+    0,
+    "mollie_bedrag_cent blijft ongemoeid",
+  );
+  const regel = op.logboek.find((r) => r.bericht.includes("niet toegekend"));
+  gelijk(regel?.velden, {
+    betaling: BETALING,
+    club_id: CLUB_CLAIM,
+    pakket_nu: "coach",
+  });
+});
+
+// ── 9f. De volgorde: eerst Mollie, dan pas het bedrag ────────
+
+Deno.test("mollie_bedrag_cent wordt pas NA de bevestiging van Mollie weggeschreven", async () => {
+  const op = wisselOpstelling({
+    rijen: {
+      abonnement_wissels: [openClaim()],
+      abonnementen: [aboRij()],
+    },
+  });
+  await behandelMelding(melding(BETALING), op.deps);
+  const patch = op.tijdlijn.indexOf("mollie PATCH");
+  const schrijf = op.tijdlijn.indexOf("db bijwerken abonnementen mollie_bedrag_cent");
+  gelijk(patch >= 0, true, "er hoort een PATCH te zijn");
+  gelijk(schrijf >= 0, true, "het bedrag hoort te worden weggeschreven");
+  // Dit veld betekent "wat Mollie volgens ons afschrijft". Vooruitlopend
+  // invullen maakt public.wissel_controle() waardeloos.
+  gelijk(patch < schrijf, true, "de PATCH hoort vóór het wegschrijven te komen");
+});
+
+Deno.test("gaat de PATCH bij Mollie mis, dan wordt mollie_bedrag_cent NIET bijgewerkt", async () => {
+  const op = wisselOpstelling({
+    mollieAntwoorden: {
+      ["GET /v2/payments/" + BETALING]: { body: wisselBetaling() },
+      ["PATCH " + PATCH_PAD]: { status: 503, body: { status: 503, title: "Service Unavailable" } },
+    },
+    rijen: {
+      abonnement_wissels: [openClaim()],
+      abonnementen: [aboRij()],
+    },
+  });
+  const antwoord = await behandelMelding(melding(BETALING), op.deps);
+  // 500: Mollie biedt de melding opnieuw aan. De wissel zelf is al
+  // geboekt en verwerk_wissel_betaling() doet de tweede keer niets meer.
+  gelijk(antwoord.status, 500);
+  gelijk(
+    op.dbAanroepen.filter(
+      (a) => a.soort === "bijwerken" && a.velden?.mollie_bedrag_cent !== undefined,
+    ).length,
+    0,
+    "een storing bij de PATCH mag mollie_bedrag_cent niet raken",
+  );
+});
+
+// ── 9g. Geen incassogegevens: melden, niet crashen ───────────
+
+Deno.test("een geslaagde wissel zonder abonnementsnummer geeft een LET OP-regel, geen crash", async () => {
+  const op = wisselOpstelling({
+    rijen: {
+      abonnement_wissels: [openClaim()],
+      abonnementen: [aboRij({ mollie_subscription_id: null })],
+    },
+  });
+  const antwoord = await behandelMelding(melding(BETALING), op.deps);
+  gelijk(antwoord.status, 200);
+  gelijk(op.mollieAanroepen.filter((a) => a.methode === "PATCH").length, 0);
+  const regel = op.logboek.find((r) => r.bericht.startsWith("LET OP"));
+  gelijk(regel?.velden, {
+    betaling: BETALING,
+    club_id: CLUB_CLAIM,
+    incasso: "onbekend",
+  });
+});
+
+Deno.test("een geslaagde wissel zonder klantnummer geeft een LET OP-regel, geen crash", async () => {
+  const op = wisselOpstelling({
+    mollieAntwoorden: {
+      ["GET /v2/payments/" + BETALING]: { body: wisselBetaling({ customerId: null }) },
+      ["PATCH " + PATCH_PAD]: { body: { id: "sub_8JfGzs6v3K" } },
+    },
+    rijen: {
+      abonnement_wissels: [openClaim()],
+      abonnementen: [aboRij()],
+    },
+  });
+  const antwoord = await behandelMelding(melding(BETALING), op.deps);
+  gelijk(antwoord.status, 200);
+  gelijk(op.mollieAanroepen.filter((a) => a.methode === "PATCH").length, 0);
+  const regel = op.logboek.find((r) => r.bericht.startsWith("LET OP"));
+  gelijk(regel?.velden?.incasso, "bekend");
+  gelijk(
+    op.dbAanroepen.filter((a) => a.soort === "bijwerken").length,
+    0,
+  );
+});
+
+// ── 9h. Een onvolledige claim ────────────────────────────────
+
+Deno.test("een claim zonder pakket, termijn of club: 200 'wissel onvolledig', niets verwerkt", async () => {
+  const gevallen: { naam: string; claim: Record<string, unknown>; betaling?: Record<string, unknown> }[] = [
+    { naam: "geen naar_pakket", claim: openClaim({ naar_pakket: null }) },
+    { naam: "onbekende termijn", claim: openClaim({ termijn: "kwartaal" }) },
+    // abonnement_wissels.termijn is vrije tekst (server/20, DEEL 2):
+    // bij een vereniging met onbeperkte toegang staat er 'onbekend'.
+    // Daar valt niets over te verrekenen, en dat hoort hier te stoppen.
+    { naam: "termijn 'onbekend'", claim: openClaim({ termijn: "onbekend" }) },
+    {
+      naam: "geen club, ook niet in de metadata",
+      claim: openClaim({ club_id: null }),
+      betaling: wisselBetaling({
+        metadata: { pakket: "coach", termijn: "maand", soort: "wissel" },
+      }),
+    },
+  ];
+  for (const geval of gevallen) {
+    const op = wisselOpstelling({
+      betaling: geval.betaling,
+      rijen: {
+        abonnement_wissels: [geval.claim],
+        abonnementen: [aboRij()],
+      },
+    });
+    const antwoord = await behandelMelding(melding(BETALING), op.deps);
+    gelijk(antwoord.status, 200, geval.naam);
+    gelijk(await antwoord.text(), "wissel onvolledig", geval.naam);
+    // Geen enkele aanroep die toch zou vastlopen — ook niet de gewone.
+    gelijk(op.dbAanroepen.filter((a) => a.soort === "rpc").length, 0, geval.naam);
+    gelijk(op.mollieAanroepen.filter((a) => a.methode === "PATCH").length, 0, geval.naam);
+    const regel = op.logboek.find((r) => r.bericht.includes("onvolledige claim"));
+    gelijk(regel !== undefined, true, geval.naam);
+  }
+});
+
+// ── 9i. Een mislukte wisselbetaling geeft de claim vrij ──────
+
+Deno.test("failed/canceled/expired MET wisselmetadata zet de claim op 'mislukt'", async () => {
+  for (const status of ["failed", "canceled", "expired"]) {
+    const op = wisselOpstelling({
+      mollieAntwoorden: {
+        ["GET /v2/payments/" + BETALING]: { body: wisselBetaling({ status }) },
+      },
+      rijen: { abonnement_wissels: [openClaim()] },
+    });
+    const antwoord = await behandelMelding(melding(BETALING), op.deps);
+    gelijk(antwoord.status, 200, "bij status " + status);
+
+    const zet = op.dbAanroepen.find(
+      (a) => a.soort === "bijwerken" && a.tabel === "abonnement_wissels",
+    );
+    gelijk(zet?.vraag, { id: "eq." + WISSEL_ID }, "bij status " + status);
+    gelijk(
+      zet?.velden,
+      { status: "mislukt", afgerond_op: "2026-09-19T12:00:00.000Z" },
+      "bij status " + status,
+    );
+    // De claim vrijgeven is het enige dat hier mag gebeuren: geen
+    // pakket, geen boeking, geen Mollie.
+    gelijk(op.dbAanroepen.filter((a) => a.soort === "rpc").length, 0, "bij status " + status);
+  }
+});
+
+Deno.test("een AL afgeronde claim wordt door een mislukte melding niet nog eens aangeraakt", async () => {
+  // Hier telt "afgerond_op is null" juist wél: een wissel die al
+  // geslaagd is mag niet achteraf op 'mislukt' komen te staan.
+  const op = wisselOpstelling({
+    mollieAntwoorden: {
+      ["GET /v2/payments/" + BETALING]: { body: wisselBetaling({ status: "failed" }) },
+    },
+    rijen: {
+      abonnement_wissels: [openClaim({ afgerond_op: "2026-09-19T11:00:00+00:00" })],
+    },
+  });
+  const antwoord = await behandelMelding(melding(BETALING), op.deps);
+  gelijk(antwoord.status, 200);
+  gelijk(op.dbAanroepen.filter((a) => a.soort === "bijwerken").length, 0);
+});
+
+Deno.test("'open' en 'pending' laten de claim met opzet staan", async () => {
+  for (const status of ["open", "pending", "authorized"]) {
+    const op = wisselOpstelling({
+      mollieAntwoorden: {
+        ["GET /v2/payments/" + BETALING]: { body: wisselBetaling({ status }) },
+      },
+      rijen: { abonnement_wissels: [openClaim()] },
+    });
+    const antwoord = await behandelMelding(melding(BETALING), op.deps);
+    gelijk(antwoord.status, 200, "bij status " + status);
+    // Onderweg is geen mislukking. Zou de claim hier vrijkomen, dan kon
+    // dezelfde club een tweede wissel starten terwijl de eerste nog
+    // loopt.
+    gelijk(op.dbAanroepen.length, 0, "bij status " + status);
+  }
+});
+
+// ── 9j. De strengere garantie voor het gewone geval ──────────
+
+Deno.test("zonder wisselmetadata raakt een mislukte melding de database niet", async () => {
+  // Dit adres staat open voor de hele wereld. Zonder deze voorfilter
+  // kan iedereen met onzinmeldingen databasewerk uitlokken. De metadata
+  // is hier géén bewijs — ze bepaalt alleen of het de moeite waard is
+  // om het te vrágen.
+  for (const status of ["failed", "canceled", "expired"]) {
+    for (
+      const meta of [
+        null,
+        { club_id: CLUB, pakket: "coach", termijn: "maand" },
+        { soort: "gewoon" },
+        { soort: "WISSEL" },
+      ]
+    ) {
+      const op = wisselOpstelling({
+        mollieAntwoorden: {
+          ["GET /v2/payments/" + BETALING]: { body: nepBetaling({ status, metadata: meta }) },
+        },
+        rijen: { abonnement_wissels: [openClaim()] },
+      });
+      const antwoord = await behandelMelding(melding(BETALING), op.deps);
+      const waar = status + " met metadata " + JSON.stringify(meta);
+      gelijk(antwoord.status, 200, waar);
+      gelijk(op.dbAanroepen.length, 0, waar);
+    }
+  }
+});
+
+// ── 9k. Het gewone pad: ook het incassobedrag komt erin ──────
+
+Deno.test("na een eerste aankoop komen mollie_subscription_id en mollie_bedrag_cent apart binnen", async () => {
+  const op = wisselOpstelling({
+    mollieAntwoorden: {
+      ["GET /v2/payments/" + BETALING]: { body: nepBetaling() },
+      "POST /v2/customers/cst_kEn1PlbGa/subscriptions": { body: { id: "sub_8JfGzs6v3K" } },
+    },
+    rijen: {
+      abonnement_wissels: [],
+      abonnementen: [{ club_id: CLUB, mollie_subscription_id: null }],
+    },
+  });
+  await behandelMelding(melding(BETALING), op.deps);
+
+  const bijwerken = op.dbAanroepen.filter(
+    (a) => a.soort === "bijwerken" && a.tabel === "abonnementen",
+  );
+  gelijk(bijwerken.length, 2, "twee losse stappen, geen samengevoegde aanroep");
+  // De eerste blijft exact zoals de bestaande test hem kent: het
+  // bestaan van de incasso is een ander feit dan het bedrag ervan, en
+  // een mislukking van het tweede mag het eerste niet meenemen.
+  gelijk(bijwerken[0]?.velden, { mollie_subscription_id: "sub_8JfGzs6v3K" });
+  gelijk(bijwerken[1]?.velden, { mollie_bedrag_cent: 699 });
+  // Zonder deze tweede regel meldt public.wissel_controle() straks elke
+  // gewone klant als "bedrag onbekend".
+  const maak = op.tijdlijn.indexOf("mollie POST");
+  const schrijf = op.tijdlijn.indexOf("db bijwerken abonnementen mollie_bedrag_cent");
+  gelijk(maak >= 0 && maak < schrijf, true, "eerst bij Mollie, dan pas in de database");
+});
