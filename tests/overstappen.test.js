@@ -143,7 +143,11 @@ eval(knip("wisUpgradeBriefje"));
 eval(knip("_overstapToken"));
 eval(knip("_overstapFoutTekst"));
 eval(knip("_overstapVraag"));
+eval(knip("_metAanmelding"));
 eval(knip("startOverstap"));
+eval(knip("_wisselVraag"));
+eval(knip("vraagWissel"));
+eval(knip("centenAlsEuro"));
 
 /* ── minimale testhulp ─────────────────────────────────────── */
 let goed = 0, fout = 0;
@@ -313,6 +317,66 @@ leeg();
 zetUpgradeBriefje({ pakket: "coach", termijn: "maand", vanaf: "free", op: Date.now() });
 wisUpgradeBriefje();
 ok("en opruimen ruimt echt op", upgradeBriefje(), null);
+
+/* ══ 5. wisselen tussen twee betaalde pakketten ══
+   Een club die al betaalt hoort NOOIT bij betaling-starten uit te
+   komen: dat telt een hele periode op bij de einddatum (de fout van
+   19 september 2026). En ook hier gaat er geen bedrag de deur uit —
+   en geen termijn: die ligt vast in het lopende abonnement. */
+groep("wisselen: het verzoek aan abonnement-wisselen");
+leeg();
+antwoorden = [{ status: 200, lichaam: JSON.stringify({ mag: true, soort: "upgrade", bedrag_cent: 2345, termijn: "maand" }) }];
+r = await vraagWissel("club", true);
+ok("naar abonnement-wisselen, niet naar betaling-starten",
+   verzoeken[0].url, "https://server.test/functions/v1/abonnement-wisselen");
+ok("als POST", verzoeken[0].opties.method, "POST");
+ok("rekenen: precies club_id, naar_pakket en alleen_berekenen — geen bedrag, geen termijn",
+   Object.keys(lichaamVan(0)).sort(), ["alleen_berekenen", "club_id", "naar_pakket"]);
+ok("alleen_berekenen staat echt aan", lichaamVan(0).alleen_berekenen, true);
+ok("het antwoord van de server komt ongewijzigd terug", r.gegevens.bedrag_cent, 2345);
+ok("als geslaagd", r.ok, true);
+
+leeg();
+antwoorden = [{ status: 200, lichaam: JSON.stringify({ status: "in_behandeling", bedrag_cent: 2345 }) }];
+r = await vraagWissel("club", false);
+ok("echt wisselen: alleen_berekenen gaat dan níet mee",
+   Object.keys(lichaamVan(0)).sort(), ["club_id", "naar_pakket"]);
+console.log("   stond hij er wél (ook als false), dan is het verschil tussen");
+console.log("   rekenen en betalen één verkeerd vinkje in de body");
+ok("en het token van deze gebruiker gaat mee",
+   verzoeken[0].opties.headers["Authorization"], "Bearer TOKEN-1");
+
+groep("wisselen: fouten en het token");
+leeg();
+antwoorden = [{ status: 409, lichaam: JSON.stringify({ fout: "Er loopt al een wijziging voor deze vereniging. Wacht tot die klaar is." }) }];
+r = await vraagWissel("club", false);
+ok("de eigen tekst van de server komt over, niet 'fout 409'",
+   r.tekst, "Er loopt al een wijziging voor deze vereniging. Wacht tot die klaar is.");
+ok("als mislukt", r.ok, false);
+
+leeg();
+antwoorden = [{ status: 401, lichaam: "" },
+              { status: 200, lichaam: JSON.stringify({ status: "gewijzigd" }) }];
+r = await vraagWissel("coach", false);
+ok("401 → verversen en precies één nieuwe poging", verzoeken.length, 2);
+ok("met het nieuwe token",
+   verzoeken[1].opties.headers["Authorization"], "Bearer TOKEN-NIEUW");
+ok("en die slaagt", r.ok, true);
+
+leeg();
+antwoorden = [{ status: 200, lichaam: "geen json" }];
+r = await vraagWissel("club", true);
+ok("een 200 met onleesbare inhoud telt als mislukt", r.ok, false);
+
+leeg();
+aangemeld = false;
+r = await vraagWissel("club", true);
+ok("niet ingelogd: er gaat niets de deur uit", verzoeken.length, 0);
+
+groep("bedragen tonen");
+ok("4950 cent", centenAlsEuro(4950), "\u20ac\u00a049,50");
+ok("250 cent", centenAlsEuro(250), "\u20ac\u00a02,50");
+ok("niets", centenAlsEuro(null), "\u20ac\u00a00,00");
 
 /* ── uitslag ─────────────────────────────────────────────── */
 console.log(`\n${goed} geslaagd, ${fout} gefaald`);

@@ -506,19 +506,22 @@ function _overstapVraag(token, clubId, pakket, termijn) {
     });
   });
 }
-/**
- * Een betaling starten. Geeft {ok:true, kassa} of {ok:false, tekst}.
- * Werpt niets op: wie langs de lijn staat met halve dekking hoort een
- * melding te krijgen, geen stilstaande knop.
- */
-function startOverstap(pakket, termijn) {
+/* Alles wat vóór en rond een verzoek aan een betaal-edge-function
+   hoort: is er een server, een aanmelding, een club, een geldig token —
+   en bij een 401 precies één nieuwe poging. Staat hier één keer voor
+   zowel startOverstap() als vraagWissel(): het verversen van een token
+   is precies het soort stukje dat, twee keer uitgeschreven, na een
+   halfjaar op twee manieren werkt.
+
+   vraag(token, clubId) geeft een belofte op iets met een .status. */
+function _metAanmelding(vraag) {
   if (!serverAan())  return Promise.resolve({ok:false, tekst:"Er is nog geen server ingesteld."});
   if (!ingelogd())   return Promise.resolve({ok:false, tekst:"Log eerst in; een abonnement hoort bij een account."});
   var clubId = clubIdNu();
   if (!clubId)       return Promise.resolve({ok:false, tekst:"Je hoort nog niet bij een vereniging."});
   return _overstapToken().then(function (token) {
     if (!token) return {ok:false, tekst:"Je aanmelding is verlopen. Log opnieuw in."};
-    return _overstapVraag(token, clubId, pakket, termijn).then(function (r) {
+    return vraag(token, clubId).then(function (r) {
       if (r.status !== 401) return r;
       /* Eén keer opnieuw na verversen, net als serverVraag(). Eén keer
          en niet eindeloos: anders blijft een app met een ongeldig token
@@ -526,13 +529,74 @@ function startOverstap(pakket, termijn) {
       return verversAanmelding().then(function (v) {
         var n = sessieNu();
         if (!v.ok || !n) return {ok:false, tekst:"Je aanmelding is verlopen. Log opnieuw in."};
-        return _overstapVraag(n.token, clubId, pakket, termijn);
+        return vraag(n.token, clubId);
       });
     });
   }).catch(function (e) {
     return {ok:false, tekst:"De server was niet te bereiken (" +
       ((e && (e.message || e.name)) || "onbekend") + "). Controleer je internetverbinding."};
   });
+}
+/**
+ * Een betaling starten. Geeft {ok:true, kassa} of {ok:false, tekst}.
+ * Werpt niets op: wie langs de lijn staat met halve dekking hoort een
+ * melding te krijgen, geen stilstaande knop.
+ */
+function startOverstap(pakket, termijn) {
+  return _metAanmelding(function (token, clubId) {
+    return _overstapVraag(token, clubId, pakket, termijn);
+  });
+}
+
+/* ── Wisselen tussen twee betaalde pakketten ─────────────────
+   Een club die al Coach of Club heeft, koopt geen nieuw abonnement
+   maar wisselt. Dat gaat naar een andere edge function
+   (abonnement-wisselen) en niet naar betaling-starten: een gewone
+   betaling telt een hele periode op bij de einddatum, en twee keer
+   klikken gaf zo twee maanden (de fout van 19 september 2026, zie
+   server/20-abonnement-wisselen.sql).
+
+   Ook hier gaat er geen bedrag de deur uit, en ook geen termijn: de
+   termijn ligt vast in het lopende abonnement, en wat het verschil
+   kost rekent de server uit. Met alleenBerekenen vraagt het scherm
+   alleen het bedrag op, zodat dat er staat vóórdat iemand tikt; er
+   wordt dan niets vastgelegd en niets bij Mollie aangevraagd. */
+function _wisselVraag(token, clubId, naar, alleenBerekenen) {
+  var lichaam = {club_id: clubId, naar_pakket: naar};
+  if (alleenBerekenen) lichaam.alleen_berekenen = true;
+  return fetch(serverAdres("/functions/v1/abonnement-wisselen"), {
+    method: "POST",
+    headers: serverKoppen(token),
+    body: JSON.stringify(lichaam)
+  }).then(function (antwoord) {
+    return antwoord.text().then(function (tekst) {
+      var gegevens = null;
+      if (tekst) { try { gegevens = JSON.parse(tekst); } catch(e) { gegevens = tekst; } }
+      if (antwoord.ok && gegevens && typeof gegevens === "object") {
+        return {ok:true, status: antwoord.status, gegevens: gegevens};
+      }
+      return {ok:false, status: antwoord.status,
+              tekst: antwoord.ok ? "De server gaf een onleesbaar antwoord."
+                                 : _overstapFoutTekst(antwoord.status, gegevens)};
+    });
+  });
+}
+/**
+ * Wisselen naar een ander betaald pakket, of alleen uitrekenen wat dat
+ * kost. Geeft {ok:true, gegevens} of {ok:false, tekst}; werpt niets op.
+ */
+function vraagWissel(naar, alleenBerekenen) {
+  return _metAanmelding(function (token, clubId) {
+    return _wisselVraag(token, clubId, naar, !!alleenBerekenen);
+  });
+}
+/* 4950 → "€ 49,50". Alleen om te tónen: het bedrag zelf komt van de
+   server en gaat nergens meer heen. */
+function centenAlsEuro(c) {
+  var n = Number(c) || 0;
+  /* Een harde spatie: anders staat het euroteken aan het eind van
+     de ene regel en het bedrag aan het begin van de volgende. */
+  return "€ " + (n / 100).toFixed(2).replace(".", ",");
 }
 
 /* ── Terug van de kassa ──────────────────────────────────────
@@ -676,6 +740,54 @@ const TERMIJNEN = [
   {id:"maand", label:"Per maand"},
   {id:"jaar",  label:"Per jaar"}
 ];
+/* De uitleg op een kaart waar je naartoe kunt wisselen. Apart gezet
+   omdat het zes toestanden zijn (rekenen, fout, onderweg, nee, omlaag,
+   omhoog) en die door elkaar in de kaart zelf onleesbaar worden. */
+function WisselUitleg({ offerte, pakket, huidig, prijs }) {
+  var stijl = {fontSize:11.5,color:"var(--grijs-donker)",fontWeight:400,margin:0,lineHeight:1.6};
+  if (!offerte) return <p style={stijl}>Even uitrekenen wat dit kost…</p>;
+  if (offerte.fout) return <p style={stijl}>{offerte.fout}</p>;
+  if (offerte.onderweg) {
+    return (
+      <p style={stijl}>
+        De betaling van {centenAlsEuro(offerte.bedrag_cent)} is aangevraagd.
+        Zodra die binnen is, heb je {pakket.naam}. Via een automatische
+        incasso kan dat een paar werkdagen duren.
+      </p>
+    );
+  }
+  if (!offerte.mag) return <p style={stijl}>{offerte.reden}</p>;
+  var per = offerte.termijn === "jaar" ? "jaar" : "maand";
+  var straks = (prijs && prijs[per]) ? " Daarna betaal je " + prijs[per].replace(" ", " ") + " per " + per + "." : "";
+  var tot = offerte.geldig_tot ? " tot " + datumLang(offerte.geldig_tot) : "";
+  if (offerte.soort === "downgrade") {
+    return (
+      <p style={stijl}>
+        Gaat meteen in en kost niets. Wat alleen bij {huidig.naam} hoort,
+        staat dan meteen uit. Je einddatum blijft hetzelfde.{straks}
+      </p>
+    );
+  }
+  if (offerte.soort === "upgrade_gratis") {
+    return (
+      <p style={stijl}>
+        Gaat meteen in. Het verschil voor de {offerte.resterende_dagen} dagen{tot} is
+        zo klein dat je het niet hoeft bij te betalen.{straks}
+      </p>
+    );
+  }
+  if (offerte.soort === "upgrade") {
+    return (
+      <p style={stijl}>
+        Je betaalt eenmalig {centenAlsEuro(offerte.bedrag_cent)}: het verschil
+        voor de {offerte.resterende_dagen} dagen{tot}. Dat gaat via je
+        automatische incasso, je hoeft niets in te vullen. Zodra het binnen
+        is heb je {pakket.naam}; dat kan een paar werkdagen duren.{straks}
+      </p>
+    );
+  }
+  return null;
+}
 function PakkettenSheet({ onSluiten, nadruk }) {
   const nu = pakketNu();
   /* De termijn per kaart en niet één voor het hele scherm. Iemand die
@@ -711,6 +823,66 @@ function PakkettenSheet({ onSluiten, nadruk }) {
     });
   }
 
+  /* Betaalt de club al, dan is de andere betaalde kaart geen aankoop
+     maar een wissel — en wat die kost hangt af van hoeveel dagen er nog
+     over zijn. Dat vragen we bij het openen meteen op, zodat het bedrag
+     op de kaart staat vóórdat iemand tikt: wie op een knop met geld
+     erachter drukt, hoort al te weten hoeveel. Eén keer bij openen en
+     niet bij elke render; het antwoord verandert niet terwijl je kijkt. */
+  const betaaldNu = nu.id !== "free";
+  const [offertes, setOffertes] = useState({});
+  useEffect(function () {
+    if (!betaaldNu) return;
+    var weg = false;
+    PAKKETTEN.forEach(function (p) {
+      if (p.id === nu.id || p.id === "free") return;
+      vraagWissel(p.id, true).then(function (r) {
+        if (weg) return;
+        setOffertes(function (v) {
+          var n = Object.assign({}, v);
+          n[p.id] = r.ok ? r.gegevens : {fout: r.tekst};
+          return n;
+        });
+      });
+    });
+    return function () { weg = true; };
+  }, []);
+
+  function wissel(p) {
+    if (bezig) return;
+    setBezig(p.id);
+    vraagWissel(p.id, false).then(function (r) {
+      if (!r || !r.ok) {
+        setBezig(null);
+        meldFout((r && r.tekst) || "Wisselen lukte nu niet.");
+        return;
+      }
+      /* Een betaalde upgrade is nooit meteen klaar: het pakket gaat pas
+         over als Mollie meldt dat het geld er is, en bij een incasso
+         kan dat dagen duren. Dus geen "gelukt", maar een eerlijke regel
+         op de kaart die blijft staan. */
+      if (r.gegevens.status === "in_behandeling") {
+        setBezig(null);
+        setOffertes(function (v) {
+          var n = Object.assign({}, v);
+          n[p.id] = {onderweg: true, bedrag_cent: r.gegevens.bedrag_cent};
+          return n;
+        });
+        meldGoed("Betaling aangevraagd. Zodra die binnen is, heb je " + p.naam + ".");
+        return;
+      }
+      /* Gratis wissel: die staat al op de server. Eerst het pakket
+         ophalen en pas dán "je hebt nu" zeggen — anders klopt de
+         melding niet met wat het menu een tel later nog toont. */
+      var clubId = clubIdNu();
+      (clubId ? syncPakket(clubId) : Promise.resolve()).then(function () {
+        setBezig(null);
+        meldGoed("Je hebt nu " + p.naam + ".");
+        onSluiten();
+      });
+    });
+  }
+
   return (
     <div className="formatie-overlay" onClick={function(e){ if(e.target===e.currentTarget) onSluiten(); }}>
       <div className="formatie-sheet" onClick={function(e){e.stopPropagation();}}>
@@ -733,9 +905,14 @@ function PakkettenSheet({ onSluiten, nadruk }) {
                dan zet je met één tik je trainingen en statistieken uit
                zonder dat er ook maar iets over stoppen op je scherm
                heeft gestaan. */
-            const betaaldNu = nu.id !== "free";
             const kanKiezen = !dit && !(betaaldNu && p.id === "free");
-            const jaar = kanKiezen && !!prijs.jaar && termijnVan(p.id) === "jaar";
+            /* Bij een wissel kies je geen termijn: die ligt vast in het
+               lopende abonnement. Dan toont de kaart de prijs in díe
+               termijn, zodra de server hem heeft genoemd. */
+            const offerte = betaaldNu && kanKiezen ? offertes[p.id] : null;
+            const jaar = kanKiezen && !!prijs.jaar &&
+              (betaaldNu ? !!offerte && offerte.termijn === "jaar"
+                         : termijnVan(p.id) === "jaar");
             return (
               <div key={p.id} className={"pakket-kaart"+(dit?" nu":"")+(p.id===nadruk?" nadruk":"")}>
                 {dit && <span className="pakket-vlag">Jouw pakket</span>}
@@ -765,7 +942,7 @@ function PakkettenSheet({ onSluiten, nadruk }) {
                     wie al naar het jaarbedrag kijkt hééft die korting, en
                     hem er dan nog bij zetten leest als een aanbieding die
                     je misloopt terwijl je hem hebt. */}
-                {kanKiezen && prijs.jaar && (
+                {kanKiezen && !betaaldNu && prijs.jaar && (
                   <div className="thema-rij" role="group"
                     aria-label={"Betaaltermijn voor " + p.naam}>
                     {TERMIJNEN.map(function (tm) {
@@ -786,7 +963,7 @@ function PakkettenSheet({ onSluiten, nadruk }) {
                       <span className="pakket-prijs-bedrag">{jaar ? prijs.jaar : prijs.maand}</span>
                       {prijs.jaar && <span className="pakket-prijs-per">{jaar ? "per jaar" : "per maand"}</span>}
                     </div>
-                    {prijs.jaar && (
+                    {prijs.jaar && !(betaaldNu && kanKiezen) && (
                       <div className="pakket-prijs-jaar">
                         {jaar ? ("of " + prijs.maand + " per maand")
                               : ("of " + prijs.jaar + " per jaar \u2014 twee maanden korting")}
@@ -809,22 +986,32 @@ function PakkettenSheet({ onSluiten, nadruk }) {
                     );
                   })}
                 </ul>
-                {/* Noodrem, 19 september 2026: wisselen tussen twee betaalde
-                    pakketten (Coach <-> Club) is met opzet uitgezet. Evan
-                    ontdekte tijdens zijn eigen testbetalingen dat elke klik
-                    hier een gloednieuwe periode start bovenop de bestaande
-                    — geen wissel, een stapeling. De server weigert dit nu
-                    ook (zie server/18-betalingen.sql en betaling-starten,
-                    ── 2b), maar de knop hoort hier niet eens aan te bieden
-                    wat hij niet correct kan. Terug aanzetten zodra
-                    abonnement-wisselen bestaat (Veerles ontwerp, 19
-                    september 2026) — dan ook deze tekst weer vervangen door
-                    een echte prijsopgave. */}
-                {kanKiezen && betaaldNu && (
-                  <p style={{fontSize:11.5,color:"var(--grijs-donker)",fontWeight:400,margin:0,lineHeight:1.6}}>
-                    Wijzigen tussen Coach en Club kan op dit moment nog niet
-                    via de app. Neem contact op als je wilt wisselen.
-                  </p>
+                {/* Wisselen tussen Coach en Club. Tot 29 september 2026
+                    stond hier een noodrem ("kan nog niet via de app"),
+                    omdat de knop een gewone nieuwe betaling startte en die
+                    een hele periode bovenop de lopende zette. Nu gaat het
+                    via abonnement-wisselen, dat niets aan de einddatum
+                    verandert.
+
+                    Elke zin hieronder zegt wat de server echt doet (zie
+                    abonnement-wisselen/index.ts): omlaag gaat meteen en
+                    is gratis, omhoog kost het verschil over de dagen die
+                    nog over zijn. Waar de server "nee" zegt, staat zijn
+                    eigen reden er letterlijk — die is voor mensen
+                    geschreven en zegt wat er te doen valt. */}
+                {offerte !== null && (
+                  <WisselUitleg offerte={offerte} pakket={p} huidig={nu} prijs={prijs}/>
+                )}
+                {offerte && offerte.mag && !offerte.onderweg && offerte.soort !== "niets" && (
+                  <button className="knop lijn klein" disabled={!!bezig}
+                    style={{width:"100%",justifyContent:"center"}}
+                    onClick={function(){ wissel(p); }}>
+                    {bezig === p.id
+                      ? <React.Fragment><i className="fa-solid fa-circle-notch fa-spin"/> Bezig…</React.Fragment>
+                      : offerte.soort === "upgrade"
+                        ? "Overstappen voor " + centenAlsEuro(offerte.bedrag_cent)
+                        : "Overstappen naar " + p.naam}
+                  </button>
                 )}
                 {kanKiezen && !betaaldNu && (
                   <button className="knop lijn klein" disabled={!!bezig}
