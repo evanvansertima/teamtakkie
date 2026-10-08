@@ -975,15 +975,43 @@ function zetAbonnementTot(d) {
   try { if (d) localStorage.setItem(ABO_TOT_KEY, String(d)); else localStorage.removeItem(ABO_TOT_KEY); } catch(e) {}
 }
 
+/* Wanneer er is opgezegd, zoals de server het laatst zei — of null.
+   Net als de einddatum alleen om te tónen; zelfde reden voor een eigen
+   sleutel. Of opzeggen mag, en wat het pakket daarna is, bepaalt de
+   server (abonnement-opzeggen, 21-opzeggen.sql). */
+const ABO_OPGEZEGD_KEY = "tt_abo_opgezegd_v1";
+/** @returns {string|null} */
+function abonnementOpgezegd() {
+  try { return localStorage.getItem(ABO_OPGEZEGD_KEY) || null; } catch(e) { return null; }
+}
+/** @param {string|null} [t] @returns {void} */
+function zetAbonnementOpgezegd(t) {
+  try { if (t) localStorage.setItem(ABO_OPGEZEGD_KEY, String(t)); else localStorage.removeItem(ABO_OPGEZEGD_KEY); } catch(e) {}
+}
+/* Vandaag als "jjjj-mm-dd" in de tijd van dit apparaat. Niet
+   toISOString(): dat is UTC, en dan is het hier om half één 's nachts
+   nog gisteren. */
+function _vandaagLokaal() {
+  var d = new Date();
+  return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+}
+
 /* Het pakket komt van de server en nergens anders vandaan. In de
    browser is elk slot te openen; in de database niet. */
 /** @param {string} clubId @returns {Promise<ServerUitkomst>} */
 function syncPakket(clubId) {
-  return serverVraag("/rest/v1/abonnementen?select=pakket,geldig_tot&club_id=eq." + clubId)
+  return serverVraag("/rest/v1/abonnementen?select=pakket,geldig_tot,opgezegd_op&club_id=eq." + clubId)
     .then(function (r) {
       if (!r.ok) return r;
       var rij = Array.isArray(r.gegevens) ? r.gegevens[0] : null;
-      if (rij && rij.pakket) zetPakket(rij.pakket);
+      /* Opgezegd en de einddatum voorbij: dan is het Free, ook al staat
+         er in de kolom nog "coach". Dat is dezelfde regel als
+         pakket_van_club() op de server (21-opzeggen.sql) — die beslist
+         wat er mag; dit zorgt alleen dat het scherm niet iets anders
+         zegt dan de server doet. */
+      var voorbij = rij && rij.opgezegd_op && rij.geldig_tot && rij.geldig_tot < _vandaagLokaal();
+      if (rij && rij.pakket) zetPakket(voorbij ? "free" : rij.pakket);
+      zetAbonnementOpgezegd(rij && !voorbij ? rij.opgezegd_op : null);
       /* Ook als er géén rij is, of een rij zonder einddatum: dan hoort
          de datum van gisteren weg. Een "loopt tot" laten staan bij een
          abonnement dat er niet meer is, is een belofte doen namens een

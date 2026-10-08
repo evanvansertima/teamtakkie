@@ -44,3 +44,10 @@ verify_jwt = true
 #  bovenaan supabase/functions/betaling-melding/index.ts.
 [functions.betaling-melding]
 verify_jwt = false
+
+# ── abonnement-opzeggen ──────────────────────────────────────
+#  verify_jwt blijft AAN, net als bij abonnement-wisselen. De functie
+#  vraagt met het token van de gebruiker "ben jij de eigenaar van deze
+#  club?"; zonder token kan iedereen die een club_id kent het proberen.
+[functions.abonnement-opzeggen]
+verify_jwt = true

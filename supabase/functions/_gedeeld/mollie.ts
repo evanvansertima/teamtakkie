@@ -229,6 +229,10 @@ export interface WisselFeiten {
   resterendeDagen: number | null; // daarvan nog over
   mollieSubscriptionId: string | null; // de doorlopende incasso
   wisselOnderweg: boolean;
+  /* Heeft de vereniging opgezegd? Optioneel, zodat bestaande aanroepers
+     (en de tests van vóór 21-opzeggen.sql) gewoon blijven werken:
+     ontbreekt het, dan is er niet opgezegd. */
+  opgezegd?: boolean;
 }
 
 export interface WisselOordeel {
@@ -265,6 +269,20 @@ export function beoordeelWissel(
   //  vooral geen foutmelding te geven: het pakket staat immers al
   //  zoals gevraagd.
   if (naarPakket === feiten.pakket) return niets;
+
+  // ── Opgezegd: geen wissel ─────────────────────────────────
+  //  Er is geen incasso meer om bij te werken, en een omlaag-wissel
+  //  zonder incasso zou alleen een "LET OP" in het logboek opleveren.
+  //  Wie toch wil wisselen, trekt eerst de opzegging in — dan is er
+  //  weer een incasso en klopt alles wat hieronder staat weer.
+  if (feiten.opgezegd) {
+    return {
+      mag: false,
+      soort: "niets",
+      bedragCent: 0,
+      reden: "Je hebt opgezegd. Trek de opzegging eerst in als je van pakket wilt wisselen.",
+    };
+  }
 
   if (feiten.wisselOnderweg) {
     return {
@@ -368,6 +386,61 @@ export function beoordeelWissel(
   return { mag: true, soort: "upgrade", bedragCent: bedrag, reden: "" };
 }
 
+// ── Opzeggen en intrekken ────────────────────────────────────
+//  Net als beoordeelWissel(): puur, zonder database en zonder Mollie,
+//  zodat elk randgeval apart te toetsen is (opzeggen.test.ts). De edge
+//  function abonnement-opzeggen doet alleen wat dit oordeel zegt.
+
+export interface OpzegOordeel {
+  mag: boolean;
+  /* "niets": het staat al zoals gevraagd (een dubbelklik). */
+  soort: "niets" | "opzeggen" | "intrekken";
+  reden: string;
+}
+
+/* vandaag: "JJJJ-MM-DD" in Nederlandse tijd. Wordt meegegeven en niet
+   hier opgehaald, zodat de tests een vaste dag kunnen kiezen. */
+export function beoordeelOpzegging(
+  feiten: WisselFeiten,
+  actie: string,
+  vandaag: string,
+): OpzegOordeel {
+  const nee = (reden: string): OpzegOordeel => ({ mag: false, soort: "niets", reden });
+
+  if (actie !== "opzeggen" && actie !== "intrekken") return nee("Onbekende actie.");
+
+  if (actie === "opzeggen") {
+    if (feiten.opgezegd) return { mag: true, soort: "niets", reden: "" };
+    if (PAKKET_RANG[feiten.pakket] === undefined) {
+      return nee("Je hebt geen betaald abonnement om op te zeggen.");
+    }
+    if (feiten.geldigTot === null) {
+      // Met de hand gezet, zonder incasso. Daar valt bij Mollie niets
+      // te stoppen; dat regelt Evan zelf.
+      return nee("Deze vereniging heeft toegang zonder einddatum. Neem contact op om te stoppen.");
+    }
+    if (feiten.wisselOnderweg) {
+      // Opzeggen midden in een betaalde upgrade laat een betaling
+      // achter voor een pakket dat daarna meteen weer stopt.
+      return nee("Er loopt nog een overstap van pakket. Wacht tot die klaar is en zeg daarna op.");
+    }
+    return { mag: true, soort: "opzeggen", reden: "" };
+  }
+
+  // ── intrekken ─────────────────────────────────────────────
+  if (!feiten.opgezegd) return { mag: true, soort: "niets", reden: "" };
+  if (feiten.geldigTot === null || feiten.geldigTot < vandaag) {
+    // Na de einddatum is er niets meer om door te laten lopen: dan is
+    // het een nieuwe aankoop, met een eigen betaling.
+    return nee("Je abonnement is al afgelopen. Sluit een nieuw abonnement af via Pakketten.");
+  }
+  if (prijsCent(feiten.pakket, feiten.termijn ?? "") === null ||
+      mollieInterval(feiten.termijn ?? "") === null) {
+    return nee("We weten niet welke incasso we opnieuw moeten starten. Neem contact op.");
+  }
+  return { mag: true, soort: "intrekken", reden: "" };
+}
+
 // ── Wat Mollie terugstuurt ───────────────────────────────────
 //  Alleen de velden die wij gebruiken. Met opzet niet compleet: wat
 //  hier niet staat, lezen we ook niet, en wat we niet lezen kan ook
@@ -412,6 +485,11 @@ export interface MollieClient {
     abonnementId: string,
     gegevens: Record<string, unknown>,
   ): Promise<MollieAbonnement>;
+  /* Een lopende incasso stoppen. Is hij bij Mollie al gestopt of
+     bestaat hij niet meer, dan telt dat als gelukt: het doel ("er
+     wordt niet meer afgeschreven") is dan bereikt, en een tweede
+     poging na een storing mag nooit vastlopen op de eerste. */
+  stopAbonnement(klantId: string, abonnementId: string): Promise<void>;
 }
 
 const MOLLIE_BASIS = "https://api.mollie.com/v2";
@@ -521,6 +599,21 @@ export function maakMollie(sleutel: string, fetchFn: Fetcher = fetch): MollieCli
         throw new MollieFout("onverwacht", "Mollie gaf geen abonnementsnummer terug");
       }
       return abo;
+    },
+
+    async stopAbonnement(klantId, abonnementId) {
+      const pad = `/customers/${klantId}/subscriptions/${abonnementId}`;
+      const { status } = await vraag("DELETE", pad);
+      if (status >= 200 && status < 300) return;
+      if (status === 404) return;
+      // Een al gestopte incasso nog eens stoppen geeft bij Mollie een
+      // weigering, geen "gelukt". Dan vragen we wat de stand is, in
+      // plaats van te raden welke foutcode wat betekent.
+      const huidig = await vraag("GET", pad);
+      if (huidig.status === 404) return;
+      const stand = (huidig.data as { status?: unknown } | null)?.status;
+      if (stand === "canceled" || stand === "completed") return;
+      eisGelukt(status, "/customers/{id}/subscriptions/{id}");
     },
   };
 }

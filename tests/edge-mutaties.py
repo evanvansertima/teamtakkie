@@ -113,6 +113,37 @@ MUTATIES = [
      "functions/_gedeeld/mollie.ts",
      '    throw new MollieFout("geen_sleutel", GEEN_SLEUTEL_TEKST);',
      '    return "";'),
+
+    # ── opzeggen (8 oktober 2026) ─────────────────────────────
+    ("O1  opzeggen schrijft de database vóór Mollie",
+     "functions/abonnement-opzeggen/index.ts",
+     '      if (feiten.mollieSubscriptionId && klantId) {\n        try {',
+     '      await serviceDb.bijwerken("abonnementen", { club_id: "eq." + clubId }, { opgezegd_op: deps.nu().toISOString() });\n      if (feiten.mollieSubscriptionId && klantId) {\n        try {'),
+
+    ("O2  intrekken start de nieuwe incasso vandaag",
+     "functions/abonnement-opzeggen/index.ts",
+     '        startDate: geldigTot,',
+     '        startDate: vandaagInNederland(deps.nu()),'),
+
+    ("O3  een half gelukte intrekking ruimt niet op",
+     "functions/abonnement-opzeggen/index.ts",
+     '        await mollie.stopAbonnement(klantId, nieuwId);',
+     ''),
+
+    ("O4  elke weigering van Mollie telt als gestopt",
+     "functions/_gedeeld/mollie.ts",
+     '      if (stand === "canceled" || stand === "completed") return;',
+     '      return;'),
+
+    ("O5  de einddatum zelf telt niet meer mee bij intrekken",
+     "functions/_gedeeld/mollie.ts",
+     'feiten.geldigTot < vandaag',
+     'feiten.geldigTot <= vandaag'),
+
+    ("O6  een verlenging na opzeggen start tóch een nieuwe incasso",
+     "functions/betaling-melding/index.ts",
+     '    if (klantId && eersteAankoop) {',
+     '    if (klantId) {'),
 ]
 
 

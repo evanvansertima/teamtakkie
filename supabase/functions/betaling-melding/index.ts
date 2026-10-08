@@ -202,6 +202,12 @@ export async function behandelMelding(
     let clubId = typeof meta.club_id === "string" ? meta.club_id : "";
     let pakket = typeof meta.pakket === "string" ? meta.pakket : "";
     let termijn = typeof meta.termijn === "string" ? meta.termijn : "";
+    /* Een eerste aankoop start betaling-starten zelf, en die geeft club,
+       pakket en termijn altijd mee. Een verlenging komt van Mollie's
+       eigen incasso en heeft niets. Dat verschil moet hier vastliggen
+       VÓÓR stap 4b de lege velden aanvult — daarna zien beide er
+       hetzelfde uit. Stap 5 heeft het nodig, zie daar. */
+    const eersteAankoop = clubId !== "" && pakket !== "" && termijn !== "";
 
     // ── 4a. IS DIT EEN WISSEL VAN PAKKET? ────────────────────
     //  DE WISSEL EERST, EN NIET OP DE METADATA. Een wisselbetaling ziet
@@ -430,7 +436,15 @@ export async function behandelMelding(
     //  bescherming tegen twee subscriptions voor dezelfde klant bij
     //  een dubbele webhook — Mollie zou dan elke maand twee keer
     //  incasseren, en dat merk je pas bij de eerste boze club.
-    if (klantId) {
+    //
+    //  EN ALLEEN NA EEN EERSTE AANKOOP, nooit na een verlenging. Na
+    //  opzeggen is het abonnementsnummer met opzet leeg
+    //  (abonnement-opzeggen). Komt daarna nog een incasso binnen die al
+    //  onderweg was — bij SEPA kan dat dagen later — dan zou deze stap
+    //  zonder die voorwaarde een NIEUWE incasso aanmaken, en daarmee de
+    //  opzegging stilletjes ongedaan maken. De club betaalt dan door
+    //  zonder dat ergens nog "opgezegd" staat.
+    if (klantId && eersteAankoop) {
       const abo = await db.selecteer("abonnementen", {
         select: "mollie_subscription_id",
         club_id: "eq." + clubId,
@@ -450,8 +464,12 @@ export async function behandelMelding(
           startDate: startDatumVolgendePeriode(new Date(betaaldOp), termijn),
           description: `TEAMTAKKIE ${pakket} (per ${termijn})`,
         });
+        // In één schrijfactie met het nummer: een nieuwe incasso ÍS het
+        // einde van een eerdere opzegging. Wie na het verlopen opnieuw
+        // een abonnement neemt, hoort niet "opgezegd" te blijven zien.
         await db.bijwerken("abonnementen", { club_id: "eq." + clubId }, {
           mollie_subscription_id: abonnement.id,
+          opgezegd_op: null,
         });
         // En apart: wat Mollie vanaf nu afschrijft. Dat is een ander
         // feit dan "er ís een incasso" — het eerste is het bestaan

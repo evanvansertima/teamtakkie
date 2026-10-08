@@ -3006,7 +3006,7 @@ window.addEventListener("error", function(e){
 });
 </script>
 <script>
-const APP_VERSIE = "7cc794b";
+const APP_VERSIE = "onbekend";
 const TEAMS_KEY = "tt_teams_v1";
 const ACTIEF_KEY = "tt_actief_v1";
 const VOORKEUR_KEY = "tt_voorkeuren_v1";
@@ -5015,11 +5015,32 @@ function zetAbonnementTot(d) {
   } catch (e) {
   }
 }
+const ABO_OPGEZEGD_KEY = "tt_abo_opgezegd_v1";
+function abonnementOpgezegd() {
+  try {
+    return localStorage.getItem(ABO_OPGEZEGD_KEY) || null;
+  } catch (e) {
+    return null;
+  }
+}
+function zetAbonnementOpgezegd(t2) {
+  try {
+    if (t2) localStorage.setItem(ABO_OPGEZEGD_KEY, String(t2));
+    else localStorage.removeItem(ABO_OPGEZEGD_KEY);
+  } catch (e) {
+  }
+}
+function _vandaagLokaal() {
+  var d = /* @__PURE__ */ new Date();
+  return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+}
 function syncPakket(clubId) {
-  return serverVraag("/rest/v1/abonnementen?select=pakket,geldig_tot&club_id=eq." + clubId).then(function(r) {
+  return serverVraag("/rest/v1/abonnementen?select=pakket,geldig_tot,opgezegd_op&club_id=eq." + clubId).then(function(r) {
     if (!r.ok) return r;
     var rij = Array.isArray(r.gegevens) ? r.gegevens[0] : null;
-    if (rij && rij.pakket) zetPakket(rij.pakket);
+    var voorbij = rij && rij.opgezegd_op && rij.geldig_tot && rij.geldig_tot < _vandaagLokaal();
+    if (rij && rij.pakket) zetPakket(voorbij ? "free" : rij.pakket);
+    zetAbonnementOpgezegd(rij && !voorbij ? rij.opgezegd_op : null);
     zetAbonnementTot(rij ? rij.geldig_tot : null);
     return { ok: true };
   });
@@ -8689,10 +8710,8 @@ function startOverstap(pakket, termijn) {
     return _overstapVraag(token, clubId, pakket, termijn);
   });
 }
-function _wisselVraag(token, clubId, naar, alleenBerekenen) {
-  var lichaam = { club_id: clubId, naar_pakket: naar };
-  if (alleenBerekenen) lichaam.alleen_berekenen = true;
-  return fetch(serverAdres("/functions/v1/abonnement-wisselen"), {
+function _edgeVraag(functie, token, lichaam) {
+  return fetch(serverAdres("/functions/v1/" + functie), {
     method: "POST",
     headers: serverKoppen(token),
     body: JSON.stringify(lichaam)
@@ -8717,9 +8736,19 @@ function _wisselVraag(token, clubId, naar, alleenBerekenen) {
     });
   });
 }
+function _wisselVraag(token, clubId, naar, alleenBerekenen) {
+  var lichaam = { club_id: clubId, naar_pakket: naar };
+  if (alleenBerekenen) lichaam.alleen_berekenen = true;
+  return _edgeVraag("abonnement-wisselen", token, lichaam);
+}
 function vraagWissel(naar, alleenBerekenen) {
   return _metAanmelding(function(token, clubId) {
     return _wisselVraag(token, clubId, naar, !!alleenBerekenen);
+  });
+}
+function vraagOpzegging(actie) {
+  return _metAanmelding(function(token, clubId) {
+    return _edgeVraag("abonnement-opzeggen", token, { club_id: clubId, actie });
   });
 }
 function centenAlsEuro(c) {
@@ -9460,12 +9489,50 @@ function InstellingenSheet({ onSluiten, onGewisseld, onTeams }) {
   const [opheffenTekst, setOpheffenTekst] = useState("");
   const [opheffenBezig, setOpheffenBezig] = useState(false);
   const [opzeggenOpen, setOpzeggenOpen] = useState(false);
+  const [intrekkenOpen, setIntrekkenOpen] = useState(false);
+  const [opzegBezig, setOpzegBezig] = useState(false);
+  const [opgezegd, setOpgezegd] = useState(function() {
+    return abonnementOpgezegd();
+  });
   const betaaldPakket = pakketNu().id !== "free";
   const [onderweg] = useState(function() {
     return upgradeBriefje();
   });
   const bestandRef = useRef(null);
   const logoRef = useRef(null);
+  function opzeg() {
+    if (opzegBezig) return;
+    setOpzegBezig(true);
+    vraagOpzegging("opzeggen").then(function(r) {
+      setOpzegBezig(false);
+      setOpzeggenOpen(false);
+      if (!r || !r.ok) {
+        meldFout(r && r.tekst || "Opzeggen lukte nu niet.");
+        return;
+      }
+      var tot = r.gegevens.geldig_tot || abonnementTot();
+      var nu = (/* @__PURE__ */ new Date()).toISOString();
+      zetAbonnementOpgezegd(nu);
+      if (tot) zetAbonnementTot(tot);
+      setOpgezegd(nu);
+      meldGoed("Opgezegd. Je houdt " + pakketNu().naam + (tot ? " tot en met " + formateerDatum(tot) : "") + "." + (r.gegevens.mail ? " Je krijgt een bevestiging per e-mail." : ""));
+    });
+  }
+  function trekIn() {
+    if (opzegBezig) return;
+    setOpzegBezig(true);
+    vraagOpzegging("intrekken").then(function(r) {
+      setOpzegBezig(false);
+      setIntrekkenOpen(false);
+      if (!r || !r.ok) {
+        meldFout(r && r.tekst || "Intrekken lukte nu niet.");
+        return;
+      }
+      zetAbonnementOpgezegd(null);
+      setOpgezegd(null);
+      meldGoed("Je abonnement loopt gewoon door." + (r.gegevens.mail ? " Je krijgt een bevestiging per e-mail." : ""));
+    });
+  }
   function kiesLogo(e) {
     var bestand = e.target.files && e.target.files[0];
     e.target.value = "";
@@ -9594,7 +9661,18 @@ function InstellingenSheet({ onSluiten, onGewisseld, onTeams }) {
     },
     /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-layer-group" }),
     " Bekijk pakketten"
-  ), betaaldPakket && /* @__PURE__ */ React.createElement(
+  ), betaaldPakket && opgezegd && /* @__PURE__ */ React.createElement("div", { className: "melding", style: { margin: "10px 0 0" } }, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-circle-info" }), " ", "Opgezegd. Je houdt ", pakketNu().naam, abonnementTot() ? " tot en met " + formateerDatum(abonnementTot()) : "", "; daarna ga je terug naar Free. Er wordt niets meer afgeschreven."), betaaldPakket && opgezegd && /* @__PURE__ */ React.createElement(
+    "button",
+    {
+      className: "knop lijn",
+      style: { width: "100%", justifyContent: "center", marginTop: 8 },
+      onClick: function() {
+        setIntrekkenOpen(true);
+      }
+    },
+    /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-rotate-left" }),
+    " Opzegging intrekken"
+  ), betaaldPakket && !opgezegd && /* @__PURE__ */ React.createElement(
     "button",
     {
       className: "knop lijn",
@@ -9814,12 +9892,27 @@ function InstellingenSheet({ onSluiten, onGewisseld, onTeams }) {
     if (e.target === e.currentTarget) setBevestigImport(null);
   } }, /* @__PURE__ */ React.createElement("div", { className: "bevestig-kaart" }, /* @__PURE__ */ React.createElement("h3", null, "Back-up terugzetten?"), /* @__PURE__ */ React.createElement("p", null, "Alle huidige spelers, wedstrijden, trainingen en tactieken worden vervangen door de inhoud van het back-upbestand. Dit kan niet ongedaan gemaakt worden."), /* @__PURE__ */ React.createElement("div", { className: "bevestig-knoppen" }, /* @__PURE__ */ React.createElement("button", { className: "knop lijn", onClick: function() {
     setBevestigImport(null);
-  } }, "Annuleren"), /* @__PURE__ */ React.createElement("button", { className: "knop gevaar", onClick: voerImportUit }, "Terugzetten")))), opzeggenOpen && /* @__PURE__ */ React.createElement("div", { className: "bevestig-overlay" }, /* @__PURE__ */ React.createElement("div", { className: "bevestig-kaart" }, /* @__PURE__ */ React.createElement("h3", null, pakketNu().naam, " opzeggen?"), /* @__PURE__ */ React.createElement("p", null, "Je houdt ", pakketNu().naam, " ", abonnementTot() ? "tot " + formateerDatum(abonnementTot()) : "tot het einde van de periode die je al hebt betaald", ". Daarna gaat je vereniging terug naar Free: \xE9\xE9n team en alleen de basis. Je gegevens blijven staan."), /* @__PURE__ */ React.createElement("div", { className: "bevestig-knoppen" }, /* @__PURE__ */ React.createElement("button", { className: "knop lijn", onClick: function() {
-    setOpzeggenOpen(false);
-  } }, "Toch niet"), /* @__PURE__ */ React.createElement("button", { className: "knop gevaar", onClick: function() {
-    setOpzeggenOpen(false);
-    meldGoed("Opzeggen kan zodra dat onderdeel klaar is.");
-  } }, "Opzeggen")))), opheffenOpen && /* @__PURE__ */ React.createElement("div", { className: "bevestig-overlay" }, /* @__PURE__ */ React.createElement("div", { className: "bevestig-kaart" }, /* @__PURE__ */ React.createElement("h3", null, "Vereniging opheffen?"), /* @__PURE__ */ React.createElement("p", null, "Alles van ", i.clubNaam ? "\u201C" + i.clubNaam + "\u201D" : "je vereniging", " gaat definitief weg: de vereniging zelf met naam en logo, alle leden, en alle teams \u2014 ook de teams die al in de prullenbak stonden. Met die teams verdwijnen hun spelers, wedstrijden, trainingen, opstellingen, tactieken, boetes en het sportpark, en ook het abonnement van de vereniging."), /* @__PURE__ */ React.createElement("p", null, "De accounts van de andere leden blijven gewoon bestaan; alleen hun plek in d\xE9ze vereniging niet. Dit kan niet ongedaan worden gemaakt."), /* @__PURE__ */ React.createElement("p", { style: { fontSize: 12.5, fontWeight: 600, margin: "0 0 6px" } }, "Typ ", "\u201C" + opheffenNaam + "\u201D", " over om te bevestigen:"), /* @__PURE__ */ React.createElement(
+  } }, "Annuleren"), /* @__PURE__ */ React.createElement("button", { className: "knop gevaar", onClick: voerImportUit }, "Terugzetten")))), opzeggenOpen && /* @__PURE__ */ React.createElement("div", { className: "bevestig-overlay" }, /* @__PURE__ */ React.createElement("div", { className: "bevestig-kaart" }, /* @__PURE__ */ React.createElement("h3", null, pakketNu().naam, " opzeggen?"), /* @__PURE__ */ React.createElement("p", null, "Je houdt ", pakketNu().naam, " ", abonnementTot() ? "tot en met " + formateerDatum(abonnementTot()) : "tot het einde van de periode die je al hebt betaald", ". Er wordt daarna niets meer afgeschreven, en je krijgt geen geld terug voor de dagen die nog over zijn. Daarna gaat je vereniging terug naar Free: \xE9\xE9n team en alleen de basis. Je gegevens blijven staan."), /* @__PURE__ */ React.createElement("div", { className: "bevestig-knoppen" }, /* @__PURE__ */ React.createElement(
+    "button",
+    {
+      className: "knop lijn",
+      disabled: opzegBezig,
+      onClick: function() {
+        setOpzeggenOpen(false);
+      }
+    },
+    "Toch niet"
+  ), /* @__PURE__ */ React.createElement("button", { className: "knop gevaar", disabled: opzegBezig, onClick: opzeg }, opzegBezig ? /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-circle-notch fa-spin" }), " Bezig\u2026") : "Opzeggen")))), intrekkenOpen && /* @__PURE__ */ React.createElement("div", { className: "bevestig-overlay" }, /* @__PURE__ */ React.createElement("div", { className: "bevestig-kaart" }, /* @__PURE__ */ React.createElement("h3", null, "Opzegging intrekken?"), /* @__PURE__ */ React.createElement("p", null, "Je abonnement op ", pakketNu().naam, " loopt dan gewoon door.", abonnementTot() ? " De volgende afschrijving is op " + formateerDatum(abonnementTot()) + "," : " De volgende afschrijving is aan het einde van de periode die je al hebt betaald,", " ", "via dezelfde machtiging als eerst. Vandaag betaal je niets."), /* @__PURE__ */ React.createElement("div", { className: "bevestig-knoppen" }, /* @__PURE__ */ React.createElement(
+    "button",
+    {
+      className: "knop lijn",
+      disabled: opzegBezig,
+      onClick: function() {
+        setIntrekkenOpen(false);
+      }
+    },
+    "Toch niet"
+  ), /* @__PURE__ */ React.createElement("button", { className: "knop", disabled: opzegBezig, onClick: trekIn }, opzegBezig ? /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-circle-notch fa-spin" }), " Bezig\u2026") : "Intrekken")))), opheffenOpen && /* @__PURE__ */ React.createElement("div", { className: "bevestig-overlay" }, /* @__PURE__ */ React.createElement("div", { className: "bevestig-kaart" }, /* @__PURE__ */ React.createElement("h3", null, "Vereniging opheffen?"), /* @__PURE__ */ React.createElement("p", null, "Alles van ", i.clubNaam ? "\u201C" + i.clubNaam + "\u201D" : "je vereniging", " gaat definitief weg: de vereniging zelf met naam en logo, alle leden, en alle teams \u2014 ook de teams die al in de prullenbak stonden. Met die teams verdwijnen hun spelers, wedstrijden, trainingen, opstellingen, tactieken, boetes en het sportpark, en ook het abonnement van de vereniging."), /* @__PURE__ */ React.createElement("p", null, "De accounts van de andere leden blijven gewoon bestaan; alleen hun plek in d\xE9ze vereniging niet. Dit kan niet ongedaan worden gemaakt."), /* @__PURE__ */ React.createElement("p", { style: { fontSize: 12.5, fontWeight: 600, margin: "0 0 6px" } }, "Typ ", "\u201C" + opheffenNaam + "\u201D", " over om te bevestigen:"), /* @__PURE__ */ React.createElement(
     "input",
     {
       type: "text",

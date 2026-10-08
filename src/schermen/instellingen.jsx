@@ -561,10 +561,13 @@ function startOverstap(pakket, termijn) {
    kost rekent de server uit. Met alleenBerekenen vraagt het scherm
    alleen het bedrag op, zodat dat er staat vóórdat iemand tikt; er
    wordt dan niets vastgelegd en niets bij Mollie aangevraagd. */
-function _wisselVraag(token, clubId, naar, alleenBerekenen) {
-  var lichaam = {club_id: clubId, naar_pakket: naar};
-  if (alleenBerekenen) lichaam.alleen_berekenen = true;
-  return fetch(serverAdres("/functions/v1/abonnement-wisselen"), {
+/* Eén verzoek aan een edge function die een JSON-antwoord geeft
+   (abonnement-wisselen, abonnement-opzeggen). Geeft {ok, status,
+   gegevens} of {ok:false, status, tekst} met de eigen zin van de
+   server. betaling-starten gaat hier niet door: die geeft een
+   kassa-adres terug en heeft zijn eigen regels (_overstapVraag). */
+function _edgeVraag(functie, token, lichaam) {
+  return fetch(serverAdres("/functions/v1/" + functie), {
     method: "POST",
     headers: serverKoppen(token),
     body: JSON.stringify(lichaam)
@@ -581,6 +584,11 @@ function _wisselVraag(token, clubId, naar, alleenBerekenen) {
     });
   });
 }
+function _wisselVraag(token, clubId, naar, alleenBerekenen) {
+  var lichaam = {club_id: clubId, naar_pakket: naar};
+  if (alleenBerekenen) lichaam.alleen_berekenen = true;
+  return _edgeVraag("abonnement-wisselen", token, lichaam);
+}
 /**
  * Wisselen naar een ander betaald pakket, of alleen uitrekenen wat dat
  * kost. Geeft {ok:true, gegevens} of {ok:false, tekst}; werpt niets op.
@@ -588,6 +596,19 @@ function _wisselVraag(token, clubId, naar, alleenBerekenen) {
 function vraagWissel(naar, alleenBerekenen) {
   return _metAanmelding(function (token, clubId) {
     return _wisselVraag(token, clubId, naar, !!alleenBerekenen);
+  });
+}
+/**
+ * Opzeggen of de opzegging intrekken. actie: "opzeggen" | "intrekken".
+ * Geeft {ok:true, gegevens} of {ok:false, tekst}; werpt niets op.
+ *
+ * Alleen de actie en de club gaan de deur uit. Wat er bij Mollie
+ * gebeurt en wanneer het pakket stopt, bepaalt de server
+ * (supabase/functions/abonnement-opzeggen).
+ */
+function vraagOpzegging(actie) {
+  return _metAanmelding(function (token, clubId) {
+    return _edgeVraag("abonnement-opzeggen", token, {club_id: clubId, actie: actie});
   });
 }
 /* 4950 → "€ 49,50". Alleen om te tónen: het bedrag zelf komt van de
@@ -1628,6 +1649,12 @@ function InstellingenSheet({ onSluiten, onGewisseld, onTeams }) {
   const [opheffenTekst, setOpheffenTekst] = useState("");
   const [opheffenBezig, setOpheffenBezig] = useState(false);
   const [opzeggenOpen, setOpzeggenOpen] = useState(false);
+  const [intrekkenOpen, setIntrekkenOpen] = useState(false);
+  const [opzegBezig, setOpzegBezig] = useState(false);
+  /* Bij het openen gelezen, en daarna alleen nog door opzeg() en
+     trekIn() hieronder gewijzigd: verder verandert het niet terwijl dit
+     venster openstaat. */
+  const [opgezegd, setOpgezegd] = useState(function(){ return abonnementOpgezegd(); });
   /* Free is geen abonnement maar de afwezigheid ervan: geen einddatum,
      niets om op te zeggen. Vandaar dat de twee stukken hieronder aan
      deze ene vraag hangen. */
@@ -1639,6 +1666,40 @@ function InstellingenSheet({ onSluiten, onGewisseld, onTeams }) {
   const [onderweg] = useState(function(){ return upgradeBriefje(); });
   const bestandRef = useRef(null);
   const logoRef = useRef(null);
+
+  /* De bevestiging per e-mail wordt alleen genoemd als de server zegt
+     dat hij weg is (mail: true). Zolang er geen maildienst is
+     aangesloten zegt hij false, en dan belooft dit scherm ook niets. */
+  function opzeg() {
+    if (opzegBezig) return;
+    setOpzegBezig(true);
+    vraagOpzegging("opzeggen").then(function (r) {
+      setOpzegBezig(false);
+      setOpzeggenOpen(false);
+      if (!r || !r.ok) { meldFout((r && r.tekst) || "Opzeggen lukte nu niet."); return; }
+      var tot = r.gegevens.geldig_tot || abonnementTot();
+      var nu = new Date().toISOString();
+      zetAbonnementOpgezegd(nu);
+      if (tot) zetAbonnementTot(tot);
+      setOpgezegd(nu);
+      meldGoed("Opgezegd. Je houdt " + pakketNu().naam +
+        (tot ? " tot en met " + formateerDatum(tot) : "") + "." +
+        (r.gegevens.mail ? " Je krijgt een bevestiging per e-mail." : ""));
+    });
+  }
+  function trekIn() {
+    if (opzegBezig) return;
+    setOpzegBezig(true);
+    vraagOpzegging("intrekken").then(function (r) {
+      setOpzegBezig(false);
+      setIntrekkenOpen(false);
+      if (!r || !r.ok) { meldFout((r && r.tekst) || "Intrekken lukte nu niet."); return; }
+      zetAbonnementOpgezegd(null);
+      setOpgezegd(null);
+      meldGoed("Je abonnement loopt gewoon door." +
+        (r.gegevens.mail ? " Je krijgt een bevestiging per e-mail." : ""));
+    });
+  }
 
   function kiesLogo(e) {
     var bestand = e.target.files && e.target.files[0];
@@ -1827,7 +1888,24 @@ function InstellingenSheet({ onSluiten, onGewisseld, onTeams }) {
               verandert daar niets aan: de knop en de vraag staan er al,
               zodat de plek klopt zodra de serverkant er is. Wat hij nú
               doet staat hieronder bij de bevestiging. */}
-          {betaaldPakket && (
+          {/* Opgezegd: dan staat hier wat dat betekent, met de datum, en
+              de weg terug. Geen Opzeggen-knop meer — twee keer opzeggen
+              is geen handeling die iemand zoekt. */}
+          {betaaldPakket && opgezegd && (
+            <div className="melding" style={{margin:"10px 0 0"}}>
+              <i className="fa-solid fa-circle-info"/>{" "}
+              Opgezegd. Je houdt {pakketNu().naam}
+              {abonnementTot() ? " tot en met " + formateerDatum(abonnementTot()) : ""}; daarna
+              ga je terug naar Free. Er wordt niets meer afgeschreven.
+            </div>
+          )}
+          {betaaldPakket && opgezegd && (
+            <button className="knop lijn" style={{width:"100%",justifyContent:"center",marginTop:8}}
+              onClick={function(){ setIntrekkenOpen(true); }}>
+              <i className="fa-solid fa-rotate-left"/> Opzegging intrekken
+            </button>
+          )}
+          {betaaldPakket && !opgezegd && (
             <button className="knop lijn" style={{width:"100%",justifyContent:"center",marginTop:8}}
               onClick={function(){ setOpzeggenOpen(true); }}>
               <i className="fa-solid fa-circle-xmark"/> Opzeggen
@@ -2110,36 +2188,59 @@ function InstellingenSheet({ onSluiten, onGewisseld, onTeams }) {
             een team, en níét het overtypen van "Vereniging opheffen"
             hieronder. Dat verschil is opzet: bij opheffen gaat alles
             onherroepelijk weg, bij opzeggen houd je je gegevens en kun je
-            morgen weer overstappen. Een rem die zwaarder is dan wat er
-            gebeurt, leert mensen alleen maar om door rode schermen heen
-            te klikken.
+            het tot de einddatum nog intrekken. Een rem die zwaarder is dan
+            wat er gebeurt, leert mensen alleen maar om door rode schermen
+            heen te klikken.
 
-            WAT DEZE KNOP VANDAAG DOET: een melding, meer niet. Er bestaat
-            aan de serverkant nog geen manier om "opgezegd maar loopt nog
-            door" vast te leggen, en ook niet om de doorlopende incasso bij
-            Mollie te stoppen (server/19-mollie-subscription.sql legt het
-            nummer wél vast, maar er is geen functie die hem opzegt). Doen
-            alsof het gelukt is terwijl er volgende maand gewoon weer wordt
-            afgeschreven, is het ergste wat deze knop kan doen — dus zegt
-            hij precies wat er is: nog niet klaar. Zelfde keuze als bij
-            "Overstappen" tot 19 september 2026. */}
+            Sinds 8 oktober 2026 doet de knop het echt (abonnement-opzeggen):
+            de incasso bij Mollie stopt, en pas dan zegt de app "opgezegd".
+            Tot die dag stond hier alleen een melding "nog niet klaar". */}
         {opzeggenOpen && (
           <div className="bevestig-overlay"><div className="bevestig-kaart">
             <h3>{pakketNu().naam} opzeggen?</h3>
             <p>
               Je houdt {pakketNu().naam}{" "}
               {abonnementTot()
-                ? "tot " + formateerDatum(abonnementTot())
+                ? "tot en met " + formateerDatum(abonnementTot())
                 : "tot het einde van de periode die je al hebt betaald"}.
-              Daarna gaat je vereniging terug naar Free: één team en alleen
-              de basis. Je gegevens blijven staan.
+              Er wordt daarna niets meer afgeschreven, en je krijgt geen
+              geld terug voor de dagen die nog over zijn. Daarna gaat je
+              vereniging terug naar Free: één team en alleen de basis. Je
+              gegevens blijven staan.
             </p>
             <div className="bevestig-knoppen">
-              <button className="knop lijn" onClick={function(){ setOpzeggenOpen(false); }}>Toch niet</button>
-              <button className="knop gevaar" onClick={function(){
-                setOpzeggenOpen(false);
-                meldGoed("Opzeggen kan zodra dat onderdeel klaar is.");
-              }}>Opzeggen</button>
+              <button className="knop lijn" disabled={opzegBezig}
+                onClick={function(){ setOpzeggenOpen(false); }}>Toch niet</button>
+              <button className="knop gevaar" disabled={opzegBezig} onClick={opzeg}>
+                {opzegBezig
+                  ? <React.Fragment><i className="fa-solid fa-circle-notch fa-spin"/> Bezig…</React.Fragment>
+                  : "Opzeggen"}
+              </button>
+            </div>
+          </div></div>
+        )}
+        {/* Intrekken: de incasso start opnieuw op dezelfde machtiging,
+            en pas op de einddatum — de periode tot dan is al betaald.
+            Dat staat er met zoveel woorden, want "weer aanzetten" klinkt
+            als "nu betalen". */}
+        {intrekkenOpen && (
+          <div className="bevestig-overlay"><div className="bevestig-kaart">
+            <h3>Opzegging intrekken?</h3>
+            <p>
+              Je abonnement op {pakketNu().naam} loopt dan gewoon door.
+              {abonnementTot()
+                ? " De volgende afschrijving is op " + formateerDatum(abonnementTot()) + ","
+                : " De volgende afschrijving is aan het einde van de periode die je al hebt betaald,"}
+              {" "}via dezelfde machtiging als eerst. Vandaag betaal je niets.
+            </p>
+            <div className="bevestig-knoppen">
+              <button className="knop lijn" disabled={opzegBezig}
+                onClick={function(){ setIntrekkenOpen(false); }}>Toch niet</button>
+              <button className="knop" disabled={opzegBezig} onClick={trekIn}>
+                {opzegBezig
+                  ? <React.Fragment><i className="fa-solid fa-circle-notch fa-spin"/> Bezig…</React.Fragment>
+                  : "Intrekken"}
+              </button>
             </div>
           </div></div>
         )}

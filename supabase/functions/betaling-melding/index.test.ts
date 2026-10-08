@@ -254,6 +254,32 @@ Deno.test("een verlenging zonder metadata wordt via het klantnummer gevonden", a
   gelijk(rpc?.argumenten?.p_termijn, "jaar");
 });
 
+Deno.test("een verlenging NA opzeggen maakt GEEN nieuwe incasso", async () => {
+  // Na opzeggen is het abonnementsnummer leeg. Een SEPA-incasso die al
+  // onderweg was kan dagen later toch nog binnenkomen. Die wordt gewoon
+  // geboekt (er ís betaald), maar mag de opzegging niet ongedaan maken
+  // door een nieuwe doorlopende incasso te starten.
+  const op = opstelling({
+    mollieAntwoorden: {
+      ["GET /v2/payments/" + BETALING]: { body: nepBetaling({ metadata: null }) },
+      "POST /v2/customers/cst_kEn1PlbGa/subscriptions": { body: { id: "sub_ONGEWENST" } },
+    },
+    rijen: {
+      abonnementen: [{ club_id: CLUB, pakket: "coach", mollie_subscription_id: null }],
+      betalingen: [{ pakket: "coach", termijn: "maand" }],
+    },
+  });
+  const antwoord = await behandelMelding(melding(BETALING), op.deps);
+  gelijk(antwoord.status, 200);
+  gelijk(op.dbAanroepen.filter((a) => a.soort === "rpc").length, 1, "de betaling zelf wordt wel geboekt");
+  gelijk(op.mollieAanroepen.filter((a) => a.url.endsWith("/subscriptions")).length, 0);
+  gelijk(
+    op.dbAanroepen.filter((a) => a.soort === "bijwerken" && a.tabel === "abonnementen").length,
+    0,
+    "opgezegd_op blijft staan",
+  );
+});
+
 Deno.test("een onbekend klantnummer: 200, niets verwerkt, wel gelogd", async () => {
   const op = opstelling({
     mollieAntwoorden: {
@@ -292,7 +318,9 @@ Deno.test("na de eerste betaling komt er een subscription bij Mollie", async () 
   const bewaard = op.dbAanroepen.find(
     (a) => a.soort === "bijwerken" && a.tabel === "abonnementen",
   );
-  gelijk(bewaard?.velden, { mollie_subscription_id: "sub_8JfGzs6v3K" });
+  // opgezegd_op gaat in dezelfde schrijfactie leeg: een nieuwe incasso
+  // ÍS het einde van een eerdere opzegging.
+  gelijk(bewaard?.velden, { mollie_subscription_id: "sub_8JfGzs6v3K", opgezegd_op: null });
 });
 
 Deno.test("een tweede melding maakt GEEN tweede subscription", async () => {
@@ -918,7 +946,7 @@ Deno.test("na een eerste aankoop komen mollie_subscription_id en mollie_bedrag_c
   // De eerste blijft exact zoals de bestaande test hem kent: het
   // bestaan van de incasso is een ander feit dan het bedrag ervan, en
   // een mislukking van het tweede mag het eerste niet meenemen.
-  gelijk(bijwerken[0]?.velden, { mollie_subscription_id: "sub_8JfGzs6v3K" });
+  gelijk(bijwerken[0]?.velden, { mollie_subscription_id: "sub_8JfGzs6v3K", opgezegd_op: null });
   gelijk(bijwerken[1]?.velden, { mollie_bedrag_cent: 699 });
   // Zonder deze tweede regel meldt public.wissel_controle() straks elke
   // gewone klant als "bedrag onbekend".

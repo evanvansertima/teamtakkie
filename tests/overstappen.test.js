@@ -145,7 +145,9 @@ eval(knip("_overstapFoutTekst"));
 eval(knip("_overstapVraag"));
 eval(knip("_metAanmelding"));
 eval(knip("startOverstap"));
+eval(knip("_edgeVraag"));
 eval(knip("_wisselVraag"));
+eval(knip("vraagOpzegging"));
 eval(knip("vraagWissel"));
 eval(knip("centenAlsEuro"));
 
@@ -372,6 +374,40 @@ leeg();
 aangemeld = false;
 r = await vraagWissel("club", true);
 ok("niet ingelogd: er gaat niets de deur uit", verzoeken.length, 0);
+
+/* ══ 6. opzeggen en intrekken ══
+   Alleen de actie en de club gaan de deur uit. Geen bedrag, geen
+   datum: wanneer het pakket stopt en wat Mollie doet, bepaalt de
+   server. Een einddatum uit de browser zou betekenen dat iemand zijn
+   eigen opzegging naar volgend jaar kan schuiven. */
+groep("opzeggen: het verzoek aan abonnement-opzeggen");
+leeg();
+antwoorden = [{ status: 200, lichaam: JSON.stringify({ status: "opgezegd", geldig_tot: "2026-10-19", mail: false }) }];
+r = await vraagOpzegging("opzeggen");
+ok("naar abonnement-opzeggen",
+   verzoeken[0].url, "https://server.test/functions/v1/abonnement-opzeggen");
+ok("precies club_id en actie, verder niets",
+   Object.keys(lichaamVan(0)).sort(), ["actie", "club_id"]);
+ok("met de gevraagde actie", lichaamVan(0).actie, "opzeggen");
+ok("het antwoord van de server komt terug", r.gegevens.geldig_tot, "2026-10-19");
+
+leeg();
+antwoorden = [{ status: 200, lichaam: JSON.stringify({ status: "ingetrokken" }) }];
+r = await vraagOpzegging("intrekken");
+ok("intrekken gaat langs dezelfde deur", lichaamVan(0).actie, "intrekken");
+
+leeg();
+antwoorden = [{ status: 403, lichaam: JSON.stringify({ fout: "Alleen de eigenaar van de club kan het abonnement opzeggen" }) }];
+r = await vraagOpzegging("opzeggen");
+ok("een trainer leest waarom het niet mag, niet 'fout 403'",
+   r.tekst, "Alleen de eigenaar van de club kan het abonnement opzeggen");
+
+leeg();
+antwoorden = [{ status: 401, lichaam: "" },
+              { status: 200, lichaam: JSON.stringify({ status: "opgezegd" }) }];
+r = await vraagOpzegging("opzeggen");
+ok("ook hier: 401 → één nieuwe poging met een vers token",
+   [verzoeken.length, verzoeken[1].opties.headers["Authorization"]], [2, "Bearer TOKEN-NIEUW"]);
 
 groep("bedragen tonen");
 ok("4950 cent", centenAlsEuro(4950), "\u20ac\u00a049,50");

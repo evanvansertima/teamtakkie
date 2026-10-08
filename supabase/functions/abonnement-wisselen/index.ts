@@ -99,6 +99,7 @@ interface WisselRij {
   mollie_klant_id?: unknown;
   mollie_subscription_id?: unknown;
   wissel_onderweg?: unknown;
+  opgezegd?: unknown; // sinds server/21-opzeggen.sql
 }
 
 function tekstOfNull(waarde: unknown): string | null {
@@ -121,6 +122,7 @@ function feitenUit(rij: WisselRij): WisselFeiten {
     resterendeDagen: getalOfNull(rij.resterende_dagen),
     mollieSubscriptionId: tekstOfNull(rij.mollie_subscription_id),
     wisselOnderweg: rij.wissel_onderweg === true,
+    opgezegd: rij.opgezegd === true,
   };
 }
 
