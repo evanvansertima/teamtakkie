@@ -22,6 +22,16 @@ nieuwe incasso op 19 oktober.
   jaar, daarna per maand". Publiceren pas als Brevo werkt — artikel 5
   belooft een bevestiging per e-mail.
 
+**Bevestigingsmail via Brevo (9 oktober 2026):** domein teamtakkie.nl
+geverifieerd (DKIM + DMARC bij TransIP), afzender headcoach@teamtakkie.nl.
+Geheimen bij Supabase › Edge Functions › Secrets: `BREVO_API_KEY` en
+`MAIL_AFZENDER_EMAIL`. **De Brevo-sleutel verloopt na één jaar (rond
+9 oktober 2027).** Vernieuw hem vóór die tijd (herinnering: 25 september
+2027): nieuwe sleutel in Brevo › SMTP & API, en `BREVO_API_KEY` in Supabase
+vervangen. Verloopt hij, dan gaan er geen bevestigingen meer weg — en bij
+herroepen is die bevestiging verplicht. In het logboek van de functies
+staat dan "bevestigingsmail geweigerd door Brevo" met status 401.
+
 *Eerdere status (8 oktober 2026):* gebouwd en getest, nog niet live. Wat er nog
 ontbreekt: de maildienst (besluit 3) en de juridische check (vraag 4 en 5).
 
