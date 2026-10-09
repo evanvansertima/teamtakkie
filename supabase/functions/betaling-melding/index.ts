@@ -455,18 +455,33 @@ export async function behandelMelding(
     //  zonder dat ergens nog "opgezegd" staat.
     if (klantId && eersteAankoop) {
       const abo = await db.selecteer("abonnementen", {
-        select: "mollie_subscription_id",
+        select: "mollie_subscription_id,opgezegd_op,herroepen_op",
         club_id: "eq." + clubId,
         limit: "1",
       });
       const alAanwezig = abo.length > 0 &&
         typeof abo[0].mollie_subscription_id === "string" &&
         (abo[0].mollie_subscription_id as string) !== "";
+      // EEN OUDE BETALING DIE OPNIEUW LANGSKOMT. Mollie meldt een
+      // betaling opnieuw bij elke wijziging — ook bij een terugstorting
+      // of een storno, weken later. Is er sindsdien opgezegd of
+      // herroepen, dan is het incassonummer met opzet leeg, en zou deze
+      // stap op een oude eerste betaling een NIEUWE incasso starten. Dus:
+      // alleen voor een betaling die ná de laatste stop is gedaan (een
+      // echte nieuwe aankoop), en nooit voor een betaling waar al geld
+      // van is teruggestort.
+      const stops = abo.length > 0
+        ? [abo[0].opgezegd_op, abo[0].herroepen_op]
+          .filter((t): t is string => typeof t === "string" && t !== "")
+          .map((t) => Date.parse(t))
+        : [];
+      const ouderDanStop = stops.length > 0 && Date.parse(betaaldOp) <= Math.max(...stops);
+      const terugbetaald = (bedragNaarCenten(betaling.amountRefunded?.value) ?? 0) > 0;
       // De termijn van de AANKOOP bepaalt alleen wanneer de incasso
       // begint (na een maand of na een jaar). Wat hij daarna afschrijft
       // is altijd het maandbedrag — zie doorlopendeIncasso().
       const incasso = mollieInterval(termijn) ? doorlopendeIncasso(pakket) : null;
-      if (!alAanwezig && incasso) {
+      if (!alAanwezig && incasso && !ouderDanStop && !terugbetaald) {
         const abonnement = await mollie.maakAbonnement(klantId, {
           amount: { value: centenNaarBedrag(incasso.bedragCent), currency: valuta },
           interval: incasso.interval,
@@ -482,6 +497,7 @@ export async function behandelMelding(
         await db.bijwerken("abonnementen", { club_id: "eq." + clubId }, {
           mollie_subscription_id: abonnement.id,
           opgezegd_op: null,
+          herroepen_op: null,
         });
         // En apart: wat Mollie vanaf nu afschrijft. Dat is een ander
         // feit dan "er ís een incasso" — het eerste is het bestaan

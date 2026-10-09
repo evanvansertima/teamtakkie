@@ -611,6 +611,16 @@ function vraagOpzegging(actie) {
     return _edgeVraag("abonnement-opzeggen", token, {club_id: clubId, actie: actie});
   });
 }
+/**
+ * De herroepingsknop. actie: "bekijken" (mag het nog, tot wanneer,
+ * hoeveel komt er terug — verandert niets) of "herroepen".
+ * Geeft {ok:true, gegevens} of {ok:false, tekst}; werpt niets op.
+ */
+function vraagHerroepen(actie) {
+  return _metAanmelding(function (token, clubId) {
+    return _edgeVraag("abonnement-herroepen", token, {club_id: clubId, actie: actie});
+  });
+}
 /* 4950 → "€ 49,50". Alleen om te tónen: het bedrag zelf komt van de
    server en gaat nergens meer heen. */
 function centenAlsEuro(c) {
@@ -1662,6 +1672,20 @@ function InstellingenSheet({ onSluiten, onGewisseld, onTeams }) {
      trekIn() hieronder gewijzigd: verder verandert het niet terwijl dit
      venster openstaat. */
   const [opgezegd, setOpgezegd] = useState(function(){ return abonnementOpgezegd(); });
+  /* De herroepingsknop staat er alleen als hij ook werkt: binnen 14
+     dagen na de aankoop, en dat weet alleen de server (die vraagt het
+     aan Mollie). Eén keer vragen bij het openen; geen antwoord = geen
+     knop, en dan blijft Opzeggen gewoon staan. */
+  const [herroep, setHerroep] = useState(null);
+  const [herroepOpen, setHerroepOpen] = useState(false);
+  useEffect(function () {
+    if (!betaaldPakket || !ingelogd()) return;
+    var weg = false;
+    vraagHerroepen("bekijken").then(function (r) {
+      if (!weg && r && r.ok && r.gegevens && r.gegevens.mag) setHerroep(r.gegevens);
+    });
+    return function () { weg = true; };
+  }, []);
   /* Free is geen abonnement maar de afwezigheid ervan: geen einddatum,
      niets om op te zeggen. Vandaar dat de twee stukken hieronder aan
      deze ene vraag hangen. */
@@ -1705,6 +1729,25 @@ function InstellingenSheet({ onSluiten, onGewisseld, onTeams }) {
       setOpgezegd(null);
       meldGoed("Je abonnement loopt gewoon door." +
         (r.gegevens.mail ? " Je krijgt een bevestiging per e-mail." : ""));
+    });
+  }
+
+  function herroepNu() {
+    if (opzegBezig || !herroep) return;
+    setOpzegBezig(true);
+    vraagHerroepen("herroepen").then(function (r) {
+      setOpzegBezig(false);
+      setHerroepOpen(false);
+      if (!r || !r.ok) { meldFout((r && r.tekst) || "Herroepen lukte nu niet."); return; }
+      setHerroep(null);
+      zetAbonnementOpgezegd(null);
+      setOpgezegd(null);
+      var clubId = clubIdNu();
+      (clubId ? syncPakket(clubId) : Promise.resolve()).then(function () {
+        meldGoed("Herroepen. " + centenAlsEuro(r.gegevens.bedrag_cent) +
+          " wordt teruggestort; je vereniging staat nu op Free." +
+          (r.gegevens.mail ? " Je krijgt een bevestiging per e-mail." : ""));
+      });
     });
   }
 
@@ -1895,6 +1938,22 @@ function InstellingenSheet({ onSluiten, onGewisseld, onTeams }) {
               verandert daar niets aan: de knop en de vraag staan er al,
               zodat de plek klopt zodra de serverkant er is. Wat hij nú
               doet staat hieronder bij de bevestiging. */}
+          {/* De herroepingsknop (verplicht sinds 19 juni 2026, EU-richtlijn
+              2023/2673): goed zichtbaar, met een naam die zegt wat hij
+              doet, en in dezelfde omgeving waar je het abonnement afsloot.
+              Alleen binnen de bedenktijd — daarbuiten is het opzeggen. */}
+          {betaaldPakket && herroep && (
+            <React.Fragment>
+              <p style={{fontSize:12,color:"var(--grijs-donker)",fontWeight:400,margin:"12px 0 0",lineHeight:1.6}}>
+                Bedenktijd tot en met {formateerDatum(herroep.tot)}: herroep je, dan krijg
+                je {centenAlsEuro(herroep.bedrag_cent)} terug en stopt je pakket meteen.
+              </p>
+              <button className="knop lijn" style={{width:"100%",justifyContent:"center",marginTop:8}}
+                onClick={function(){ setHerroepOpen(true); }}>
+                <i className="fa-solid fa-arrow-rotate-left"/> Overeenkomst herroepen
+              </button>
+            </React.Fragment>
+          )}
           {/* Opgezegd: dan staat hier wat dat betekent, met de datum, en
               de weg terug. Geen Opzeggen-knop meer — twee keer opzeggen
               is geen handeling die iemand zoekt. */}
@@ -2222,6 +2281,26 @@ function InstellingenSheet({ onSluiten, onGewisseld, onTeams }) {
                 {opzegBezig
                   ? <React.Fragment><i className="fa-solid fa-circle-notch fa-spin"/> Bezig…</React.Fragment>
                   : "Opzeggen"}
+              </button>
+            </div>
+          </div></div>
+        )}
+        {herroepOpen && herroep && (
+          <div className="bevestig-overlay"><div className="bevestig-kaart">
+            <h3>Overeenkomst herroepen?</h3>
+            <p>
+              Je krijgt het volledige bedrag terug, {centenAlsEuro(herroep.bedrag_cent)}, op
+              de rekening waarmee je betaalde. Er wordt niets meer afgeschreven. Je
+              pakket stopt meteen en je vereniging gaat terug naar Free. Je gegevens
+              blijven staan.
+            </p>
+            <div className="bevestig-knoppen">
+              <button className="knop lijn" disabled={opzegBezig}
+                onClick={function(){ setHerroepOpen(false); }}>Toch niet</button>
+              <button className="knop gevaar" disabled={opzegBezig} onClick={herroepNu}>
+                {opzegBezig
+                  ? <React.Fragment><i className="fa-solid fa-circle-notch fa-spin"/> Bezig…</React.Fragment>
+                  : "Herroepen"}
               </button>
             </div>
           </div></div>

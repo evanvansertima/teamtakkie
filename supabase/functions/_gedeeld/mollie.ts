@@ -470,6 +470,77 @@ export function beoordeelOpzegging(
   return { mag: true, soort: "intrekken", reden: "" };
 }
 
+// ── Herroepen binnen 14 dagen ────────────────────────────────
+//  Besluit van Evan (9 oktober 2026): wie herroept krijgt ALLES terug.
+//  Dat is meer dan de wet eist (die laat het al gebruikte deel toe), en
+//  het scheelt elke discussie over "hoeveel dagen heb je gebruikt".
+
+/* Eén betaling, zoals Mollie hem zelf beschrijft. */
+export interface HerroepBetaling {
+  id: string;
+  betaaldOp: string; // ISO-tijdstip
+  bedragCent: number;
+  alTerugCent: number;
+  eerste: boolean; // sequenceType "first": een aankoop via de kassa
+}
+
+export interface HerroepOordeel {
+  mag: boolean;
+  soort: "niets" | "herroepen";
+  reden: string;
+  /* Tot en met welke dag (JJJJ-MM-DD, Nederlandse tijd) herroepen kan. */
+  tot: string | null;
+  /* Wat er per betaling nog terug moet. */
+  terug: { id: string; bedragCent: number }[];
+  bedragCent: number;
+}
+
+export const BEDENKTIJD_DAGEN = 14;
+
+function nlDag(tijdstip: string | Date): string {
+  const d = typeof tijdstip === "string" ? new Date(tijdstip) : tijdstip;
+  return d.toLocaleDateString("sv-SE", { timeZone: "Europe/Amsterdam" });
+}
+function plusDagen(dag: string, n: number): string {
+  const [j, m, d] = dag.split("-").map((x) => parseInt(x, 10));
+  const t = new Date(Date.UTC(j, m - 1, d + n));
+  return t.toISOString().slice(0, 10);
+}
+
+/* De bedenktijd begint bij de LAATSTE eerste aankoop: wie na een
+   verlopen abonnement opnieuw koopt, sluit een nieuwe overeenkomst met
+   een nieuwe bedenktijd. Alles wat daarna is betaald (ook een overstap)
+   hoort bij die overeenkomst en gaat dus ook terug. */
+export function beoordeelHerroepen(betalingen: HerroepBetaling[], nu: Date): HerroepOordeel {
+  const nee = (reden: string, tot: string | null = null): HerroepOordeel =>
+    ({ mag: false, soort: "niets", reden, tot, terug: [], bedragCent: 0 });
+
+  const eersten = betalingen.filter((b) => b.eerste)
+    .sort((a, b) => Date.parse(b.betaaldOp) - Date.parse(a.betaaldOp));
+  if (eersten.length === 0) return nee("We vinden geen aankoop die je nog kunt herroepen.");
+  const eerste = eersten[0];
+
+  const tot = plusDagen(nlDag(eerste.betaaldOp), BEDENKTIJD_DAGEN);
+  if (nlDag(nu) > tot) {
+    return nee("De bedenktijd van 14 dagen is voorbij. Opzeggen kan nog wel.", tot);
+  }
+
+  const terug = betalingen
+    .filter((b) => Date.parse(b.betaaldOp) >= Date.parse(eerste.betaaldOp))
+    .map((b) => ({ id: b.id, bedragCent: Math.max(b.bedragCent - b.alTerugCent, 0) }))
+    .filter((b) => b.bedragCent > 0);
+  if (terug.length === 0) return { mag: true, soort: "niets", reden: "", tot, terug: [], bedragCent: 0 };
+
+  return {
+    mag: true,
+    soort: "herroepen",
+    reden: "",
+    tot,
+    terug,
+    bedragCent: terug.reduce((som, b) => som + b.bedragCent, 0),
+  };
+}
+
 // ── Wat Mollie terugstuurt ───────────────────────────────────
 //  Alleen de velden die wij gebruiken. Met opzet niet compleet: wat
 //  hier niet staat, lezen we ook niet, en wat we niet lezen kan ook
@@ -487,6 +558,12 @@ export interface MollieBetaling {
   customerId?: string | null;
   paidAt?: string | null;
   metadata?: Record<string, string> | null;
+  /* "first" (eerste aankoop, via de kassa), "recurring" (via een
+     bestaande machtiging) of "oneoff". Van Mollie zelf, dus te
+     vertrouwen — in tegenstelling tot metadata. */
+  sequenceType?: string | null;
+  /* Wat er al van deze betaling is teruggestort. */
+  amountRefunded?: { value: string; currency: string } | null;
   _links?: { checkout?: { href: string } | null } | null;
 }
 
@@ -519,6 +596,9 @@ export interface MollieClient {
      wordt niet meer afgeschreven") is dan bereikt, en een tweede
      poging na een storing mag nooit vastlopen op de eerste. */
   stopAbonnement(klantId: string, abonnementId: string): Promise<void>;
+  /* Geld terugstorten van één betaling. Het bedrag komt altijd van ons
+     (wat er nog niet is teruggestort), nooit van de aanvrager. */
+  terugbetalen(betalingId: string, bedragCent: number, omschrijving: string): Promise<void>;
 }
 
 const MOLLIE_BASIS = "https://api.mollie.com/v2";
@@ -628,6 +708,15 @@ export function maakMollie(sleutel: string, fetchFn: Fetcher = fetch): MollieCli
         throw new MollieFout("onverwacht", "Mollie gaf geen abonnementsnummer terug");
       }
       return abo;
+    },
+
+    async terugbetalen(betalingId, bedragCent, omschrijving) {
+      const pad = `/payments/${betalingId}/refunds`;
+      const { status } = await vraag("POST", pad, {
+        amount: { value: centenNaarBedrag(bedragCent), currency: "EUR" },
+        description: omschrijving,
+      });
+      eisGelukt(status, "/payments/{id}/refunds");
     },
 
     async stopAbonnement(klantId, abonnementId) {

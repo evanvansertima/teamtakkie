@@ -148,6 +148,7 @@ eval(knip("startOverstap"));
 eval(knip("_edgeVraag"));
 eval(knip("_wisselVraag"));
 eval(knip("vraagOpzegging"));
+eval(knip("vraagHerroepen"));
 eval(knip("vraagWissel"));
 eval(knip("centenAlsEuro"));
 
@@ -408,6 +409,16 @@ antwoorden = [{ status: 401, lichaam: "" },
 r = await vraagOpzegging("opzeggen");
 ok("ook hier: 401 → één nieuwe poging met een vers token",
    [verzoeken.length, verzoeken[1].opties.headers["Authorization"]], [2, "Bearer TOKEN-NIEUW"]);
+
+groep("herroepen: het verzoek aan abonnement-herroepen");
+leeg();
+antwoorden = [{ status: 200, lichaam: JSON.stringify({ mag: true, tot: "2026-10-18", bedrag_cent: 699 }) }];
+r = await vraagHerroepen("bekijken");
+ok("naar abonnement-herroepen",
+   verzoeken[0].url, "https://server.test/functions/v1/abonnement-herroepen");
+ok("precies club_id en actie — geen bedrag: wat terugkomt bepaalt de server",
+   Object.keys(lichaamVan(0)).sort(), ["actie", "club_id"]);
+ok("het antwoord komt terug", r.gegevens.bedrag_cent, 699);
 
 groep("bedragen tonen");
 ok("4950 cent", centenAlsEuro(4950), "\u20ac\u00a049,50");

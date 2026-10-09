@@ -51,3 +51,8 @@ verify_jwt = false
 #  club?"; zonder token kan iedereen die een club_id kent het proberen.
 [functions.abonnement-opzeggen]
 verify_jwt = true
+
+# ── abonnement-herroepen ─────────────────────────────────────
+#  verify_jwt blijft AAN: alleen een ingelogde eigenaar kan herroepen.
+[functions.abonnement-herroepen]
+verify_jwt = true

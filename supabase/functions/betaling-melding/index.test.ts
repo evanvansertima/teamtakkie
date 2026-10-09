@@ -300,6 +300,62 @@ Deno.test("een verlenging NA opzeggen maakt GEEN nieuwe incasso", async () => {
   );
 });
 
+Deno.test("een terugstorting op de eerste betaling NA herroepen start GEEN nieuwe incasso", async () => {
+  // Mollie meldt de eerste betaling opnieuw zodra er geld van is
+  // teruggestort. Zonder de controle zou die oude eerste aankoop een
+  // nieuwe incasso opleveren voor iemand die net zijn geld terugkreeg.
+  const op = opstelling({
+    mollieAntwoorden: {
+      ["GET /v2/payments/" + BETALING]: {
+        body: nepBetaling({ amountRefunded: { value: "6.99", currency: "EUR" } }),
+      },
+      "POST /v2/customers/cst_kEn1PlbGa/subscriptions": { body: { id: "sub_ONGEWENST" } },
+    },
+    rijen: { abonnementen: [{ mollie_subscription_id: null, herroepen_op: "2026-09-21T10:00:00Z" }] },
+  });
+  const a = await behandelMelding(melding(BETALING), op.deps);
+  gelijk(a.status, 200);
+  gelijk(op.mollieAanroepen.filter((x) => x.url.endsWith("/subscriptions")).length, 0);
+});
+
+Deno.test("een eerste betaling waar al geld van terug is (met de hand) start GEEN incasso", async () => {
+  // Bijvoorbeeld: Evan stort in het Mollie-dashboard iets terug vóórdat
+  // de melding verwerkt is. Er is niet opgezegd of herroepen, dus alleen
+  // de terugstorting zelf kan dit tegenhouden.
+  const op = opstelling({
+    mollieAntwoorden: {
+      ["GET /v2/payments/" + BETALING]: {
+        body: nepBetaling({ amountRefunded: { value: "6.99", currency: "EUR" } }),
+      },
+      "POST /v2/customers/cst_kEn1PlbGa/subscriptions": { body: { id: "sub_ONGEWENST" } },
+    },
+    rijen: { abonnementen: [{ mollie_subscription_id: null }] },
+  });
+  await behandelMelding(melding(BETALING), op.deps);
+  gelijk(op.mollieAanroepen.filter((x) => x.url.endsWith("/subscriptions")).length, 0);
+});
+
+Deno.test("een oude eerste betaling die na opzeggen opnieuw langskomt (storno) start GEEN incasso", async () => {
+  const op = opstelling({
+    mollieAntwoorden: {
+      ["GET /v2/payments/" + BETALING]: { body: nepBetaling() },
+      "POST /v2/customers/cst_kEn1PlbGa/subscriptions": { body: { id: "sub_ONGEWENST" } },
+    },
+    // nepBetaling() is betaald op 19 september; opgezegd op 1 oktober.
+    rijen: { abonnementen: [{ mollie_subscription_id: null, opgezegd_op: "2026-10-01T10:00:00Z" }] },
+  });
+  await behandelMelding(melding(BETALING), op.deps);
+  gelijk(op.mollieAanroepen.filter((x) => x.url.endsWith("/subscriptions")).length, 0);
+});
+
+Deno.test("een NIEUWE aankoop na een oude opzegging krijgt wél een incasso", async () => {
+  const op = opstelling({
+    rijen: { abonnementen: [{ mollie_subscription_id: null, opgezegd_op: "2026-03-01T10:00:00Z" }] },
+  });
+  await behandelMelding(melding(BETALING), op.deps);
+  gelijk(op.mollieAanroepen.filter((x) => x.url.endsWith("/subscriptions")).length, 1);
+});
+
 Deno.test("een onbekend klantnummer: 200, niets verwerkt, wel gelogd", async () => {
   const op = opstelling({
     mollieAntwoorden: {
@@ -340,7 +396,7 @@ Deno.test("na de eerste betaling komt er een subscription bij Mollie", async () 
   );
   // opgezegd_op gaat in dezelfde schrijfactie leeg: een nieuwe incasso
   // ÍS het einde van een eerdere opzegging.
-  gelijk(bewaard?.velden, { mollie_subscription_id: "sub_8JfGzs6v3K", opgezegd_op: null });
+  gelijk(bewaard?.velden, { mollie_subscription_id: "sub_8JfGzs6v3K", opgezegd_op: null, herroepen_op: null });
 });
 
 Deno.test("een tweede melding maakt GEEN tweede subscription", async () => {
@@ -974,7 +1030,7 @@ Deno.test("na een eerste aankoop komen mollie_subscription_id en mollie_bedrag_c
   // De eerste blijft exact zoals de bestaande test hem kent: het
   // bestaan van de incasso is een ander feit dan het bedrag ervan, en
   // een mislukking van het tweede mag het eerste niet meenemen.
-  gelijk(bijwerken[0]?.velden, { mollie_subscription_id: "sub_8JfGzs6v3K", opgezegd_op: null });
+  gelijk(bijwerken[0]?.velden, { mollie_subscription_id: "sub_8JfGzs6v3K", opgezegd_op: null, herroepen_op: null });
   gelijk(bijwerken[1]?.velden, { mollie_bedrag_cent: 699 });
   // Zonder deze tweede regel meldt public.wissel_controle() straks elke
   // gewone klant als "bedrag onbekend".

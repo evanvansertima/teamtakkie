@@ -91,8 +91,8 @@ MUTATIES = [
 
     ("M8  een tweede melding maakt tóch een tweede subscription",
      "functions/betaling-melding/index.ts",
-     '      if (!alAanwezig && incasso) {',
-     '      if (incasso) {'),
+     '      if (!alAanwezig && incasso && !ouderDanStop && !terugbetaald) {',
+     '      if (incasso && !ouderDanStop && !terugbetaald) {'),
 
     ("M9  de subscription begint meteen (startDate weg)",
      "functions/betaling-melding/index.ts",
@@ -155,6 +155,42 @@ MUTATIES = [
      "functions/betaling-melding/index.ts",
      '      if (!termijn && pakket) termijn = termijnVanVerlenging(pakket, bedragCent);',
      ''),
+
+    # ── herroepen (9 oktober 2026) ────────────────────────────
+    ("H1  de bedenktijd is 15 dagen in plaats van 14",
+     "functions/_gedeeld/mollie.ts",
+     'export const BEDENKTIJD_DAGEN = 14;',
+     'export const BEDENKTIJD_DAGEN = 15;'),
+
+    ("H2  wat al is teruggestort, gaat nog een keer terug",
+     "functions/_gedeeld/mollie.ts",
+     '    .map((b) => ({ id: b.id, bedragCent: Math.max(b.bedragCent - b.alTerugCent, 0) }))',
+     '    .map((b) => ({ id: b.id, bedragCent: b.bedragCent }))'),
+
+    ("H3  een betaling van een eerdere overeenkomst gaat ook terug",
+     "functions/_gedeeld/mollie.ts",
+     '    .filter((b) => Date.parse(b.betaaldOp) >= Date.parse(eerste.betaaldOp))',
+     '    .filter((_b) => true)'),
+
+    ("H4  herroepen terwijl er een overstap onderweg is",
+     "functions/abonnement-herroepen/index.ts",
+     '    const wisselOnderweg = onderweg.length > 0;',
+     '    const wisselOnderweg = false;'),
+
+    ("H5  de database zegt 'herroepen' ook als terugstorten mislukt",
+     "functions/abonnement-herroepen/index.ts",
+     '        return fout(\n          "Een deel van het terugstorten is niet gelukt.',
+     '        if (false) return fout(\n          "Een deel van het terugstorten is niet gelukt.'),
+
+    ("H6  een terugstorting op een oude eerste betaling start een incasso",
+     "functions/betaling-melding/index.ts",
+     '      if (!alAanwezig && incasso && !ouderDanStop && !terugbetaald) {',
+     '      if (!alAanwezig && incasso && !ouderDanStop) {'),
+
+    ("H7  een storno na opzeggen start een incasso",
+     "functions/betaling-melding/index.ts",
+     '      if (!alAanwezig && incasso && !ouderDanStop && !terugbetaald) {',
+     '      if (!alAanwezig && incasso && !terugbetaald) {'),
 ]
 
 

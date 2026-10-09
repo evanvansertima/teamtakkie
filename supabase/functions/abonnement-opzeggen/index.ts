@@ -56,19 +56,14 @@ import {
   type WisselFeiten,
 } from "../_gedeeld/mollie.ts";
 import { type DbClient, maakDbClient } from "../_gedeeld/supabase.ts";
+import { type Bevestiging, bevestigingsTekst } from "../_gedeeld/bevestiging.ts";
+
+// De tests importeren deze twee van hier; ze wonen sinds de
+// herroepingsknop in _gedeeld, omdat drie functies dezelfde mail sturen.
+export { type Bevestiging, bevestigingsTekst };
 
 const UUID_VORM =
   /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
-
-/* Wat er in de bevestigingsmail moet. Alleen feiten die de club zelf
-   al kent; geen bedragen van Mollie, geen rekeningnummer. */
-export interface Bevestiging {
-  soort: "opzeggen" | "intrekken";
-  naar: string;
-  pakket: string;
-  termijn: string | null;
-  geldigTot: string;
-}
 
 export interface OpzegAfhankelijkheden {
   gebruikerClient(jwt: string): DbClient;
@@ -112,52 +107,6 @@ function getalOfNull(waarde: unknown): number | null {
    een dag te vroeg geweigerd of toegestaan worden. */
 export function vandaagInNederland(nu: Date): string {
   return nu.toLocaleDateString("sv-SE", { timeZone: "Europe/Amsterdam" });
-}
-
-/* De tekst van de bevestigingsmail. Puur, zodat hij te toetsen is
-   zonder iets te versturen. "19 december 2026", niet "2026-12-19":
-   dit leest een penningmeester, geen database. */
-const MAANDEN = [
-  "januari", "februari", "maart", "april", "mei", "juni", "juli",
-  "augustus", "september", "oktober", "november", "december",
-];
-export function bevestigingsTekst(b: Bevestiging): { onderwerp: string; tekst: string } {
-  const [j, m, d] = b.geldigTot.split("-").map((x) => parseInt(x, 10));
-  const datum = `${d} ${MAANDEN[m - 1] ?? ""} ${j}`;
-  const naam = b.pakket === "club" ? "Club" : b.pakket === "coach" ? "Coach" : b.pakket;
-  if (b.soort === "opzeggen") {
-    return {
-      onderwerp: "Je opzegging van TEAMTAKKIE " + naam,
-      tekst: [
-        "Hallo,",
-        "",
-        `We hebben je opzegging van TEAMTAKKIE ${naam} ontvangen.`,
-        "",
-        `Je houdt ${naam} tot en met ${datum}. Er wordt niets meer afgeschreven.`,
-        "Daarna gaat je vereniging terug naar Free: één team en de basis.",
-        "Je gegevens blijven staan, en je kunt ze altijd inzien en exporteren.",
-        "",
-        `Bedacht? Tot en met ${datum} kun je de opzegging intrekken in de app,`,
-        "bij Instellingen › Abonnement.",
-        "",
-        "Groet,",
-        "TEAMTAKKIE",
-      ].join("\n"),
-    };
-  }
-  return {
-    onderwerp: "Je opzegging van TEAMTAKKIE " + naam + " is ingetrokken",
-    tekst: [
-      "Hallo,",
-      "",
-      `Je hebt je opzegging van TEAMTAKKIE ${naam} ingetrokken. Je abonnement loopt gewoon door.`,
-      "",
-      `De volgende afschrijving is op ${datum}, via dezelfde machtiging als eerst.`,
-      "",
-      "Groet,",
-      "TEAMTAKKIE",
-    ].join("\n"),
-  };
 }
 
 export async function behandelOpzegging(
