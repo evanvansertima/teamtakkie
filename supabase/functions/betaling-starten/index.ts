@@ -242,6 +242,17 @@ export async function behandelStart(
       ? clubRijen[0].naam as string
       : null;
 
+    // Een klantnummer uit de testmodus bestaat niet voor de live-sleutel.
+    // Gevonden op 9 oktober 2026, bij de eerste echte betaling: een club
+    // die eerder had getest kon daarna niet meer afrekenen ("Betaling
+    // starten is niet gelukt"), want Mollie kende de klant niet. Dus
+    // eerst vragen; kent Mollie hem niet, dan een nieuwe — en die
+    // overschrijft hieronder het oude nummer.
+    if (klantId && !(await mollie.bestaatKlant(klantId))) {
+      deps.log("klantnummer onbekend bij Mollie — nieuwe klant", { club_id: clubId });
+      klantId = "";
+    }
+
     if (!klantId) {
       const klant = await mollie.maakKlant({
         naam: clubNaam ?? undefined,

@@ -202,6 +202,17 @@ MUTATIES = [
      "functions/_gedeeld/mail.ts",
      '      await antwoord.body?.cancel();',
      '      log("brevo zei", { tekst: await antwoord.text() });'),
+
+    # ── klant uit de testmodus (9 oktober 2026) ───────────────
+    ("K1  een klantnummer uit de testmodus wordt blind hergebruikt",
+     "functions/betaling-starten/index.ts",
+     '    if (klantId && !(await mollie.bestaatKlant(klantId))) {',
+     '    if (false) {'),
+
+    ("K2  een storing bij Mollie telt als 'klant bestaat niet'",
+     "functions/_gedeeld/mollie.ts",
+     '      if (status === 404 || status === 410) return false;\n      eisGelukt(status, "/customers/{id}");',
+     '      if (status !== 200) return false;'),
 ]
 
 

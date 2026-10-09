@@ -26,6 +26,8 @@ const IK = { id: "99999999-8888-7777-6666-555555555555", email: "evan@example.nl
 /* De standaardantwoorden van Mollie voor een geslaagde start. */
 const MOLLIE_OK = {
   "POST /v2/customers": { body: { id: "cst_nieuw12345" } },
+  // Een bewaard klantnummer wordt eerst nagevraagd (zie index.ts, ── 5).
+  "GET /v2/customers/cst_kEn1PlbGa": { body: { id: "cst_kEn1PlbGa" } },
   "POST /v2/payments": {
     body: {
       id: "tr_WDqYK6vllg",
@@ -178,7 +180,7 @@ Deno.test("een pakket zonder einddatum (onbeperkt, met de hand gezet) telt ook a
 
 Deno.test("een verlopen betaald pakket blokkeert een nieuwe aankoop niet", async () => {
   const gisteren = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
-  const op = opstelling({ huidigPakket: "coach", huidigGeldigTot: gisteren, klantId: "cst_bestaand" });
+  const op = opstelling({ huidigPakket: "coach", huidigGeldigTot: gisteren, klantId: "cst_kEn1PlbGa" });
   const antwoord = await behandelStart(
     verzoek({ club_id: CLUB, pakket: "coach", termijn: "maand" }),
     op.deps,
@@ -463,4 +465,37 @@ Deno.test("zonder Mollie-sleutel een eigen melding, geen kale crash", async () =
   gelijk(antwoord.status, 503);
   const inhoud = await antwoord.json();
   gelijk(inhoud.fout, "Mollie is nog niet aangesloten");
+});
+
+Deno.test("een klantnummer uit de testmodus (onbekend voor de live-sleutel) wordt vervangen", async () => {
+  // 9 oktober 2026: de eerste echte betaling mislukte, omdat de club
+  // nog een klantnummer uit de testmodus had. Mollie kent dat nummer
+  // niet onder de live-sleutel, en weigerde de betaling.
+  const op = opstelling({
+    klantId: "cst_uitTestmodus",
+    mollieAntwoorden: {
+      ...MOLLIE_OK,
+      "GET /v2/customers/cst_uitTestmodus": { status: 404, body: {} },
+    },
+  });
+  const antwoord = await behandelStart(verzoek({ club_id: CLUB, pakket: "coach", termijn: "maand" }), op.deps);
+  gelijk(antwoord.status, 200);
+  const nieuw = op.mollieAanroepen.find((a) => a.methode === "POST" && a.url === "/v2/customers");
+  gelijk(!!nieuw, true, "er wordt een nieuwe klant gemaakt");
+  const betaling = op.mollieAanroepen.find((a) => a.url === "/v2/payments");
+  gelijk(betaling?.body?.customerId, "cst_nieuw12345", "en de betaling gebruikt die nieuwe klant");
+  const bewaard = op.serviceAanroepen.find((a) => a.soort === "bijwerken" && a.tabel === "abonnementen");
+  gelijk(bewaard?.velden, { mollie_klant_id: "cst_nieuw12345" }, "het oude nummer wordt overschreven");
+});
+
+Deno.test("kan Mollie niet zeggen of de klant bestaat, dan géén nieuwe klant (en geen betaling)", async () => {
+  // "Weet ik niet" is geen "nee": anders krijgt een club bij elke
+  // storing een nieuwe klant, en raakt zijn machtiging zoek.
+  const op = opstelling({
+    klantId: "cst_kEn1PlbGa",
+    mollieAntwoorden: { ...MOLLIE_OK, "GET /v2/customers/cst_kEn1PlbGa": { status: 500, body: {} } },
+  });
+  const antwoord = await behandelStart(verzoek({ club_id: CLUB, pakket: "coach", termijn: "maand" }), op.deps);
+  gelijk(antwoord.status, 502);
+  gelijk(op.mollieAanroepen.some((a) => a.methode === "POST" && a.url === "/v2/customers"), false);
 });

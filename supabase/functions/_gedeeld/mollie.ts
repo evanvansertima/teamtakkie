@@ -573,6 +573,11 @@ export interface MollieAbonnement {
 
 export interface MollieClient {
   maakKlant(gegevens: { naam?: string; email?: string }): Promise<MollieKlant>;
+  /* Bestaat dit klantnummer bij Mollie, met DEZE sleutel? Een klant uit
+     de testmodus bestaat niet voor de live-sleutel (en andersom): het
+     zijn twee gescheiden werelden. false bij 404, een fout bij al het
+     andere — "weet ik niet" is geen "nee". */
+  bestaatKlant(id: string): Promise<boolean>;
   maakBetaling(gegevens: Record<string, unknown>): Promise<MollieBetaling>;
   /* null betekent: Mollie kent dit betaalnummer niet (404). Dat is
      geen storing maar een antwoord — zie betaling-melding stap 2. */
@@ -664,6 +669,13 @@ export function maakMollie(sleutel: string, fetchFn: Fetcher = fetch): MollieCli
         throw new MollieFout("onverwacht", "Mollie gaf geen klantnummer terug");
       }
       return klant;
+    },
+
+    async bestaatKlant(id) {
+      const { status } = await vraag("GET", "/customers/" + id);
+      if (status === 404 || status === 410) return false;
+      eisGelukt(status, "/customers/{id}");
+      return true;
     },
 
     async maakBetaling(gegevens) {
