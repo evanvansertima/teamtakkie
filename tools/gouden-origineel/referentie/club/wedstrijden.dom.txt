@@ -101,8 +101,6 @@
               "en"
               "gepland"
           <div style="display: flex; gap: 8px; align-items: center;">
-            <button class="knop lijn klein" style="padding: 9px 12px;" title="Programma van voetbal.nl laden">
-              <i class="fa-solid fa-download">
             <button class="knop lijn klein" style="padding: 9px 12px;" title="Uit bestand importeren">
               <i class="fa-solid fa-file-import">
             <button class="knop-plus">

@@ -40,8 +40,8 @@
    treffers elders, ook nagerekend:
    - Programma importeren (11): NL_MAANDEN, padGetal, alsDatumString,
      ontvouwICS, ontleedICSDatum, ontleedICS, ontleedPlakTekst,
-     striplabel, herkenWedstrijd, bouwImportWedstrijden,
-     INGEBOUWD_PROGRAMMA — uitsluitend gebruikt door ImportSheet.
+     striplabel, herkenWedstrijd, bouwImportWedstrijden — uitsluitend
+     gebruikt door ImportSheet.
    - Delen via WhatsApp (3): deelWedstrijdVooraf, deelWedstrijdUitslag,
      deelVariantenWedstrijd — uitsluitend aangeroepen vanuit
      WedstrijdDetail's deelknop. (whatsappLink, waOpmaak, zonderEmoji,
@@ -275,14 +275,12 @@ function bouwImportWedstrijden(items, clubNaam, bestaande) {
   return uit;
 }
 
-/* ── INGEBOUWD PROGRAMMA (overgenomen van voetbal.nl, seizoen 2026/2027) ── */
-const INGEBOUWD_PROGRAMMA = [
-  {datum:"2026-09-05", tijd:"14:30", tegenstander:"LAC Frisia 1883 O19-4",     thuis:false},
-  {datum:"2026-09-12", tijd:"11:00", tegenstander:"SJO DFC O19-1",             thuis:true },
-  {datum:"2026-09-19", tijd:"12:30", tegenstander:"Leeuwarder Zwaluwen O19-1", thuis:false},
-  {datum:"2026-09-26", tijd:"12:15", tegenstander:"ST Birdaard/VCR O19-1",     thuis:false},
-  {datum:"2026-10-03", tijd:"11:00", tegenstander:"SC Berlikum O19-2",         thuis:true }
-];
+/* ── GEEN INGEBOUWD PROGRAMMA ──
+   Tot 9 oktober 2026 stond hier het programma van fc Harlingen O19-2
+   (vijf wedstrijden), met een knop "Programma laden" voor iedereen. Een
+   nieuwe klant kreeg zo de wedstrijden van een ander team aangeboden.
+   Elk team voegt nu zijn eigen wedstrijden toe: met de hand, of via
+   importeren (agendabestand, plakken of een link van voetbal.nl). */
 
 /* ── TEAMTAKEN (wassen, fruit, vlaggen) ── */
 /* ── SPELERSROLLEN PER WEDSTRIJD ──────────────────────────
@@ -2788,29 +2786,6 @@ function ImportSheet({ bestaande, onImporteren, onSluiten }) {
 
         {!gevonden && (
           <div>
-            <div className="kaart" style={{marginTop:6,borderColor:"var(--blauw-licht)"}}>
-              <div className="kaart-titel"><i className="fa-solid fa-bolt"/> Snelste manier</div>
-              <p style={{fontSize:13,color:"var(--grijs-donker)",fontWeight:400,lineHeight:1.6,marginBottom:12}}>
-                {"Het programma van fc Harlingen O19-2 zit al in de app: "+INGEBOUWD_PROGRAMMA.length+" wedstrijden van 5 september tot 3 oktober."}
-              </p>
-              <button className="knop" style={{width:"100%",justifyContent:"center"}}
-                onClick={function(){
-                  var items = INGEBOUWD_PROGRAMMA.map(function(w){
-                    return { titel: w.thuis ? ("fc Harlingen O19-2 - "+w.tegenstander)
-                                            : (w.tegenstander+" - fc Harlingen O19-2"),
-                             datum: w.datum, tijd: w.tijd,
-                             locatie: w.thuis ? "Sportpark De Zeehoek, Harlingen" : "" };
-                  });
-                  var lijst = bouwImportWedstrijden(items, "fc Harlingen", bestaande);
-                  var keuze = {};
-                  lijst.forEach(function(w){ keuze[w.tijdelijkId] = !w.dubbel; });
-                  setGekozen(keuze);
-                  setGevonden(lijst);
-                }}>
-                <i className="fa-solid fa-download"/> Programma laden
-              </button>
-            </div>
-
             <div className="tabs" style={{marginTop:6}}>
               <button className={"tab-knop"+(bron==="bestand"?" actief":"")} onClick={function(){setBron("bestand");}}>Bestand</button>
               <button className={"tab-knop"+(bron==="plakken"?" actief":"")} onClick={function(){setBron("plakken");}}>Plakken</button>
@@ -6220,29 +6195,6 @@ function WedstrijdenModule() {
   const [alleSeizoenen,setAlleSeizoenen]=useState(false);
   const [importOpen,setImportOpen]=useState(false);
 
-  function laadIngebouwdProgramma() {
-    var bestaandeSleutels = wedstrijden.map(function(w){
-      return w.datum+"|"+String(w.tegenstander||"").toLowerCase().trim();
-    });
-    var nieuwe = INGEBOUWD_PROGRAMMA.filter(function(w){
-      return bestaandeSleutels.indexOf(w.datum+"|"+w.tegenstander.toLowerCase().trim()) < 0;
-    }).map(function(w,i){
-      return Object.assign({}, LEEG_WEDSTRIJD, {
-        id: Date.now()+i,
-        tegenstander: w.tegenstander,
-        datum: w.datum,
-        tijd: w.tijd,
-        thuis: w.thuis,
-        locatie: w.thuis ? (inst().locatie || "Sportpark De Zeehoek") : "",
-        speelduur: inst().speelduur||90,
-        status: "gepland"
-      });
-    });
-    if (nieuwe.length===0) { toon("Deze wedstrijden staan er al in."); return; }
-    setWedstrijden(function(l){ return l.concat(nieuwe); });
-    meldGoed(nieuwe.length+" wedstrijd"+(nieuwe.length===1?"":"en")+" toegevoegd");
-  }
-
   function importeerWedstrijden(lijst) {
     var nieuwe = lijst.map(function(w,i){
       return Object.assign({}, LEEG_WEDSTRIJD, {
@@ -6341,10 +6293,6 @@ function WedstrijdenModule() {
       <div className="pagina-header">
         <div className="pagina-header-tekst"><div className="eyebrow">Programma &amp; uitslagen</div><h2>Wedstrijden</h2><p>{wedstrijden.length} wedstrijd{wedstrijden.length!==1?"en":""} gepland</p></div>
         <div style={{display:"flex",gap:8,alignItems:"center"}}>
-          <button className="knop lijn klein" style={{padding:"9px 12px"}} title="Programma van voetbal.nl laden"
-            onClick={laadIngebouwdProgramma}>
-            <i className="fa-solid fa-download"/>
-          </button>
           <button className="knop lijn klein" style={{padding:"9px 12px"}} title="Uit bestand importeren"
             onClick={function(){setImportOpen(true);}}>
             <i className="fa-solid fa-file-import"/>
@@ -6395,16 +6343,13 @@ function WedstrijdenModule() {
         <div className="leeg">
           <div className="leeg-icoon"><i className="fa-solid fa-futbol"/></div>
           <h3>Nog geen wedstrijden</h3>
-          <p>Laad het programma van voetbal.nl in, of voeg zelf een wedstrijd toe.</p>
-          <button className="knop" style={{marginBottom:8}} onClick={laadIngebouwdProgramma}>
-            <i className="fa-solid fa-download"/>{" Programma laden ("+INGEBOUWD_PROGRAMMA.length+" wedstrijden)"}
+          <p>Voeg je eerste wedstrijd toe, of importeer het programma van je team van voetbal.nl.</p>
+          <button className="knop" style={{marginBottom:8}} onClick={()=>{setBewerkW(null);setFormulier(true);}}>
+            + Wedstrijd toevoegen
           </button>
           <div style={{display:"flex",gap:8,justifyContent:"center",flexWrap:"wrap"}}>
             <button className="knop lijn klein" onClick={function(){setImportOpen(true);}}>
-              <i className="fa-solid fa-file-import"/> Uit bestand
-            </button>
-            <button className="knop lijn klein" onClick={()=>{setBewerkW(null);setFormulier(true);}}>
-              + Zelf toevoegen
+              <i className="fa-solid fa-file-import"/> Programma importeren
             </button>
           </div>
         </div>

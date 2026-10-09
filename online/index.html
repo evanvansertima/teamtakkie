@@ -3006,7 +3006,7 @@ window.addEventListener("error", function(e){
 });
 </script>
 <script>
-const APP_VERSIE = "a5e3f67";
+const APP_VERSIE = "386ebac";
 const TEAMS_KEY = "tt_teams_v1";
 const ACTIEF_KEY = "tt_actief_v1";
 const VOORKEUR_KEY = "tt_voorkeuren_v1";
@@ -28026,13 +28026,6 @@ function bouwImportWedstrijden(items, clubNaam, bestaande) {
   });
   return uit;
 }
-const INGEBOUWD_PROGRAMMA = [
-  { datum: "2026-09-05", tijd: "14:30", tegenstander: "LAC Frisia 1883 O19-4", thuis: false },
-  { datum: "2026-09-12", tijd: "11:00", tegenstander: "SJO DFC O19-1", thuis: true },
-  { datum: "2026-09-19", tijd: "12:30", tegenstander: "Leeuwarder Zwaluwen O19-1", thuis: false },
-  { datum: "2026-09-26", tijd: "12:15", tegenstander: "ST Birdaard/VCR O19-1", thuis: false },
-  { datum: "2026-10-03", tijd: "11:00", tegenstander: "SC Berlikum O19-2", thuis: true }
-];
 const WEDSTRIJD_ROLLEN = [
   {
     id: "aanvoerder",
@@ -30391,32 +30384,7 @@ function ImportSheet({ bestaande, onImporteren, onSluiten }) {
       onClick: onSluiten
     },
     "\u2715"
-  )), !gevonden && /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { className: "kaart", style: { marginTop: 6, borderColor: "var(--blauw-licht)" } }, /* @__PURE__ */ React.createElement("div", { className: "kaart-titel" }, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-bolt" }), " Snelste manier"), /* @__PURE__ */ React.createElement("p", { style: { fontSize: 13, color: "var(--grijs-donker)", fontWeight: 400, lineHeight: 1.6, marginBottom: 12 } }, "Het programma van fc Harlingen O19-2 zit al in de app: " + INGEBOUWD_PROGRAMMA.length + " wedstrijden van 5 september tot 3 oktober."), /* @__PURE__ */ React.createElement(
-    "button",
-    {
-      className: "knop",
-      style: { width: "100%", justifyContent: "center" },
-      onClick: function() {
-        var items = INGEBOUWD_PROGRAMMA.map(function(w) {
-          return {
-            titel: w.thuis ? "fc Harlingen O19-2 - " + w.tegenstander : w.tegenstander + " - fc Harlingen O19-2",
-            datum: w.datum,
-            tijd: w.tijd,
-            locatie: w.thuis ? "Sportpark De Zeehoek, Harlingen" : ""
-          };
-        });
-        var lijst = bouwImportWedstrijden(items, "fc Harlingen", bestaande);
-        var keuze = {};
-        lijst.forEach(function(w) {
-          keuze[w.tijdelijkId] = !w.dubbel;
-        });
-        setGekozen(keuze);
-        setGevonden(lijst);
-      }
-    },
-    /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-download" }),
-    " Programma laden"
-  )), /* @__PURE__ */ React.createElement("div", { className: "tabs", style: { marginTop: 6 } }, /* @__PURE__ */ React.createElement("button", { className: "tab-knop" + (bron === "bestand" ? " actief" : ""), onClick: function() {
+  )), !gevonden && /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { className: "tabs", style: { marginTop: 6 } }, /* @__PURE__ */ React.createElement("button", { className: "tab-knop" + (bron === "bestand" ? " actief" : ""), onClick: function() {
     setBron("bestand");
   } }, "Bestand"), /* @__PURE__ */ React.createElement("button", { className: "tab-knop" + (bron === "plakken" ? " actief" : ""), onClick: function() {
     setBron("plakken");
@@ -33633,33 +33601,6 @@ function WedstrijdenModule() {
   const [hoofdTab, setHoofdTab] = useState("wedstrijden");
   const [alleSeizoenen, setAlleSeizoenen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
-  function laadIngebouwdProgramma() {
-    var bestaandeSleutels = wedstrijden.map(function(w) {
-      return w.datum + "|" + String(w.tegenstander || "").toLowerCase().trim();
-    });
-    var nieuwe = INGEBOUWD_PROGRAMMA.filter(function(w) {
-      return bestaandeSleutels.indexOf(w.datum + "|" + w.tegenstander.toLowerCase().trim()) < 0;
-    }).map(function(w, i) {
-      return Object.assign({}, LEEG_WEDSTRIJD, {
-        id: Date.now() + i,
-        tegenstander: w.tegenstander,
-        datum: w.datum,
-        tijd: w.tijd,
-        thuis: w.thuis,
-        locatie: w.thuis ? inst().locatie || "Sportpark De Zeehoek" : "",
-        speelduur: inst().speelduur || 90,
-        status: "gepland"
-      });
-    });
-    if (nieuwe.length === 0) {
-      toon("Deze wedstrijden staan er al in.");
-      return;
-    }
-    setWedstrijden(function(l) {
-      return l.concat(nieuwe);
-    });
-    meldGoed(nieuwe.length + " wedstrijd" + (nieuwe.length === 1 ? "" : "en") + " toegevoegd");
-  }
   function importeerWedstrijden(lijst) {
     var nieuwe = lijst.map(function(w, i) {
       return Object.assign({}, LEEG_WEDSTRIJD, {
@@ -33758,15 +33699,6 @@ function WedstrijdenModule() {
     {
       className: "knop lijn klein",
       style: { padding: "9px 12px" },
-      title: "Programma van voetbal.nl laden",
-      onClick: laadIngebouwdProgramma
-    },
-    /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-download" })
-  ), /* @__PURE__ */ React.createElement(
-    "button",
-    {
-      className: "knop lijn klein",
-      style: { padding: "9px 12px" },
       title: "Uit bestand importeren",
       onClick: function() {
         setImportOpen(true);
@@ -33826,12 +33758,12 @@ function WedstrijdenModule() {
     },
     /* @__PURE__ */ React.createElement("i", { className: alleSeizoenen ? "fa-solid fa-chevron-up" : "fa-solid fa-clock-rotate-left" }),
     alleSeizoenen ? " Alleen " + ditSeizoen + " tonen" : " " + vanEerder.length + " wedstrijd" + (vanEerder.length === 1 ? "" : "en") + " van buiten " + ditSeizoen + " tonen"
-  )), wedstrijden.length === 0 && !importOpen ? /* @__PURE__ */ React.createElement("div", { className: "leeg" }, /* @__PURE__ */ React.createElement("div", { className: "leeg-icoon" }, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-futbol" })), /* @__PURE__ */ React.createElement("h3", null, "Nog geen wedstrijden"), /* @__PURE__ */ React.createElement("p", null, "Laad het programma van voetbal.nl in, of voeg zelf een wedstrijd toe."), /* @__PURE__ */ React.createElement("button", { className: "knop", style: { marginBottom: 8 }, onClick: laadIngebouwdProgramma }, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-download" }), " Programma laden (" + INGEBOUWD_PROGRAMMA.length + " wedstrijden)"), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 8, justifyContent: "center", flexWrap: "wrap" } }, /* @__PURE__ */ React.createElement("button", { className: "knop lijn klein", onClick: function() {
-    setImportOpen(true);
-  } }, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-file-import" }), " Uit bestand"), /* @__PURE__ */ React.createElement("button", { className: "knop lijn klein", onClick: () => {
+  )), wedstrijden.length === 0 && !importOpen ? /* @__PURE__ */ React.createElement("div", { className: "leeg" }, /* @__PURE__ */ React.createElement("div", { className: "leeg-icoon" }, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-futbol" })), /* @__PURE__ */ React.createElement("h3", null, "Nog geen wedstrijden"), /* @__PURE__ */ React.createElement("p", null, "Voeg je eerste wedstrijd toe, of importeer het programma van je team van voetbal.nl."), /* @__PURE__ */ React.createElement("button", { className: "knop", style: { marginBottom: 8 }, onClick: () => {
     setBewerkW(null);
     setFormulier(true);
-  } }, "+ Zelf toevoegen"))) : /* @__PURE__ */ React.createElement("div", null, [
+  } }, "+ Wedstrijd toevoegen"), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 8, justifyContent: "center", flexWrap: "wrap" } }, /* @__PURE__ */ React.createElement("button", { className: "knop lijn klein", onClick: function() {
+    setImportOpen(true);
+  } }, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-file-import" }), " Programma importeren"))) : /* @__PURE__ */ React.createElement("div", null, [
     { id: "gepland", titel: "Nog te spelen", icoon: "fa-solid fa-calendar-days", kleur: "var(--blauw)" },
     { id: "gespeeld", titel: "Gespeeld", icoon: "fa-solid fa-clock-rotate-left", kleur: "var(--grijs-donker)" }
   ].map(function(groep) {
