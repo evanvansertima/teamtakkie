@@ -1,7 +1,13 @@
 # Opzeggen — plan
 
 **Datum:** 29 september 2026
-**Status (8 oktober 2026):** gebouwd en getest, nog niet live. Wat er nog
+**Status (9 oktober 2026):** LIVE, en getest met SV Voorbeeld (testmodus):
+opzeggen stopte de incasso bij Mollie (Geannuleerd), intrekken maakte er één
+nieuwe aan (sub_cuMJADu26k, € 49,00) zonder vandaag af te schrijven, en de
+database klopte na elke stap. Nog te zien: de eerste afschrijving van die
+nieuwe incasso op 19 oktober.
+
+*Eerdere status (8 oktober 2026):* gebouwd en getest, nog niet live. Wat er nog
 ontbreekt: de maildienst (besluit 3) en de juridische check (vraag 4 en 5).
 
 **Gebouwd:**
