@@ -1,6 +1,22 @@
 # Opzeggen — plan
 
 **Datum:** 29 september 2026
+**Stand 9 oktober 2026, 16:00 — klaar voor echte klanten.** Mollie op de
+live-sleutel (iDEAL + SEPA-incasso actief), Supabase op Pro (dagelijkse
+back-ups), Brevo-mail werkt, site met nieuwe voorwaarden gepubliceerd
+(OpenAI Sites). Met echt geld getest op SV Herroeptest: Coach € 6,99
+gekocht en herroepen — betaling `live`, status `terugbetaald`, club op
+free. Daarbij gevonden en gerepareerd: een klantnummer uit de testmodus
+blokkeerde de eerste echte betaling (`b1b569e`).
+
+Nog open: de vragen voor de jurist (onderaan), en op 19 oktober 2026 de
+eerste afschrijving van de incasso van SV Voorbeeld nakijken (testmodus;
+met de live-sleutel wordt die testbetaling door de webhook genegeerd —
+dat is goed). Brevo zet een "Meld me af"-kop in elke mail; wie zich
+afmeldt, krijgt geen bevestigingen meer. Maandelijks Brevo › Contacts ›
+Blocklist nakijken; vraag aan de jurist of een herroep-bevestiging die
+afmelding mag passeren.
+
 **Status (9 oktober 2026):** LIVE, en getest met SV Voorbeeld (testmodus):
 opzeggen stopte de incasso bij Mollie (Geannuleerd), intrekken maakte er één
 nieuwe aan (sub_cuMJADu26k, € 49,00) zonder vandaag af te schrijven, en de
