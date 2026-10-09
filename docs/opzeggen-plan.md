@@ -7,6 +7,21 @@ nieuwe aan (sub_cuMJADu26k, € 49,00) zonder vandaag af te schrijven, en de
 database klopte na elke stap. Nog te zien: de eerste afschrijving van die
 nieuwe incasso op 19 oktober.
 
+**Ook gebouwd op 9 oktober 2026 (nog niet live):**
+- **Herroepingsknop** (`abonnement-herroepen`, `server/22-herroepen.sql`):
+  binnen 14 dagen na de eerste aankoop ALLES terug (besluit Evan), pakket
+  stopt meteen. Mag pas voor echte klanten live als de bevestigingsmail
+  werkt (Brevo), want die is bij herroepen verplicht.
+- **Jaarabonnement**: eerste jaar vooruit, daarna per maand en
+  maandelijks opzegbaar (besluit Evan). Incasso is altijd maandelijks.
+- **Webhook**: een oude eerste betaling die opnieuw langskomt
+  (terugstorting, storno) start geen incasso meer.
+- **App**: toont het pakket dat de server laat gelden (pakket_van_club).
+- **Site** (`marketing-site/`, nog niet vastgelegd of gepubliceerd):
+  artikel 5 van de voorwaarden herschreven; prijsteksten "voor het eerste
+  jaar, daarna per maand". Publiceren pas als Brevo werkt — artikel 5
+  belooft een bevestiging per e-mail.
+
 *Eerdere status (8 oktober 2026):* gebouwd en getest, nog niet live. Wat er nog
 ontbreekt: de maildienst (besluit 3) en de juridische check (vraag 4 en 5).
 
