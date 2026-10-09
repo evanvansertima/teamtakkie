@@ -91,8 +91,8 @@ MUTATIES = [
 
     ("M8  een tweede melding maakt tóch een tweede subscription",
      "functions/betaling-melding/index.ts",
-     '      if (!alAanwezig && interval) {',
-     '      if (interval) {'),
+     '      if (!alAanwezig && incasso) {',
+     '      if (incasso) {'),
 
     ("M9  de subscription begint meteen (startDate weg)",
      "functions/betaling-melding/index.ts",
@@ -144,6 +144,17 @@ MUTATIES = [
      "functions/betaling-melding/index.ts",
      '    if (klantId && eersteAankoop) {',
      '    if (klantId) {'),
+
+    # ── jaarabonnement: daarna per maand (9 oktober 2026) ─────
+    ("J1  de incasso na een jaaraankoop schrijft weer een jaar af",
+     "functions/_gedeeld/mollie.ts",
+     '  const bedrag = prijsCent(pakket, "maand");\n  return bedrag === null ? null : { bedragCent: bedrag, interval: "1 month" };',
+     '  const bedrag = prijsCent(pakket, "jaar");\n  return bedrag === null ? null : { bedragCent: bedrag, interval: "12 months" };'),
+
+    ("J2  een verlenging neemt de termijn van de vorige betaling over",
+     "functions/betaling-melding/index.ts",
+     '      if (!termijn && pakket) termijn = termijnVanVerlenging(pakket, bedragCent);',
+     ''),
 ]
 
 

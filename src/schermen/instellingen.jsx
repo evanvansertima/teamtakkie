@@ -778,8 +778,9 @@ function WisselUitleg({ offerte, pakket, huidig, prijs }) {
     );
   }
   if (!offerte.mag) return <p style={stijl}>{offerte.reden}</p>;
-  var per = offerte.termijn === "jaar" ? "jaar" : "maand";
-  var straks = (prijs && prijs[per]) ? " Daarna betaal je " + prijs[per].replace(" ", " ") + " per " + per + "." : "";
+  /* Daarna altijd per maand: ook na een jaaraankoop loopt de incasso
+     maandelijks (besluit 9 oktober 2026). */
+  var straks = (prijs && prijs.maand) ? " Daarna betaal je " + prijs.maand.replace(" ", "\u00a0") + " per maand." : "";
   var tot = offerte.geldig_tot ? " tot " + datumLang(offerte.geldig_tot) : "";
   if (offerte.soort === "downgrade") {
     return (
@@ -986,8 +987,14 @@ function PakkettenSheet({ onSluiten, nadruk }) {
                     </div>
                     {prijs.jaar && !(betaaldNu && kanKiezen) && (
                       <div className="pakket-prijs-jaar">
-                        {jaar ? ("of " + prijs.maand + " per maand")
-                              : ("of " + prijs.jaar + " per jaar \u2014 twee maanden korting")}
+                        {/* "Per jaar" is sinds 9 oktober 2026 het EERSTE jaar:
+                            daarna loopt het per maand door en is het maandelijks
+                            opzegbaar (doorlopendeIncasso in
+                            supabase/functions/_gedeeld/mollie.ts). "€ 490 per
+                            jaar" zonder meer zou een tweede jaar beloven dat
+                            de software niet afschrijft. */}
+                        {jaar ? ("het eerste jaar; daarna " + prijs.maand + " per maand, maandelijks opzegbaar")
+                              : ("of " + prijs.jaar + " voor het eerste jaar \u2014 twee maanden korting")}
                       </div>
                     )}
                   </div>

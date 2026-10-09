@@ -251,6 +251,26 @@ Deno.test("een verlenging zonder metadata wordt via het klantnummer gevonden", a
   const rpc = op.dbAanroepen.find((a) => a.soort === "rpc");
   gelijk(rpc?.argumenten?.p_club, CLUB);
   gelijk(rpc?.argumenten?.p_pakket, "coach");
+  // De termijn volgt uit het afgeschreven bedrag (€ 6,99 = een maand),
+  // niet uit de vorige betaling (die was "jaar"). Anders levert de eerste
+  // maandafschrijving na een jaaraankoop een heel jaar op.
+  gelijk(rpc?.argumenten?.p_termijn, "maand");
+});
+
+Deno.test("een oude jaarincasso (van vóór 9 oktober) telt nog als een jaar", async () => {
+  const op = opstelling({
+    mollieAntwoorden: {
+      ["GET /v2/payments/" + BETALING]: {
+        body: nepBetaling({ metadata: null, amount: { value: "69.90", currency: "EUR" } }),
+      },
+    },
+    rijen: {
+      abonnementen: [{ club_id: CLUB, pakket: "coach", mollie_subscription_id: "sub_8JfGzs6v3K" }],
+      betalingen: [{ pakket: "coach", termijn: "maand" }],
+    },
+  });
+  await behandelMelding(melding(BETALING), op.deps);
+  const rpc = op.dbAanroepen.find((a) => a.soort === "rpc");
   gelijk(rpc?.argumenten?.p_termijn, "jaar");
 });
 
@@ -335,7 +355,9 @@ Deno.test("een tweede melding maakt GEEN tweede subscription", async () => {
   gelijk(op.mollieAanroepen.filter((a) => a.url.endsWith("/subscriptions")).length, 0);
 });
 
-Deno.test("een jaarabonnement krijgt het jaarinterval", async () => {
+Deno.test("na een jaaraankoop begint de incasso over een jaar, en dan PER MAAND", async () => {
+  // Besluit 9 oktober 2026 (Wet Van Dam, CBb 11 september 2026): na het
+  // eerste jaar maandelijks opzegbaar, dus maandelijks afschrijven.
   const op = opstelling({
     mollieAntwoorden: {
       ["GET /v2/payments/" + BETALING]: {
@@ -349,8 +371,11 @@ Deno.test("een jaarabonnement krijgt het jaarinterval", async () => {
   });
   await behandelMelding(melding(BETALING), op.deps);
   const abo = op.mollieAanroepen.find((a) => a.url.endsWith("/subscriptions"));
-  gelijk(abo?.body?.interval, "12 months");
-  gelijk(abo?.body?.startDate, "2027-09-19");
+  gelijk(abo?.body?.interval, "1 month");
+  gelijk(abo?.body?.amount, { value: "49.00", currency: "EUR" }, "het maandbedrag, niet € 490");
+  gelijk(abo?.body?.startDate, "2027-09-19", "pas na het betaalde jaar");
+  const bedrag = op.dbAanroepen.filter((a) => a.soort === "bijwerken" && a.tabel === "abonnementen")[1];
+  gelijk(bedrag?.velden, { mollie_bedrag_cent: 4900 });
 });
 
 // ── 7. Wat er misgaat ────────────────────────────────────────
@@ -663,7 +688,10 @@ Deno.test("na een doorgevoerde wissel wordt de LOPENDE incasso gewijzigd, niet e
   gelijk(bedrag?.vraag, { club_id: "eq." + CLUB_CLAIM });
 });
 
-Deno.test("een jaarwissel zet de incasso op het jaarbedrag", async () => {
+Deno.test("een jaarwissel zet de incasso op het MAANDbedrag (de incasso loopt per maand)", async () => {
+  // Besluit 9 oktober 2026: na een jaaraankoop loopt de incasso per
+  // maand (doorlopendeIncasso). € 490 op een maandelijkse incasso zou
+  // elke maand een jaarbedrag afschrijven.
   const op = wisselOpstelling({
     rijen: {
       abonnement_wissels: [openClaim({ termijn: "jaar" })],
@@ -672,11 +700,11 @@ Deno.test("een jaarwissel zet de incasso op het jaarbedrag", async () => {
   });
   await behandelMelding(melding(BETALING), op.deps);
   const patch = op.mollieAanroepen.find((a) => a.methode === "PATCH");
-  gelijk(patch?.body?.amount, { value: "490.00", currency: "EUR" });
+  gelijk(patch?.body?.amount, { value: "49.00", currency: "EUR" });
   const bedrag = op.dbAanroepen.find(
     (a) => a.soort === "bijwerken" && a.tabel === "abonnementen",
   );
-  gelijk(bedrag?.velden, { mollie_bedrag_cent: 49000 });
+  gelijk(bedrag?.velden, { mollie_bedrag_cent: 4900 });
 });
 
 // ── 9e. De wissel is NIET doorgevoerd ────────────────────────

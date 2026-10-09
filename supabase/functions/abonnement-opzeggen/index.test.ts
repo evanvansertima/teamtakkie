@@ -313,11 +313,13 @@ Deno.test("intrekken: nieuwe incasso die OP DE EINDDATUM ingaat, dan pas de data
   });
 });
 
-Deno.test("intrekken: het bedrag komt uit PRIJZEN, ook als de body iets anders zegt", async () => {
+Deno.test("intrekken: het bedrag komt uit PRIJZEN (per maand), ook als de body iets anders zegt", async () => {
   const op = opstelling({ rij: { opgezegd: true, mollie_subscription_id: null, pakket: "club", termijn: "jaar" } });
   await behandelOpzegging(verzoek("intrekken", { bedrag_cent: 1 }), op.deps);
-  gelijk(op.mollieAanroepen[0]?.body?.amount, { value: "490.00", currency: "EUR" });
-  gelijk(op.mollieAanroepen[0]?.body?.interval, "12 months");
+  // Club per jaar: de incasso loopt na de einddatum per maand (besluit
+  // 9 oktober 2026), dus het maandbedrag van Club.
+  gelijk(op.mollieAanroepen[0]?.body?.amount, { value: "49.00", currency: "EUR" });
+  gelijk(op.mollieAanroepen[0]?.body?.interval, "1 month");
 });
 
 Deno.test("intrekken: lukt het bij Mollie niet, dan blijft de opzegging gewoon staan", async () => {

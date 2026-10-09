@@ -540,7 +540,7 @@
                 <span class="pakket-prijs-per">
                   "per maand"
               <div class="pakket-prijs-jaar">
-                "of € 69,90 per jaar — twee maanden korting"
+                "of € 69,90 voor het eerste jaar — twee maanden korting"
             <div class="pakket-teams">
               "1 team"
             <ul class="pakket-lijst">
@@ -581,7 +581,7 @@
                 <span class="pakket-prijs-per">
                   "per maand"
               <div class="pakket-prijs-jaar">
-                "of € 490,00 per jaar — twee maanden korting"
+                "of € 490,00 voor het eerste jaar — twee maanden korting"
             <div class="pakket-teams">
               "Onbeperkt teams"
             <ul class="pakket-lijst">

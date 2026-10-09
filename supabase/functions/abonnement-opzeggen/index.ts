@@ -44,6 +44,7 @@
 import {
   beoordeelOpzegging,
   centenNaarBedrag,
+  doorlopendeIncasso,
   type Fetcher,
   GEEN_SLEUTEL_TEKST,
   maakMollie,
@@ -310,17 +311,20 @@ export async function behandelOpzegging(
       return fout("We kunnen deze vereniging niet bij de betaaldienst vinden. Neem contact op.", 400);
     }
     const termijn = feiten.termijn as string;
-    const bedragCent = prijsCent(feiten.pakket, termijn) as number;
+    // Maandelijks, ook na een jaaraankoop (doorlopendeIncasso). Het
+    // oordeel heeft al gecontroleerd dat pakket en termijn bekend zijn.
+    const incasso = doorlopendeIncasso(feiten.pakket) as { bedragCent: number; interval: string };
+    const bedragCent = incasso.bedragCent;
     const mollie = deps.mollie();
     let nieuwId = "";
     try {
       const abo = await mollie.maakAbonnement(klantId, {
         amount: { value: centenNaarBedrag(bedragCent), currency: "EUR" },
-        interval: mollieInterval(termijn),
+        interval: incasso.interval,
         // De einddatum is betaald. De eerste nieuwe afschrijving hoort
         // dáár, niet vandaag — anders betaalt de club een periode dubbel.
         startDate: geldigTot,
-        description: `TEAMTAKKIE ${feiten.pakket} (per ${termijn})`,
+        description: `TEAMTAKKIE ${feiten.pakket} (per maand)`,
       });
       nieuwId = abo.id;
     } catch (f) {

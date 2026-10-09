@@ -110,6 +110,35 @@ export function prijsCent(pakket: unknown, termijn: unknown): number | null {
   return typeof bedrag === "number" ? bedrag : null;
 }
 
+/* Wat de DOORLOPENDE incasso afschrijft — los van hoe er de eerste
+   keer is betaald.
+
+   Besluit van Evan (9 oktober 2026): een jaarabonnement wordt het
+   eerste jaar vooruit betaald, en gaat daarna over op het maandbedrag,
+   maandelijks opzegbaar. Na de eerste periode mag een
+   consumentenabonnement alleen doorlopen als het maandelijks opzegbaar
+   is (Wet Van Dam; het CBb bevestigde dat op 11 september 2026), en
+   automatisch nog een heel jaar vooruit afschrijven past daar niet bij.
+
+   De incasso is dus ALTIJD maandelijks, ook na een jaaraankoop. Wie
+   hier "voor de netheid" weer de termijn van de aankoop gebruikt,
+   schrijft na een jaar € 490 af bij iemand die per maand mag stoppen. */
+export function doorlopendeIncasso(
+  pakket: string,
+): { bedragCent: number; interval: string } | null {
+  const bedrag = prijsCent(pakket, "maand");
+  return bedrag === null ? null : { bedragCent: bedrag, interval: "1 month" };
+}
+
+/* Welke termijn hoort bij een afschrijving van de doorlopende incasso?
+   Sinds het besluit hierboven altijd een maand — behalve bij een
+   incasso van vóór 9 oktober 2026 die nog per jaar loopt; die herkennen
+   we aan het jaarbedrag. Het bedrag komt van Mollie, niet van de
+   aanvrager, dus dit is geen gok op iets wat iemand kan sturen. */
+export function termijnVanVerlenging(pakket: string, bedragCent: number): string {
+  return prijsCent(pakket, "jaar") === bedragCent ? "jaar" : "maand";
+}
+
 /* 699 wordt "6.99". Mollie wil het bedrag als tekst met precies twee
    decimalen en een punt, niet als getal — een getal zou onderweg een
    kommagetal worden en dat is de bekendste rekenfout met geld. */

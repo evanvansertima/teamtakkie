@@ -52,6 +52,8 @@ import {
   mollieSleutel,
   prijsCent,
   startDatumVolgendePeriode,
+  doorlopendeIncasso,
+  termijnVanVerlenging,
 } from "../_gedeeld/mollie.ts";
 import { type DbClient, maakDbClient } from "../_gedeeld/supabase.ts";
 
@@ -296,7 +298,9 @@ export async function behandelMelding(
       const incasso = abo.length > 0 && typeof abo[0].mollie_subscription_id === "string"
         ? abo[0].mollie_subscription_id as string
         : "";
-      const nieuwBedrag = prijsCent(wisselPakket, wisselTermijn);
+      // Het maandbedrag, ook bij een jaarabonnement: de incasso loopt
+      // per maand (doorlopendeIncasso in _gedeeld/mollie.ts).
+      const nieuwBedrag = doorlopendeIncasso(wisselPakket)?.bedragCent ?? null;
 
       if (pakketNu !== wisselPakket) {
         deps.log("wisselbetaling niet toegekend — incasso blijft ongewijzigd", {
@@ -313,7 +317,7 @@ export async function behandelMelding(
       } else {
         await mollie.wijzigAbonnement(klantId, incasso, {
           amount: { value: centenNaarBedrag(nieuwBedrag), currency: valuta },
-          description: `TEAMTAKKIE ${wisselPakket} (per ${wisselTermijn})`,
+          description: `TEAMTAKKIE ${wisselPakket} (per maand)`,
         });
         // PAS NA de bevestiging van Mollie. Dit veld betekent "wat
         // Mollie volgens ons afschrijft"; vooruitlopend invullen maakt
@@ -358,6 +362,11 @@ export async function behandelMelding(
         if (!clubId && typeof abo[0].club_id === "string") clubId = abo[0].club_id;
         if (!pakket && typeof abo[0].pakket === "string") pakket = abo[0].pakket as string;
       }
+      // De termijn van een verlenging volgt uit wat er nu is
+      // afgeschreven, en niet uit de vorige betaling: na een
+      // jaaraankoop is de incasso maandelijks (doorlopendeIncasso), en
+      // die eerste maandafschrijving zou anders een heel jaar opleveren.
+      if (!termijn && pakket) termijn = termijnVanVerlenging(pakket, bedragCent);
       if (!termijn || !pakket) {
         const eerder = await db.selecteer("betalingen", {
           select: "pakket,termijn",
@@ -453,16 +462,19 @@ export async function behandelMelding(
       const alAanwezig = abo.length > 0 &&
         typeof abo[0].mollie_subscription_id === "string" &&
         (abo[0].mollie_subscription_id as string) !== "";
-      const interval = mollieInterval(termijn);
-      if (!alAanwezig && interval) {
+      // De termijn van de AANKOOP bepaalt alleen wanneer de incasso
+      // begint (na een maand of na een jaar). Wat hij daarna afschrijft
+      // is altijd het maandbedrag — zie doorlopendeIncasso().
+      const incasso = mollieInterval(termijn) ? doorlopendeIncasso(pakket) : null;
+      if (!alAanwezig && incasso) {
         const abonnement = await mollie.maakAbonnement(klantId, {
-          amount: { value: centenNaarBedrag(bedragCent), currency: valuta },
-          interval,
+          amount: { value: centenNaarBedrag(incasso.bedragCent), currency: valuta },
+          interval: incasso.interval,
           // Zonder startDate incasseert Mollie meteen — bovenop de
           // betaling die zojuist is gedaan. Zie de uitleg bij
           // startDatumVolgendePeriode() in _gedeeld/mollie.ts.
           startDate: startDatumVolgendePeriode(new Date(betaaldOp), termijn),
-          description: `TEAMTAKKIE ${pakket} (per ${termijn})`,
+          description: `TEAMTAKKIE ${pakket} (per maand)`,
         });
         // In één schrijfactie met het nummer: een nieuwe incasso ÍS het
         // einde van een eerdere opzegging. Wie na het verlopen opnieuw
@@ -479,7 +491,7 @@ export async function behandelMelding(
         // voor iedereen die gewoon een abonnement koopt, en meldt
         // public.wissel_controle() straks elke club als "onbekend".
         await db.bijwerken("abonnementen", { club_id: "eq." + clubId }, {
-          mollie_bedrag_cent: bedragCent,
+          mollie_bedrag_cent: incasso.bedragCent,
         });
         deps.log("doorlopende incasso aangezet", {
           betaling: id,

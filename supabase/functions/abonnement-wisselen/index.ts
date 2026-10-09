@@ -44,6 +44,7 @@
 import {
   beoordeelWissel,
   centenNaarBedrag,
+  doorlopendeIncasso,
   type Fetcher,
   GEEN_SLEUTEL_TEKST,
   maakMollie,
@@ -254,7 +255,9 @@ export async function behandelWissel(
 
       // ── 6b. En dan de incasso bij Mollie ───────────────────
       //  Het pakket staat nu goed. Wat Mollie afschrijft nog niet.
-      const nieuwBedrag = prijsCent(naarPakket, feiten.termijn ?? "");
+      // Het maandbedrag, ook bij een jaarabonnement: de incasso loopt
+      // per maand (doorlopendeIncasso in _gedeeld/mollie.ts).
+      const nieuwBedrag = doorlopendeIncasso(naarPakket)?.bedragCent ?? null;
       if (!feiten.mollieSubscriptionId || !klantId || nieuwBedrag === null) {
         // Een downgrade mag ook zonder doorlopende incasso doorgaan —
         // maar dan hoort dat hier hard in het logboek te staan, want
@@ -280,7 +283,7 @@ export async function behandelWissel(
         const mollie = deps.mollie();
         await mollie.wijzigAbonnement(klantId, feiten.mollieSubscriptionId, {
           amount: { value: centenNaarBedrag(nieuwBedrag), currency: "EUR" },
-          description: `TEAMTAKKIE ${naarPakket} (per ${feiten.termijn})`,
+          description: `TEAMTAKKIE ${naarPakket} (per maand)`,
         });
       } catch (f) {
         // Het pakket staat al goed en dat draaien we niet terug — dat
