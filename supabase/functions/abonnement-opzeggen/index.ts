@@ -56,6 +56,7 @@ import {
   type WisselFeiten,
 } from "../_gedeeld/mollie.ts";
 import { type DbClient, maakDbClient } from "../_gedeeld/supabase.ts";
+import { leesMailInstellingen, maakBevestiger } from "../_gedeeld/mail.ts";
 import { type Bevestiging, bevestigingsTekst } from "../_gedeeld/bevestiging.ts";
 
 // De tests importeren deze twee van hier; ze wonen sinds de
@@ -365,13 +366,9 @@ export function standaardAfhankelijkheden(fetchFn: Fetcher = fetch): OpzegAfhank
     gebruikerClient: (jwt) => maakDbClient({ url, sleutel: anon, jwt, fetchFn }),
     serviceClient: () => maakDbClient({ url, sleutel: service, fetchFn }),
     mollie: () => maakMollie(mollieSleutel(), fetchFn),
-    // Nog geen maildienst gekozen (zie bovenaan). Het onderwerp wordt
-    // gelogd zodat te zien is dát er een mail had moeten gaan; het
-    // e-mailadres met opzet niet.
-    bevestig: (b) => {
-      log("bevestigingsmail nog niet aangesloten", { onderwerp: bevestigingsTekst(b).onderwerp });
-      return Promise.resolve(false);
-    },
+    // Brevo als de sleutel en de afzender er zijn; anders alleen een
+    // logregel en mail: false (zie _gedeeld/mail.ts).
+    bevestig: maakBevestiger(leesMailInstellingen(Deno.env), log, fetchFn),
     log,
     nu: () => new Date(),
   };

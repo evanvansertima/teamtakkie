@@ -191,6 +191,17 @@ MUTATIES = [
      "functions/betaling-melding/index.ts",
      '      if (!alAanwezig && incasso && !ouderDanStop && !terugbetaald) {',
      '      if (!alAanwezig && incasso && !terugbetaald) {'),
+
+    # ── bevestigingsmail via Brevo (9 oktober 2026) ───────────
+    ("B1  een weigering van Brevo telt als verstuurd",
+     "functions/_gedeeld/mail.ts",
+     '    if (status === 201 || status === 202) {',
+     '    if (status > 0) {'),
+
+    ("B2  de statusregel neemt het antwoord van Brevo mee",
+     "functions/_gedeeld/mail.ts",
+     '      await antwoord.body?.cancel();',
+     '      log("brevo zei", { tekst: await antwoord.text() });'),
 ]
 
 

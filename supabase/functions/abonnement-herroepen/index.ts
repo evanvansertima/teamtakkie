@@ -45,7 +45,8 @@ import {
   mollieSleutel,
 } from "../_gedeeld/mollie.ts";
 import { type DbClient, maakDbClient } from "../_gedeeld/supabase.ts";
-import { type Bevestiging, bevestigingsTekst } from "../_gedeeld/bevestiging.ts";
+import { leesMailInstellingen, maakBevestiger } from "../_gedeeld/mail.ts";
+import { type Bevestiging } from "../_gedeeld/bevestiging.ts";
 
 const UUID_VORM =
   /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
@@ -291,12 +292,9 @@ export function standaardAfhankelijkheden(fetchFn: Fetcher = fetch): HerroepAfha
     gebruikerClient: (jwt) => maakDbClient({ url, sleutel: anon, jwt, fetchFn }),
     serviceClient: () => maakDbClient({ url, sleutel: service, fetchFn }),
     mollie: () => maakMollie(mollieSleutel(), fetchFn),
-    // Nog geen maildienst aangesloten (Brevo volgt). Zie
-    // abonnement-opzeggen: het onderwerp wordt gelogd, het adres niet.
-    bevestig: (b) => {
-      log("bevestigingsmail nog niet aangesloten", { onderwerp: bevestigingsTekst(b).onderwerp });
-      return Promise.resolve(false);
-    },
+    // Brevo als de sleutel en de afzender er zijn; anders alleen een
+    // logregel en mail: false (zie _gedeeld/mail.ts).
+    bevestig: maakBevestiger(leesMailInstellingen(Deno.env), log, fetchFn),
     log,
     nu: () => new Date(),
   };
