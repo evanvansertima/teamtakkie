@@ -3006,7 +3006,7 @@ window.addEventListener("error", function(e){
 });
 </script>
 <script>
-const APP_VERSIE = "onbekend";
+const APP_VERSIE = "9573516";
 const TEAMS_KEY = "tt_teams_v1";
 const ACTIEF_KEY = "tt_actief_v1";
 const VOORKEUR_KEY = "tt_voorkeuren_v1";
@@ -5039,10 +5039,13 @@ function syncPakket(clubId) {
     if (!r.ok) return r;
     var rij = Array.isArray(r.gegevens) ? r.gegevens[0] : null;
     var voorbij = rij && rij.opgezegd_op && rij.geldig_tot && rij.geldig_tot < _vandaagLokaal();
-    if (rij && rij.pakket) zetPakket(voorbij ? "free" : rij.pakket);
-    zetAbonnementOpgezegd(rij && !voorbij ? rij.opgezegd_op : null);
-    zetAbonnementTot(rij ? rij.geldig_tot : null);
-    return { ok: true };
+    return serverVraag("/rest/v1/rpc/pakket_van_club", { methode: "POST", lichaam: { doel: clubId } }).then(function(p) {
+      var geldt = p && p.ok && typeof p.gegevens === "string" ? p.gegevens : rij && rij.pakket ? voorbij ? "free" : rij.pakket : null;
+      if (geldt) zetPakket(geldt);
+      zetAbonnementOpgezegd(rij && geldt !== "free" ? rij.opgezegd_op : null);
+      zetAbonnementTot(rij ? rij.geldig_tot : null);
+      return { ok: true };
+    });
   });
 }
 var _syncBezig = false;

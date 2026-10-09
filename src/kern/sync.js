@@ -1004,20 +1004,31 @@ function syncPakket(clubId) {
     .then(function (r) {
       if (!r.ok) return r;
       var rij = Array.isArray(r.gegevens) ? r.gegevens[0] : null;
-      /* Opgezegd en de einddatum voorbij: dan is het Free, ook al staat
-         er in de kolom nog "coach". Dat is dezelfde regel als
-         pakket_van_club() op de server (21-opzeggen.sql) — die beslist
-         wat er mag; dit zorgt alleen dat het scherm niet iets anders
-         zegt dan de server doet. */
+      /* De kolom pakket zegt wat er gekocht is, niet wat er nú geldt. Na
+         de einddatum (plus respijt, of zonder respijt na opzeggen) is
+         het Free, ook al staat er nog "coach". Dat beslist
+         pakket_van_club() op de server, en die vragen we het dus zelf —
+         anders toont dit scherm een pakket dat de server al lang niet
+         meer toestaat, en dan lijkt de app kapot zodra iemand iets
+         probeert op te slaan.
+
+         Lukt die vraag niet (geen verbinding halverwege, of een server
+         van vóór 06-pakketten.sql), dan dezelfde regel hier nagedaan
+         voor het geval dat het vaakst voorkomt: opgezegd en verlopen. */
       var voorbij = rij && rij.opgezegd_op && rij.geldig_tot && rij.geldig_tot < _vandaagLokaal();
-      if (rij && rij.pakket) zetPakket(voorbij ? "free" : rij.pakket);
-      zetAbonnementOpgezegd(rij && !voorbij ? rij.opgezegd_op : null);
-      /* Ook als er géén rij is, of een rij zonder einddatum: dan hoort
-         de datum van gisteren weg. Een "loopt tot" laten staan bij een
-         abonnement dat er niet meer is, is een belofte doen namens een
-         server die niets beloofd heeft. */
-      zetAbonnementTot(rij ? rij.geldig_tot : null);
-      return {ok:true};
+      return serverVraag("/rest/v1/rpc/pakket_van_club", {methode:"POST", lichaam:{doel: clubId}})
+        .then(function (p) {
+          var geldt = (p && p.ok && typeof p.gegevens === "string") ? p.gegevens
+                    : (rij && rij.pakket ? (voorbij ? "free" : rij.pakket) : null);
+          if (geldt) zetPakket(geldt);
+          zetAbonnementOpgezegd(rij && geldt !== "free" ? rij.opgezegd_op : null);
+          /* Ook als er géén rij is, of een rij zonder einddatum: dan
+             hoort de datum van gisteren weg. Een "loopt tot" laten staan
+             bij een abonnement dat er niet meer is, is een belofte doen
+             namens een server die niets beloofd heeft. */
+          zetAbonnementTot(rij ? rij.geldig_tot : null);
+          return {ok:true};
+        });
     });
 }
 
