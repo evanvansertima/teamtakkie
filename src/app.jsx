@@ -561,6 +561,17 @@ function teamNaamVol() {
   var i = _instellingen;
   return (i.clubNaam+" "+i.teamNaam).trim();
 }
+/* De club- en teamnaam als stukje bestandsnaam: "VV De Toekomst JO11-1"
+   wordt "vv-de-toekomst-jo11-1". Tot 9 oktober 2026 stond hier op vier
+   plekken vast "fc-harlingen-jo19-2" — elke klant downloadde zo een
+   bestand met de naam van het eerste team waarvoor de app gebouwd is.
+   Nog geen naam ingevuld? Dan "teamtakkie", nooit een leeg stuk. */
+function teamBestandsdeel() {
+  var kaal = teamNaamVol().toLowerCase()
+    .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+  return kaal || "teamtakkie";
+}
 /* De twee helften wegschrijven. Alles wat in TEAM_INSTELLINGEN staat
    gaat naar dit team, de rest naar jou. */
 function _schrijfInstellingen() {

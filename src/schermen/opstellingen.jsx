@@ -3571,7 +3571,7 @@ function exporteerOpstellingPDF(opstellingNaam, formatie, toewijzing) {
     }
   });
   pdfVoet(doc, W, H, {donker:true, seizoen:true, marge:14});
-  doc.save("fc-harlingen-opstelling.pdf");
+  doc.save(teamBestandsdeel() + "-opstelling.pdf");
 }
 
 function deelOpstellingWhatsApp(opstellingNaam, formatie, toewijzing) {
@@ -3588,8 +3588,18 @@ function deelOpstellingWhatsApp(opstellingNaam, formatie, toewijzing) {
   ctx.fillStyle="#004aad"; ctx.fillRect(0,0,CW,120);
   ctx.fillStyle="#38b6ff"; ctx.fillRect(0,114,CW,12);
   ctx.fillStyle="white"; ctx.textAlign="center";
-  ctx.font="bold 40px 'Helvetica Neue',Arial";
-  ctx.fillText("FC HARLINGEN JO19-2",CW/2,62);
+  /* De naam van DIT team, niet die van het eerste team waarvoor de app
+     gebouwd is (tot 9 oktober 2026 stond hier vast "FC HARLINGEN
+     JO19-2", bij iedere klant). Een lange clubnaam krijgt een kleinere
+     letter in plaats van over de rand te lopen. */
+  var kop = (teamNaamVol() || APP_NAAM).toUpperCase();
+  var kopMaat = 40;
+  ctx.font="bold "+kopMaat+"px 'Helvetica Neue',Arial";
+  while (kopMaat > 20 && ctx.measureText(kop).width > CW - 60) {
+    kopMaat -= 2;
+    ctx.font="bold "+kopMaat+"px 'Helvetica Neue',Arial";
+  }
+  ctx.fillText(kop,CW/2,62);
   ctx.font="bold 22px 'Helvetica Neue',Arial";
   ctx.fillText("Opstelling: "+opstellingNaam+"  ·  "+formatie,CW/2,96);
   // Veld
@@ -3670,13 +3680,13 @@ function deelOpstellingWhatsApp(opstellingNaam, formatie, toewijzing) {
   ctx.fillText(teamNaamVol()+"  ·  Seizoen "+inst().seizoen+"  ·  "+datum,CW/2,CH-20);
   // Delen als PNG
   canvas.toBlob(function(blob){
-    var bestand=new File([blob],"fc-harlingen-opstelling.png",{type:"image/png"});
+    var bestand=new File([blob],teamBestandsdeel()+"-opstelling.png",{type:"image/png"});
     if(navigator.canShare&&navigator.canShare({files:[bestand]})){
       navigator.share({title:teamNaamVol()+" – opstelling",text:"Opstelling: "+opstellingNaam,files:[bestand]}).catch(function(){});
     } else {
       var url=URL.createObjectURL(blob);
       var a=document.createElement("a");
-      a.href=url; a.download="fc-harlingen-opstelling.png"; a.click();
+      a.href=url; a.download=teamBestandsdeel()+"-opstelling.png"; a.click();
       URL.revokeObjectURL(url);
     }
   },"image/png");

@@ -3006,7 +3006,7 @@ window.addEventListener("error", function(e){
 });
 </script>
 <script>
-const APP_VERSIE = "386ebac";
+const APP_VERSIE = "1cd58f3";
 const TEAMS_KEY = "tt_teams_v1";
 const ACTIEF_KEY = "tt_actief_v1";
 const VOORKEUR_KEY = "tt_voorkeuren_v1";
@@ -8347,7 +8347,7 @@ function TeamScherm({ opKlaar, eerste }) {
         "input",
         {
           value: locatie,
-          placeholder: "Bijvoorbeeld Sportpark De Zeehoek",
+          placeholder: "Bijvoorbeeld Sportpark De Toekomst",
           onChange: function(e) {
             setLocatie(e.target.value);
           }
@@ -9809,7 +9809,7 @@ function InstellingenSheet({ onSluiten, onGewisseld, onTeams }) {
       onChange: function(e) {
         zetInstellingen({ locatie: e.target.value });
       },
-      placeholder: "Sportpark De Zeehoek"
+      placeholder: "Sportpark De Toekomst"
     }
   )))), /* @__PURE__ */ React.createElement("div", { className: "inst-groep" }, "App"), /* @__PURE__ */ React.createElement("div", { className: "kaart" }, /* @__PURE__ */ React.createElement("div", { className: "kaart-titel" }, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-circle-half-stroke" }), " Weergave"), /* @__PURE__ */ React.createElement("div", { className: "thema-rij" }, [
     { id: "licht", label: "Licht", ic: "fa-solid fa-sun" },
@@ -12030,7 +12030,7 @@ function TrainingFormulier({ training, onOpslaan, onSluiten }) {
   const typeKleur = { Oefening: "var(--blauw-licht)", "Warming-up": "var(--oranje)", Positiespel: "var(--succes)", Wedstrijdvorm: "var(--blauw)", Conditie: "var(--gevaar)", Afkoelen: "var(--grijs-donker)" };
   return /* @__PURE__ */ React.createElement("div", { className: "modal-overlay", onClick: (e) => {
     if (e.target === e.currentTarget) onSluiten();
-  } }, /* @__PURE__ */ React.createElement("div", { className: "modal-sheet" }, /* @__PURE__ */ React.createElement("div", { className: "modal-greep" }), /* @__PURE__ */ React.createElement("div", { className: "modal-titel" }, form.id ? "Training bewerken" : "Training toevoegen"), /* @__PURE__ */ React.createElement("div", { className: "formulier-rij" }, /* @__PURE__ */ React.createElement("div", { className: "formulier-groep" }, /* @__PURE__ */ React.createElement("label", { className: "formulier-label" }, "Datum *"), /* @__PURE__ */ React.createElement("input", { className: "formulier-input", type: "date", value: form.datum, onChange: (e) => set("datum", e.target.value) })), /* @__PURE__ */ React.createElement("div", { className: "formulier-groep" }, /* @__PURE__ */ React.createElement("label", { className: "formulier-label" }, "Aanvangstijd"), /* @__PURE__ */ React.createElement("input", { className: "formulier-input", type: "time", value: form.tijd, onChange: (e) => set("tijd", e.target.value) }))), /* @__PURE__ */ React.createElement("div", { className: "formulier-rij" }, /* @__PURE__ */ React.createElement("div", { className: "formulier-groep" }, /* @__PURE__ */ React.createElement("label", { className: "formulier-label" }, "Locatie"), /* @__PURE__ */ React.createElement("input", { className: "formulier-input", value: form.locatie, onChange: (e) => set("locatie", e.target.value), placeholder: "Sportpark De Zeehoek" })), /* @__PURE__ */ React.createElement("div", { className: "formulier-groep" }, /* @__PURE__ */ React.createElement("label", { className: "formulier-label" }, "Duur (min)"), /* @__PURE__ */ React.createElement(GetalVeld, { className: "formulier-input", min: 30, max: 180, step: "5", leeg: 90, waarde: form.duur, opWaarde: function(n) {
+  } }, /* @__PURE__ */ React.createElement("div", { className: "modal-sheet" }, /* @__PURE__ */ React.createElement("div", { className: "modal-greep" }), /* @__PURE__ */ React.createElement("div", { className: "modal-titel" }, form.id ? "Training bewerken" : "Training toevoegen"), /* @__PURE__ */ React.createElement("div", { className: "formulier-rij" }, /* @__PURE__ */ React.createElement("div", { className: "formulier-groep" }, /* @__PURE__ */ React.createElement("label", { className: "formulier-label" }, "Datum *"), /* @__PURE__ */ React.createElement("input", { className: "formulier-input", type: "date", value: form.datum, onChange: (e) => set("datum", e.target.value) })), /* @__PURE__ */ React.createElement("div", { className: "formulier-groep" }, /* @__PURE__ */ React.createElement("label", { className: "formulier-label" }, "Aanvangstijd"), /* @__PURE__ */ React.createElement("input", { className: "formulier-input", type: "time", value: form.tijd, onChange: (e) => set("tijd", e.target.value) }))), /* @__PURE__ */ React.createElement("div", { className: "formulier-rij" }, /* @__PURE__ */ React.createElement("div", { className: "formulier-groep" }, /* @__PURE__ */ React.createElement("label", { className: "formulier-label" }, "Locatie"), /* @__PURE__ */ React.createElement("input", { className: "formulier-input", value: form.locatie, onChange: (e) => set("locatie", e.target.value), placeholder: "Sportpark De Toekomst" })), /* @__PURE__ */ React.createElement("div", { className: "formulier-groep" }, /* @__PURE__ */ React.createElement("label", { className: "formulier-label" }, "Duur (min)"), /* @__PURE__ */ React.createElement(GetalVeld, { className: "formulier-input", min: 30, max: 180, step: "5", leeg: 90, waarde: form.duur, opWaarde: function(n) {
     set("duur", n);
   } }))), /* @__PURE__ */ React.createElement("div", { className: "formulier-sectie-titel" }, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-bullseye" }), " Doelstellingen"), /* @__PURE__ */ React.createElement("div", { className: "formulier-groep" }, /* @__PURE__ */ React.createElement("textarea", { className: "formulier-input", rows: "2", value: form.doelstellingen, onChange: (e) => set("doelstellingen", e.target.value), placeholder: "Wat wil je bereiken met deze training?", style: { resize: "vertical" } })), /* @__PURE__ */ React.createElement("div", { className: "formulier-sectie-titel" }, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-clipboard" }), " Voorbereiding & Materialen"), /* @__PURE__ */ React.createElement("div", { className: "formulier-groep" }, /* @__PURE__ */ React.createElement("label", { className: "formulier-label" }, "Voorbereiding"), /* @__PURE__ */ React.createElement("textarea", { className: "formulier-input", rows: "2", value: form.voorbereidingen, onChange: (e) => set("voorbereidingen", e.target.value), placeholder: "Wat moet je voorbereiden? Veldopstelling, hesjes\u2026", style: { resize: "vertical" } })), /* @__PURE__ */ React.createElement("div", { className: "formulier-groep" }, /* @__PURE__ */ React.createElement("label", { className: "formulier-label" }, "Materialen (meenemen)"), /* @__PURE__ */ React.createElement("input", { className: "formulier-input", value: form.materialen, onChange: (e) => set("materialen", e.target.value), placeholder: "ballen, hesjes, pionnen, doeltjes\u2026" })), /* @__PURE__ */ React.createElement("div", { className: "formulier-sectie-titel" }, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-person-running" }), " Onderdelen (", form.onderdelen.length, ")"), form.onderdelen.map((od, i) => /* @__PURE__ */ React.createElement("div", { key: od.id, style: { display: "flex", alignItems: "center", gap: 8, background: "var(--grijs-licht)", borderRadius: 10, padding: "8px 12px", marginBottom: 8, borderLeft: "4px solid " + (typeKleur[od.type] || "var(--blauw-licht)") } }, /* @__PURE__ */ React.createElement("div", { style: { flex: 1 } }, /* @__PURE__ */ React.createElement("div", { style: { fontWeight: 700, fontFamily: "'Helvetica Neue',Arial", fontSize: 13 } }, i + 1, ". ", od.naam), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: "var(--grijs-donker)", marginTop: 2 } }, od.type, " \xB7 ", od.duur, "'", " \xB7 ", od.aantalSpelers, " spelers")), /* @__PURE__ */ React.createElement("button", { className: "knop lijn klein", style: { padding: "4px 8px" }, onClick: () => setOnderdeelFormulier(od) }, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-pen" })), /* @__PURE__ */ React.createElement("button", { className: "knop gevaar klein", style: { padding: "4px 8px" }, onClick: () => verwijderOnderdeel(od.id) }, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-trash" })))), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 8, marginBottom: 8 } }, /* @__PURE__ */ React.createElement("button", { className: "knop lijn klein", style: { flex: 1, justifyContent: "center" }, onClick: () => setOnderdeelFormulier({}) }, "+ Nieuw onderdeel"), /* @__PURE__ */ React.createElement("button", { className: "knop klein", style: { flex: 1, justifyContent: "center" }, onClick: function() {
     setBibliotheekOpen(true);
@@ -12950,7 +12950,7 @@ function maakICS(g) {
     "CALSCALE:GREGORIAN",
     "METHOD:PUBLISH",
     "BEGIN:VEVENT",
-    "UID:" + (g.id || Date.now()) + "@fc-harlingen",
+    "UID:" + (g.id || Date.now()) + "@teamtakkie.nl",
     "DTSTAMP:" + gemaakt,
     "DTSTART:" + begin,
     "DTEND:" + eind,
@@ -15392,7 +15392,7 @@ function tenuePlaatje(svgVoor, svgAchter, breed) {
 }
 function tenueBestandsnaam(label) {
   var kaal = String(label || "tenue").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
-  return "tenue-" + (kaal || "tenue") + "-fc-harlingen-jo19-2.png";
+  return "tenue-" + (kaal || "tenue") + "-" + teamBestandsdeel() + ".png";
 }
 function tenueKleurlijst(set) {
   var s = Object.assign({}, STANDAARD_SET, set || {});
@@ -21088,7 +21088,7 @@ function TenueOntwerperTab() {
         288,
         { align: "center" }
       );
-      doc.save("tenues-fc-harlingen-jo19-2.pdf");
+      doc.save("tenues-" + teamBestandsdeel() + ".pdf");
       setBezig(false);
     }).catch(function() {
       setBezig(false);
@@ -27435,7 +27435,7 @@ function exporteerOpstellingPDF(opstellingNaam, formatie, toewijzing) {
     }
   });
   pdfVoet(doc, W, H, { donker: true, seizoen: true, marge: 14 });
-  doc.save("fc-harlingen-opstelling.pdf");
+  doc.save(teamBestandsdeel() + "-opstelling.pdf");
 }
 function deelOpstellingWhatsApp(opstellingNaam, formatie, toewijzing) {
   var CW = 800, CH = 1120;
@@ -27453,8 +27453,14 @@ function deelOpstellingWhatsApp(opstellingNaam, formatie, toewijzing) {
   ctx.fillRect(0, 114, CW, 12);
   ctx.fillStyle = "white";
   ctx.textAlign = "center";
-  ctx.font = "bold 40px 'Helvetica Neue',Arial";
-  ctx.fillText("FC HARLINGEN JO19-2", CW / 2, 62);
+  var kop = (teamNaamVol() || APP_NAAM).toUpperCase();
+  var kopMaat = 40;
+  ctx.font = "bold " + kopMaat + "px 'Helvetica Neue',Arial";
+  while (kopMaat > 20 && ctx.measureText(kop).width > CW - 60) {
+    kopMaat -= 2;
+    ctx.font = "bold " + kopMaat + "px 'Helvetica Neue',Arial";
+  }
+  ctx.fillText(kop, CW / 2, 62);
   ctx.font = "bold 22px 'Helvetica Neue',Arial";
   ctx.fillText("Opstelling: " + opstellingNaam + "  \xB7  " + formatie, CW / 2, 96);
   var FL = 80, FT = 145, FW = 640, FH = 840;
@@ -27555,7 +27561,7 @@ function deelOpstellingWhatsApp(opstellingNaam, formatie, toewijzing) {
   var datum = (/* @__PURE__ */ new Date()).toLocaleDateString("nl-NL");
   ctx.fillText(teamNaamVol() + "  \xB7  Seizoen " + inst().seizoen + "  \xB7  " + datum, CW / 2, CH - 20);
   canvas.toBlob(function(blob) {
-    var bestand = new File([blob], "fc-harlingen-opstelling.png", { type: "image/png" });
+    var bestand = new File([blob], teamBestandsdeel() + "-opstelling.png", { type: "image/png" });
     if (navigator.canShare && navigator.canShare({ files: [bestand] })) {
       navigator.share({ title: teamNaamVol() + " \u2013 opstelling", text: "Opstelling: " + opstellingNaam, files: [bestand] }).catch(function() {
       });
@@ -27563,7 +27569,7 @@ function deelOpstellingWhatsApp(opstellingNaam, formatie, toewijzing) {
       var url = URL.createObjectURL(blob);
       var a = document.createElement("a");
       a.href = url;
-      a.download = "fc-harlingen-opstelling.png";
+      a.download = teamBestandsdeel() + "-opstelling.png";
       a.click();
       URL.revokeObjectURL(url);
     }
@@ -29782,7 +29788,7 @@ function ToernooiFormulier({ toernooi, onOpslaan, onSluiten }) {
       onChange: function(e) {
         set("naam", e.target.value);
       },
-      placeholder: "bijv. Zeehoek Cup"
+      placeholder: "bijv. Paastoernooi"
     }
   )), /* @__PURE__ */ React.createElement("div", { className: "formulier-rij" }, /* @__PURE__ */ React.createElement("div", { className: "formulier-groep" }, /* @__PURE__ */ React.createElement("label", { className: "formulier-label" }, "Datum"), /* @__PURE__ */ React.createElement("input", { className: "formulier-input", type: "date", value: form.datum, onChange: function(e) {
     set("datum", e.target.value);
@@ -30174,7 +30180,7 @@ function WedstrijdFormulier({ wedstrijd, spelers, onOpslaan, onSluiten }) {
       /* @__PURE__ */ React.createElement("i", { className: s.telt ? "fa-solid fa-trophy" : "fa-solid fa-futbol", style: { color: s.kleur } }),
       s.label
     );
-  })), /* @__PURE__ */ React.createElement("p", { style: { fontSize: 11, color: "var(--grijs-donker)", fontWeight: 400, margin: "7px 0 0", lineHeight: 1.5 } }, wedstrijdSoort(form).uitleg, wedstrijdSoort(form).id !== "competitie" ? " \xB7 niet in de competitiestand" : "")), /* @__PURE__ */ React.createElement("div", { className: "formulier-rij" }, /* @__PURE__ */ React.createElement("div", { className: "formulier-groep" }, /* @__PURE__ */ React.createElement("label", { className: "formulier-label" }, "Datum *"), /* @__PURE__ */ React.createElement("input", { className: "formulier-input", type: "date", value: form.datum, onChange: (e) => set("datum", e.target.value) })), /* @__PURE__ */ React.createElement("div", { className: "formulier-groep" }, /* @__PURE__ */ React.createElement("label", { className: "formulier-label" }, "Aanvangstijd"), /* @__PURE__ */ React.createElement("input", { className: "formulier-input", type: "time", value: form.tijd, onChange: (e) => set("tijd", e.target.value) }))), /* @__PURE__ */ React.createElement("div", { className: "formulier-groep" }, /* @__PURE__ */ React.createElement("label", { className: "formulier-label" }, "Locatie / Sportpark"), /* @__PURE__ */ React.createElement("input", { className: "formulier-input", value: form.locatie, onChange: (e) => set("locatie", e.target.value), placeholder: "Sportpark De Zeehoek" })), /* @__PURE__ */ React.createElement("div", { className: "formulier-groep" }, /* @__PURE__ */ React.createElement("label", { className: "formulier-label" }, "Thuis of Uit?"), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 8 } }, ["Thuis", "Uit"].map((opt) => /* @__PURE__ */ React.createElement(
+  })), /* @__PURE__ */ React.createElement("p", { style: { fontSize: 11, color: "var(--grijs-donker)", fontWeight: 400, margin: "7px 0 0", lineHeight: 1.5 } }, wedstrijdSoort(form).uitleg, wedstrijdSoort(form).id !== "competitie" ? " \xB7 niet in de competitiestand" : "")), /* @__PURE__ */ React.createElement("div", { className: "formulier-rij" }, /* @__PURE__ */ React.createElement("div", { className: "formulier-groep" }, /* @__PURE__ */ React.createElement("label", { className: "formulier-label" }, "Datum *"), /* @__PURE__ */ React.createElement("input", { className: "formulier-input", type: "date", value: form.datum, onChange: (e) => set("datum", e.target.value) })), /* @__PURE__ */ React.createElement("div", { className: "formulier-groep" }, /* @__PURE__ */ React.createElement("label", { className: "formulier-label" }, "Aanvangstijd"), /* @__PURE__ */ React.createElement("input", { className: "formulier-input", type: "time", value: form.tijd, onChange: (e) => set("tijd", e.target.value) }))), /* @__PURE__ */ React.createElement("div", { className: "formulier-groep" }, /* @__PURE__ */ React.createElement("label", { className: "formulier-label" }, "Locatie / Sportpark"), /* @__PURE__ */ React.createElement("input", { className: "formulier-input", value: form.locatie, onChange: (e) => set("locatie", e.target.value), placeholder: "Sportpark De Toekomst" })), /* @__PURE__ */ React.createElement("div", { className: "formulier-groep" }, /* @__PURE__ */ React.createElement("label", { className: "formulier-label" }, "Thuis of Uit?"), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 8 } }, ["Thuis", "Uit"].map((opt) => /* @__PURE__ */ React.createElement(
     "button",
     {
       key: opt,
@@ -30420,7 +30426,7 @@ function ImportSheet({ bestaande, onImporteren, onSluiten }) {
         setTekst(e.target.value);
       },
       style: { resize: "vertical", fontSize: 13 },
-      placeholder: "za 23 aug 2026  14:30  fc Harlingen JO19-2 - VV Bolsward JO19-1\nzo 30 aug 2026  12:00  SC Franeker JO19-1 - fc Harlingen JO19-2"
+      placeholder: "za 23 aug 2026  14:30  VV De Toekomst JO19-2 - SV Voorbeeld JO19-1\nzo 30 aug 2026  12:00  FC Oefendorp JO19-1 - VV De Toekomst JO19-2"
     }
   ), /* @__PURE__ */ React.createElement(
     "button",
@@ -34177,6 +34183,10 @@ function inst() {
 function teamNaamVol() {
   var i = _instellingen;
   return (i.clubNaam + " " + i.teamNaam).trim();
+}
+function teamBestandsdeel() {
+  var kaal = teamNaamVol().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+  return kaal || "teamtakkie";
 }
 function _schrijfInstellingen() {
   var vanJou = {}, vanTeam = {};

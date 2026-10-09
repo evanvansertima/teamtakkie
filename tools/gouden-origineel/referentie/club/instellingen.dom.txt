@@ -582,7 +582,7 @@
           <div class="formulier-groep">
             <label class="formulier-label">
               "Vaste thuislocatie"
-            <input class="formulier-input" placeholder="Sportpark De Zeehoek" value="Sportpark De Verzonnen Kamp">
+            <input class="formulier-input" placeholder="Sportpark De Toekomst" value="Sportpark De Verzonnen Kamp">
         <div class="inst-groep">
           "App"
         <div class="kaart">

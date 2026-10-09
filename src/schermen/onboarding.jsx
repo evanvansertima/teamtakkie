@@ -265,7 +265,7 @@ function TeamScherm({ opKlaar, eerste }) {
             </span>
           </div>
           <label className="formulier-label">Vaste thuislocatie</label>
-          <input value={locatie} placeholder="Bijvoorbeeld Sportpark De Zeehoek"
+          <input value={locatie} placeholder="Bijvoorbeeld Sportpark De Toekomst"
             onChange={function(e){ setLocatie(e.target.value); }}/>
           <button className="knop onboard-knop" disabled={bezig || !naam.trim()} onClick={maak}>
             <i className={bezig ? "fa-solid fa-hourglass-half" : "fa-solid fa-check"}/>

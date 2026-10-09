@@ -1036,7 +1036,7 @@ function TrainingFormulier({ training, onOpslaan, onSluiten }) {
         <div className="formulier-rij">
           <div className="formulier-groep">
             <label className="formulier-label">Locatie</label>
-            <input className="formulier-input" value={form.locatie} onChange={e=>set("locatie",e.target.value)} placeholder="Sportpark De Zeehoek" />
+            <input className="formulier-input" value={form.locatie} onChange={e=>set("locatie",e.target.value)} placeholder="Sportpark De Toekomst" />
           </div>
           <div className="formulier-groep">
             <label className="formulier-label">Duur (min)</label>
@@ -2190,7 +2190,7 @@ function maakICS(g) {
     "CALSCALE:GREGORIAN",
     "METHOD:PUBLISH",
     "BEGIN:VEVENT",
-    "UID:" + (g.id || Date.now()) + "@fc-harlingen",
+    "UID:" + (g.id || Date.now()) + "@teamtakkie.nl",
     "DTSTAMP:" + gemaakt,
     "DTSTART:" + begin,
     "DTEND:" + eind,

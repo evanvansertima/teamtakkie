@@ -466,7 +466,7 @@ function tenuePlaatje(svgVoor, svgAchter, breed) {
 function tenueBestandsnaam(label) {
   var kaal = String(label || "tenue").toLowerCase()
     .replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
-  return "tenue-" + (kaal || "tenue") + "-fc-harlingen-jo19-2.png";
+  return "tenue-" + (kaal || "tenue") + "-" + teamBestandsdeel() + ".png";
 }
 /* Welke kleuren er in een tenue zitten, met hun code erbij: dat is
    wat een leverancier nodig heeft. */
@@ -4393,7 +4393,7 @@ function TenueOntwerperTab() {
       doc.setTextColor(150, 156, 166);
       doc.text("Gemaakt met " + APP_NAAM + " · " + teamNaamVol(),
                W/2, 288, {align:"center"});
-      doc.save("tenues-fc-harlingen-jo19-2.pdf");
+      doc.save("tenues-" + teamBestandsdeel() + ".pdf");
       setBezig(false);
     }).catch(function(){
       setBezig(false);

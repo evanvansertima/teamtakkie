@@ -2052,7 +2052,7 @@ function InstellingenSheet({ onSluiten, onGewisseld, onTeams }) {
           <div className="formulier-groep">
             <label className="formulier-label">Vaste thuislocatie</label>
             <input className="formulier-input" value={i.locatie}
-              onChange={function(e){zetInstellingen({locatie:e.target.value});}} placeholder="Sportpark De Zeehoek" />
+              onChange={function(e){zetInstellingen({locatie:e.target.value});}} placeholder="Sportpark De Toekomst" />
           </div>
         </div>
         </React.Fragment>

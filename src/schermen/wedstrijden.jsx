@@ -2098,7 +2098,7 @@ function ToernooiFormulier({ toernooi, onOpslaan, onSluiten }) {
         <div className="formulier-groep">
           <label className="formulier-label">Naam *</label>
           <input className="formulier-input" value={form.naam} onChange={function(e){set("naam",e.target.value);}}
-            placeholder="bijv. Zeehoek Cup" />
+            placeholder="bijv. Paastoernooi" />
         </div>
         <div className="formulier-rij">
           <div className="formulier-groep">
@@ -2574,7 +2574,7 @@ function WedstrijdFormulier({ wedstrijd, spelers, onOpslaan, onSluiten }) {
         </div>
         <div className="formulier-groep">
           <label className="formulier-label">Locatie / Sportpark</label>
-          <input className="formulier-input" value={form.locatie} onChange={e=>set("locatie",e.target.value)} placeholder="Sportpark De Zeehoek" />
+          <input className="formulier-input" value={form.locatie} onChange={e=>set("locatie",e.target.value)} placeholder="Sportpark De Toekomst" />
         </div>
         <div className="formulier-groep">
           <label className="formulier-label">Thuis of Uit?</label>
@@ -2817,7 +2817,7 @@ function ImportSheet({ bestaande, onImporteren, onSluiten }) {
                 </p>
                 <textarea className="formulier-input" rows="7" value={tekst}
                   onChange={function(e){setTekst(e.target.value);}} style={{resize:"vertical",fontSize:13}}
-                  placeholder={"za 23 aug 2026  14:30  fc Harlingen JO19-2 - VV Bolsward JO19-1\nzo 30 aug 2026  12:00  SC Franeker JO19-1 - fc Harlingen JO19-2"} />
+                  placeholder={"za 23 aug 2026  14:30  VV De Toekomst JO19-2 - SV Voorbeeld JO19-1\nzo 30 aug 2026  12:00  FC Oefendorp JO19-1 - VV De Toekomst JO19-2"} />
                 <button className="knop" style={{width:"100%",justifyContent:"center",marginTop:10}}
                   onClick={function(){verwerk(tekst,"tekst");}}>
                   <i className="fa-solid fa-magnifying-glass"/> Wedstrijden zoeken
