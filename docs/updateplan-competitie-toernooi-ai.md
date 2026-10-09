@@ -16,7 +16,7 @@ aangepast.
 | 2 | Toernooimodule: pakketten | **Coach en Club** | Beheren én publiceren/presentatie in beide pakketten. Free ziet een slotje. |
 | 3 | Spelers over teams heen koppelen | **Ja, in release 1** | Spelers krijgen een clubbrede `persoonId`; een koppelscherm "dit is dezelfde speler"; statistieken kunnen over teams van dezelfde club heen. Zie 4c, 5d. Release 1 wordt ± 3 dagen groter. |
 | 4 | Standaardvolgorde bij gelijke punten | **Punten → doelsaldo → doelpunten voor → onderling** | Ongewijzigd; per fase aan te passen. |
-| 5 | Gedeelde competitie tussen TeamTakkie-teams | **Ja** | **Grootste wijziging.** Een competitie is niet langer een JSON-blob van één team, maar een **gedeeld object in eigen servertabellen**, waar meerdere TeamTakkie-teams (ook van verschillende clubs) aan deelnemen. Eén uitslag is voor alle deelnemende teams zichtbaar. Zie 4a, 4b, 4d, 4g, 6 en 11. Release 1 wordt ± 6 dagen groter, maar dit lost ook het zwakke punt "alles als JSON-blob" (CLAUDE.md) op voor dit onderdeel. |
+| 5 | Gedeelde competitie tussen TeamTakkie-teams | **Nee** (eerst "ja", op 9 oktober teruggedraaid) | Elk team houdt zijn eigen competitie bij, in de bestaande opslag per team en seizoen (`fch_competities_v1`). Geen nieuwe servertabellen voor competities. |
 
 ## 1. Samenvatting van het eindbeeld
 
@@ -37,11 +37,10 @@ TeamTakkie krijgt drie nieuwe onderdelen, in deze volgorde:
    bestaande tekenbord, gecontroleerd vóór opslaan.
 
 Alles blijft binnen de huidige opzet: dezelfde app (`src/` → `online/index.html`),
-dezelfde rollen, en voor toernooien en oefeningen dezelfde opslag (per team en
-per seizoen, gesynchroniseerd via `public.gegevens`). Geen herbouw. Nieuw aan de
-serverkant: **eigen tabellen voor gedeelde competities** (release 1, besluit 5),
-één tabel voor openbaar gepubliceerde toernooien (release 3) en één edge
-function plus gebruikstabel voor de AI (release 4).
+dezelfde opslag (per team en per seizoen, gesynchroniseerd via
+`public.gegevens`), dezelfde rollen. Geen herbouw. Nieuw aan de serverkant zijn
+alleen: één tabel voor openbaar gepubliceerde toernooien (release 3) en één
+edge function plus gebruikstabel voor de AI (release 4).
 
 ---
 
@@ -80,8 +79,9 @@ function plus gebruikstabel voor de AI (release 4).
 - **A3.** De datahoeveelheden blijven klein (honderden wedstrijden per seizoen,
   enkele toernooien met < 200 wedstrijden). Plannen en standen berekenen in de
   browser is daarom snel genoeg; geen serverrekenwerk nodig.
-- **A4.** ~~Eén competitie wordt door één TeamTakkie-team bijgehouden.~~
-  Vervallen door besluit 5: competities worden gedeeld (zie 4a).
+- **A4.** Eén competitie wordt door **één TeamTakkie-team** bijgehouden. Als twee
+  TeamTakkie-teams in dezelfde poule zitten, voert ieder zijn eigen administratie
+  (besluit 5).
 
 ---
 
@@ -166,30 +166,12 @@ tekening; per kaart: *Opslaan in bibliotheek*, *Vervangen*, *Makkelijker*,
 
 ### 4a. Waar het staat
 
-**Competities staan in eigen servertabellen** (besluit 5), omdat meerdere
-TeamTakkie-teams — ook van verschillende clubs — dezelfde competitie delen. Een
-JSON-sleutel hoort bij één team en kan dat niet. Nieuw bestand
-`server/23-competities.sql`:
-
-| Tabel | Inhoud |
-|---|---|
-| `competities` | id, naam, seizoen (tekst, bv. `2026/2027`), aangemaakt_door_team, actieve_fase_id, deelcode |
-| `competitie_teams` | id, competitie_id, naam, logo, **teamtakkie_team_id** (leeg voor tegenstanders zonder account), aliassen |
-| `competitie_fases` | id, competitie_id, naam, volgorde, van, tot, status, vorm, regels (jsonb), deelnemers (uuid[]) |
-| `competitie_rondes` | id, fase_id, nummer, naam, datum, vrij_team_id |
-| `competitie_wedstrijden` | id, fase_id, ronde_id, thuis_id, uit_id, datum, tijd, locatie, status, uitslag_thuis, uitslag_uit, versie |
-| `competitie_logboek` | id, competitie_id, tijd, gebruiker_id, team_id, wat, voor (jsonb), na (jsonb) |
-| `competitie_notities` | wedstrijd_id, team_id, tekst — **per team privé** |
-
-De app houdt een **lokale kopie** (sleutel `fch_competities_cache_v1`) zodat
-de stand ook zonder verbinding te zien is; schrijven vraagt verbinding (een
-uitslag die offline is ingevoerd blijft in een wachtrij en wordt bij verbinding
-verstuurd, met de botsingsregel uit 4g).
-
-Wat bij één team blijft, blijft in de bestaande opslag:
+Alles wat team- en seizoensgebonden is, komt onder **nieuwe sleutels** via
+`sleutelVoor()` en synchroniseert dus zonder serverwijziging:
 
 | Sleutel | Bereik | Inhoud |
 |---|---|---|
+| `fch_competities_v1` | team + seizoen | competities, fases, rondes, wedstrijden, teams, logboek |
 | `fch_toernooien_v2` | team + seizoen | toernooien (nieuw model) |
 | `fch_ai_gesprekken_v1` | persoonlijk (gedeeld) | laatste gesprekken, alleen lokaal |
 
@@ -197,11 +179,6 @@ Oude sleutels (`fch_stand_v1`, `fch_toernooien_v1`) blijven **ongewijzigd
 bestaan**; dat is de terugvalroute.
 
 ### 4b. Competitie
-
-Hieronder het logische model; in de database zijn dit de tabellen uit 4a
-(`Competitie.teams` = `competitie_teams`, enzovoort). `CompTeam.eigen` wordt
-`teamtakkie_team_id`: elk deelnemend TeamTakkie-team ziet zijn eigen rij als
-"eigen".
 
 ```
 Competitie  { id, naam, actieveFaseId, teams: CompTeam[], fases: Fase[], logboek: LogRegel[] }
@@ -271,15 +248,6 @@ doelpunten, minuten). De bijbehorende `CompWedstrijd` heeft `wedstrijdId` en
 (`thuis` + `score.fch/teg` vertaald naar thuis/uit). Zo kunnen stand en
 spelerstatistieken nooit uit twee verschillende registraties ontstaan.
 
-**Twee TeamTakkie-teams tegen elkaar (besluit 5):** de competitiewedstrijd
-staat één keer op de server. Elk team heeft zijn eigen `Wedstrijd` (eigen
-opstelling, eigen doelpuntenmakers) met een koppeling naar die ene
-competitiewedstrijd. De **uitslag** staat in de competitiewedstrijd; wie hem als
-eerste invoert, zet hem. Voert het andere team in zijn eigen wedstrijd een
-afwijkende score in, dan wordt niets overschreven: beide teams zien
-"Uitslag verschilt: jullie 2–1, SV B 1–2" tot een van de twee kiest. De stand
-gebruikt tot die tijd de eerst ingevoerde uitslag en markeert de wedstrijd.
-
 ### 4e. Toernooi (release 2)
 
 ```
@@ -340,37 +308,28 @@ Het woord "fase" wordt in toernooien alleen in "groepsfase" gebruikt.
 
 ### 4g. Rechten
 
-| Handeling | Eigenaar/trainer van een deelnemend TT-team | Eigenaar/trainer van het team dat de competitie maakte | Kijker | Openbaar |
+| Handeling | Eigenaar | Trainer | Kijker | Openbaar |
 |---|---|---|---|---|
-| Stand, programma, logboek bekijken | ✓ | ✓ | ✓ (eigen club) | – |
+| Competitie/fase/teams beheren | ✓ | ✓ | – | – |
 | Uitslagen invoeren of corrigeren | ✓ | ✓ | – | – |
-| Teams, fases, rondes, schema beheren | – | ✓ | – | – |
-| Afgesloten fase wijzigen | – | eigenaar, met bevestiging, gelogd | – | – |
-| Eigen notitie bij een wedstrijd | ✓ (alleen zichtbaar voor het eigen team) | ✓ | – | – |
-| Toernooi beheren | ✓ (eigen toernooi) | | – | – |
-| Toernooi publiceren / presentatie | ✓ | | – | alleen-lezen via link |
+| Afgesloten fase wijzigen | ✓ (met bevestiging, gelogd) | – | – | – |
+| Stand en statistieken bekijken | ✓ | ✓ | ✓ | – |
+| Toernooi beheren | ✓ | ✓ | – | – |
+| Toernooi publiceren / presentatie | ✓ | ✓ | – | alleen-lezen via link |
 
-**Hoe een tweede TeamTakkie-team erbij komt:** de beheerder deelt een
-**deelcode** (zes tekens, te vervangen). Het andere team voert hem in, kiest
-welke rij in de competitie zijn eigen team is, en is daarmee deelnemer. De
-beheerder ziet wie er via de code is gekoppeld en kan een koppeling verbreken.
+Dit volgt de bestaande `magRol`-indeling; de server (RLS op `public.gegevens`)
+blijft de echte grens. Het openbare toernooi is een **aparte, bewust
+gepubliceerde momentopname** zonder contactgegevens (zie 5f).
 
-**Afdwingen gebeurt op de server** met RLS op elke competitietabel, via een
-functie `mijn_competities()` = competities waar een team van een club van de
-gebruiker aan deelneemt (via `competitie_teams.teamtakkie_team_id` → `teams` →
-`leden`). Schrijven van uitslagen: `rol in ('eigenaar','trainer')` bij zo'n club.
-Structuur wijzigen: alleen de club van `aangemaakt_door_team`. Notities: alleen
-het eigen team. Dit wordt getest met SQL-tests zoals bij abonnementen.
+**Gelijktijdig bewerken:** de bestaande synchronisatie werkt per sleutel met
+"laatste schrijver wint" en een botsingsmelding. Omdat een hele competitie in
+één sleutel staat, botsen twee trainers sneller. Maatregel: wijzigingen worden
+als **kleine, idempotente bewerkingen** (`{op:"uitslag", wedstrijdId, uitslag,
+tijd, door}`) in het logboek gezet en bij een botsing opnieuw toegepast op de
+nieuwste versie; een dubbel toegepaste bewerking verandert niets (dezelfde
+uitslag twee keer zetten = één keer).
 
-**Gelijktijdig bewerken:** elke competitiewedstrijd heeft een `versie`. Een
-uitslag opslaan gebeurt met "alleen als de versie nog X is"; lukt dat niet, dan
-ziet de gebruiker de nieuwe uitslag en kiest. Dezelfde uitslag twee keer
-versturen is onschadelijk (idempotent). Elke wijziging komt in
-`competitie_logboek`.
-
-Toernooien blijven per team (JSON, `fch_toernooien_v2`); daar geldt de
-bestaande synchronisatie, aangevuld met idempotente bewerkingen in het
-toernooilogboek.
+---
 
 ## 5. Logica
 
@@ -449,8 +408,9 @@ te beslissen.
 - *Seizoen(en):* de wedstrijden uit elk gekozen seizoen worden gelezen via de
   seizoenssleutel van het team. Spelers worden op `persoonId` samengevoegd.
 - *Teams (besluit 3):* extra keuze "Alle teams van de club" (alleen als je lid
-  bent van die teams). Wedstrijden van andere teams worden via de server
-  gelezen; de RLS bepaalt wat je mag zien. Een speler die van JO17-1 naar
+  bent van die teams). Wedstrijden van andere teams van je club worden gelezen
+  uit hun eigen opslag (dezelfde synchronisatie als bij teamwissel); de RLS op
+  `public.gegevens` bepaalt wat je mag zien. Een speler die van JO17-1 naar
   JO19-2 ging, telt over beide teams heen als één persoon.
 - **Nooit dubbel tellen:** de selectie is een verzameling op `Wedstrijd.id`
   (en seizoen), dus een wedstrijd die in twee gekozen fases zou vallen —
@@ -610,9 +570,8 @@ blijven staan; de nieuwe module leest ze alleen.
 
 **Stap M1 — Competitie aanmaken (eenmalig per team en seizoen, bij eerste
 openen van het tabblad Competitie):**
-1. Maak op de server competitie "Competitie" (seizoen = huidig seizoen) met
-   **Fase 1** (zonder datums, status open, actief, vorm *handmatig*), met dit
-   team als maker.
+1. Maak competitie "Competitie" met **Fase 1** (zonder datums, status open,
+   actief, vorm *handmatig*).
 2. Teams: het eigen team + alle namen uit `fch_stand_v1` + alle unieke
    `tegenstander`-waarden van eigen wedstrijden met soort competitie,
    samengevoegd via de naamnormalisatie (4f).
@@ -647,10 +606,9 @@ Over teams heen: **geen** automatische koppeling op naam (twee keer "Daan"
 is niet per se dezelfde Daan) — wel een voorstellijst bij gelijke naam én
 geboortedatum, die de gebruiker bevestigt.
 
-**Terugval:** de competitie verwijderen (één knop voor de maker) of het
-tabblad uitzetten met een instelling zet alles terug naar de oude weergave,
-omdat de oude sleutels nooit zijn aangeraakt. `server/23-competities.sql`
-krijgt een terugdraaiblok zoals de eerdere SQL-bestanden. De nieuwe
+**Terugval:** de nieuwe sleutel weghalen (één knop in Instellingen voor de
+beheerder, of de sleutel in `public.gegevens` verwijderen) zet alles terug naar
+de oude weergave, omdat de oude sleutels nooit zijn aangeraakt. De nieuwe
 velden op `Wedstrijd` (`competitie`, statussen) worden door de oude code
 genegeerd; `uitgesteld`/`afgelast` zou de oude code als "niet gespeeld" lezen —
 wat klopt.
@@ -661,7 +619,7 @@ wat klopt.
 
 | Release | Inhoud | Afhankelijk van | Omvang (bouw + tests) |
 |---|---|---|---|
-| **1** | Competitie op de server (gedeeld), teams, seizoen/fases, rondes, uitslagen, correcte stand, deelcode, migratie, statistiekfilters over fases, seizoenen én teams | — | **XL** · ± 20–24 werkdagen |
+| **1** | Competitie: teams, seizoen/fases, rondes, uitslagen, correcte stand, migratie, statistiekfilters over fases, seizoenen én teams (`persoonId`) | — | **L** · ± 15–18 werkdagen |
 | **2** | Toernooi: instellingen, deelnemers, indeling, handmatig schema, resultaten, doorstroming, basisdownloads, migratie v1 | gedeelde standfunctie uit R1 | **L** · ± 12–15 werkdagen |
 | **3** | Automatische planner, scheidsrechtersindeling, publiceren, presentatie/grootscherm | R2 | **M/L** · ± 10 werkdagen |
 | **4** | AI-trainer met tekeningen, controle, opslag, limieten | — (los van R1–3) | **M** · ± 8–10 werkdagen + proefperiode |
@@ -675,10 +633,6 @@ commercieel beter uitkomt; R1 blijft de hoogste prioriteit.
 
 ### Release 1 — Competitie
 
-0. `server/23-competities.sql`: tabellen, RLS, `mijn_competities()`,
-   deelcode-functie, logboek-trigger, terugdraaiblok + `tests/competities.test.sql`
-   (toegang per team/club, kijker kan niet schrijven, notities privé, structuur
-   alleen door de maker).
 1. `src/domein/competitie.js`: `normaliseerTeamNaam`, `genereerSchema(half|heel)`,
    `standVanFase(fase, eigenWedstrijden, regels)` met onderling resultaat,
    `achterstallig(fase, vandaag)`, validaties (4b), `pasBewerkingToe(op)`.
@@ -692,8 +646,6 @@ commercieel beter uitkomt; R1 blijft de hoogste prioriteit.
 6. Migratie M1 met het indeelscherm en de controlefunctie.
 7. Statistiekfilters (bereik, soorten, teams) in Team en Individu; "—" voor
    ontbrekende gegevens; `persoonId` en koppelscherm in Selectie.
-7b. Deelcode: competitie delen, koppelen, ontkoppelen; afwijkende uitslag
-   tussen twee TT-teams tonen en laten oplossen.
 8. *Statistieken › Stand* verwijst naar Competitie; oude stand alleen-lezen.
 9. Dashboard: "positie in de stand" komt uit de actieve fase.
 10. Tests (zie 9), gouden origineel bijwerken, mobiele schermafdrukken.
@@ -760,10 +712,7 @@ wordt gecontroleerd met een opzettelijke fout die hem rood moet maken.
 | 15 | AI-tekening: aantal spelers en materiaal in de tekening komen overeen met de tekst; ongeldige tekening wordt niet opgeslagen zonder bevestiging. | node + Deno |
 | 16 | Kijker kan geen uitslag invoeren; openbare toernooipagina bevat geen e-mail of telefoonnummer. | node (rollen) + SQL-test (publiek) |
 | 17 | Dezelfde uitslagbewerking twee keer toepassen verandert niets. | node |
-| 18 | Twee TeamTakkie-teams in één competitie: een uitslag ingevoerd door team A is zichtbaar voor team B; een team van een derde club zonder koppeling ziet niets. | SQL (RLS) |
-| 19 | Team B voert een afwijkende score in: de uitslag van A wordt niet overschreven; beide zien de melding. | node + SQL |
 | 20 | Een speler gekoppeld over JO17-1 en JO19-2: zijn doelpunten tellen in "alle teams" één keer per wedstrijd. | node |
-| 21 | Notitie van team A is niet leesbaar voor team B. | SQL |
 
 Daarnaast per release: gouden origineel bijgewerkt (alleen bedoelde
 verschillen), schermafdrukken op 390 px breed, en een handmatige ronde op een
@@ -776,10 +725,9 @@ telefoon.
 Alle vijf beantwoord op 9 oktober 2026; zie hoofdstuk 0. Nieuwe keuzes die
 daaruit volgen, met een standaard (geen vraag, wel bij review te wijzigen):
 
-- **Wie de structuur van een gedeelde competitie beheert:** het team dat hem
-  aanmaakte. Uitslagen mag elk deelnemend TeamTakkie-team invoeren.
-- **Notities bij een wedstrijd:** per team privé, ook in een gedeelde
-  competitie.
+- **Competitie per team:** elk TeamTakkie-team houdt zijn eigen competitie bij
+  (besluit 5). Een later te bouwen "gedeelde competitie" zou eigen
+  servertabellen vragen; dat staat niet op de roadmap.
 - **Spelers koppelen over teams:** nooit automatisch, alleen na bevestiging.
 - **AI zonder maandlimiet:** wel een technische rem (1 tegelijk, 20 per 10
   minuten per gebruiker) en een maandelijks kostenoverzicht voor Evan.
@@ -787,29 +735,27 @@ daaruit volgen, met een standaard (geen vraag, wel bij review te wijzigen):
 **Gekozen standaarden (geen vraag):** puntentelling 3-1-0; knock-out bij gelijk
 = strafschoppen; bonuspunten uit; spelerstatistieken in toernooien uit; geluid
 in presentatie uit; scheidsrechtercontact nooit openbaar; een afgesloten fase
-alleen door de eigenaar van het makende team te wijzigen; vergelijking ongelijke
+alleen door de eigenaar te wijzigen; vergelijking ongelijke
 poules op gemiddelden.
 
 ## 11. Eerste implementatiepakket (release 1)
 
-**Doel:** de stand klopt per fase, uit echte uitslagen, gedeeld tussen de
-deelnemende TeamTakkie-teams, zonder iets van de bestaande gegevens te
-verliezen. Elke stap houdt `online/index.html` uitrolbaar (regel 2 in
-CLAUDE.md); stappen 1–4 veranderen nog niets zichtbaars.
+**Doel:** de stand klopt per fase, uit echte uitslagen, zonder iets van de
+bestaande gegevens te verliezen. Elke stap houdt `online/index.html` uitrolbaar
+(regel 2 in CLAUDE.md); stappen 1–3 veranderen nog niets zichtbaars.
 
 | Stap | Wat | Bewijs dat het werkt |
 |---|---|---|
-| 1 | **Tests eerst:** `tests/competitie.test.js` (scenario 1–9, 17, 19, 20) en `tests/competities.test.sql` (18, 21), rood. | Tests draaien en falen om de juiste reden. |
-| 2 | `server/23-competities.sql`: tabellen, RLS, functies, logboek, terugdraaiblok. | SQL-tests groen in Docker; twee opzettelijke fouten in de RLS worden gevangen. Daarna door Evan in de SQL Editor gedraaid (controleblok "in orde"). |
-| 3 | `src/domein/competitie.js`: normaliseren, schema (hergebruik `maakPouleSchema`), stand met onderling resultaat, achterstallig, validaties, botsingsregel. | Node-tests groen; mutatielijst zoals `tests/edge-mutaties.py`, alles gevangen. |
-| 4 | Serverlaag in de app (lezen/schrijven competitie, cache, wachtrij) + migratie M1 en M3 als pure functies met controlefunctie. | `tests/competitie-migratie.test.js` op de gouden vulling: scenario 10 groen; oude sleutels byte-gelijk. |
-| 5 | `Wedstrijd`: statussen uitgesteld/afgelast, koppeling, lege uitslag bij gepland; speler `persoonId`. | Bestaande tests groen; gouden origineel: alleen bedoelde verschillen. |
-| 6 | Scherm Competitie (Stand, Deelnemers, fasekiezer, Nieuwe fase), achter een instelling "Nieuwe competitie (proef)". | Schermafdrukken op 390 px; Evan test met zijn eigen JO19-2 en het indeelscherm. |
-| 7 | Programma + uitslageninvoer per ronde, notities, statussen; deelcode en afwijkende-uitslagmelding. | Scenario 2–6 en 18–19 handmatig op twee telefoons met twee testteams. |
-| 8 | Statistiekfilters (fases, seizoenen, teams) en koppelscherm spelers. | Scenario 7 en 20; "heel seizoen, dit team" = huidige cijfers. |
-| 9 | Proefinstelling weg, Competitie voor iedereen, oude Stand alleen-lezen, dashboard op actieve fase. | Volledige testset, gouden origineel, uitrol, controle met de vier testers. |
+| 1 | **Tests eerst:** `tests/competitie.test.js` met scenario 1–9, 17 en 20, rood. | Tests draaien en falen om de juiste reden. |
+| 2 | `src/domein/competitie.js`: normaliseren, schema (hergebruik `maakPouleSchema`), stand met onderling resultaat, achterstallig, validaties, bewerkingen. | Stap-1-tests groen; per functie een opzettelijke fout die rood wordt (vastgelegd in een mutatielijst zoals `tests/edge-mutaties.py`). |
+| 3 | Opslag `fch_competities_v1` en migraties M1 en M3 als pure functies + controlefunctie. | `tests/competitie-migratie.test.js` op de gouden vulling: scenario 10 groen; oude sleutels byte-gelijk. |
+| 4 | `Wedstrijd`: statussen uitgesteld/afgelast, koppeling, lege uitslag bij gepland; speler `persoonId`. | Bestaande tests groen; gouden origineel: alleen bedoelde verschillen, gecontroleerd en opnieuw opgenomen. |
+| 5 | Scherm Competitie (Stand + Deelnemers + fasekiezer + Nieuwe fase), achter een instelling "Nieuwe competitie (proef)" voor jouw eigen team. | Schermafdrukken op 390 px; jij test met je eigen JO19-2 en het indeelscherm. |
+| 6 | Programma + uitslageninvoer per ronde, notities, statussen. | Scenario 2–6 handmatig nagelopen op een telefoon; tests groen. |
+| 7 | Statistiekfilters (fases, seizoenen, teams) en koppelscherm spelers. | Scenario 7 en 20; "heel seizoen, dit team" = huidige cijfers. |
+| 8 | Proefinstelling weg, Competitie voor iedereen, oude Stand alleen-lezen, dashboard op actieve fase. | Volledige testset, gouden origineel, uitrol, controle met de vier testers. |
 
-Na stap 9: release 1 is af als de competitie-scenario's (1–10 en 17–21) als
+Na stap 8: release 1 is af als de competitie-scenario's (1–10, 17 en 20) als
 geautomatiseerde test groen zijn, elke test een opzettelijke fout vangt, en jij
 met je eigen team een nieuwe fase hebt aangemaakt waarin het team op nul begint
 terwijl de vorige fase intact is.
