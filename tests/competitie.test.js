@@ -328,12 +328,20 @@ groep("statistieken: niets dubbel (7, 20)");
   /* Speler Daan zat vorig seizoen in JO17-1 (id 11) en nu in JO19-2
      (id 22), gekoppeld met dezelfde persoonId. Zelfde wedstrijd-id in
      twee teams is toeval en mag niet samensmelten. */
-  const jo17 = { teamId: "jo17", seizoen: "2025/2026", wedstrijden: [w("1", null, [{ spelerId: 11 }, { spelerId: 11 }])] };
-  const jo19b = { teamId: "jo19", seizoen: "2026/2027", wedstrijden: [w("1", null, [{ spelerId: 22 }]), w("2", null, [{ spelerId: 22 }, { spelerId: 33 }])] };
+  /* Doelpunten zoals de app ze bewaart: eigenTeam true = van ons,
+     eigenTeam false = van de tegenstander (zonder spelerId). */
+  const goal = (id) => ({ spelerId: id, eigenTeam: true });
+  const tegengoal = { spelerId: null, eigenTeam: false };
+  const jo17 = { teamId: "jo17", seizoen: "2025/2026", wedstrijden: [w("1", null, [goal(11), goal(11), tegengoal])] };
+  /* Een doelpunt vóór de tegenstander dat tóch een spelerId draagt (zoals
+     een eigen doelpunt zou doen) telt niet voor die speler — dezelfde regel
+     als berekenSpelerStats in src/domein/statistieken.js (alleen eigenTeam). */
+  const voorTegenstander = { spelerId: 33, eigenTeam: false };
+  const jo19b = { teamId: "jo19", seizoen: "2026/2027", wedstrijden: [w("1", null, [goal(22), tegengoal]), w("2", null, [goal(22), goal(33), voorTegenstander])] };
   const verz = verzamelWedstrijden([{ bron: jo17, fases: null }, { bron: jo19b, fases: null }, { bron: jo19b, fases: null }], ["competitie"]);
   ok("zelfde wedstrijd-id in twee teams blijven twee wedstrijden", verz.length, 3);
   const spelers = { jo17: [{ id: 11, persoonId: "daan" }], jo19: [{ id: 22, persoonId: "daan" }, { id: 33, persoonId: "sem" }] };
-  ok("Daan: 4 doelpunten over twee teams, Sem 1 — niets dubbel door de dubbele selectie",
+  ok("Daan: 4 doelpunten over twee teams, Sem 1 — niets dubbel, tegengoals tellen niet",
      doelpuntenPerPersoon(verz, spelers), { daan: 4, sem: 1 });
 }
 

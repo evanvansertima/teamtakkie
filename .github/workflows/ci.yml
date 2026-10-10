@@ -107,6 +107,11 @@ jobs:
       - name: node tests/boetepot.test.js
         run: node tests/boetepot.test.js
 
+      # Competitie (release 1 van docs/updateplan-competitie-toernooi-ai.md):
+      # fases, schema, stand, onderling resultaat, niets dubbel tellen.
+      - name: node tests/competitie.test.js
+        run: node tests/competitie.test.js
+
       # vulling.test.js controleert de vaste vulling van het gouden
       # origineel tegen wat de app werkelijk schrijft. Dat klinkt als een
       # test op een test, maar het is de enige die vangt dat een opname

@@ -79,7 +79,7 @@ const KERN_VOLGORDE = ["sleutels.js", "server.js", "foutmeldingen.js", "rollen.j
    kern (boetepot.js gebruikt sleutelVoor() uit src/kern/sleutels.js)
    en vóór src/app.jsx zelf. Een module die nog niet bestaat wordt
    net als bij de kern overgeslagen. */
-const DOMEIN_VOLGORDE = ["boetepot.js", "wedstrijden.js", "statistieken.js", "opkomst.js"];
+const DOMEIN_VOLGORDE = ["boetepot.js", "wedstrijden.js", "competitie.js", "statistieken.js", "opkomst.js"];
 
 /* Sinds P4 (docs/p4-stappenplan.md) komt daar een derde laag bovenop:
    de schermmodules onder src/schermen/ — de React-componenten van

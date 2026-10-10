@@ -3006,7 +3006,7 @@ window.addEventListener("error", function(e){
 });
 </script>
 <script>
-const APP_VERSIE = "1cd58f3";
+const APP_VERSIE = "4976aff";
 const TEAMS_KEY = "tt_teams_v1";
 const ACTIEF_KEY = "tt_actief_v1";
 const VOORKEUR_KEY = "tt_voorkeuren_v1";
@@ -5746,6 +5746,281 @@ function toernooiStand(teams2, wedstrijden) {
     }
   });
   return standMetPunten(rijen);
+}
+const STANDAARD_REGELS = { winst: 3, gelijk: 1, verlies: 0, volgorde: ["punten", "saldo", "voor", "onderling"] };
+function normaliseerTeamNaam(naam) {
+  return String(naam || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/\./g, "").replace(/[^a-z0-9-]+/g, " ").replace(/\s+/g, " ").trim();
+}
+function genereerSchema(teamIds, vorm) {
+  var ids = (teamIds || []).slice();
+  var basis = maakPouleSchema(ids);
+  function vrijIn(paren) {
+    if (ids.length % 2 === 0) return null;
+    var spelen = {};
+    paren.forEach(function(p) {
+      spelen[p[0]] = true;
+      spelen[p[1]] = true;
+    });
+    var vrij = ids.filter(function(id) {
+      return !spelen[id];
+    });
+    return vrij.length === 1 ? vrij[0] : null;
+  }
+  var rondes = basis.map(function(paren, i) {
+    return { nummer: i + 1, paren, vrijTeamId: vrijIn(paren) };
+  });
+  if (vorm === "heel") {
+    var terug = basis.map(function(paren, i) {
+      var om = paren.map(function(p) {
+        return (
+          /** @type {[string,string]} */
+          [p[1], p[0]]
+        );
+      });
+      return { nummer: basis.length + i + 1, paren: om, vrijTeamId: vrijIn(om) };
+    });
+    rondes = rondes.concat(terug);
+  }
+  return { rondes };
+}
+function uitslagVan(w, eigenWedstrijden) {
+  if (w.wedstrijdId !== void 0 && w.wedstrijdId !== null) {
+    var e = (eigenWedstrijden || []).filter(function(x) {
+      return x.id === w.wedstrijdId;
+    })[0];
+    if (!e || e.status !== "gespeeld" || !e.score) return null;
+    var fch = Number(e.score.fch), teg = Number(e.score.teg);
+    if (!isFinite(fch) || !isFinite(teg)) return null;
+    return e.thuis ? { thuis: fch, uit: teg } : { thuis: teg, uit: fch };
+  }
+  if (w.status !== "gespeeld" || !w.uitslag) return null;
+  return { thuis: Number(w.uitslag.thuis), uit: Number(w.uitslag.uit) };
+}
+function zoekFase(c, faseId) {
+  var f = (c.fases || []).filter(function(x) {
+    return x.id === faseId;
+  })[0];
+  if (!f) throw new Error("Onbekende fase: " + faseId);
+  return f;
+}
+function telRijen(ids, gespeeld, regels) {
+  var rij = {};
+  ids.forEach(function(id) {
+    rij[id] = { gespeeld: 0, winst: 0, gelijk: 0, verlies: 0, voor: 0, tegen: 0, saldo: 0, punten: 0 };
+  });
+  gespeeld.forEach(function(g) {
+    var t2 = rij[g.thuisId], u = rij[g.uitId];
+    if (!t2 || !u) return;
+    t2.gespeeld++;
+    u.gespeeld++;
+    t2.voor += g.u.thuis;
+    t2.tegen += g.u.uit;
+    u.voor += g.u.uit;
+    u.tegen += g.u.thuis;
+    if (g.u.thuis > g.u.uit) {
+      t2.winst++;
+      u.verlies++;
+    } else if (g.u.thuis < g.u.uit) {
+      u.winst++;
+      t2.verlies++;
+    } else {
+      t2.gelijk++;
+      u.gelijk++;
+    }
+  });
+  ids.forEach(function(id) {
+    var r = rij[id];
+    r.saldo = r.voor - r.tegen;
+    r.punten = r.winst * regels.winst + r.gelijk * regels.gelijk + r.verlies * regels.verlies;
+  });
+  return rij;
+}
+function rangschik(ids, criteria, totaal, gespeeld, regels) {
+  if (ids.length <= 1 || criteria.length === 0) return [ids];
+  var c = criteria[0], rest = criteria.slice(1);
+  if (c === "onderling") {
+    var gesplitst = onderling(ids, gespeeld, regels);
+    if (gesplitst.length === 1) return rangschik(ids, rest, totaal, gespeeld, regels);
+    var uit = [];
+    gesplitst.forEach(function(groep) {
+      rangschik(groep, criteria, totaal, gespeeld, regels).forEach(function(g) {
+        uit.push(g);
+      });
+    });
+    return uit;
+  }
+  return verdeel(ids, function(id) {
+    return [totaal[id][c]];
+  }).reduce(function(acc, groep) {
+    return acc.concat(rangschik(groep, rest, totaal, gespeeld, regels));
+  }, []);
+}
+function onderling(ids, gespeeld, regels) {
+  var binnen = gespeeld.filter(function(g) {
+    return ids.indexOf(g.thuisId) >= 0 && ids.indexOf(g.uitId) >= 0;
+  });
+  var mini = telRijen(ids, binnen, regels);
+  return verdeel(ids, function(id) {
+    return [mini[id].punten, mini[id].saldo, mini[id].voor];
+  });
+}
+function verdeel(ids, sleutel) {
+  var gesorteerd = ids.slice().sort(function(a, b) {
+    var x = sleutel(a), y = sleutel(b);
+    for (var i = 0; i < x.length; i++) if (x[i] !== y[i]) return y[i] - x[i];
+    return 0;
+  });
+  var groepen = [];
+  gesorteerd.forEach(function(id) {
+    var laatste = groepen[groepen.length - 1];
+    if (laatste && sleutel(laatste[0]).join("|") === sleutel(id).join("|")) laatste.push(id);
+    else groepen.push([id]);
+  });
+  return groepen;
+}
+function standVanFase(c, faseId, eigenWedstrijden) {
+  var f = zoekFase(c, faseId);
+  var regels = f.regels || STANDAARD_REGELS;
+  var ids = (f.deelnemers || []).slice();
+  var gespeeld = [];
+  (f.wedstrijden || []).forEach(function(w) {
+    var u = uitslagVan(w, eigenWedstrijden);
+    if (u) gespeeld.push({ thuisId: w.thuisId, uitId: w.uitId, u });
+  });
+  var totaal = telRijen(ids, gespeeld, regels);
+  var teams2 = {};
+  (c.teams || []).forEach(function(t2) {
+    teams2[t2.id] = t2;
+  });
+  function naamVan(id) {
+    return teams2[id] ? teams2[id].naam : id;
+  }
+  var groepen = rangschik(ids, regels.volgorde || STANDAARD_REGELS.volgorde, totaal, gespeeld, regels);
+  var stand = [];
+  var plek = 1;
+  groepen.forEach(function(groep) {
+    groep.slice().sort(function(a, b) {
+      return naamVan(a).localeCompare(naamVan(b), "nl");
+    }).forEach(function(id) {
+      stand.push(Object.assign({
+        teamId: id,
+        naam: naamVan(id),
+        eigen: !!(teams2[id] && teams2[id].eigen),
+        plek,
+        gedeeld: groep.length > 1
+      }, totaal[id]));
+    });
+    plek += groep.length;
+  });
+  return stand;
+}
+function achterstallig(c, faseId, eigenWedstrijden, vandaag) {
+  return zoekFase(c, faseId).wedstrijden.filter(function(w) {
+    return w.status === "gepland" && !!w.datum && w.datum < vandaag && !uitslagVan(w, eigenWedstrijden);
+  }).map(function(w) {
+    return w.id;
+  });
+}
+function nieuweFase(c, opties) {
+  var vorige = (c.fases || []).filter(function(x) {
+    return x.id === c.actieveFaseId;
+  })[0] || (c.fases || [])[(c.fases || []).length - 1];
+  var nieuw = {
+    id: opties.id || "f" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+    naam: opties.naam,
+    van: "",
+    tot: "",
+    status: "open",
+    vorm: opties.vorm || (vorige ? vorige.vorm : "handmatig"),
+    regels: JSON.parse(JSON.stringify(opties.kopieerRegels && vorige ? vorige.regels : STANDAARD_REGELS)),
+    deelnemers: opties.kopieerDeelnemers && vorige ? vorige.deelnemers.slice() : [],
+    rondes: [],
+    wedstrijden: []
+  };
+  return Object.assign({}, c, { fases: (c.fases || []).concat([nieuw]), actieveFaseId: nieuw.id });
+}
+function valideerWedstrijd(fase, w) {
+  if (w.thuisId === w.uitId) return ["zelf"];
+  var fouten = [];
+  if (fase.deelnemers.indexOf(w.thuisId) < 0 || fase.deelnemers.indexOf(w.uitId) < 0) fouten.push("geen-deelnemer");
+  var dubbel = (fase.wedstrijden || []).some(function(x) {
+    if (x.id === w.id) return false;
+    if (x.thuisId === w.thuisId && x.uitId === w.uitId) return true;
+    return fase.vorm === "half" && x.thuisId === w.uitId && x.uitId === w.thuisId;
+  });
+  if (dubbel) fouten.push("dubbel");
+  var eigen = w.wedstrijdId !== void 0 && w.wedstrijdId !== null;
+  if (!eigen) {
+    if (w.status === "gespeeld" && !w.uitslag) fouten.push("gespeeld-zonder-uitslag");
+    if (w.status !== "gespeeld" && w.uitslag) fouten.push("uitslag-zonder-gespeeld");
+    if (w.uitslag && [w.uitslag.thuis, w.uitslag.uit].some(function(n) {
+      return typeof n !== "number" || !isFinite(n) || n < 0 || Math.floor(n) !== n;
+    })) fouten.push("score-ongeldig");
+  }
+  return fouten;
+}
+function pasBewerkingToe(c, op) {
+  if (op.soort !== "uitslag") throw new Error("Onbekende bewerking: " + op.soort);
+  var f = zoekFase(c, op.faseId);
+  var oud = f.wedstrijden.filter(function(w) {
+    return w.id === op.wedstrijdId;
+  })[0];
+  if (!oud) throw new Error("Onbekende wedstrijd: " + op.wedstrijdId);
+  var uitslag = op.status === "gespeeld" && op.uitslag ? { thuis: op.uitslag.thuis, uit: op.uitslag.uit } : null;
+  var nieuw = Object.assign({}, oud, { status: op.status, uitslag });
+  var fouten = valideerWedstrijd(f, nieuw);
+  if (fouten.length) throw new Error("Ongeldige uitslag: " + fouten.join(", "));
+  if (oud.status === nieuw.status && JSON.stringify(oud.uitslag) === JSON.stringify(nieuw.uitslag)) return c;
+  var nieuweFaseObj = Object.assign({}, f, {
+    wedstrijden: f.wedstrijden.map(function(w) {
+      return w.id === op.wedstrijdId ? nieuw : w;
+    })
+  });
+  return Object.assign({}, c, {
+    fases: c.fases.map(function(x) {
+      return x.id === f.id ? nieuweFaseObj : x;
+    }),
+    logboek: (c.logboek || []).concat([{
+      tijd: op.tijd,
+      door: op.door,
+      wat: "uitslag",
+      faseId: f.id,
+      wedstrijdId: op.wedstrijdId,
+      voor: { status: oud.status, uitslag: oud.uitslag },
+      na: { status: nieuw.status, uitslag: nieuw.uitslag }
+    }])
+  });
+}
+function verzamelWedstrijden(selecties, soorten) {
+  var gezien = {};
+  var uit = [];
+  (selecties || []).forEach(function(sel) {
+    (sel.bron.wedstrijden || []).forEach(function(w) {
+      if (w.status !== "gespeeld") return;
+      if ((soorten || []).indexOf(w.soort || "competitie") < 0) return;
+      if (sel.fases && !(w.competitie && sel.fases.indexOf(w.competitie.faseId) >= 0)) return;
+      var sleutel = sel.bron.teamId + "|" + sel.bron.seizoen + "|" + w.id;
+      if (gezien[sleutel]) return;
+      gezien[sleutel] = true;
+      uit.push({ teamId: sel.bron.teamId, seizoen: sel.bron.seizoen, wedstrijd: w });
+    });
+  });
+  return uit;
+}
+function doelpuntenPerPersoon(verzameling, spelersPerTeam) {
+  var tel = {};
+  (verzameling || []).forEach(function(item) {
+    var spelers = (spelersPerTeam || {})[item.teamId] || [];
+    (item.wedstrijd.scorers || []).forEach(function(s) {
+      if (!s.eigenTeam || s.spelerId === null || s.spelerId === void 0) return;
+      var sp = spelers.filter(function(x) {
+        return x.id === s.spelerId;
+      })[0];
+      var persoon = sp && sp.persoonId ? sp.persoonId : item.teamId + ":" + s.spelerId;
+      tel[persoon] = (tel[persoon] || 0) + 1;
+    });
+  });
+  return tel;
 }
 const FC_CATEGORIEEN = [
   { id: "pace", label: "Snelheid", kort: "SNE", kleur: "#22c55e", attrs: [
