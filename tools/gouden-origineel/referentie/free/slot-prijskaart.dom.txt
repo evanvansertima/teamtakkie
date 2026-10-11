@@ -520,6 +520,9 @@
               <li class="uit">
                 <i class="fa-solid fa-minus">
                 "Clubhuis, sportpark en tenues"
+              <li class="uit">
+                <i class="fa-solid fa-minus">
+                "Toernooien organiseren"
           <div class="pakket-kaart nadruk">
             <div class="pakket-kop">
               <span class="pakket-merk">
@@ -559,6 +562,9 @@
               <li class="aan">
                 <i class="fa-solid fa-check">
                 "Clubhuis, sportpark en tenues"
+              <li class="aan">
+                <i class="fa-solid fa-check">
+                "Toernooien organiseren"
             <button class="knop lijn klein" style="width: 100%; justify-content: center;">
               "Overstappen"
           <div class="pakket-kaart">
@@ -600,6 +606,9 @@
               <li class="aan">
                 <i class="fa-solid fa-check">
                 "Clubhuis, sportpark en tenues"
+              <li class="aan">
+                <i class="fa-solid fa-check">
+                "Toernooien organiseren"
             <button class="knop lijn klein" style="width: 100%; justify-content: center;">
               "Overstappen"
     <nav class="bottom-nav">

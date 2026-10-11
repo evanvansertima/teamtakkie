@@ -14,7 +14,8 @@
    DE 27 MET NAAM GENOEMDE COMPONENTEN
    SpelerKeuzeModal, Kleedkamerbriefje, DoelpuntScherm, TegenDoelpuntModal,
    WisselScherm, UitslagFormulier, ToernooiFormulier, ToernooiDetail,
-   ToernooienTab, WedstrijdFormulier, ImportSheet, WedstrijdOpstelling,
+   ToernooienTab (die drie sinds 11 oktober 2026 vervangen door
+   src/schermen/toernooi.jsx), WedstrijdFormulier, ImportSheet, WedstrijdOpstelling,
    DSMVeldLijnen, DSMLijn, DSMBord, DSMSectie, RollenSectie,
    WedstrijdTactiek, WerkVenster, BewaarMelder, UitleenSectie,
    GastenSectie, TegenstanderSectie, KaartScherm, Wedstrijdcentrum,
@@ -51,7 +52,8 @@
    - PDF-export (2): tekenDSMBord, exporteerWedstrijdplanPDF —
      uitsluitend gebruikt vanuit Wedstrijdcentrum/WedstrijdDetail.
    - Taken en toernooien-opslag (6): TAKEN_KEY, laadTaken,
-     STANDAARD_TAKEN, TOERNOOIEN_KEY, laadToernooien, LEEG_TOERNOOI.
+     STANDAARD_TAKEN, TOERNOOIEN_KEY, laadToernooien, LEEG_TOERNOOI
+     (die laatste vervallen op 11 oktober 2026, met de oude toernooischermen).
    - Eén losse constante: SPEELDUREN (het wedstrijdformulier).
 
    WEDSTRIJD_ROLLEN, VLAG_ROLLEN, LEEG_WEDSTRIJD EN TEGEN_TENUE — EEN
@@ -340,9 +342,10 @@ const STANDAARD_TAKEN = [
    toernooiStand) staat sinds P3 stap 2 in src/domein/wedstrijden.js;
    de opslag hieronder blijft hier. */
 const TOERNOOIEN_KEY = "fch_toernooien_v1";
+/* Alleen nog gelezen: bij de eerste keer openen zet laadToernooienV2
+   (src/schermen/toernooi.jsx) deze oude toernooien om naar v2. De
+   v1-sleutel zelf wordt nooit meer beschreven. */
 const laadToernooien = () => laadJson(TOERNOOIEN_KEY);
-const LEEG_TOERNOOI = { id:null, naam:"", datum:"", locatie:"", aantalVelden:2,
-  speelduur:15, pauze:5, starttijd:"09:00", teams:[], wedstrijden:[], opgezet:false };
 
 /* ── Hoe lang duurt een wedstrijd ────────────────────────────
    Negentig minuten is een aanname, geen gegeven. De JO19 speelt twee
@@ -2060,403 +2063,10 @@ function UitslagFormulier({ wedstrijd, spelers, onOpslaan, onSluiten }) {
 }
 
 
-/* ═══════════════════════════════════════════════════════════
-   TOERNOOIEN
-═══════════════════════════════════════════════════════════ */
-function ToernooiFormulier({ toernooi, onOpslaan, onSluiten }) {
-  const [form, setForm] = useState(Object.assign({}, LEEG_TOERNOOI, toernooi||{}));
-  const [nieuwTeam, setNieuwTeam] = useState("");
-  const set = (k,v) => setForm(function(f){ var n=Object.assign({},f); n[k]=v; return n; });
-
-  function voegTeamToe(naam, eigen) {
-    var n = (naam||"").trim();
-    if (!n) return;
-    setForm(function(f){
-      if (f.teams.some(function(t){ return t.naam.toLowerCase()===n.toLowerCase(); })) return f;
-      return Object.assign({}, f, {teams: f.teams.concat([{id:"tm"+Date.now()+Math.random().toString(36).slice(2,6), naam:n, eigen:!!eigen}])});
-    });
-    setNieuwTeam("");
-  }
-  function verwijderTeam(id) {
-    setForm(function(f){ return Object.assign({}, f, {teams: f.teams.filter(function(t){return t.id!==id;})}); });
-  }
-  function opslaan() {
-    if (!form.naam.trim()) { meldFout("Geef het toernooi een naam."); return; }
-    if (form.teams.length < 2) { meldFout("Voeg minstens twee teams toe."); return; }
-    onOpslaan(Object.assign({}, form, {id: form.id||Date.now()}));
-  }
-
-  const heeftEigen = form.teams.some(function(t){return t.eigen;});
-  const aantalW = form.teams.length>=2 ? form.teams.length*(form.teams.length-1)/2 : 0;
-
-  return (
-    <div className="modal-overlay" onClick={function(e){if(e.target===e.currentTarget)onSluiten();}}>
-      <div className="modal-sheet">
-        <div className="modal-greep"/>
-        <div className="modal-titel">{form.id?"Toernooi bewerken":"Nieuw toernooi"}</div>
-
-        <div className="formulier-groep">
-          <label className="formulier-label">Naam *</label>
-          <input className="formulier-input" value={form.naam} onChange={function(e){set("naam",e.target.value);}}
-            placeholder="bijv. Paastoernooi" />
-        </div>
-        <div className="formulier-rij">
-          <div className="formulier-groep">
-            <label className="formulier-label">Datum</label>
-            <input className="formulier-input" type="date" value={form.datum} onChange={function(e){set("datum",e.target.value);}} />
-          </div>
-          <div className="formulier-groep">
-            <label className="formulier-label">Starttijd</label>
-            <input className="formulier-input" type="time" value={form.starttijd} onChange={function(e){set("starttijd",e.target.value);}} />
-          </div>
-        </div>
-        <div className="formulier-groep">
-          <label className="formulier-label">Locatie</label>
-          <input className="formulier-input" value={form.locatie} onChange={function(e){set("locatie",e.target.value);}}
-            placeholder="Sportpark" />
-        </div>
-        <div className="formulier-rij">
-          <div className="formulier-groep">
-            <label className="formulier-label">Velden</label>
-            <GetalVeld className="formulier-input" min={1} max={8} leeg={1} waarde={form.aantalVelden}
-              opWaarde={function(n){ set("aantalVelden", n); }} />
-          </div>
-          <div className="formulier-groep">
-            <label className="formulier-label">Speelduur</label>
-            <GetalVeld className="formulier-input" min={5} max={60} leeg={15} waarde={form.speelduur}
-              opWaarde={function(n){ set("speelduur", n); }} />
-          </div>
-          <div className="formulier-groep">
-            <label className="formulier-label">Pauze</label>
-            <GetalVeld className="formulier-input" min={0} max={30} leeg={0} waarde={form.pauze}
-              opWaarde={function(n){ set("pauze", n); }} />
-          </div>
-        </div>
-
-        <div className="formulier-sectie-titel"><i className="fa-solid fa-users-line"/> Teams ({form.teams.length})</div>
-        {!heeftEigen && (
-          <button className="knop lijn klein" style={{width:"100%",justifyContent:"center",marginBottom:8}}
-            onClick={function(){voegTeamToe(teamNaamVol(), true);}}>
-            + {teamNaamVol()} toevoegen
-          </button>
-        )}
-        <div style={{display:"flex",gap:8,marginBottom:10}}>
-          <input className="formulier-input" style={{flex:1,marginBottom:0}} value={nieuwTeam}
-            placeholder="Naam tegenstander"
-            onChange={function(e){setNieuwTeam(e.target.value);}}
-            onKeyDown={function(e){ if(e.key==="Enter"){ e.preventDefault(); voegTeamToe(nieuwTeam,false); } }} />
-          <button className="knop klein" onClick={function(){voegTeamToe(nieuwTeam,false);}}>+</button>
-        </div>
-        {form.teams.map(function(t){
-          return (
-            <div key={t.id} className="opgave-rij">
-              <div className="opp-avatar" style={{width:28,height:28,fontSize:10,background:t.eigen?"var(--blauw)":"var(--grijs-donker)"}}>
-                {initialen(t.naam)}
-              </div>
-              <div style={{flex:1,fontSize:13,fontWeight:600,fontFamily:"'Helvetica Neue',Arial"}}>
-                {t.naam}{t.eigen&&<span className="oef-tag" style={{marginLeft:6,background:"var(--blauw)",color:"#fff"}}>ons</span>}
-              </div>
-              <button className="knop gevaar klein" style={{padding:"4px 8px"}} onClick={function(){verwijderTeam(t.id);}}>
-                <i className="fa-solid fa-trash"/>
-              </button>
-            </div>
-          );
-        })}
-        {aantalW>0 && (
-          <p style={{fontSize:12,color:"var(--grijs-donker)",fontWeight:400,marginTop:10,lineHeight:1.5}}>
-            {"Halve competitie: "+aantalW+" wedstrijden, iedereen één keer tegen elkaar."}
-          </p>
-        )}
-
-        <div style={{display:"flex",gap:10,marginTop:14}}>
-          <button className="knop lijn" style={{flex:1,justifyContent:"center"}} onClick={onSluiten}>Annuleren</button>
-          <button className="knop" style={{flex:2,justifyContent:"center"}} onClick={opslaan}><i className="fa-solid fa-check"/> Opslaan</button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function ToernooiDetail({ toernooi, onTerug, onBewerken, onVerwijderen, onOpslaan }) {
-  const [tab, setTab] = useState("schema");
-  const [bevestig, setBevestig] = useState(false);
-  const [herbouw, setHerbouw] = useState(false);
-
-  const teams = toernooi.teams || [];
-  const wedstrijden = toernooi.wedstrijden || [];
-  const stand = toernooiStand(teams, wedstrijden);
-  const gespeeldAantal = wedstrijden.filter(function(w){return w.gespeeld;}).length;
-
-  function teamNaam(id) {
-    var t = teams.find(function(x){return x.id===id;});
-    return t ? t.naam : "?";
-  }
-  function isEigen(id) {
-    var t = teams.find(function(x){return x.id===id;});
-    return t && t.eigen;
-  }
-  function genereer() {
-    var rondes = maakPouleSchema(teams.map(function(t){return t.id;}));
-    var nieuw = planToernooi(rondes, toernooi.aantalVelden, toernooi.starttijd, toernooi.speelduur, toernooi.pauze);
-    onOpslaan(Object.assign({}, toernooi, {wedstrijden:nieuw, opgezet:true}));
-    setHerbouw(false);
-    meldGoed(nieuw.length+" wedstrijden ingepland");
-  }
-  function zetScore(id, kant, waarde) {
-    var nieuw = wedstrijden.map(function(w){
-      if (w.id!==id) return w;
-      var score = Object.assign({}, w.score);
-      score[kant] = Math.max(0, Number(waarde)||0);
-      return Object.assign({}, w, {score:score, gespeeld:true});
-    });
-    onOpslaan(Object.assign({}, toernooi, {wedstrijden:nieuw}));
-  }
-  function wisGespeeld(id) {
-    var nieuw = wedstrijden.map(function(w){
-      return w.id===id ? Object.assign({}, w, {gespeeld:false, score:{thuis:0,uit:0}}) : w;
-    });
-    onOpslaan(Object.assign({}, toernooi, {wedstrijden:nieuw}));
-  }
-
-  const perTijd = {};
-  wedstrijden.forEach(function(w){
-    if (!perTijd[w.tijd]) perTijd[w.tijd] = [];
-    perTijd[w.tijd].push(w);
-  });
-  const tijden = Object.keys(perTijd).sort();
-
-  return (
-    <div className="pagina-slide">
-      <button className="back-knop" onClick={onTerug}><i className="fa-solid fa-arrow-left"/> Terug naar toernooien</button>
-
-      <div style={{background:"linear-gradient(150deg,#062f6e 0%,var(--blauw) 55%,#0068d6 100%)",color:"#fff",borderRadius:18,padding:"22px 20px",marginBottom:14}}>
-        <div style={{fontSize:10,opacity:.72,textTransform:"uppercase",letterSpacing:1.2,fontWeight:700,fontFamily:"'Helvetica Neue',Arial"}}>Toernooi</div>
-        <div style={{fontSize:26,fontWeight:700,fontFamily:"'Helvetica Neue',Arial",margin:"7px 0 6px",letterSpacing:"-0.025em",lineHeight:1.1}}>{toernooi.naam}</div>
-        <div style={{fontSize:13,opacity:.87,display:"flex",flexWrap:"wrap",gap:12}}>
-          {toernooi.datum&&<span><i className="fa-solid fa-calendar-days"/>{" "+formateerDatumKort(toernooi.datum)}</span>}
-          {toernooi.locatie&&<span><i className="fa-solid fa-location-dot"/>{" "+toernooi.locatie}</span>}
-          <span><i className="fa-solid fa-users-line"/>{" "+teams.length+" teams"}</span>
-        </div>
-      </div>
-
-      {!toernooi.opgezet || wedstrijden.length===0 ? (
-        <div className="kaart">
-          <div className="kaart-titel"><i className="fa-solid fa-wand-magic-sparkles"/> Speelschema maken</div>
-          <p style={{fontSize:13,color:"var(--grijs-donker)",fontWeight:400,lineHeight:1.6,marginBottom:14}}>
-            {"Iedereen speelt één keer tegen elkaar: "+(teams.length*(teams.length-1)/2)+" wedstrijden van "+toernooi.speelduur+" minuten, verdeeld over "+toernooi.aantalVelden+" veld"+(toernooi.aantalVelden===1?"":"en")+"."}
-          </p>
-          <button className="knop" style={{width:"100%",justifyContent:"center"}} onClick={genereer}>
-            <i className="fa-solid fa-wand-magic-sparkles"/> Schema genereren
-          </button>
-        </div>
-      ) : (
-        <div>
-          <div className="tabs">
-            <button className={"tab-knop"+(tab==="schema"?" actief":"")} onClick={function(){setTab("schema");}}>
-              <i className="fa-solid fa-list-ol"/> Schema
-            </button>
-            <button className={"tab-knop"+(tab==="stand"?" actief":"")} onClick={function(){setTab("stand");}}>
-              <i className="fa-solid fa-ranking-star"/> Stand
-            </button>
-          </div>
-
-          {tab==="schema" && (
-            <div>
-              <div className="kaart">
-                <div className="kaart-titel">
-                  <i className="fa-solid fa-list-ol"/>
-                  {" Speelschema · "+gespeeldAantal+" van "+wedstrijden.length+" gespeeld"}
-                </div>
-                {tijden.map(function(t){
-                  return (
-                    <div key={t} style={{marginBottom:10}}>
-                      <div className="review-label" style={{margin:"8px 0 2px"}}>{t}</div>
-                      {perTijd[t].map(function(w){
-                        return (
-                          <div key={w.id} className="tw-rij">
-                            <span className="tw-veld">{"V"+w.veld}</span>
-                            <span className={"tw-team rechts"+(isEigen(w.thuisId)?" eigen":"")}>{teamNaam(w.thuisId)}</span>
-                            <GetalVeld className="tw-score" min={0} leeg={0} waarde={w.gespeeld?w.score.thuis:""}
-                              placeholder="–" opWaarde={function(n){zetScore(w.id,"thuis",n);}} />
-                            <span className="tw-streep">–</span>
-                            <GetalVeld className="tw-score" min={0} leeg={0} waarde={w.gespeeld?w.score.uit:""}
-                              placeholder="–" opWaarde={function(n){zetScore(w.id,"uit",n);}} />
-                            <span className={"tw-team"+(isEigen(w.uitId)?" eigen":"")}>{teamNaam(w.uitId)}</span>
-                            {w.gespeeld && (
-                              <button className="event-verwijder" title="Uitslag wissen"
-                                onClick={function(){wisGespeeld(w.id);}}>×</button>
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  );
-                })}
-              </div>
-              <button className="knop lijn klein" style={{width:"100%",justifyContent:"center"}}
-                onClick={function(){setHerbouw(true);}}>
-                <i className="fa-solid fa-rotate-left"/> Schema opnieuw genereren
-              </button>
-            </div>
-          )}
-
-          {tab==="stand" && (
-            <div className="kaart">
-              <div className="kaart-titel"><i className="fa-solid fa-ranking-star"/> Tussenstand</div>
-              <div style={{overflowX:"auto"}}>
-                <table className="stand-tabel">
-                  <thead>
-                    <tr>
-                      <th style={{width:26}}>#</th>
-                      <th className="links">Team</th>
-                      <th>G</th><th>W</th><th>G</th><th>V</th><th>DS</th><th>P</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {stand.map(function(r,i){
-                      return (
-                        <tr key={r.id} className={r.eigen?"eigen":""}>
-                          <td><span className="stand-pos">{i+1}</span></td>
-                          <td className="links naam">{r.naam}</td>
-                          <td>{r.gespeeld}</td><td>{r.winst}</td><td>{r.gelijk}</td><td>{r.verlies}</td>
-                          <td style={{color:r.saldo>0?"var(--succes)":r.saldo<0?"var(--gevaar)":"inherit"}}>{(r.saldo>0?"+":"")+r.saldo}</td>
-                          <td style={{fontSize:15}}>{r.punten}</td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-              {gespeeldAantal===0 && (
-                <p style={{fontSize:12,color:"var(--grijs-donker)",fontWeight:400,textAlign:"center",marginTop:10}}>
-                  Vul uitslagen in bij het schema om de stand te vullen.
-                </p>
-              )}
-            </div>
-          )}
-        </div>
-      )}
-
-      <div style={{display:"flex",gap:10,marginTop:4}}>
-        <button className="knop lijn" style={{flex:1,justifyContent:"center"}} onClick={onBewerken}>
-          <i className="fa-solid fa-pen"/> Bewerken
-        </button>
-        <button className="knop gevaar klein" onClick={function(){setBevestig(true);}}><i className="fa-solid fa-trash"/></button>
-      </div>
-
-      {herbouw && (
-        <div className="bevestig-overlay" onClick={function(e){if(e.target===e.currentTarget)setHerbouw(false);}}>
-          <div className="bevestig-kaart">
-            <h3>Schema opnieuw maken?</h3>
-            <p>Alle ingevulde uitslagen van dit toernooi gaan verloren.</p>
-            <div className="bevestig-knoppen">
-              <button className="knop lijn" onClick={function(){setHerbouw(false);}}>Annuleren</button>
-              <button className="knop gevaar" onClick={genereer}>Opnieuw</button>
-            </div>
-          </div>
-        </div>
-      )}
-      {bevestig && (
-        <div className="bevestig-overlay"><div className="bevestig-kaart">
-          <h3>Toernooi verwijderen?</h3><p>{toernooi.naam} wordt definitief verwijderd.</p>
-          <div className="bevestig-knoppen">
-            <button className="knop lijn" onClick={function(){setBevestig(false);}}>Annuleren</button>
-            <button className="knop gevaar" onClick={onVerwijderen}>Verwijderen</button>
-          </div>
-        </div></div>
-      )}
-    </div>
-  );
-}
-
-function ToernooienTab() {
-  const [toernooien, setToernooien] = useState(laadToernooien);
-  const [gekozen, setGekozen] = useState(null);
-  const [formulier, setFormulier] = useState(null);
-
-  useEffect(function(){ slaJson(TOERNOOIEN_KEY, toernooien); },[toernooien]);
-
-  function slaOp(t) {
-    setToernooien(function(l){
-      var b = l.find(function(x){return x.id===t.id;});
-      return b ? l.map(function(x){return x.id===t.id?t:x;}) : l.concat([t]);
-    });
-    setFormulier(null);
-    if (gekozen && gekozen.id===t.id) setGekozen(t);
-  }
-  function verwijder() {
-    var weg = gekozen;
-    setToernooien(function(l){ return l.filter(function(x){return x.id!==weg.id;}); });
-    setGekozen(null);
-    toon("Toernooi \u201c"+weg.naam+"\u201d verwijderd", {
-      actie: function(){ setToernooien(function(l){ return l.concat([weg]); }); }
-    });
-  }
-
-  if (gekozen) {
-    var actueel = toernooien.find(function(t){return t.id===gekozen.id;}) || gekozen;
-    return (
-      <>
-        <ToernooiDetail toernooi={actueel}
-          onTerug={function(){setGekozen(null);}}
-          onBewerken={function(){setFormulier(actueel);}}
-          onVerwijderen={verwijder}
-          onOpslaan={slaOp} />
-        {formulier && (
-          <ToernooiFormulier toernooi={formulier.id?formulier:null} onOpslaan={slaOp}
-            onSluiten={function(){setFormulier(null);}} />
-        )}
-      </>
-    );
-  }
-
-  const gesorteerd = toernooien.slice().sort(function(a,b){ return new Date(b.datum)-new Date(a.datum); });
-
-  return (
-    <div>
-      <div className="pagina-header">
-        <div className="pagina-header-tekst">
-          <div className="eyebrow">Poules &amp; schema</div>
-          <h2>Toernooien</h2>
-          <p>{toernooien.length===0?"Plan een toernooi met poule-indeling":toernooien.length+" toernooi"+(toernooien.length===1?"":"en")}</p>
-        </div>
-        <button className="knop-plus" onClick={function(){setFormulier({});}}>+</button>
-      </div>
-
-      {gesorteerd.length===0 ? (
-        <div className="leeg">
-          <div className="leeg-icoon"><i className="fa-solid fa-trophy"/></div>
-          <h3>Nog geen toernooien</h3>
-          <p>Voeg teams toe en laat de app het speelschema maken: iedereen één keer tegen elkaar, verdeeld over de velden.</p>
-          <button className="knop" onClick={function(){setFormulier({});}}>+ Eerste toernooi</button>
-        </div>
-      ) : (
-        <div>
-          {gesorteerd.map(function(t){
-            var gespeeld = (t.wedstrijden||[]).filter(function(w){return w.gespeeld;}).length;
-            var totaal = (t.wedstrijden||[]).length;
-            return (
-              <div key={t.id} className="toernooi-kaart" onClick={function(){setGekozen(t);}}>
-                <div className="toernooi-naam">{t.naam}</div>
-                <div className="toernooi-meta">
-                  {t.datum&&<span><i className="fa-solid fa-calendar-days"/>{" "+formateerDatumKort(t.datum)}</span>}
-                  <span><i className="fa-solid fa-users-line"/>{" "+(t.teams||[]).length+" teams"}</span>
-                  {totaal>0&&<span><i className="fa-solid fa-list-ol"/>{" "+gespeeld+"/"+totaal+" gespeeld"}</span>}
-                  {totaal===0&&<span style={{color:"var(--oranje)",fontWeight:700}}>Nog geen schema</span>}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
-
-      {formulier && (
-        <ToernooiFormulier toernooi={formulier.id?formulier:null} onOpslaan={slaOp}
-          onSluiten={function(){setFormulier(null);}} />
-      )}
-    </div>
-  );
-}
+/* De toernooischermen (ToernooiFormulier, ToernooiDetail,
+   ToernooienTab) zijn op 11 oktober 2026 vervangen door
+   src/schermen/toernooi.jsx (release 2 van docs/updateplan-competitie-
+   toernooi-ai.md). */
 
 /* ═══════════════════════════════════════════════════════════
    WEDSTRIJD FORMULIER
@@ -6324,7 +5934,7 @@ function WedstrijdenModule() {
   if (hoofdTab==="toernooien") return (
     <div>
       {hoofdTabs}
-      <ToernooienTab />
+      <ToernooiModule />
     </div>
   );
 

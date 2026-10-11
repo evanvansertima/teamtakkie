@@ -756,7 +756,8 @@ function UpgradeTerugScherm() {
 const MODULE_LABEL = {
   basis:"Team, spelers, wedstrijden en agenda", trainingen:"Trainingen en aanwezigheid",
   ontwikkeling:"Beoordelingen en ontwikkeling", analyse:"Statistieken en live-analyse",
-  clubhuis:"Clubhuis, sportpark en tenues"
+  clubhuis:"Clubhuis, sportpark en tenues",
+  toernooi:"Toernooien organiseren"
 };
 /* nadruk is optioneel: het id van het pakket dat het antwoord geeft
    op een slotje waar net op getikt is. Via Instellingen komt er niets

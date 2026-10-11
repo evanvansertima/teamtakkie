@@ -387,8 +387,12 @@ ok("geen pakket noemt een onderdeel dat niet bestaat",
 ok("elk pakket geeft minstens zoveel als het pakket eronder",
    PAKKETTEN.every((p, i) => i === 0 ||
      PAKKETTEN[i - 1].modules.every((m) => p.modules.indexOf(m) >= 0)), true);
-ok("de vijf onderdelen staan vast",
-   MODULES, ["basis", "trainingen", "ontwikkeling", "analyse", "clubhuis"]);
+ok("de zes onderdelen staan vast (toernooi sinds 11 oktober 2026)",
+   MODULES, ["basis", "trainingen", "ontwikkeling", "analyse", "clubhuis", "toernooi"]);
+/* Besluit 2 van 9 oktober 2026: toernooien in Coach en Club, Free ziet een slotje. */
+ok("toernooi zit alleen in de betaalde pakketten",
+   PAKKETTEN.filter((p) => p.modules.indexOf("toernooi") >= 0).map((p) => p.id),
+   ["coach", "club"]);
 
 /* ══ 2. welk scherm bij welk onderdeel hoort ══ */
 groep("PAGINA_MODULE — de sleutel tussen scherm en onderdeel");

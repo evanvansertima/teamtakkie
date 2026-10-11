@@ -22,7 +22,27 @@ of uit de praktijk:
 - Het dashboard houdt "seizoen in cijfers" en krijgt daarboven een blok
   met de plek in de actieve fase.
 
-Volgende: release 2 (toernooi).
+**Release 2 (toernooi) is af — 11 oktober 2026.** Rekenwerk in
+`src/domein/toernooi.js` (64 tests, 13 mutaties gevangen), schermen in
+`src/schermen/toernooi.jsx`, opslag `fch_toernooien_v2` (v1 wordt bij de
+eerste keer openen omgezet en zelf nooit meer beschreven). Afwijkingen en
+keuzes:
+- Stappenkiezer is op elk scherm een keuzelijst met vorige/volgende, geen
+  tabbladen (vijf tabbladen passen niet op een telefoon).
+- Schema: per wedstrijd dag, veld, tijd en scheidsrechter kiezen, met een
+  voorstel voor het eerste vrije veld en tijdstip; geen slepen. Conflicten
+  worden getoond, niet tegengehouden.
+- "Loting" bij gelijkspel in de knock-out staat niet in het scherm: de app
+  kan een loting niet vastleggen, dus de winnaar zou nooit bekend worden.
+  Keuze is "direct strafschoppen" of "verlenging, dan strafschoppen".
+- Downloads: speelschema, poules en standen, wedstrijdbriefjes (PDF, drie
+  per A4) en het schema als CSV; per categorie of alles. Geen
+  contactgegevens.
+- Pakket: nieuwe module `toernooi` in Coach en Club; Free ziet een slotje.
+  De kolom `modules` in `pakket_grenzen` (server) wordt nog nergens
+  gebruikt en is niet bijgewerkt.
+
+Volgende: release 3 (planner, scheidsrechters indelen, presentatie).
 
 ## 0. Besluiten van Evan (9 oktober 2026) en wat ze veranderen
 

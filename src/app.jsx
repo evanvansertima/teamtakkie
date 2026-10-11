@@ -52,12 +52,12 @@ const WEDSTRIJDEN_KEY = "fch_wedstrijden_v1";
 
    Zodra er een server met accounts is komt het antwoord daarvandaan
    en verandert hier alleen pakketNu(). */
-const MODULES = ["basis", "trainingen", "ontwikkeling", "analyse", "clubhuis"];
+const MODULES = ["basis", "trainingen", "ontwikkeling", "analyse", "clubhuis", "toernooi"];
 const PAKKETTEN = [
   {id:"free",  naam:"Free",  teams:1,
    modules:["basis"]},
   {id:"coach", naam:"Coach", teams:1,
-   modules:["basis", "trainingen", "ontwikkeling", "analyse", "clubhuis"]},
+   modules:["basis", "trainingen", "ontwikkeling", "analyse", "clubhuis", "toernooi"]},
   /* In pakket_grenzen staat club op teams = null, want SQL kent geen
      oneindig. Dat één op één overnemen gaat hier mis: magNieuwTeam
      rekent met _teams.length < maxTeams, en "iets < null" is altijd
@@ -65,7 +65,7 @@ const PAKKETTEN = [
      precies het omgekeerde van onbeperkt. Infinity is hetzelfde
      besluit in een taal die het wél kan opschrijven. */
   {id:"club",  naam:"Club",  teams:Infinity,
-   modules:["basis", "trainingen", "ontwikkeling", "analyse", "clubhuis"]}
+   modules:["basis", "trainingen", "ontwikkeling", "analyse", "clubhuis", "toernooi"]}
 ];
 /* Wat een pakket kost. Dit is de enige plek in de app waar een bedrag
    staat, en de bedragen komen uit docs/pakketten-besluit.md (het
@@ -158,7 +158,12 @@ const SLOT_ZIN = {
   trainingen:   function (p) { return "Trainingen horen bij " + p + "."; },
   ontwikkeling: function (p) { return "Beoordelingen en ontwikkeling horen bij " + p + "."; },
   analyse:      function (p) { return "Statistieken en live-analyse horen bij " + p + "."; },
-  clubhuis:     function (p) { return "Het clubhuis hoort bij " + p + "."; }
+  clubhuis:     function (p) { return "Het clubhuis hoort bij " + p + "."; },
+  /* Toernooien: besluit 2 van 9 oktober 2026 (docs/updateplan-
+     competitie-toernooi-ai.md). Geen eigen pagina, maar een tabblad
+     binnen Wedstrijden — daarom staat hij niet in PAGINA_MODULE en
+     vraagt ToernooiModule zelf magModule("toernooi"). */
+  toernooi:     function (p) { return "Toernooien horen bij " + p + "."; }
 };
 function slotZin(module) {
   var p = pakketVoorModule(module);
