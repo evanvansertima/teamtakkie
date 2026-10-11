@@ -145,6 +145,8 @@ function CompetitieTab({ wedstrijden, opWedstrijden }) {
       <div className="tabs">
         <button className={"tab-knop" + (tab === "stand" ? " actief" : "")} onClick={function () { setTab("stand"); }}>
           <i className="fa-solid fa-ranking-star"/> Stand</button>
+        <button className={"tab-knop" + (tab === "wedstrijden" ? " actief" : "")} onClick={function () { setTab("wedstrijden"); }}>
+          <i className="fa-solid fa-futbol"/> Wedstrijden</button>
         <button className={"tab-knop" + (tab === "deelnemers" ? " actief" : "")} onClick={function () { setTab("deelnemers"); }}>
           <i className="fa-solid fa-users"/> Deelnemers</button>
       </div>
@@ -193,6 +195,11 @@ function CompetitieTab({ wedstrijden, opWedstrijden }) {
              " punten. Bij gelijke punten: doelsaldo, doelpunten voor, onderling resultaat. = is een gedeelde plek."}
           </p>
         </div>
+      )}
+
+      {tab === "wedstrijden" && (
+        <CompWedstrijden c={c} faseId={faseId} wedstrijden={wedstrijden} opWedstrijden={opWedstrijden}
+          bewaar={bewaar} magHier={magHier} />
       )}
 
       {tab === "deelnemers" && (
@@ -373,6 +380,234 @@ function IndeelScherm({ c, wedstrijden, onKlaar, onSluiten }) {
           meldGoed(rijen.length + (rijen.length === 1 ? " wedstrijd ingedeeld" : " wedstrijden ingedeeld"));
         }}>Indeling bevestigen</button>
       </div>
+    </div>
+  );
+}
+
+/* ── Tabblad Wedstrijden: speelrondes, wie tegen wie, uitslagen ──
+   Op verzoek van Evan (11 oktober 2026): speelrondes met de hand
+   aanmaken, per ronde zelf kiezen welke teams tegen elkaar spelen, en
+   daar meteen de uitslag invullen.
+
+   Een wedstrijd van het eigen team hoort bij een eigen Wedstrijd (met
+   opstelling en doelpunten). Bestaat die al zonder koppeling, dan wordt
+   hij gekoppeld; anders komt hij erbij in de wedstrijdlijst. De uitslag
+   die je hier invult, komt in díe Wedstrijd — één registratie, dus stand
+   en spelerscijfers kunnen niet uit elkaar lopen. */
+function CompWedstrijden({ c, faseId, wedstrijden, opWedstrijden, bewaar, magHier }) {
+  const fase = c.fases.filter(function (f) { return f.id === faseId; })[0];
+  const eigen = c.teams.filter(function (t) { return t.eigen; })[0];
+  const rondes = (fase.rondes || []).slice().sort(function (a, b) { return a.nummer - b.nummer; });
+  const losse = fase.wedstrijden.filter(function (w) { return !rondes.some(function (r) { return r.id === w.rondeId; }); });
+  /** @param {string} id */
+  function naam(id) { var t = c.teams.filter(function (x) { return x.id === id; })[0]; return t ? t.naam : id; }
+
+  function nieuweRonde() {
+    var r = voegRondeToe(c, faseId);
+    bewaar(r.competitie);
+  }
+
+  /* Uitslag bewaren. Voor een eigen wedstrijd in de Wedstrijd zelf. */
+  function bewaarUitslag(cw, uitslag) {
+    if (cw.wedstrijdId !== undefined && cw.wedstrijdId !== null) {
+      var e = eigenScoreUit(cw, eigen.id, uitslag);
+      opWedstrijden((wedstrijden || []).map(function (w) {
+        return w.id === cw.wedstrijdId ? Object.assign({}, w, { status: e.status, score: e.score, thuis: e.thuis }) : w;
+      }));
+      return;
+    }
+    try {
+      bewaar(pasBewerkingToe(c, { soort: "uitslag", faseId: faseId, wedstrijdId: cw.id,
+        status: uitslag ? "gespeeld" : "gepland", uitslag: uitslag, tijd: wieNu().tijd, door: wieNu().door }));
+    } catch (e2) { meldFout(e2.message); }
+  }
+
+  function voegToe(rondeId, thuisId, uitId) {
+    if (!thuisId || !uitId) { meldFout("Kies twee teams."); return; }
+    var cwId = "cw-" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+    var eigenDoetMee = thuisId === eigen.id || uitId === eigen.id;
+    var nieuweLijst = null, wedstrijdId = null;
+    if (eigenDoetMee) {
+      var tegenId = thuisId === eigen.id ? uitId : thuisId;
+      var tegen = c.teams.filter(function (t) { return t.id === tegenId; })[0];
+      var namen = [tegen.naam].concat(tegen.aliassen || []).map(normaliseerTeamNaam);
+      var bestaand = (wedstrijden || []).filter(function (w) {
+        return (w.soort || "competitie") === "competitie" && !w.competitie && w.status !== "gespeeld" &&
+               namen.indexOf(normaliseerTeamNaam(w.tegenstander)) >= 0;
+      })[0];
+      var koppeling = { competitieId: c.id, faseId: faseId, compWedstrijdId: cwId };
+      if (bestaand) {
+        wedstrijdId = bestaand.id;
+        nieuweLijst = wedstrijden.map(function (w) {
+          return w.id === bestaand.id ? Object.assign({}, w, { thuis: thuisId === eigen.id, competitie: koppeling }) : w;
+        });
+      } else {
+        wedstrijdId = Date.now();
+        nieuweLijst = (wedstrijden || []).concat([Object.assign({}, LEEG_WEDSTRIJD, {
+          id: wedstrijdId, tegenstander: tegen.naam, thuis: thuisId === eigen.id, status: "gepland",
+          soort: "competitie", speelduur: inst().speelduur || 90, competitie: koppeling
+        })]);
+      }
+    }
+    try {
+      var r = voegWedstrijdToe(c, faseId, { id: cwId, rondeId: rondeId, thuisId: thuisId, uitId: uitId, wedstrijdId: wedstrijdId });
+      bewaar(r.competitie);
+      if (nieuweLijst) opWedstrijden(nieuweLijst);
+    } catch (e) { meldFout(e.message); }
+  }
+
+  function haalWeg(cw) {
+    try {
+      bewaar(verwijderWedstrijd(c, faseId, cw.id, wedstrijden));
+      if (cw.wedstrijdId !== undefined && cw.wedstrijdId !== null) {
+        opWedstrijden(wedstrijden.map(function (w) {
+          if (w.id !== cw.wedstrijdId) return w;
+          var kaal = Object.assign({}, w); delete kaal.competitie; return kaal;
+        }));
+      }
+    } catch (e) { meldFout(e.message); }
+  }
+
+  return (
+    <div>
+      {rondes.length === 0 && losse.length === 0 && (
+        <div className="kaart" style={{textAlign:"center"}}>
+          <p style={{fontSize:13,color:"var(--grijs-donker)",lineHeight:1.6}}>
+            Nog geen speelrondes in {fase.naam}. Maak een speelronde en kies welke teams tegen elkaar spelen.
+          </p>
+        </div>
+      )}
+      {rondes.map(function (r) {
+        var inRonde = fase.wedstrijden.filter(function (w) { return w.rondeId === r.id; });
+        return (
+          <div key={r.id} className="kaart">
+            <div className="kaart-titel" style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+              <span><i className="fa-solid fa-flag-checkered"/> {r.naam}</span>
+              {magHier && inRonde.length === 0 && (
+                <button className="knop lijn klein" aria-label={r.naam + " weghalen"}
+                  onClick={function () { try { bewaar(verwijderRonde(c, faseId, r.id)); } catch (e) { meldFout(e.message); } }}>
+                  <i className="fa-solid fa-trash"/></button>
+              )}
+            </div>
+            {inRonde.map(function (cw) {
+              return <UitslagRegel key={cw.id + "|" + JSON.stringify(uitslagVan(cw, wedstrijden))} cw={cw}
+                thuis={naam(cw.thuisId)} uit={naam(cw.uitId)} eigenId={eigen.id}
+                uitslag={uitslagVan(cw, wedstrijden)} mag={magHier}
+                onUitslag={function (u) { bewaarUitslag(cw, u); }} onWeg={function () { haalWeg(cw); }} />;
+            })}
+            {magHier && (
+              <NieuweWedstrijdRegel fase={fase} rondeId={r.id} naam={naam}
+                onToevoegen={function (t, u) { voegToe(r.id, t, u); }} />
+            )}
+          </div>
+        );
+      })}
+      {losse.length > 0 && (
+        <div className="kaart">
+          <div className="kaart-titel"><i className="fa-solid fa-inbox"/> Zonder speelronde</div>
+          <p style={{fontSize:12,color:"var(--grijs-donker)",margin:"0 0 8px"}}>Kies bij elke wedstrijd in welke speelronde hij hoort.</p>
+          {losse.map(function (cw) {
+            return (
+              <div key={cw.id}>
+                <UitslagRegel key={cw.id + "|" + JSON.stringify(uitslagVan(cw, wedstrijden))} cw={cw}
+                  thuis={naam(cw.thuisId)} uit={naam(cw.uitId)} eigenId={eigen.id}
+                  uitslag={uitslagVan(cw, wedstrijden)} mag={magHier}
+                  onUitslag={function (u) { bewaarUitslag(cw, u); }} onWeg={function () { haalWeg(cw); }} />
+                {magHier && rondes.length > 0 && (
+                  <select className="formulier-input" style={{marginTop:-4}} value=""
+                    onChange={function (e) { try { bewaar(zetWedstrijdInRonde(c, faseId, cw.id, e.target.value)); } catch (er) { meldFout(er.message); } }}>
+                    <option value="">Zet in speelronde…</option>
+                    {rondes.map(function (r) { return <option key={r.id} value={r.id}>{r.naam}</option>; })}
+                  </select>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+      {magHier && (
+        <button className="knop" style={{width:"100%",justifyContent:"center",marginBottom:12}} onClick={nieuweRonde}>
+          + Speelronde
+        </button>
+      )}
+    </div>
+  );
+}
+
+/* Eén wedstrijd met twee invulvakjes. Bewaart zodra beide vakjes iets
+   geldigs hebben of allebei leeg zijn (dan geen uitslag, nooit 0–0). */
+function UitslagRegel({ cw, thuis, uit, eigenId, uitslag, mag, onUitslag, onWeg }) {
+  const [a, setA] = useState(uitslag ? String(uitslag.thuis) : "");
+  const [b, setB] = useState(uitslag ? String(uitslag.uit) : "");
+  function klaar(na, nb) {
+    var r = leesUitslagInvoer(na, nb);
+    if (r.soort === "half") return;
+    if (r.soort === "fout") { meldFout("Een score is een heel getal vanaf 0."); return; }
+    var nieuw = r.soort === "uitslag" ? r.uitslag : null;
+    if (JSON.stringify(nieuw) === JSON.stringify(uitslag || null)) return;
+    onUitslag(nieuw);
+  }
+  var eigenWed = cw.thuisId === eigenId || cw.uitId === eigenId;
+  /* Thuis en uit onder elkaar, elk met een eigen vakje: op een telefoon
+     past een volledige teamnaam dan wel, en je ziet in één oogopslag wie
+     wat scoorde. Naast elkaar werden namen tot "VV Stuifz…" afgekapt. */
+  var vak = {width:52,textAlign:"center",marginBottom:0,padding:"8px 4px",fontSize:17,fontWeight:700};
+  /** @param {string} teamNaam @param {boolean} vet @param {string} waarde @param {function(string):void} zet @param {"a"|"b"} kant */
+  function regel(teamNaam, vet, waarde, zet, kant) {
+    return (
+      <div style={{display:"flex",alignItems:"center",gap:8,padding:"3px 0"}}>
+        <span style={{flex:1,minWidth:0,fontSize:14,fontWeight:vet?700:500,lineHeight:1.3}}>{teamNaam}</span>
+        <input className="formulier-input" style={vak} inputMode="numeric" value={waarde} disabled={!mag}
+          aria-label={"Doelpunten " + teamNaam}
+          onChange={function (e) { zet(e.target.value); }}
+          onBlur={function () { klaar(a, b); }}
+          onKeyDown={function (e) { if (e.key === "Enter") klaar(a, b); }} />
+      </div>
+    );
+  }
+  return (
+    <div style={{display:"flex",alignItems:"center",gap:8,padding:"8px 0",borderBottom:"1px solid var(--grijs)"}}>
+      <div style={{flex:1,minWidth:0}}>
+        {regel(thuis, cw.thuisId === eigenId, a, setA, "a")}
+        {regel(uit, cw.uitId === eigenId, b, setB, "b")}
+        {eigenWed && (
+          <div style={{fontSize:11,color:"var(--grijs-donker)",marginTop:2}}>
+            <i className="fa-solid fa-link"/> Eigen wedstrijd — de uitslag staat ook in je wedstrijdlijst
+          </div>
+        )}
+      </div>
+      {mag && (
+        <button className="knop lijn klein" style={{padding:"6px 9px",alignSelf:"center"}} aria-label="Wedstrijd weghalen" onClick={onWeg}>
+          <i className="fa-solid fa-xmark"/></button>
+      )}
+    </div>
+  );
+}
+
+/* Twee keuzelijsten: wie speelt thuis, wie uit. Teams die in deze ronde
+   al spelen, staan er niet tussen. */
+function NieuweWedstrijdRegel({ fase, rondeId, naam, onToevoegen }) {
+  const [t, setT] = useState("");
+  const [u, setU] = useState("");
+  const bezet = teamsInRonde(fase, rondeId);
+  const vrij = fase.deelnemers.filter(function (id) { return bezet.indexOf(id) < 0; })
+    .sort(function (x, y) { return naam(x).localeCompare(naam(y), "nl"); });
+  if (vrij.length < 2) {
+    return <p style={{fontSize:12,color:"var(--grijs-donker)",margin:"8px 0 0"}}>
+      {fase.deelnemers.length < 2 ? "Voeg eerst teams toe bij Deelnemers." : "Alle teams spelen al in deze ronde."}</p>;
+  }
+  return (
+    <div style={{display:"flex",gap:6,alignItems:"center",marginTop:10,flexWrap:"wrap"}}>
+      <select className="formulier-input" style={{flex:"1 1 120px",marginBottom:0}} value={t} onChange={function (e) { setT(e.target.value); }} aria-label="Thuisteam">
+        <option value="">Thuis…</option>
+        {vrij.filter(function (id) { return id !== u; }).map(function (id) { return <option key={id} value={id}>{naam(id)}</option>; })}
+      </select>
+      <span style={{color:"var(--grijs-donker)"}}>tegen</span>
+      <select className="formulier-input" style={{flex:"1 1 120px",marginBottom:0}} value={u} onChange={function (e) { setU(e.target.value); }} aria-label="Uitteam">
+        <option value="">Uit…</option>
+        {vrij.filter(function (id) { return id !== t; }).map(function (id) { return <option key={id} value={id}>{naam(id)}</option>; })}
+      </select>
+      <button className="knop klein" disabled={!t || !u} onClick={function () { onToevoegen(t, u); setT(""); setU(""); }}>+ Toevoegen</button>
     </div>
   );
 }

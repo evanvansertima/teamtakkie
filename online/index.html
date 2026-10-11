@@ -3006,7 +3006,7 @@ window.addEventListener("error", function(e){
 });
 </script>
 <script>
-const APP_VERSIE = "bf25651";
+const APP_VERSIE = "c284572";
 const TEAMS_KEY = "tt_teams_v1";
 const ACTIEF_KEY = "tt_actief_v1";
 const VOORKEUR_KEY = "tt_voorkeuren_v1";
@@ -6344,6 +6344,132 @@ function nietIngedeeld(c, wedstrijden) {
       });
     });
   });
+}
+function voegRondeToe(c, faseId, naam) {
+  var f = zoekFase(c, faseId);
+  var nummer = (f.rondes || []).reduce(function(m, r) {
+    return Math.max(m, Number(r.nummer) || 0);
+  }, 0) + 1;
+  var id = "r" + nummer + "-" + Date.now().toString(36);
+  var ronde = { id, nummer, naam: String(naam || "").trim() || "Speelronde " + nummer, datum: "" };
+  return {
+    competitie: Object.assign({}, c, { fases: c.fases.map(function(x) {
+      return x.id === faseId ? Object.assign({}, x, { rondes: (x.rondes || []).concat([ronde]) }) : x;
+    }) }),
+    rondeId: id
+  };
+}
+function verwijderRonde(c, faseId, rondeId) {
+  var f = zoekFase(c, faseId);
+  if (f.wedstrijden.some(function(w) {
+    return w.rondeId === rondeId;
+  })) {
+    throw new Error("Er staan nog wedstrijden in deze speelronde. Haal die eerst weg.");
+  }
+  return Object.assign({}, c, { fases: c.fases.map(function(x) {
+    return x.id === faseId ? Object.assign({}, x, { rondes: x.rondes.filter(function(r) {
+      return r.id !== rondeId;
+    }) }) : x;
+  }) });
+}
+function teamsInRonde(f, rondeId) {
+  var uit = [];
+  f.wedstrijden.forEach(function(w) {
+    if (w.rondeId === rondeId) {
+      uit.push(w.thuisId);
+      uit.push(w.uitId);
+    }
+  });
+  return uit;
+}
+var FOUT_TEKST = {
+  "zelf": "Een team kan niet tegen zichzelf spelen.",
+  "geen-deelnemer": "Dat team doet niet mee in deze fase.",
+  "dubbel": "Deze twee teams spelen in deze fase al tegen elkaar.",
+  "al-in-ronde": "Een van deze teams speelt al in deze speelronde.",
+  "gespeeld-zonder-uitslag": "Vul beide scores in.",
+  "uitslag-zonder-gespeeld": "Een uitslag hoort bij een gespeelde wedstrijd.",
+  "score-ongeldig": "Een score is een heel getal vanaf 0."
+};
+function voegWedstrijdToe(c, faseId, w) {
+  var f = zoekFase(c, faseId);
+  if (!(f.rondes || []).some(function(r) {
+    return r.id === w.rondeId;
+  })) throw new Error("Kies een speelronde.");
+  var id = w.id || "cw-" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+  var nieuw = {
+    id,
+    rondeId: w.rondeId,
+    thuisId: w.thuisId,
+    uitId: w.uitId,
+    datum: "",
+    tijd: "",
+    locatie: "",
+    status: "gepland",
+    uitslag: null,
+    notitie: ""
+  };
+  if (w.wedstrijdId !== void 0 && w.wedstrijdId !== null) nieuw.wedstrijdId = w.wedstrijdId;
+  var fouten = valideerWedstrijd(f, nieuw);
+  var bezet = teamsInRonde(f, w.rondeId);
+  if (!fouten.length && (bezet.indexOf(w.thuisId) >= 0 || bezet.indexOf(w.uitId) >= 0)) fouten.push("al-in-ronde");
+  if (fouten.length) throw new Error(FOUT_TEKST[fouten[0]] || fouten[0]);
+  return {
+    competitie: Object.assign({}, c, { fases: c.fases.map(function(x) {
+      return x.id === faseId ? Object.assign({}, x, { wedstrijden: x.wedstrijden.concat([nieuw]) }) : x;
+    }) }),
+    id
+  };
+}
+function verwijderWedstrijd(c, faseId, id, eigenWedstrijden) {
+  var f = zoekFase(c, faseId);
+  var w = f.wedstrijden.filter(function(x) {
+    return x.id === id;
+  })[0];
+  if (!w) return c;
+  if (uitslagVan(w, eigenWedstrijden)) throw new Error("Deze wedstrijd heeft een uitslag. Maak die eerst leeg.");
+  return Object.assign({}, c, { fases: c.fases.map(function(x) {
+    return x.id === faseId ? Object.assign({}, x, { wedstrijden: x.wedstrijden.filter(function(y) {
+      return y.id !== id;
+    }) }) : x;
+  }) });
+}
+function zetWedstrijdInRonde(c, faseId, id, rondeId) {
+  var f = zoekFase(c, faseId);
+  var w = f.wedstrijden.filter(function(x) {
+    return x.id === id;
+  })[0];
+  if (!w) throw new Error("Onbekende wedstrijd: " + id);
+  if (!(f.rondes || []).some(function(r) {
+    return r.id === rondeId;
+  })) throw new Error("Kies een speelronde.");
+  var bezet = f.wedstrijden.filter(function(x) {
+    return x.rondeId === rondeId && x.id !== id;
+  }).reduce(function(l, x) {
+    return l.concat([x.thuisId, x.uitId]);
+  }, []);
+  if (bezet.indexOf(w.thuisId) >= 0 || bezet.indexOf(w.uitId) >= 0) throw new Error(FOUT_TEKST["al-in-ronde"]);
+  return Object.assign({}, c, { fases: c.fases.map(function(x) {
+    return x.id !== faseId ? x : Object.assign({}, x, { wedstrijden: x.wedstrijden.map(function(y) {
+      return y.id === id ? Object.assign({}, y, { rondeId }) : y;
+    }) });
+  }) });
+}
+function leesUitslagInvoer(thuis, uit) {
+  var a = String(thuis == null ? "" : thuis).trim(), b = String(uit == null ? "" : uit).trim();
+  if (a === "" && b === "") return { soort: "leeg" };
+  if (a === "" || b === "") return { soort: "half" };
+  if (!/^\d{1,3}$/.test(a) || !/^\d{1,3}$/.test(b)) return { soort: "fout" };
+  return { soort: "uitslag", uitslag: { thuis: Number(a), uit: Number(b) } };
+}
+function eigenScoreUit(cw, eigenId, uitslag) {
+  var thuis = cw.thuisId === eigenId;
+  if (!uitslag) return { status: "gepland", score: { fch: 0, teg: 0 }, thuis };
+  return {
+    status: "gespeeld",
+    thuis,
+    score: thuis ? { fch: uitslag.thuis, teg: uitslag.uit } : { fch: uitslag.uit, teg: uitslag.thuis }
+  };
 }
 const FC_CATEGORIEEN = [
   { id: "pace", label: "Snelheid", kort: "SNE", kleur: "#22c55e", attrs: [
@@ -28581,7 +28707,9 @@ function CompetitieTab({ wedstrijden, opWedstrijden }) {
     setIndelen(true);
   } }, "Indelen")), /* @__PURE__ */ React.createElement("div", { className: "tabs" }, /* @__PURE__ */ React.createElement("button", { className: "tab-knop" + (tab === "stand" ? " actief" : ""), onClick: function() {
     setTab("stand");
-  } }, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-ranking-star" }), " Stand"), /* @__PURE__ */ React.createElement("button", { className: "tab-knop" + (tab === "deelnemers" ? " actief" : ""), onClick: function() {
+  } }, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-ranking-star" }), " Stand"), /* @__PURE__ */ React.createElement("button", { className: "tab-knop" + (tab === "wedstrijden" ? " actief" : ""), onClick: function() {
+    setTab("wedstrijden");
+  } }, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-futbol" }), " Wedstrijden"), /* @__PURE__ */ React.createElement("button", { className: "tab-knop" + (tab === "deelnemers" ? " actief" : ""), onClick: function() {
     setTab("deelnemers");
   } }, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-users" }), " Deelnemers")), tab === "stand" && /* @__PURE__ */ React.createElement("div", { className: "kaart" }, achter.length > 0 && /* @__PURE__ */ React.createElement("div", { className: "melding", style: { margin: "0 0 10px" } }, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-triangle-exclamation" }), " ", "Stand onvolledig: ", achter.length === 1 ? "1 uitslag ontbreekt" : achter.length + " uitslagen ontbreken", "."), stand.length === 0 ? /* @__PURE__ */ React.createElement("p", { style: { fontSize: 13, color: "var(--grijs-donker)" } }, "Nog geen deelnemers in deze fase. Voeg ze toe bij Deelnemers.") : /* @__PURE__ */ React.createElement("div", { style: { overflowX: "auto" } }, /* @__PURE__ */ React.createElement("table", { className: "stand-tabel" }, /* @__PURE__ */ React.createElement("thead", null, /* @__PURE__ */ React.createElement("tr", null, /* @__PURE__ */ React.createElement("th", { style: { width: 30 } }, "#"), /* @__PURE__ */ React.createElement("th", { className: "links" }, "Team"), /* @__PURE__ */ React.createElement("th", null, "G"), /* @__PURE__ */ React.createElement("th", null, "W"), /* @__PURE__ */ React.createElement("th", null, "GL"), /* @__PURE__ */ React.createElement("th", null, "V"), /* @__PURE__ */ React.createElement("th", null, "DV"), /* @__PURE__ */ React.createElement("th", null, "DT"), /* @__PURE__ */ React.createElement("th", null, "DS"), /* @__PURE__ */ React.createElement("th", null, "P"))), /* @__PURE__ */ React.createElement("tbody", null, stand.map(function(r) {
     var achterTeam = achter.some(function(id) {
@@ -28591,7 +28719,17 @@ function CompetitieTab({ wedstrijden, opWedstrijden }) {
       return w && (w.thuisId === r.teamId || w.uitId === r.teamId);
     });
     return /* @__PURE__ */ React.createElement("tr", { key: r.teamId, className: r.eigen ? "eigen" : "" }, /* @__PURE__ */ React.createElement("td", null, /* @__PURE__ */ React.createElement("span", { className: "stand-pos", title: r.gedeeld ? "Gedeelde plek" : "" }, r.plek, r.gedeeld ? "=" : "")), /* @__PURE__ */ React.createElement("td", { className: "links naam" }, r.naam), /* @__PURE__ */ React.createElement("td", null, r.gespeeld, achterTeam && /* @__PURE__ */ React.createElement("span", { title: "Er ontbreekt een uitslag", style: { color: "var(--gevaar)" } }, "!")), /* @__PURE__ */ React.createElement("td", null, r.winst), /* @__PURE__ */ React.createElement("td", null, r.gelijk), /* @__PURE__ */ React.createElement("td", null, r.verlies), /* @__PURE__ */ React.createElement("td", null, r.voor), /* @__PURE__ */ React.createElement("td", null, r.tegen), /* @__PURE__ */ React.createElement("td", { style: { color: r.saldo > 0 ? "var(--succes)" : r.saldo < 0 ? "var(--gevaar)" : "inherit" } }, (r.saldo > 0 ? "+" : "") + r.saldo), /* @__PURE__ */ React.createElement("td", { style: { fontSize: 15 } }, r.punten));
-  })))), /* @__PURE__ */ React.createElement("p", { style: { fontSize: 11, color: "var(--grijs-donker)", margin: "10px 0 0", lineHeight: 1.5 } }, "Winst " + fase.regels.winst + ", gelijk " + fase.regels.gelijk + ", verlies " + fase.regels.verlies + " punten. Bij gelijke punten: doelsaldo, doelpunten voor, onderling resultaat. = is een gedeelde plek.")), tab === "deelnemers" && /* @__PURE__ */ React.createElement("div", { className: "kaart" }, magHier && /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 8, marginBottom: 12 } }, /* @__PURE__ */ React.createElement(
+  })))), /* @__PURE__ */ React.createElement("p", { style: { fontSize: 11, color: "var(--grijs-donker)", margin: "10px 0 0", lineHeight: 1.5 } }, "Winst " + fase.regels.winst + ", gelijk " + fase.regels.gelijk + ", verlies " + fase.regels.verlies + " punten. Bij gelijke punten: doelsaldo, doelpunten voor, onderling resultaat. = is een gedeelde plek.")), tab === "wedstrijden" && /* @__PURE__ */ React.createElement(
+    CompWedstrijden,
+    {
+      c,
+      faseId,
+      wedstrijden,
+      opWedstrijden,
+      bewaar,
+      magHier
+    }
+  ), tab === "deelnemers" && /* @__PURE__ */ React.createElement("div", { className: "kaart" }, magHier && /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 8, marginBottom: 12 } }, /* @__PURE__ */ React.createElement(
     "input",
     {
       className: "formulier-input",
@@ -28746,6 +28884,269 @@ function IndeelScherm({ c, wedstrijden, onKlaar, onSluiten }) {
     onKlaar(r);
     meldGoed(rijen.length + (rijen.length === 1 ? " wedstrijd ingedeeld" : " wedstrijden ingedeeld"));
   } }, "Indeling bevestigen")));
+}
+function CompWedstrijden({ c, faseId, wedstrijden, opWedstrijden, bewaar, magHier }) {
+  const fase = c.fases.filter(function(f) {
+    return f.id === faseId;
+  })[0];
+  const eigen = c.teams.filter(function(t2) {
+    return t2.eigen;
+  })[0];
+  const rondes = (fase.rondes || []).slice().sort(function(a, b) {
+    return a.nummer - b.nummer;
+  });
+  const losse = fase.wedstrijden.filter(function(w) {
+    return !rondes.some(function(r) {
+      return r.id === w.rondeId;
+    });
+  });
+  function naam(id) {
+    var t2 = c.teams.filter(function(x) {
+      return x.id === id;
+    })[0];
+    return t2 ? t2.naam : id;
+  }
+  function nieuweRonde() {
+    var r = voegRondeToe(c, faseId);
+    bewaar(r.competitie);
+  }
+  function bewaarUitslag(cw, uitslag) {
+    if (cw.wedstrijdId !== void 0 && cw.wedstrijdId !== null) {
+      var e = eigenScoreUit(cw, eigen.id, uitslag);
+      opWedstrijden((wedstrijden || []).map(function(w) {
+        return w.id === cw.wedstrijdId ? Object.assign({}, w, { status: e.status, score: e.score, thuis: e.thuis }) : w;
+      }));
+      return;
+    }
+    try {
+      bewaar(pasBewerkingToe(c, {
+        soort: "uitslag",
+        faseId,
+        wedstrijdId: cw.id,
+        status: uitslag ? "gespeeld" : "gepland",
+        uitslag,
+        tijd: wieNu().tijd,
+        door: wieNu().door
+      }));
+    } catch (e2) {
+      meldFout(e2.message);
+    }
+  }
+  function voegToe(rondeId, thuisId, uitId) {
+    if (!thuisId || !uitId) {
+      meldFout("Kies twee teams.");
+      return;
+    }
+    var cwId = "cw-" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+    var eigenDoetMee = thuisId === eigen.id || uitId === eigen.id;
+    var nieuweLijst = null, wedstrijdId = null;
+    if (eigenDoetMee) {
+      var tegenId = thuisId === eigen.id ? uitId : thuisId;
+      var tegen = c.teams.filter(function(t2) {
+        return t2.id === tegenId;
+      })[0];
+      var namen = [tegen.naam].concat(tegen.aliassen || []).map(normaliseerTeamNaam);
+      var bestaand = (wedstrijden || []).filter(function(w) {
+        return (w.soort || "competitie") === "competitie" && !w.competitie && w.status !== "gespeeld" && namen.indexOf(normaliseerTeamNaam(w.tegenstander)) >= 0;
+      })[0];
+      var koppeling = { competitieId: c.id, faseId, compWedstrijdId: cwId };
+      if (bestaand) {
+        wedstrijdId = bestaand.id;
+        nieuweLijst = wedstrijden.map(function(w) {
+          return w.id === bestaand.id ? Object.assign({}, w, { thuis: thuisId === eigen.id, competitie: koppeling }) : w;
+        });
+      } else {
+        wedstrijdId = Date.now();
+        nieuweLijst = (wedstrijden || []).concat([Object.assign({}, LEEG_WEDSTRIJD, {
+          id: wedstrijdId,
+          tegenstander: tegen.naam,
+          thuis: thuisId === eigen.id,
+          status: "gepland",
+          soort: "competitie",
+          speelduur: inst().speelduur || 90,
+          competitie: koppeling
+        })]);
+      }
+    }
+    try {
+      var r = voegWedstrijdToe(c, faseId, { id: cwId, rondeId, thuisId, uitId, wedstrijdId });
+      bewaar(r.competitie);
+      if (nieuweLijst) opWedstrijden(nieuweLijst);
+    } catch (e) {
+      meldFout(e.message);
+    }
+  }
+  function haalWeg(cw) {
+    try {
+      bewaar(verwijderWedstrijd(c, faseId, cw.id, wedstrijden));
+      if (cw.wedstrijdId !== void 0 && cw.wedstrijdId !== null) {
+        opWedstrijden(wedstrijden.map(function(w) {
+          if (w.id !== cw.wedstrijdId) return w;
+          var kaal = Object.assign({}, w);
+          delete kaal.competitie;
+          return kaal;
+        }));
+      }
+    } catch (e) {
+      meldFout(e.message);
+    }
+  }
+  return /* @__PURE__ */ React.createElement("div", null, rondes.length === 0 && losse.length === 0 && /* @__PURE__ */ React.createElement("div", { className: "kaart", style: { textAlign: "center" } }, /* @__PURE__ */ React.createElement("p", { style: { fontSize: 13, color: "var(--grijs-donker)", lineHeight: 1.6 } }, "Nog geen speelrondes in ", fase.naam, ". Maak een speelronde en kies welke teams tegen elkaar spelen.")), rondes.map(function(r) {
+    var inRonde = fase.wedstrijden.filter(function(w) {
+      return w.rondeId === r.id;
+    });
+    return /* @__PURE__ */ React.createElement("div", { key: r.id, className: "kaart" }, /* @__PURE__ */ React.createElement("div", { className: "kaart-titel", style: { display: "flex", alignItems: "center", justifyContent: "space-between" } }, /* @__PURE__ */ React.createElement("span", null, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-flag-checkered" }), " ", r.naam), magHier && inRonde.length === 0 && /* @__PURE__ */ React.createElement(
+      "button",
+      {
+        className: "knop lijn klein",
+        "aria-label": r.naam + " weghalen",
+        onClick: function() {
+          try {
+            bewaar(verwijderRonde(c, faseId, r.id));
+          } catch (e) {
+            meldFout(e.message);
+          }
+        }
+      },
+      /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-trash" })
+    )), inRonde.map(function(cw) {
+      return /* @__PURE__ */ React.createElement(
+        UitslagRegel,
+        {
+          key: cw.id + "|" + JSON.stringify(uitslagVan(cw, wedstrijden)),
+          cw,
+          thuis: naam(cw.thuisId),
+          uit: naam(cw.uitId),
+          eigenId: eigen.id,
+          uitslag: uitslagVan(cw, wedstrijden),
+          mag: magHier,
+          onUitslag: function(u) {
+            bewaarUitslag(cw, u);
+          },
+          onWeg: function() {
+            haalWeg(cw);
+          }
+        }
+      );
+    }), magHier && /* @__PURE__ */ React.createElement(
+      NieuweWedstrijdRegel,
+      {
+        fase,
+        rondeId: r.id,
+        naam,
+        onToevoegen: function(t2, u) {
+          voegToe(r.id, t2, u);
+        }
+      }
+    ));
+  }), losse.length > 0 && /* @__PURE__ */ React.createElement("div", { className: "kaart" }, /* @__PURE__ */ React.createElement("div", { className: "kaart-titel" }, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-inbox" }), " Zonder speelronde"), /* @__PURE__ */ React.createElement("p", { style: { fontSize: 12, color: "var(--grijs-donker)", margin: "0 0 8px" } }, "Kies bij elke wedstrijd in welke speelronde hij hoort."), losse.map(function(cw) {
+    return /* @__PURE__ */ React.createElement("div", { key: cw.id }, /* @__PURE__ */ React.createElement(
+      UitslagRegel,
+      {
+        key: cw.id + "|" + JSON.stringify(uitslagVan(cw, wedstrijden)),
+        cw,
+        thuis: naam(cw.thuisId),
+        uit: naam(cw.uitId),
+        eigenId: eigen.id,
+        uitslag: uitslagVan(cw, wedstrijden),
+        mag: magHier,
+        onUitslag: function(u) {
+          bewaarUitslag(cw, u);
+        },
+        onWeg: function() {
+          haalWeg(cw);
+        }
+      }
+    ), magHier && rondes.length > 0 && /* @__PURE__ */ React.createElement(
+      "select",
+      {
+        className: "formulier-input",
+        style: { marginTop: -4 },
+        value: "",
+        onChange: function(e) {
+          try {
+            bewaar(zetWedstrijdInRonde(c, faseId, cw.id, e.target.value));
+          } catch (er) {
+            meldFout(er.message);
+          }
+        }
+      },
+      /* @__PURE__ */ React.createElement("option", { value: "" }, "Zet in speelronde\u2026"),
+      rondes.map(function(r) {
+        return /* @__PURE__ */ React.createElement("option", { key: r.id, value: r.id }, r.naam);
+      })
+    ));
+  })), magHier && /* @__PURE__ */ React.createElement("button", { className: "knop", style: { width: "100%", justifyContent: "center", marginBottom: 12 }, onClick: nieuweRonde }, "+ Speelronde"));
+}
+function UitslagRegel({ cw, thuis, uit, eigenId, uitslag, mag, onUitslag, onWeg }) {
+  const [a, setA] = useState(uitslag ? String(uitslag.thuis) : "");
+  const [b, setB] = useState(uitslag ? String(uitslag.uit) : "");
+  function klaar(na, nb) {
+    var r = leesUitslagInvoer(na, nb);
+    if (r.soort === "half") return;
+    if (r.soort === "fout") {
+      meldFout("Een score is een heel getal vanaf 0.");
+      return;
+    }
+    var nieuw = r.soort === "uitslag" ? r.uitslag : null;
+    if (JSON.stringify(nieuw) === JSON.stringify(uitslag || null)) return;
+    onUitslag(nieuw);
+  }
+  var eigenWed = cw.thuisId === eigenId || cw.uitId === eigenId;
+  var vak = { width: 52, textAlign: "center", marginBottom: 0, padding: "8px 4px", fontSize: 17, fontWeight: 700 };
+  function regel(teamNaam, vet, waarde, zet, kant) {
+    return /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 8, padding: "3px 0" } }, /* @__PURE__ */ React.createElement("span", { style: { flex: 1, minWidth: 0, fontSize: 14, fontWeight: vet ? 700 : 500, lineHeight: 1.3 } }, teamNaam), /* @__PURE__ */ React.createElement(
+      "input",
+      {
+        className: "formulier-input",
+        style: vak,
+        inputMode: "numeric",
+        value: waarde,
+        disabled: !mag,
+        "aria-label": "Doelpunten " + teamNaam,
+        onChange: function(e) {
+          zet(e.target.value);
+        },
+        onBlur: function() {
+          klaar(a, b);
+        },
+        onKeyDown: function(e) {
+          if (e.key === "Enter") klaar(a, b);
+        }
+      }
+    ));
+  }
+  return /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 8, padding: "8px 0", borderBottom: "1px solid var(--grijs)" } }, /* @__PURE__ */ React.createElement("div", { style: { flex: 1, minWidth: 0 } }, regel(thuis, cw.thuisId === eigenId, a, setA, "a"), regel(uit, cw.uitId === eigenId, b, setB, "b"), eigenWed && /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: "var(--grijs-donker)", marginTop: 2 } }, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-link" }), " Eigen wedstrijd \u2014 de uitslag staat ook in je wedstrijdlijst")), mag && /* @__PURE__ */ React.createElement("button", { className: "knop lijn klein", style: { padding: "6px 9px", alignSelf: "center" }, "aria-label": "Wedstrijd weghalen", onClick: onWeg }, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-xmark" })));
+}
+function NieuweWedstrijdRegel({ fase, rondeId, naam, onToevoegen }) {
+  const [t2, setT] = useState("");
+  const [u, setU] = useState("");
+  const bezet = teamsInRonde(fase, rondeId);
+  const vrij = fase.deelnemers.filter(function(id) {
+    return bezet.indexOf(id) < 0;
+  }).sort(function(x, y) {
+    return naam(x).localeCompare(naam(y), "nl");
+  });
+  if (vrij.length < 2) {
+    return /* @__PURE__ */ React.createElement("p", { style: { fontSize: 12, color: "var(--grijs-donker)", margin: "8px 0 0" } }, fase.deelnemers.length < 2 ? "Voeg eerst teams toe bij Deelnemers." : "Alle teams spelen al in deze ronde.");
+  }
+  return /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 6, alignItems: "center", marginTop: 10, flexWrap: "wrap" } }, /* @__PURE__ */ React.createElement("select", { className: "formulier-input", style: { flex: "1 1 120px", marginBottom: 0 }, value: t2, onChange: function(e) {
+    setT(e.target.value);
+  }, "aria-label": "Thuisteam" }, /* @__PURE__ */ React.createElement("option", { value: "" }, "Thuis\u2026"), vrij.filter(function(id) {
+    return id !== u;
+  }).map(function(id) {
+    return /* @__PURE__ */ React.createElement("option", { key: id, value: id }, naam(id));
+  })), /* @__PURE__ */ React.createElement("span", { style: { color: "var(--grijs-donker)" } }, "tegen"), /* @__PURE__ */ React.createElement("select", { className: "formulier-input", style: { flex: "1 1 120px", marginBottom: 0 }, value: u, onChange: function(e) {
+    setU(e.target.value);
+  }, "aria-label": "Uitteam" }, /* @__PURE__ */ React.createElement("option", { value: "" }, "Uit\u2026"), vrij.filter(function(id) {
+    return id !== t2;
+  }).map(function(id) {
+    return /* @__PURE__ */ React.createElement("option", { key: id, value: id }, naam(id));
+  })), /* @__PURE__ */ React.createElement("button", { className: "knop klein", disabled: !t2 || !u, onClick: function() {
+    onToevoegen(t2, u);
+    setT("");
+    setU("");
+  } }, "+ Toevoegen"));
 }
 const NL_MAANDEN = { jan: 1, feb: 2, mrt: 3, maa: 3, apr: 4, mei: 5, jun: 6, jul: 7, aug: 8, sep: 9, okt: 10, nov: 11, dec: 12 };
 function padGetal(n) {

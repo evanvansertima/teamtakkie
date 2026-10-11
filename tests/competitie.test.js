@@ -385,6 +385,50 @@ groep("teams toevoegen en verwijderen, fase afsluiten");
   ok("niet ingedeelde eigen wedstrijden", nietIngedeeld(metEigen, [{ id: "w1", soort: "competitie" }, { id: "w2" }, { id: "w3", soort: "oefen" }]).map((w) => w.id), ["w2"]);
 }
 
+/* ══ speelrondes en wedstrijden met de hand ══ */
+groep("speelrondes en wedstrijden met de hand");
+{
+  const c0 = competitie([team("e", "Eigen", true), team("a", "A"), team("b", "B"), team("x", "X")],
+    [fase("f1", ["e", "a", "b", "x"], [], { rondes: [] })]);
+  const r1 = voegRondeToe(c0, "f1");
+  ok("eerste ronde heet Speelronde 1", r1.competitie.fases[0].rondes[0].naam, "Speelronde 1");
+  const r2 = voegRondeToe(r1.competitie, "f1");
+  ok("tweede ronde nummer 2", r2.competitie.fases[0].rondes[1].nummer, 2);
+  let c = r2.competitie;
+  const R1 = r1.rondeId, R2 = r2.rondeId;
+  c = voegWedstrijdToe(c, "f1", { rondeId: R1, thuisId: "a", uitId: "b" }).competitie;
+  ok("wedstrijd tussen twee andere teams staat in ronde 1", c.fases[0].wedstrijden.map((w) => [w.rondeId === R1, w.thuisId, w.uitId, w.status, w.uitslag]), [[true, "a", "b", "gepland", null]]);
+  ok("een team twee keer in dezelfde ronde: weigert met uitleg",
+     String(veilig(() => voegWedstrijdToe(c, "f1", { rondeId: R1, thuisId: "a", uitId: "x" }))).indexOf("al in deze speelronde") >= 0, true);
+  ok("tegen zichzelf: weigert", String(veilig(() => voegWedstrijdToe(c, "f1", { rondeId: R2, thuisId: "x", uitId: "x" }))).indexOf("zichzelf") >= 0, true);
+  ok("zonder ronde: weigert", String(veilig(() => voegWedstrijdToe(c, "f1", { rondeId: "nope", thuisId: "e", uitId: "x" }))).indexOf("speelronde") >= 0, true);
+  ok("in een andere ronde mag hetzelfde team wel", voegWedstrijdToe(c, "f1", { rondeId: R2, thuisId: "a", uitId: "x" }).competitie.fases[0].wedstrijden.length, 2);
+  const id = c.fases[0].wedstrijden[0].id;
+  c = pasBewerkingToe(c, { soort: "uitslag", faseId: "f1", wedstrijdId: id, status: "gespeeld", uitslag: { thuis: 2, uit: 1 }, tijd: "t", door: "d" });
+  ok("uitslag ingevuld: A 3 punten in de stand", rijVan(standVanFase(c, "f1", []), "a").punten, 3);
+  ok("een wedstrijd met uitslag weghalen: weigert", String(veilig(() => verwijderWedstrijd(c, "f1", id, []))).indexOf("uitslag") >= 0, true);
+  ok("een ronde met wedstrijden weghalen: weigert", String(veilig(() => verwijderRonde(c, "f1", R1))).indexOf("WERPT") === 0, true);
+  ok("een lege ronde weghalen mag", verwijderRonde(c, "f1", R2).fases[0].rondes.length, 1);
+  const verplaatst = zetWedstrijdInRonde(c, "f1", id, R2);
+  ok("wedstrijd naar een andere ronde", verplaatst.fases[0].wedstrijden[0].rondeId, R2);
+
+  ok("invoer: allebei leeg is geen uitslag (geen 0–0)", leesUitslagInvoer("", ""), { soort: "leeg" });
+  ok("invoer: één leeg is nog niet compleet", leesUitslagInvoer("2", ""), { soort: "half" });
+  ok("invoer: 0 en 0 is een echte 0–0", leesUitslagInvoer("0", "0"), { soort: "uitslag", uitslag: { thuis: 0, uit: 0 } });
+  ok("invoer: geen getal is fout", [leesUitslagInvoer("-1", "2").soort, leesUitslagInvoer("1,5", "2").soort, leesUitslagInvoer("a", "2").soort], ["fout", "fout", "fout"]);
+
+  ok("eigen uitwedstrijd 1–3 (wij uit, wij 3): score.fch 3",
+     eigenScoreUit({ thuisId: "a", uitId: "e" }, "e", { thuis: 1, uit: 3 }), { status: "gespeeld", thuis: false, score: { fch: 3, teg: 1 } });
+  ok("eigen thuiswedstrijd 2–0", eigenScoreUit({ thuisId: "e", uitId: "a" }, "e", { thuis: 2, uit: 0 }).score, { fch: 2, teg: 0 });
+  ok("uitslag leegmaken: weer gepland", eigenScoreUit({ thuisId: "e", uitId: "a" }, "e", null).status, "gepland");
+  /* En de rondgang: een via eigenScoreUit bewaarde uitslag leest
+     uitslagVan weer precies zo terug. */
+  const cwE = { id: "c1", thuisId: "a", uitId: "e", status: "gepland", uitslag: null, wedstrijdId: "W" };
+  const s = eigenScoreUit(cwE, "e", { thuis: 1, uit: 3 });
+  ok("heen en terug via de eigen wedstrijd: dezelfde uitslag",
+     uitslagVan(cwE, [{ id: "W", status: s.status, thuis: s.thuis, score: s.score }]), { thuis: 1, uit: 3 });
+}
+
 console.log(`\n${goed} geslaagd, ${fout} gefaald`);
 if (fout) process.exitCode = 1;
 })();

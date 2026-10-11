@@ -126,6 +126,22 @@ MUTATIES = [
      "  var bestaand = zoekTeamOpNaam(kopie.teams, schoon);\n  var id",
      "  var bestaand = null;\n  var id"),
 
+    ("H1  een team mag twee keer in dezelfde speelronde",
+     "  if (!fouten.length && (bezet.indexOf(w.thuisId) >= 0 || bezet.indexOf(w.uitId) >= 0)) fouten.push(\"al-in-ronde\");",
+     ""),
+
+    ("H2  twee lege vakjes worden een 0–0",
+     "  if (a === \"\" && b === \"\") return { soort: \"leeg\" };",
+     "  if (a === \"\" && b === \"\") return { soort: \"uitslag\", uitslag: { thuis: 0, uit: 0 } };"),
+
+    ("H3  eigen uitwedstrijd: fch en teg omgedraaid",
+     "           score: thuis ? { fch: uitslag.thuis, teg: uitslag.uit } : { fch: uitslag.uit, teg: uitslag.thuis } };",
+     "           score: { fch: uitslag.thuis, teg: uitslag.uit } };"),
+
+    ("H4  een wedstrijd met uitslag kan stil verdwijnen",
+     "  if (uitslagVan(w, eigenWedstrijden)) throw new Error(",
+     "  if (false) throw new Error("),
+
     ("M9  bevestigen past de competitie van vóór het bevestigen aan",
      "  var nieuw = JSON.parse(JSON.stringify(c));\n  var eigen",
      "  var nieuw = c;\n  var eigen"),

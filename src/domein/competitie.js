@@ -777,3 +777,148 @@ function nietIngedeeld(c, wedstrijden) {
     });
   });
 }
+
+/* ══ SPEELRONDES EN WEDSTRIJDEN MET DE HAND (wens van Evan, 11 okt.) ══
+   Speelrondes aanmaken, per ronde zelf kiezen wie tegen wie speelt, en
+   daar de uitslag invullen. Een wedstrijd van het eigen team verwijst
+   altijd naar een eigen Wedstrijd (wedstrijdId): de uitslag staat daar,
+   ook als hij hier wordt ingevuld — één registratie. */
+
+/**
+ * @param {Competitie} c
+ * @param {string} faseId
+ * @param {string} [naam]
+ * @returns {{competitie:Competitie, rondeId:string}}
+ */
+function voegRondeToe(c, faseId, naam) {
+  var f = zoekFase(c, faseId);
+  var nummer = (f.rondes || []).reduce(function (m, r) { return Math.max(m, Number(r.nummer) || 0); }, 0) + 1;
+  var id = "r" + nummer + "-" + Date.now().toString(36);
+  var ronde = { id: id, nummer: nummer, naam: String(naam || "").trim() || ("Speelronde " + nummer), datum: "" };
+  return {
+    competitie: Object.assign({}, c, { fases: c.fases.map(function (x) {
+      return x.id === faseId ? Object.assign({}, x, { rondes: (x.rondes || []).concat([ronde]) }) : x;
+    }) }),
+    rondeId: id
+  };
+}
+
+/* Een ronde weghalen kan alleen als er geen wedstrijden in staan. */
+/** @param {Competitie} c @param {string} faseId @param {string} rondeId @returns {Competitie} */
+function verwijderRonde(c, faseId, rondeId) {
+  var f = zoekFase(c, faseId);
+  if (f.wedstrijden.some(function (w) { return w.rondeId === rondeId; })) {
+    throw new Error("Er staan nog wedstrijden in deze speelronde. Haal die eerst weg.");
+  }
+  return Object.assign({}, c, { fases: c.fases.map(function (x) {
+    return x.id === faseId ? Object.assign({}, x, { rondes: x.rondes.filter(function (r) { return r.id !== rondeId; }) }) : x;
+  }) });
+}
+
+/* Welke teams spelen al in deze ronde? Een team speelt per ronde één keer. */
+/** @param {Fase} f @param {string} rondeId @returns {string[]} */
+function teamsInRonde(f, rondeId) {
+  var uit = [];
+  f.wedstrijden.forEach(function (w) { if (w.rondeId === rondeId) { uit.push(w.thuisId); uit.push(w.uitId); } });
+  return uit;
+}
+
+var FOUT_TEKST = {
+  "zelf": "Een team kan niet tegen zichzelf spelen.",
+  "geen-deelnemer": "Dat team doet niet mee in deze fase.",
+  "dubbel": "Deze twee teams spelen in deze fase al tegen elkaar.",
+  "al-in-ronde": "Een van deze teams speelt al in deze speelronde.",
+  "gespeeld-zonder-uitslag": "Vul beide scores in.",
+  "uitslag-zonder-gespeeld": "Een uitslag hoort bij een gespeelde wedstrijd.",
+  "score-ongeldig": "Een score is een heel getal vanaf 0."
+};
+
+/* Een wedstrijd in een ronde zetten. Bij het eigen team hoort er een
+   wedstrijdId bij (zie hierboven); het scherm zorgt daarvoor. */
+/**
+ * @param {Competitie} c
+ * @param {string} faseId
+ * @param {{rondeId:string, thuisId:string, uitId:string, wedstrijdId?:any, id?:string}} w
+ * @returns {{competitie:Competitie, id:string}}
+ */
+function voegWedstrijdToe(c, faseId, w) {
+  var f = zoekFase(c, faseId);
+  if (!(f.rondes || []).some(function (r) { return r.id === w.rondeId; })) throw new Error("Kies een speelronde.");
+  var id = w.id || ("cw-" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6));
+  /** @type {CompWedstrijd} */
+  var nieuw = { id: id, rondeId: w.rondeId, thuisId: w.thuisId, uitId: w.uitId, datum: "", tijd: "", locatie: "",
+                status: "gepland", uitslag: null, notitie: "" };
+  if (w.wedstrijdId !== undefined && w.wedstrijdId !== null) nieuw.wedstrijdId = w.wedstrijdId;
+  var fouten = valideerWedstrijd(f, nieuw);
+  var bezet = teamsInRonde(f, w.rondeId);
+  if (!fouten.length && (bezet.indexOf(w.thuisId) >= 0 || bezet.indexOf(w.uitId) >= 0)) fouten.push("al-in-ronde");
+  if (fouten.length) throw new Error(FOUT_TEKST[fouten[0]] || fouten[0]);
+  return {
+    competitie: Object.assign({}, c, { fases: c.fases.map(function (x) {
+      return x.id === faseId ? Object.assign({}, x, { wedstrijden: x.wedstrijden.concat([nieuw]) }) : x;
+    }) }),
+    id: id
+  };
+}
+
+/* Een wedstrijd uit de competitie halen. Niet als er een uitslag is: die
+   eerst leegmaken, zodat er nooit stilletjes een resultaat verdwijnt. */
+/** @param {Competitie} c @param {string} faseId @param {string} id @param {any[]} eigenWedstrijden @returns {Competitie} */
+function verwijderWedstrijd(c, faseId, id, eigenWedstrijden) {
+  var f = zoekFase(c, faseId);
+  var w = f.wedstrijden.filter(function (x) { return x.id === id; })[0];
+  if (!w) return c;
+  if (uitslagVan(w, eigenWedstrijden)) throw new Error("Deze wedstrijd heeft een uitslag. Maak die eerst leeg.");
+  return Object.assign({}, c, { fases: c.fases.map(function (x) {
+    return x.id === faseId ? Object.assign({}, x, { wedstrijden: x.wedstrijden.filter(function (y) { return y.id !== id; }) }) : x;
+  }) });
+}
+
+/* Een wedstrijd naar een (andere) ronde, bijvoorbeeld een ingedeelde
+   eigen wedstrijd die nog geen ronde had. */
+/** @param {Competitie} c @param {string} faseId @param {string} id @param {string} rondeId @returns {Competitie} */
+function zetWedstrijdInRonde(c, faseId, id, rondeId) {
+  var f = zoekFase(c, faseId);
+  var w = f.wedstrijden.filter(function (x) { return x.id === id; })[0];
+  if (!w) throw new Error("Onbekende wedstrijd: " + id);
+  if (!(f.rondes || []).some(function (r) { return r.id === rondeId; })) throw new Error("Kies een speelronde.");
+  var bezet = f.wedstrijden.filter(function (x) { return x.rondeId === rondeId && x.id !== id; })
+    .reduce(function (/** @type {string[]} */ l, x) { return l.concat([x.thuisId, x.uitId]); }, []);
+  if (bezet.indexOf(w.thuisId) >= 0 || bezet.indexOf(w.uitId) >= 0) throw new Error(FOUT_TEKST["al-in-ronde"]);
+  return Object.assign({}, c, { fases: c.fases.map(function (x) {
+    return x.id !== faseId ? x : Object.assign({}, x, { wedstrijden: x.wedstrijden.map(function (y) {
+      return y.id === id ? Object.assign({}, y, { rondeId: rondeId }) : y; }) });
+  }) });
+}
+
+/* Twee invulvakjes → wat er moet gebeuren. Allebei leeg: geen uitslag.
+   Allebei een heel getal ≥ 0: gespeeld. Eén leeg: nog niet compleet
+   (er wordt niets bewaard). Iets anders: fout. Een lege uitslag is dus
+   nooit 0–0. */
+/**
+ * @param {string} thuis
+ * @param {string} uit
+ * @returns {{soort:"leeg"}|{soort:"half"}|{soort:"fout"}|{soort:"uitslag", uitslag:Uitslag}}
+ */
+function leesUitslagInvoer(thuis, uit) {
+  var a = String(thuis == null ? "" : thuis).trim(), b = String(uit == null ? "" : uit).trim();
+  if (a === "" && b === "") return { soort: "leeg" };
+  if (a === "" || b === "") return { soort: "half" };
+  if (!/^\d{1,3}$/.test(a) || !/^\d{1,3}$/.test(b)) return { soort: "fout" };
+  return { soort: "uitslag", uitslag: { thuis: Number(a), uit: Number(b) } };
+}
+
+/* De uitslag van een competitiewedstrijd vertaald naar de eigen
+   Wedstrijd (score.fch = eigen team). null = geen uitslag. */
+/**
+ * @param {CompWedstrijd} cw
+ * @param {string} eigenId
+ * @param {Uitslag|null} uitslag
+ * @returns {{status:string, score:{fch:number, teg:number}, thuis:boolean}}
+ */
+function eigenScoreUit(cw, eigenId, uitslag) {
+  var thuis = cw.thuisId === eigenId;
+  if (!uitslag) return { status: "gepland", score: { fch: 0, teg: 0 }, thuis: thuis };
+  return { status: "gespeeld", thuis: thuis,
+           score: thuis ? { fch: uitslag.thuis, teg: uitslag.uit } : { fch: uitslag.uit, teg: uitslag.thuis } };
+}
