@@ -76,8 +76,14 @@ commit geeft het complete werk terug (controle, edge function, database,
 chatscherm, tests). Hoofdstuk 5h en de besluiten 1 hierboven gelden tot dan
 niet.
 
-In plaats daarvan: een uitgebreidere oefeningenbibliotheek met tekeningen,
-leeftijden en thematrainingen (vraag van een tester, 11 oktober 2026).
+**Oefeningenbibliotheek (11 oktober 2026, vraag van een tester).**
+`src/domein/bibliotheek.js`: 88 ingebouwde oefeningen (de 50 bestaande plus
+38 nieuwe, vooral fun en techniek voor O7–O11), elk met tekening, een lijst
+leeftijden (nieuw: O7-O8) en een thema (Fun, Techniek, Tactiek); 13
+thematrainingen die je met één tik plant. De bibliotheek is alleen-lezen en
+gaat niet mee met synchroniseren; kopiëren naar "Mijn oefeningen" om aan te
+passen. Oude, onaangepaste kopieën van de 50 krijgen vanzelf de nieuwe
+versie. Tests: tests/bibliotheek.test.js, tests/bibliotheek-mutaties.py.
 
 ## 0. Besluiten van Evan (9 oktober 2026) en wat ze veranderen
 

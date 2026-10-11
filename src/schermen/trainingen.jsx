@@ -384,10 +384,31 @@ function OefeningFormulier({ oefening, onOpslaan, onSluiten }) {
             </select>
           </div>
           <div className="formulier-groep">
-            <label className="formulier-label">Leeftijd</label>
-            <select className="formulier-input" value={form.leeftijd} onChange={function(e){set("leeftijd",e.target.value);}}>
-              {OEFENING_LEEFTIJDEN.map(function(l){ return <option key={l} value={l}>{l}</option>; })}
+            <label className="formulier-label">Thema</label>
+            <select className="formulier-input" value={form.thema||""} onChange={function(e){set("thema",e.target.value);}}>
+              <option value="">—</option>
+              {BIB_THEMAS.map(function(t){ return <option key={t} value={t}>{t}</option>; })}
             </select>
+          </div>
+        </div>
+
+        {/* Meerdere leeftijden tegelijk: een rondo werkt van O9 tot de senioren.
+            Het oude veld leeftijd houdt de jongste bij, voor wat daar nog op leunt. */}
+        <div className="formulier-groep">
+          <label className="formulier-label">Geschikt voor</label>
+          <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
+            {BIB_LEEFTIJDEN.map(function(l){
+              var gekozen = leeftijdenVan(form);
+              var aan = gekozen.indexOf(l) >= 0;
+              return (
+                <button key={l} className="filter-chip" style={chipStijl(aan)} onClick={function(){
+                  var n = aan ? gekozen.filter(function(x){ return x!==l; }) : gekozen.concat([l]);
+                  n = BIB_LEEFTIJDEN.filter(function(x){ return n.indexOf(x)>=0; });
+                  if (!n.length) return;
+                  setForm(function(f){ return Object.assign({}, f, {leeftijden:n, leeftijd:n.length===BIB_LEEFTIJDEN.length?"Alle":n[0]}); });
+                }}>{l}</button>
+              );
+            })}
           </div>
         </div>
 
@@ -444,13 +465,17 @@ function OefeningFormulier({ oefening, onOpslaan, onSluiten }) {
   );
 }
 
-function OefeningDetail({ oefening, onTerug, onBewerken, onVerwijderen }) {
+function OefeningDetail({ oefening, onTerug, onBewerken, onVerwijderen, onKopieer }) {
+  /* Een oefening uit de TEAMTAKKIE-bibliotheek is alleen-lezen: wie hem
+     wil aanpassen, kopieert hem eerst naar Mijn oefeningen. */
+  const uitBieb = oefening.bron === "teamtakkie";
   const [bevestig, setBevestig] = useState(false);
   return (
     <div className="pagina-slide">
       <button className="back-knop" onClick={onTerug}><i className="fa-solid fa-arrow-left"/> Terug naar bibliotheek</button>
       <div style={{background:"linear-gradient(135deg,var(--blauw) 0%,#0063cc 100%)",color:"var(--op-kleur)",borderRadius:16,padding:"18px 16px",marginBottom:12}}>
-        <div style={{fontSize:11,opacity:.75,textTransform:"uppercase",letterSpacing:.7,fontWeight:700,fontFamily:"'Helvetica Neue',Arial"}}>{oefening.type}</div>
+        <div style={{fontSize:11,opacity:.75,textTransform:"uppercase",letterSpacing:.7,fontWeight:700,fontFamily:"'Helvetica Neue',Arial"}}>
+          {oefening.type}{oefening.thema ? " · " + oefening.thema : ""}{uitBieb ? " · TEAMTAKKIE-bibliotheek" : ""}</div>
         <div style={{fontSize:21,fontWeight:700,fontFamily:"'Helvetica Neue',Arial",margin:"6px 0 6px",lineHeight:1.25}}>{oefening.naam}</div>
         <div style={{fontSize:12,opacity:.87,display:"flex",flexWrap:"wrap",gap:12}}>
           <span><i className="fa-solid fa-bullseye"/>{" "+oefening.doel}</span>
@@ -462,14 +487,16 @@ function OefeningDetail({ oefening, onTerug, onBewerken, onVerwijderen }) {
       {oefening.tekening && (
         <div className="kaart">
           <div className="kaart-titel"><i className="fa-solid fa-pen-ruler"/> Tekening</div>
-          <TrainingTekenBord value={oefening.tekening} onChange={function(){}}
-            pdfNaam={oefening.naam} pdfInfo={oefening} />
+          {uitBieb
+            ? <TekeningPlaat tekening={oefening.tekening} />
+            : <TrainingTekenBord value={oefening.tekening} onChange={function(){}}
+                pdfNaam={oefening.naam} pdfInfo={oefening} />}
         </div>
       )}
 
       <div className="kaart">
         <div className="kaart-titel"><i className="fa-solid fa-circle-info"/> Gegevens</div>
-        <div className="info-rij"><span className="info-icoon"><i className="fa-solid fa-child-reaching"/></span><div><div className="info-label">Leeftijd</div><div className="info-waarde">{oefening.leeftijd}</div></div></div>
+        <div className="info-rij"><span className="info-icoon"><i className="fa-solid fa-child-reaching"/></span><div><div className="info-label">Geschikt voor</div><div className="info-waarde">{leeftijdenVan(oefening).length===BIB_LEEFTIJDEN.length ? "Alle leeftijden" : leeftijdenVan(oefening).join(", ")}</div></div></div>
         {oefening.veldGrootte&&<div className="info-rij"><span className="info-icoon"><i className="fa-solid fa-ruler-combined"/></span><div><div className="info-label">Veldgrootte</div><div className="info-waarde">{oefening.veldGrootte}</div></div></div>}
         {oefening.materialen&&<div className="info-rij"><span className="info-icoon"><i className="fa-solid fa-basket-shopping"/></span><div><div className="info-label">Materialen</div><div className="info-waarde">{oefening.materialen}</div></div></div>}
       </div>
@@ -487,10 +514,15 @@ function OefeningDetail({ oefening, onTerug, onBewerken, onVerwijderen }) {
         </div>
       )}
 
+      {uitBieb ? (
+        <button className="knop" style={{width:"100%",justifyContent:"center",marginTop:4}} onClick={onKopieer}>
+          <i className="fa-solid fa-copy"/> Kopiëren naar mijn oefeningen (om aan te passen)</button>
+      ) : (
       <div style={{display:"flex",gap:10,marginTop:4}}>
         <button className="knop lijn" style={{flex:1,justifyContent:"center"}} onClick={onBewerken}><i className="fa-solid fa-pen"/> Bewerken</button>
         <button className="knop gevaar klein" onClick={function(){setBevestig(true);}}><i className="fa-solid fa-trash"/></button>
       </div>
+      )}
       {bevestig&&(
         <div className="bevestig-overlay"><div className="bevestig-kaart">
           <h3>Oefening verwijderen?</h3><p>{oefening.naam} wordt definitief verwijderd uit je bibliotheek.</p>
@@ -504,15 +536,84 @@ function OefeningDetail({ oefening, onTerug, onBewerken, onVerwijderen }) {
   );
 }
 
-function OefeningenBibliotheek({ kiesModus, onKies }) {
-  const [oefeningen, setOefeningen] = useState(laadOefeningen);
+/* Een klein plaatje van een tekening, voor de kaarten in de lijst.
+   Niet maakTekeningCanvas: dat tekent op exportformaat (vier keer zo
+   groot) en dat is voor tachtig kaartjes te zwaar. Hier op halve
+   grootte, en per tekening één keer (de bibliotheek verandert niet). */
+var _miniaturen = {};
+function tekeningMiniatuur(tekening, sleutel) {
+  if (sleutel && _miniaturen[sleutel]) return _miniaturen[sleutel];
+  try {
+    var vt = (tekening && tekening.veldType) || "leeg";
+    var info = VELD_TYPEN.find(function(v){ return v.id===vt; }) || VELD_TYPEN[0];
+    var vel = scherpCanvas(info.w, info.h, 0.6);
+    tekenVeld(vel.ctx, info.w, info.h, vt);
+    (tekening.lijnen||[]).forEach(function(l){ tekenlijn(vel.ctx, l); });
+    (tekening.elems||[]).forEach(function(el){ tekenelement(vel.ctx, el); });
+    var url = vel.canvas.toDataURL("image/png");
+    if (sleutel) _miniaturen[sleutel] = url;
+    return url;
+  } catch (e) { return null; }
+}
+/* De tekening van een bibliotheekoefening op ware grootte, als vaste
+   afbeelding (met de stappen eronder als die er zijn). Geen tekenbord:
+   wijzigingen zouden nergens worden bewaard. */
+function TekeningPlaat({ tekening }) {
+  var stappen = (tekening && tekening.stappen && tekening.stappen.length > 1) ? tekening.stappen : [tekening];
+  return (
+    <div>
+      {stappen.map(function(st, i){
+        var t = Object.assign({}, tekening, {elems: st.elems, lijnen: st.lijnen});
+        var src = null;
+        try { src = maakTekeningCanvas(t).toDataURL("image/png"); } catch (e) {}
+        return (
+          <div key={i} style={{marginBottom:8}}>
+            {stappen.length > 1 && <div style={{fontSize:12,fontWeight:700,margin:"0 0 4px"}}>{"Stap " + (i+1)}</div>}
+            {src && <img src={src} alt={"Tekening" + (stappen.length > 1 ? ", stap " + (i+1) : "")} style={{width:"100%",borderRadius:10,display:"block"}} />}
+          </div>
+        );
+      })}
+      <p style={{fontSize:11,color:"var(--grijs-donker)",margin:0}}>Wil je de tekening aanpassen? Kopieer de oefening naar Mijn oefeningen.</p>
+    </div>
+  );
+}
+function Miniatuur({ tekening, sleutel, breed }) {
+  const [src, setSrc] = useState(sleutel && _miniaturen[sleutel] || null);
+  useEffect(function(){
+    if (src || !tekening) return;
+    /* Na het tekenen van het scherm, zodat de lijst meteen verschijnt. */
+    var t = setTimeout(function(){ setSrc(tekeningMiniatuur(tekening, sleutel)); }, 0);
+    return function(){ clearTimeout(t); };
+  }, [sleutel]);
+  if (!tekening) return null;
+  return src
+    ? <img src={src} alt="" style={{width:breed||92,borderRadius:8,display:"block",flexShrink:0,background:"#2e7d32"}} />
+    : <div style={{width:breed||92,aspectRatio:"580/370",borderRadius:8,background:"#2e7d32",flexShrink:0}} />;
+}
+
+/* De leeftijd die bij het team hoort (JO11 → O9-O11), als beginstand
+   van het filter. Geen herkenbare leeftijd: alles tonen. */
+function teamLeeftijdFilter() {
+  try { return leeftijdUitTeamnaam((inst()||{}).teamNaam) || "Alle"; } catch (e) { return "Alle"; }
+}
+
+function OefeningenBibliotheek({ kiesModus, onKies, onPlanTraining }) {
+  const [oefeningen, setOefeningen] = useState(function(){
+    /* Oude kopieën van de 50 kant-en-klare oefeningen die nooit zijn
+       aangepast, krijgen de nieuwe versie met tekening (werkOudeBasisBij). */
+    return werkOudeBasisBij(laadOefeningen()).lijst;
+  });
+  const [bron, setBron] = useState("bibliotheek");
   const [gekozen, setGekozen] = useState(null);
+  const [gekozenThema, setGekozenThema] = useState(null);
   const [formulier, setFormulier] = useState(false);
   const [bewerk, setBewerk] = useState(null);
   const [zoek, setZoek] = useState("");
+  const [filterLeeftijd, setFilterLeeftijd] = useState(teamLeeftijdFilter);
+  const [filterThema, setFilterThema] = useState("Alle");
   const [filterDoel, setFilterDoel] = useState("Alle");
-  const [filterCat, setFilterCat] = useState("Alle");
   const [alleenFavoriet, setAlleenFavoriet] = useState(false);
+  const bib = bibliotheekOefeningen();
 
   useEffect(function(){ slaJson(OEFENINGEN_KEY, oefeningen); },[oefeningen]);
 
@@ -523,28 +624,22 @@ function OefeningenBibliotheek({ kiesModus, onKies }) {
     });
     setFormulier(false); setBewerk(null);
     if (gekozen && gekozen.id===o.id) setGekozen(o);
-    meldGoed("Oefening \u201c"+o.naam+"\u201d opgeslagen");
+    meldGoed("Oefening “"+o.naam+"” opgeslagen");
   }
   function verwijder() {
     const weg = gekozen;
     setOefeningen(function(l){ return l.filter(function(x){return x.id!==weg.id;}); });
     setGekozen(null);
-    toon("Oefening \u201c"+weg.naam+"\u201d verwijderd", {
+    toon("Oefening “"+weg.naam+"” verwijderd", {
       actie: function(){ setOefeningen(function(l){ return l.concat([weg]); }); }
     });
   }
-  function laadBasisSet() {
-    var bestaandeNamen = oefeningen.map(function(o){ return String(o.naam||"").toLowerCase().trim(); });
-    var nieuwe = BASIS_OEFENINGEN.filter(function(o){
-      return bestaandeNamen.indexOf(o.naam.toLowerCase().trim()) < 0;
-    }).map(function(o, i){
-      return Object.assign({}, LEEG_OEFENING, o, {id: Date.now() + i});
-    });
-    if (nieuwe.length === 0) { toon("Deze oefeningen staan er al in."); return; }
-    setOefeningen(function(l){ return l.concat(nieuwe); });
-    meldGoed(nieuwe.length + " oefeningen toegevoegd");
+  function kopieer(o) {
+    var k = kopieVanBibliotheek(o, Date.now());
+    setOefeningen(function(l){ return l.concat([k]); });
+    setGekozen(k); setBron("eigen");
+    meldGoed("Gekopieerd naar Mijn oefeningen. Je kunt hem nu aanpassen.");
   }
-
   function wisselFavoriet(e, o) {
     e.stopPropagation();
     setOefeningen(function(l){
@@ -552,29 +647,45 @@ function OefeningenBibliotheek({ kiesModus, onKies }) {
     });
   }
 
-  const gefilterd = oefeningen
-    .filter(function(o){ return filterCat==="Alle" || (o.categorie||"Overig")===filterCat; })
-    .filter(function(o){ return filterDoel==="Alle" || o.doel===filterDoel; })
-    .filter(function(o){ return !alleenFavoriet || o.favoriet; })
-    .filter(function(o){
-      var q = zoek.toLowerCase();
-      return !q || (o.naam||"").toLowerCase().indexOf(q)>=0 || (o.beschrijving||"").toLowerCase().indexOf(q)>=0;
-    })
-    .sort(function(a,b){ return (b.favoriet?1:0)-(a.favoriet?1:0) || (a.naam||"").localeCompare(b.naam||""); });
-
-  const doelen = ["Alle"].concat(OEFENING_DOELEN);
   const typeKleur = {Oefening:"var(--blauw-licht)","Warming-up":"var(--oranje)",Positiespel:"var(--succes)",Wedstrijdvorm:"var(--blauw)",Conditie:"var(--gevaar)",Afkoelen:"var(--grijs-donker)"};
+  const themaKleur = {Fun:"var(--oranje)", Techniek:"var(--succes)", Tactiek:"var(--blauw)"};
 
   if (gekozen && !kiesModus) return (
     <>
       <OefeningDetail oefening={gekozen} onTerug={function(){setGekozen(null);}}
-        onBewerken={function(){setBewerk(gekozen);setFormulier(true);}} onVerwijderen={verwijder} />
+        onBewerken={function(){setBewerk(gekozen);setFormulier(true);}} onVerwijderen={verwijder}
+        onKopieer={function(){ kopieer(gekozen); }} />
       {formulier && (
         <OefeningFormulier oefening={bewerk} onOpslaan={slaOp}
           onSluiten={function(){setFormulier(false);setBewerk(null);}} />
       )}
     </>
   );
+  if (gekozenThema && !kiesModus) return (
+    <ThemaTrainingDetail th={gekozenThema} onTerug={function(){ setGekozenThema(null); }}
+      onOefening={function(o){ setGekozenThema(null); setGekozen(o); }}
+      onPlan={onPlanTraining} />
+  );
+
+  var filter = {leeftijd:filterLeeftijd, thema:filterThema, doel:filterDoel, zoek:zoek};
+  var lijst = bron === "eigen" ? oefeningen : bib;
+  const gefilterd = filterOefeningen(lijst, filter)
+    .filter(function(o){ return bron !== "eigen" || !alleenFavoriet || o.favoriet; })
+    .sort(function(a,b){ return (b.favoriet?1:0)-(a.favoriet?1:0) || (a.naam||"").localeCompare(b.naam||""); });
+  const themas = BIB_THEMATRAININGEN.filter(function(t){
+    return (filterLeeftijd==="Alle" || t.leeftijden.indexOf(filterLeeftijd)>=0) && (filterThema==="Alle" || t.thema===filterThema);
+  });
+
+  function chips(waarden, waarde, zet, label) {
+    return (
+      <div className="oef-filterbalk" role="group" aria-label={label}>
+        {waarden.map(function(w){
+          return <button key={w} className="filter-chip" style={Object.assign({flexShrink:0}, chipStijl(waarde===w))}
+            onClick={function(){ zet(w); }}>{w==="Alle" ? (label==="Leeftijd" ? "Alle leeftijden" : label==="Thema" ? "Alle thema's" : "Alle doelen") : w}</button>;
+        })}
+      </div>
+    );
+  }
 
   return (
     <div>
@@ -583,75 +694,67 @@ function OefeningenBibliotheek({ kiesModus, onKies }) {
           <div className="pagina-header-tekst">
             <div className="eyebrow">Bibliotheek</div>
             <h2>Oefeningen</h2>
-            <p>{oefeningen.length} oefening{oefeningen.length!==1?"en":""} in je bibliotheek</p>
+            <p>{bib.length + " in de TEAMTAKKIE-bibliotheek, " + oefeningen.length + " van jezelf"}</p>
           </div>
-          <div style={{display:"flex",gap:8,alignItems:"center"}}>
-            <button className="knop lijn klein" style={{padding:"9px 12px"}}
-              title={BASIS_OEFENINGEN.length+" kant-en-klare oefeningen laden"}
-              onClick={laadBasisSet}>
-              <i className="fa-solid fa-download"/>
-            </button>
-            <button className="knop-plus" onClick={function(){setBewerk(null);setFormulier(true);}}>+</button>
-          </div>
+          <button className="knop-plus" aria-label="Eigen oefening toevoegen" onClick={function(){setBewerk(null);setFormulier(true);}}>+</button>
         </div>
       )}
 
-      {oefeningen.length>0 && (
-        <div>
-          <input className="zoekbalk" placeholder="Zoek op naam of uitleg…" value={zoek}
-            onChange={function(e){setZoek(e.target.value);}} />
-          <div className="oef-filterbalk">
-            {["Alle"].concat(OEFENING_CATEGORIEEN).map(function(c){
-              var aan = filterCat===c;
-              var aantal = c==="Alle" ? oefeningen.length
-                : oefeningen.filter(function(o){ return (o.categorie||"Overig")===c; }).length;
-              if (aantal===0 && c!=="Alle") return null;
-              return (
-                <button key={"c"+c} className="filter-chip" style={{flexShrink:0,fontWeight:700,
-                  borderColor:aan?"var(--blauw)":"var(--grijs)",
-                  background:aan?"var(--blauw)":"var(--wit)",
-                  color:aan?"var(--op-kleur)":"var(--grijs-donker)"}}
-                  onClick={function(){setFilterCat(c);}}>{c+" "+aantal}</button>
-              );
-            })}
-          </div>
-          <div className="oef-filterbalk">
-            {doelen.map(function(d){
-              var aan = filterDoel===d;
-              return (
-                <button key={d} className="filter-chip" style={{flexShrink:0,
-                  borderColor:aan?"var(--blauw)":"var(--grijs)",
-                  background:aan?"var(--blauw)":"var(--wit)",
-                  color:aan?"var(--wit)":"var(--grijs-donker)"}}
-                  onClick={function(){setFilterDoel(d);}}>{d}</button>
-              );
-            })}
-            <button className="filter-chip" style={{flexShrink:0,
-              borderColor:alleenFavoriet?"#ffc107":"var(--grijs)",
-              background:alleenFavoriet?"var(--vlak-goud)":"var(--wit)",
-              color:alleenFavoriet?"var(--goud)":"var(--grijs-donker)"}}
-              onClick={function(){setAlleenFavoriet(!alleenFavoriet);}}>
-              <i className="fa-solid fa-star"/> Favoriet
-            </button>
-          </div>
+      <div className="tabs" style={{marginBottom:10}}>
+        <button className={"tab-knop"+(bron==="bibliotheek"?" actief":"")} onClick={function(){setBron("bibliotheek");}}>
+          <i className="fa-solid fa-book-open"/> Bibliotheek</button>
+        {!kiesModus && <button className={"tab-knop"+(bron==="thema"?" actief":"")} onClick={function(){setBron("thema");}}>
+          <i className="fa-solid fa-layer-group"/> Thematrainingen</button>}
+        <button className={"tab-knop"+(bron==="eigen"?" actief":"")} onClick={function(){setBron("eigen");}}>
+          <i className="fa-solid fa-user"/> Mijn oefeningen</button>
+      </div>
+
+      {bron !== "thema" && <input className="zoekbalk" placeholder="Zoek op naam of uitleg…" value={zoek}
+        onChange={function(e){setZoek(e.target.value);}} />}
+      {chips(["Alle"].concat(BIB_LEEFTIJDEN), filterLeeftijd, setFilterLeeftijd, "Leeftijd")}
+      {chips(["Alle"].concat(BIB_THEMAS), filterThema, setFilterThema, "Thema")}
+      {bron !== "thema" && chips(["Alle"].concat(OEFENING_DOELEN), filterDoel, setFilterDoel, "Doel")}
+      {bron === "eigen" && (
+        <div className="oef-filterbalk">
+          <button className="filter-chip" style={{flexShrink:0,
+            borderColor:alleenFavoriet?"#ffc107":"var(--grijs)",
+            background:alleenFavoriet?"var(--vlak-goud)":"var(--wit)",
+            color:alleenFavoriet?"var(--goud)":"var(--grijs-donker)"}}
+            onClick={function(){setAlleenFavoriet(!alleenFavoriet);}}>
+            <i className="fa-solid fa-star"/> Favoriet
+          </button>
         </div>
       )}
 
-      {oefeningen.length===0 ? (
+      {bron === "thema" ? (
+        themas.length === 0 ? (
+          <div className="leeg"><div className="leeg-icoon"><i className="fa-solid fa-magnifying-glass"/></div>
+            <h3>Geen thematraining met dit filter</h3><p>Kies een andere leeftijd of thema.</p></div>
+        ) : (
+          <div className="oef-raster">
+            {themas.map(function(t){
+              var onderdelen = onderdelenVanThema(t);
+              return (
+                <div key={t.naam} className="oef-kaart" style={{borderLeftColor:themaKleur[t.thema]}} onClick={function(){ setGekozenThema(t); }}>
+                  <div className="oef-naam">{t.naam}</div>
+                  <div style={{fontSize:12.5,color:"var(--grijs-donker)",margin:"4px 0 6px",lineHeight:1.45}}>{t.doel}</div>
+                  <div className="oef-meta">
+                    <span className="oef-tag" style={{background:themaKleur[t.thema],color:"#fff"}}>{t.thema}</span>
+                    <span className="oef-tag">{t.leeftijden.join(", ")}</span>
+                    <span><i className="fa-solid fa-clock"/>{" "+t.duur+"'"}</span>
+                    <span><i className="fa-solid fa-list-ul"/>{" "+onderdelen.length+" onderdelen"}</span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )
+      ) : bron === "eigen" && oefeningen.length === 0 ? (
         <div className="leeg">
-          <div className="leeg-icoon"><i className="fa-solid fa-book-open"/></div>
-          <h3>Nog geen oefeningen</h3>
-          <p>Begin met {BASIS_OEFENINGEN.length} kant-en-klare oefeningen, of maak er zelf een.</p>
-          {!kiesModus && (
-            <div>
-              <button className="knop" style={{marginBottom:8}} onClick={laadBasisSet}>
-                <i className="fa-solid fa-download"/>{" "+BASIS_OEFENINGEN.length+" oefeningen laden"}
-              </button>
-              <div>
-                <button className="knop lijn klein" onClick={function(){setBewerk(null);setFormulier(true);}}>+ Zelf toevoegen</button>
-              </div>
-            </div>
-          )}
+          <div className="leeg-icoon"><i className="fa-solid fa-user"/></div>
+          <h3>Nog geen eigen oefeningen</h3>
+          <p>Maak er zelf een, of kopieer een oefening uit de bibliotheek om hem aan te passen.</p>
+          {!kiesModus && <button className="knop" onClick={function(){setBewerk(null);setFormulier(true);}}>+ Oefening maken</button>}
         </div>
       ) : gefilterd.length===0 ? (
         <div className="leeg">
@@ -659,29 +762,32 @@ function OefeningenBibliotheek({ kiesModus, onKies }) {
           <h3>Geen resultaten</h3><p>Pas je zoekopdracht of filter aan.</p>
         </div>
       ) : (
-        <div className="oef-raster">
+        <div>
+          <p style={{fontSize:12,color:"var(--grijs-donker)",margin:"0 0 8px"}}>{gefilterd.length + (gefilterd.length===1?" oefening":" oefeningen")}</p>
+          <div className="oef-raster">
           {gefilterd.map(function(o){
+            var lf = leeftijdenVan(o);
             return (
               <div key={o.id} className="oef-kaart"
                 style={{borderLeftColor: typeKleur[o.type]||"var(--blauw-licht)"}}
                 onClick={function(){ if(kiesModus&&onKies) onKies(o); else setGekozen(o); }}>
-                <div className="oef-kop">
+                <div className="oef-kop" style={{alignItems:"flex-start",gap:10}}>
+                  <Miniatuur tekening={o.tekening} sleutel={o.bron==="teamtakkie" ? o.id : null} />
                   <div style={{flex:1,minWidth:0}}>
                     <div className="oef-naam">{o.naam}</div>
                     <div className="oef-meta">
-                      {o.categorie && o.categorie!=="Overig" && (
-                        <span className="oef-tag" style={{background:"var(--vlak-info)",color:"var(--blauw)"}}>{o.categorie}</span>
-                      )}
-                      <span className="oef-tag">{o.type}</span>
+                      {o.thema && <span className="oef-tag" style={{background:themaKleur[o.thema],color:"#fff"}}>{o.thema}</span>}
                       <span className="oef-tag">{o.doel}</span>
                       <span><i className="fa-solid fa-clock"/>{" "+o.duur+"'"}</span>
                       <span><i className="fa-solid fa-users"/>{" "+o.aantalSpelers}</span>
-                      {o.tekening&&<span><i className="fa-solid fa-pen-ruler"/></span>}
+                    </div>
+                    <div style={{fontSize:11,color:"var(--grijs-donker)",marginTop:3}}>
+                      {lf.length===BIB_LEEFTIJDEN.length ? "Alle leeftijden" : lf[0]===lf[lf.length-1] ? lf[0] : lf[0].split("-")[0] + " t/m " + (lf[lf.length-1]==="Senioren" ? "senioren" : lf[lf.length-1].split("-")[1])}
                     </div>
                   </div>
                   {kiesModus
                     ? <i className="fa-solid fa-circle-plus" style={{color:"var(--succes)",fontSize:19}}/>
-                    : <button className="oef-ster" onClick={function(e){wisselFavoriet(e,o);}}>
+                    : bron==="eigen" && <button className="oef-ster" aria-label="Favoriet" onClick={function(e){wisselFavoriet(e,o);}}>
                         <i className={o.favoriet?"fa-solid fa-star":"fa-regular fa-star"} style={{color:o.favoriet?"#ffc107":"var(--grijs-donker)"}}/>
                       </button>
                   }
@@ -689,12 +795,70 @@ function OefeningenBibliotheek({ kiesModus, onKies }) {
               </div>
             );
           })}
+          </div>
         </div>
       )}
 
       {formulier && (
         <OefeningFormulier oefening={bewerk} onOpslaan={slaOp}
           onSluiten={function(){setFormulier(false);setBewerk(null);}} />
+      )}
+    </div>
+  );
+}
+
+/* Eén thematraining: de onderdelen met tekening, en "Plan deze training". */
+function ThemaTrainingDetail({ th, onTerug, onOefening, onPlan }) {
+  const [plannen, setPlannen] = useState(false);
+  const [datum, setDatum] = useState(vandaagISO());
+  const [tijd, setTijd] = useState("19:00");
+  var onderdelen = onderdelenVanThema(th);
+  return (
+    <div className="pagina-slide">
+      <button className="back-knop" onClick={onTerug}><i className="fa-solid fa-arrow-left"/> Terug naar thematrainingen</button>
+      <div style={{background:"linear-gradient(135deg,var(--blauw) 0%,#0063cc 100%)",color:"var(--op-kleur)",borderRadius:16,padding:"18px 16px",marginBottom:12}}>
+        <div style={{fontSize:11,opacity:.8,textTransform:"uppercase",letterSpacing:.7,fontWeight:700}}>{"Thematraining · " + th.thema}</div>
+        <div style={{fontSize:21,fontWeight:700,margin:"6px 0",lineHeight:1.25}}>{th.naam}</div>
+        <div style={{fontSize:13,opacity:.9,lineHeight:1.5}}>{th.doel}</div>
+        <div style={{fontSize:12,opacity:.87,display:"flex",flexWrap:"wrap",gap:12,marginTop:8}}>
+          <span><i className="fa-solid fa-child-reaching"/>{" "+th.leeftijden.join(", ")}</span>
+          <span><i className="fa-solid fa-clock"/>{" "+th.duur+" min"}</span>
+        </div>
+      </div>
+      {onderdelen.map(function(r, i){
+        return (
+          <div key={i} className="kaart" style={{padding:"12px 14px",cursor:"pointer"}} onClick={function(){ onOefening(r.oefening); }}>
+            <div style={{display:"flex",gap:12,alignItems:"flex-start"}}>
+              <Miniatuur tekening={r.oefening.tekening} sleutel={r.oefening.id} breed={110} />
+              <div style={{flex:1,minWidth:0}}>
+                <div style={{fontWeight:700,fontSize:14.5}}>{(i+1) + ". " + r.oefening.naam}</div>
+                <div style={{fontSize:12,color:"var(--grijs-donker)",margin:"3px 0"}}>{r.duur + " min · " + r.oefening.type + " · " + r.oefening.doel}</div>
+                <div style={{fontSize:12.5,lineHeight:1.45,display:"-webkit-box",WebkitLineClamp:3,WebkitBoxOrient:"vertical",overflow:"hidden"}}>{r.oefening.beschrijving}</div>
+              </div>
+            </div>
+          </div>
+        );
+      })}
+      <p style={{fontSize:12,color:"var(--grijs-donker)",margin:"0 0 10px"}}>{"Inclusief twee minuten voor uitleg en wisselen tussen de onderdelen: " + themaTotaal(th) + " van de " + th.duur + " minuten."}</p>
+      {onPlan && <button className="knop" style={{width:"100%",justifyContent:"center"}} onClick={function(){ setPlannen(true); }}>
+        <i className="fa-solid fa-calendar-plus"/> Plan deze training</button>}
+      {plannen && (
+        <div className="bevestig-overlay" onClick={function(e){ if (e.target===e.currentTarget) setPlannen(false); }}>
+          <div className="bevestig-kaart" style={{textAlign:"left"}}>
+            <h3>Training plannen</h3>
+            <p>{th.naam + " komt bij je trainingen, met alle onderdelen en tekeningen. Daarna kun je alles nog aanpassen."}</p>
+            <div className="formulier-rij">
+              <div><label className="formulier-label">Datum</label>
+                <input className="formulier-input" type="date" value={datum} onChange={function(e){ setDatum(e.target.value); }} /></div>
+              <div><label className="formulier-label">Tijd</label>
+                <input className="formulier-input" type="time" value={tijd} onChange={function(e){ setTijd(e.target.value); }} /></div>
+            </div>
+            <div className="bevestig-knoppen">
+              <button className="knop lijn" onClick={function(){ setPlannen(false); }}>Annuleren</button>
+              <button className="knop" onClick={function(){ setPlannen(false); onPlan(trainingUitThema(th, {id: Date.now(), datum: datum, tijd: tijd})); }}>Plannen</button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
@@ -1467,7 +1631,8 @@ function TrainingenModule() {
     );
   }
 
-  if (tab==="oefeningen") return (<div>{tabBalk()}<OefeningenBibliotheek /></div>);
+  if (tab==="oefeningen") return (<div>{tabBalk()}<OefeningenBibliotheek
+    onPlanTraining={function(t){ slaOp(t); setTab("trainingen"); }} /></div>);
   if (tab==="seizoen")    return (<div>{tabBalk()}<SeizoensPlanner /></div>);
 
   return (

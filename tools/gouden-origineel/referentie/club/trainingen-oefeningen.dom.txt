@@ -100,31 +100,1270 @@
               <h2>
                 "Oefeningen"
               <p>
-                "0"
-                "oefening"
-                "en"
-                "in je bibliotheek"
-            <div style="display: flex; gap: 8px; align-items: center;">
-              <button class="knop lijn klein" style="padding: 9px 12px;" title="50 kant-en-klare oefeningen laden">
-                <i class="fa-solid fa-download">
-              <button class="knop-plus">
-                "+"
-          <div class="leeg">
-            <div class="leeg-icoon">
+                "88 in de TEAMTAKKIE-bibliotheek, 0 van jezelf"
+            <button aria-label="Eigen oefening toevoegen" class="knop-plus">
+              "+"
+          <div class="tabs" style="margin-bottom: 10px;">
+            <button class="tab-knop actief">
               <i class="fa-solid fa-book-open">
-            <h3>
-              "Nog geen oefeningen"
-            <p>
-              "Begin met"
-              "50"
-              "kant-en-klare oefeningen, of maak er zelf een."
-            <div>
-              <button class="knop" style="margin-bottom: 8px;">
-                <i class="fa-solid fa-download">
-                "50 oefeningen laden"
-              <div>
-                <button class="knop lijn klein">
-                  "+ Zelf toevoegen"
+              "Bibliotheek"
+            <button class="tab-knop">
+              <i class="fa-solid fa-layer-group">
+              "Thematrainingen"
+            <button class="tab-knop">
+              <i class="fa-solid fa-user">
+              "Mijn oefeningen"
+          <input class="zoekbalk" placeholder="Zoek op naam of uitleg…" value="">
+          <div aria-label="Leeftijd" class="oef-filterbalk" role="group">
+            <button class="filter-chip" style="flex-shrink: 0; border-color: var(--grijs); background: var(--wit); color: var(--grijs-donker);">
+              "Alle leeftijden"
+            <button class="filter-chip" style="flex-shrink: 0; border-color: var(--grijs); background: var(--wit); color: var(--grijs-donker);">
+              "O7-O8"
+            <button class="filter-chip" style="flex-shrink: 0; border-color: var(--grijs); background: var(--wit); color: var(--grijs-donker);">
+              "O9-O11"
+            <button class="filter-chip" style="flex-shrink: 0; border-color: var(--grijs); background: var(--wit); color: var(--grijs-donker);">
+              "O12-O14"
+            <button class="filter-chip" style="flex-shrink: 0; border-color: var(--grijs); background: var(--wit); color: var(--grijs-donker);">
+              "O15-O17"
+            <button class="filter-chip" style="flex-shrink: 0; border-color: var(--blauw); background: var(--blauw); color: var(--wit);">
+              "O18-O19"
+            <button class="filter-chip" style="flex-shrink: 0; border-color: var(--grijs); background: var(--wit); color: var(--grijs-donker);">
+              "Senioren"
+          <div aria-label="Thema" class="oef-filterbalk" role="group">
+            <button class="filter-chip" style="flex-shrink: 0; border-color: var(--blauw); background: var(--blauw); color: var(--wit);">
+              "Alle thema's"
+            <button class="filter-chip" style="flex-shrink: 0; border-color: var(--grijs); background: var(--wit); color: var(--grijs-donker);">
+              "Fun"
+            <button class="filter-chip" style="flex-shrink: 0; border-color: var(--grijs); background: var(--wit); color: var(--grijs-donker);">
+              "Techniek"
+            <button class="filter-chip" style="flex-shrink: 0; border-color: var(--grijs); background: var(--wit); color: var(--grijs-donker);">
+              "Tactiek"
+          <div aria-label="Doel" class="oef-filterbalk" role="group">
+            <button class="filter-chip" style="flex-shrink: 0; border-color: var(--blauw); background: var(--blauw); color: var(--wit);">
+              "Alle doelen"
+            <button class="filter-chip" style="flex-shrink: 0; border-color: var(--grijs); background: var(--wit); color: var(--grijs-donker);">
+              "Passen & trappen"
+            <button class="filter-chip" style="flex-shrink: 0; border-color: var(--grijs); background: var(--wit); color: var(--grijs-donker);">
+              "Aanvallen"
+            <button class="filter-chip" style="flex-shrink: 0; border-color: var(--grijs); background: var(--wit); color: var(--grijs-donker);">
+              "Verdedigen"
+            <button class="filter-chip" style="flex-shrink: 0; border-color: var(--grijs); background: var(--wit); color: var(--grijs-donker);">
+              "Positiespel"
+            <button class="filter-chip" style="flex-shrink: 0; border-color: var(--grijs); background: var(--wit); color: var(--grijs-donker);">
+              "Afwerken"
+            <button class="filter-chip" style="flex-shrink: 0; border-color: var(--grijs); background: var(--wit); color: var(--grijs-donker);">
+              "Dribbelen"
+            <button class="filter-chip" style="flex-shrink: 0; border-color: var(--grijs); background: var(--wit); color: var(--grijs-donker);">
+              "Omschakeling A-V"
+            <button class="filter-chip" style="flex-shrink: 0; border-color: var(--grijs); background: var(--wit); color: var(--grijs-donker);">
+              "Omschakeling V-A"
+            <button class="filter-chip" style="flex-shrink: 0; border-color: var(--grijs); background: var(--wit); color: var(--grijs-donker);">
+              "Keeper"
+            <button class="filter-chip" style="flex-shrink: 0; border-color: var(--grijs); background: var(--wit); color: var(--grijs-donker);">
+              "Conditie"
+            <button class="filter-chip" style="flex-shrink: 0; border-color: var(--grijs); background: var(--wit); color: var(--grijs-donker);">
+              "Spelhervatting"
+          <div>
+            <p style="font-size: 12px; color: var(--grijs-donker); margin: 0px 0px 8px;">
+              "63 oefeningen"
+            <div class="oef-raster">
+              <div class="oef-kaart" style="border-left-color: var(--blauw-licht);">
+                <div class="oef-kop" style="align-items: flex-start; gap: 10px;">
+                  <img alt="" src="data:image/png#8858-lfv5fu" style="width: 92px; border-radius: 8px; display: block; flex-shrink: 0; background: rgb(46, 125, 50);">
+                  <div style="flex: 1 1 0%; min-width: 0px;">
+                    <div class="oef-naam">
+                      "Aannemen uit de lucht"
+                    <div class="oef-meta">
+                      <span class="oef-tag" style="background: var(--succes); color: rgb(255, 255, 255);">
+                        "Techniek"
+                      <span class="oef-tag">
+                        "Passen & trappen"
+                      <span>
+                        <i class="fa-solid fa-clock">
+                        "10'"
+                      <span>
+                        <i class="fa-solid fa-users">
+                        "8"
+                    <div style="font-size: 11px; color: var(--grijs-donker); margin-top: 3px;">
+                      "O12 t/m senioren"
+              <div class="oef-kaart" style="border-left-color: var(--blauw);">
+                <div class="oef-kop" style="align-items: flex-start; gap: 10px;">
+                  <img alt="" src="data:image/png#13862-i8cpvq" style="width: 92px; border-radius: 8px; display: block; flex-shrink: 0; background: rgb(46, 125, 50);">
+                  <div style="flex: 1 1 0%; min-width: 0px;">
+                    <div class="oef-naam">
+                      "Aanvallende overtal drie tegen twee"
+                    <div class="oef-meta">
+                      <span class="oef-tag" style="background: var(--blauw); color: rgb(255, 255, 255);">
+                        "Tactiek"
+                      <span class="oef-tag">
+                        "Aanvallen"
+                      <span>
+                        <i class="fa-solid fa-clock">
+                        "15'"
+                      <span>
+                        <i class="fa-solid fa-users">
+                        "10"
+                    <div style="font-size: 11px; color: var(--grijs-donker); margin-top: 3px;">
+                      "O9 t/m senioren"
+              <div class="oef-kaart" style="border-left-color: var(--blauw-licht);">
+                <div class="oef-kop" style="align-items: flex-start; gap: 10px;">
+                  <img alt="" src="data:image/png#12542-ohv7sp" style="width: 92px; border-radius: 8px; display: block; flex-shrink: 0; background: rgb(46, 125, 50);">
+                  <div style="flex: 1 1 0%; min-width: 0px;">
+                    <div class="oef-naam">
+                      "Afwerken na aanname"
+                    <div class="oef-meta">
+                      <span class="oef-tag" style="background: var(--succes); color: rgb(255, 255, 255);">
+                        "Techniek"
+                      <span class="oef-tag">
+                        "Afwerken"
+                      <span>
+                        <i class="fa-solid fa-clock">
+                        "15'"
+                      <span>
+                        <i class="fa-solid fa-users">
+                        "8"
+                    <div style="font-size: 11px; color: var(--grijs-donker); margin-top: 3px;">
+                      "O9 t/m senioren"
+              <div class="oef-kaart" style="border-left-color: var(--blauw-licht);">
+                <div class="oef-kop" style="align-items: flex-start; gap: 10px;">
+                  <img alt="" src="data:image/png#12466-li3pc7" style="width: 92px; border-radius: 8px; display: block; flex-shrink: 0; background: rgb(46, 125, 50);">
+                  <div style="flex: 1 1 0%; min-width: 0px;">
+                    <div class="oef-naam">
+                      "Afwerken na wandpass"
+                    <div class="oef-meta">
+                      <span class="oef-tag" style="background: var(--succes); color: rgb(255, 255, 255);">
+                        "Techniek"
+                      <span class="oef-tag">
+                        "Afwerken"
+                      <span>
+                        <i class="fa-solid fa-clock">
+                        "15'"
+                      <span>
+                        <i class="fa-solid fa-users">
+                        "8"
+                    <div style="font-size: 11px; color: var(--grijs-donker); margin-top: 3px;">
+                      "O9 t/m senioren"
+              <div class="oef-kaart" style="border-left-color: var(--succes);">
+                <div class="oef-kop" style="align-items: flex-start; gap: 10px;">
+                  <img alt="" src="data:image/png#22074-18jk993" style="width: 92px; border-radius: 8px; display: block; flex-shrink: 0; background: rgb(46, 125, 50);">
+                  <div style="flex: 1 1 0%; min-width: 0px;">
+                    <div class="oef-naam">
+                      "Buitenspelers diep sturen"
+                    <div class="oef-meta">
+                      <span class="oef-tag" style="background: var(--blauw); color: rgb(255, 255, 255);">
+                        "Tactiek"
+                      <span class="oef-tag">
+                        "Aanvallen"
+                      <span>
+                        <i class="fa-solid fa-clock">
+                        "18'"
+                      <span>
+                        <i class="fa-solid fa-users">
+                        "12"
+                    <div style="font-size: 11px; color: var(--grijs-donker); margin-top: 3px;">
+                      "O12 t/m senioren"
+              <div class="oef-kaart" style="border-left-color: var(--blauw-licht);">
+                <div class="oef-kop" style="align-items: flex-start; gap: 10px;">
+                  <img alt="" src="data:image/png#13366-1cirbv8" style="width: 92px; border-radius: 8px; display: block; flex-shrink: 0; background: rgb(46, 125, 50);">
+                  <div style="flex: 1 1 0%; min-width: 0px;">
+                    <div class="oef-naam">
+                      "Buitenspelval"
+                    <div class="oef-meta">
+                      <span class="oef-tag" style="background: var(--blauw); color: rgb(255, 255, 255);">
+                        "Tactiek"
+                      <span class="oef-tag">
+                        "Verdedigen"
+                      <span>
+                        <i class="fa-solid fa-clock">
+                        "15'"
+                      <span>
+                        <i class="fa-solid fa-users">
+                        "12"
+                    <div style="font-size: 11px; color: var(--grijs-donker); margin-top: 3px;">
+                      "O15 t/m senioren"
+              <div class="oef-kaart" style="border-left-color: var(--succes);">
+                <div class="oef-kop" style="align-items: flex-start; gap: 10px;">
+                  <img alt="" src="data:image/png#17506-gul3qe" style="width: 92px; border-radius: 8px; display: block; flex-shrink: 0; background: rgb(46, 125, 50);">
+                  <div style="flex: 1 1 0%; min-width: 0px;">
+                    <div class="oef-naam">
+                      "Combineren in het laatste dertig"
+                    <div class="oef-meta">
+                      <span class="oef-tag" style="background: var(--blauw); color: rgb(255, 255, 255);">
+                        "Tactiek"
+                      <span class="oef-tag">
+                        "Aanvallen"
+                      <span>
+                        <i class="fa-solid fa-clock">
+                        "22'"
+                      <span>
+                        <i class="fa-solid fa-users">
+                        "14"
+                    <div style="font-size: 11px; color: var(--grijs-donker); margin-top: 3px;">
+                      "O12 t/m senioren"
+              <div class="oef-kaart" style="border-left-color: var(--blauw);">
+                <div class="oef-kop" style="align-items: flex-start; gap: 10px;">
+                  <img alt="" src="data:image/png#23818-1wsk62w" style="width: 92px; border-radius: 8px; display: block; flex-shrink: 0; background: rgb(46, 125, 50);">
+                  <div style="flex: 1 1 0%; min-width: 0px;">
+                    <div class="oef-naam">
+                      "Compact blok verdedigen"
+                    <div class="oef-meta">
+                      <span class="oef-tag" style="background: var(--blauw); color: rgb(255, 255, 255);">
+                        "Tactiek"
+                      <span class="oef-tag">
+                        "Verdedigen"
+                      <span>
+                        <i class="fa-solid fa-clock">
+                        "22'"
+                      <span>
+                        <i class="fa-solid fa-users">
+                        "16"
+                    <div style="font-size: 11px; color: var(--grijs-donker); margin-top: 3px;">
+                      "O15 t/m senioren"
+              <div class="oef-kaart" style="border-left-color: var(--blauw-licht);">
+                <div class="oef-kop" style="align-items: flex-start; gap: 10px;">
+                  <img alt="" src="data:image/png#17690-1qto5s8" style="width: 92px; border-radius: 8px; display: block; flex-shrink: 0; background: rgb(46, 125, 50);">
+                  <div style="flex: 1 1 0%; min-width: 0px;">
+                    <div class="oef-naam">
+                      "Corner aanvallend"
+                    <div class="oef-meta">
+                      <span class="oef-tag" style="background: var(--blauw); color: rgb(255, 255, 255);">
+                        "Tactiek"
+                      <span class="oef-tag">
+                        "Spelhervatting"
+                      <span>
+                        <i class="fa-solid fa-clock">
+                        "15'"
+                      <span>
+                        <i class="fa-solid fa-users">
+                        "12"
+                    <div style="font-size: 11px; color: var(--grijs-donker); margin-top: 3px;">
+                      "O12 t/m senioren"
+              <div class="oef-kaart" style="border-left-color: var(--blauw-licht);">
+                <div class="oef-kop" style="align-items: flex-start; gap: 10px;">
+                  <img alt="" src="data:image/png#15462-t8vq85" style="width: 92px; border-radius: 8px; display: block; flex-shrink: 0; background: rgb(46, 125, 50);">
+                  <div style="flex: 1 1 0%; min-width: 0px;">
+                    <div class="oef-naam">
+                      "Corner verdedigen"
+                    <div class="oef-meta">
+                      <span class="oef-tag" style="background: var(--blauw); color: rgb(255, 255, 255);">
+                        "Tactiek"
+                      <span class="oef-tag">
+                        "Spelhervatting"
+                      <span>
+                        <i class="fa-solid fa-clock">
+                        "15'"
+                      <span>
+                        <i class="fa-solid fa-users">
+                        "12"
+                    <div style="font-size: 11px; color: var(--grijs-donker); margin-top: 3px;">
+                      "O12 t/m senioren"
+              <div class="oef-kaart" style="border-left-color: var(--blauw);">
+                <div class="oef-kop" style="align-items: flex-start; gap: 10px;">
+                  <img alt="" src="data:image/png#17594-ggvqj5" style="width: 92px; border-radius: 8px; display: block; flex-shrink: 0; background: rgb(46, 125, 50);">
+                  <div style="flex: 1 1 0%; min-width: 0px;">
+                    <div class="oef-naam">
+                      "Counter na balverovering"
+                    <div class="oef-meta">
+                      <span class="oef-tag" style="background: var(--blauw); color: rgb(255, 255, 255);">
+                        "Tactiek"
+                      <span class="oef-tag">
+                        "Omschakeling V-A"
+                      <span>
+                        <i class="fa-solid fa-clock">
+                        "20'"
+                      <span>
+                        <i class="fa-solid fa-users">
+                        "14"
+                    <div style="font-size: 11px; color: var(--grijs-donker); margin-top: 3px;">
+                      "O12 t/m senioren"
+              <div class="oef-kaart" style="border-left-color: var(--blauw-licht);">
+                <div class="oef-kop" style="align-items: flex-start; gap: 10px;">
+                  <img alt="" src="data:image/png#10154-1o77bmw" style="width: 92px; border-radius: 8px; display: block; flex-shrink: 0; background: rgb(46, 125, 50);">
+                  <div style="flex: 1 1 0%; min-width: 0px;">
+                    <div class="oef-naam">
+                      "Dekken en rugdekking"
+                    <div class="oef-meta">
+                      <span class="oef-tag" style="background: var(--blauw); color: rgb(255, 255, 255);">
+                        "Tactiek"
+                      <span class="oef-tag">
+                        "Verdedigen"
+                      <span>
+                        <i class="fa-solid fa-clock">
+                        "15'"
+                      <span>
+                        <i class="fa-solid fa-users">
+                        "9"
+                    <div style="font-size: 11px; color: var(--grijs-donker); margin-top: 3px;">
+                      "O12 t/m senioren"
+              <div class="oef-kaart" style="border-left-color: var(--blauw-licht);">
+                <div class="oef-kop" style="align-items: flex-start; gap: 10px;">
+                  <img alt="" src="data:image/png#19078-bo2uac" style="width: 92px; border-radius: 8px; display: block; flex-shrink: 0; background: rgb(46, 125, 50);">
+                  <div style="flex: 1 1 0%; min-width: 0px;">
+                    <div class="oef-naam">
+                      "Derde man vrijspelen"
+                    <div class="oef-meta">
+                      <span class="oef-tag" style="background: var(--blauw); color: rgb(255, 255, 255);">
+                        "Tactiek"
+                      <span class="oef-tag">
+                        "Passen & trappen"
+                      <span>
+                        <i class="fa-solid fa-clock">
+                        "15'"
+                      <span>
+                        <i class="fa-solid fa-users">
+                        "9"
+                    <div style="font-size: 11px; color: var(--grijs-donker); margin-top: 3px;">
+                      "O12 t/m senioren"
+              <div class="oef-kaart" style="border-left-color: var(--succes);">
+                <div class="oef-kop" style="align-items: flex-start; gap: 10px;">
+                  <img alt="" src="data:image/png#21194-sbvl9v" style="width: 92px; border-radius: 8px; display: block; flex-shrink: 0; background: rgb(46, 125, 50);">
+                  <div style="flex: 1 1 0%; min-width: 0px;">
+                    <div class="oef-naam">
+                      "Diepte zoeken via de spits"
+                    <div class="oef-meta">
+                      <span class="oef-tag" style="background: var(--blauw); color: rgb(255, 255, 255);">
+                        "Tactiek"
+                      <span class="oef-tag">
+                        "Aanvallen"
+                      <span>
+                        <i class="fa-solid fa-clock">
+                        "18'"
+                      <span>
+                        <i class="fa-solid fa-users">
+                        "11"
+                    <div style="font-size: 11px; color: var(--grijs-donker); margin-top: 3px;">
+                      "O12 t/m senioren"
+              <div class="oef-kaart" style="border-left-color: var(--blauw);">
+                <div class="oef-kop" style="align-items: flex-start; gap: 10px;">
+                  <img alt="" src="data:image/png#15614-vzk3bi" style="width: 92px; border-radius: 8px; display: block; flex-shrink: 0; background: rgb(46, 125, 50);">
+                  <div style="flex: 1 1 0%; min-width: 0px;">
+                    <div class="oef-naam">
+                      "Direct terugjagen na balverlies"
+                    <div class="oef-meta">
+                      <span class="oef-tag" style="background: var(--blauw); color: rgb(255, 255, 255);">
+                        "Tactiek"
+                      <span class="oef-tag">
+                        "Omschakeling A-V"
+                      <span>
+                        <i class="fa-solid fa-clock">
+                        "18'"
+                      <span>
+                        <i class="fa-solid fa-users">
+                        "14"
+                    <div style="font-size: 11px; color: var(--grijs-donker); margin-top: 3px;">
+                      "O12 t/m senioren"
+              <div class="oef-kaart" style="border-left-color: var(--blauw-licht);">
+                <div class="oef-kop" style="align-items: flex-start; gap: 10px;">
+                  <img alt="" src="data:image/png#12210-o4ryld" style="width: 92px; border-radius: 8px; display: block; flex-shrink: 0; background: rgb(46, 125, 50);">
+                  <div style="flex: 1 1 0%; min-width: 0px;">
+                    <div class="oef-naam">
+                      "Doelpogingen blokken"
+                    <div class="oef-meta">
+                      <span class="oef-tag" style="background: var(--blauw); color: rgb(255, 255, 255);">
+                        "Tactiek"
+                      <span class="oef-tag">
+                        "Verdedigen"
+                      <span>
+                        <i class="fa-solid fa-clock">
+                        "12'"
+                      <span>
+                        <i class="fa-solid fa-users">
+                        "8"
+                    <div style="font-size: 11px; color: var(--grijs-donker); margin-top: 3px;">
+                      "O12 t/m senioren"
+              <div class="oef-kaart" style="border-left-color: var(--succes);">
+                <div class="oef-kop" style="align-items: flex-start; gap: 10px;">
+                  <img alt="" src="data:image/png#21622-nyey7z" style="width: 92px; border-radius: 8px; display: block; flex-shrink: 0; background: rgb(46, 125, 50);">
+                  <div style="flex: 1 1 0%; min-width: 0px;">
+                    <div class="oef-naam">
+                      "Druk zetten vanaf voren"
+                    <div class="oef-meta">
+                      <span class="oef-tag" style="background: var(--blauw); color: rgb(255, 255, 255);">
+                        "Tactiek"
+                      <span class="oef-tag">
+                        "Verdedigen"
+                      <span>
+                        <i class="fa-solid fa-clock">
+                        "20'"
+                      <span>
+                        <i class="fa-solid fa-users">
+                        "14"
+                    <div style="font-size: 11px; color: var(--grijs-donker); margin-top: 3px;">
+                      "O15 t/m senioren"
+              <div class="oef-kaart" style="border-left-color: var(--blauw-licht);">
+                <div class="oef-kop" style="align-items: flex-start; gap: 10px;">
+                  <img alt="" src="data:image/png#11774-jnlv1f" style="width: 92px; border-radius: 8px; display: block; flex-shrink: 0; background: rgb(46, 125, 50);">
+                  <div style="flex: 1 1 0%; min-width: 0px;">
+                    <div class="oef-naam">
+                      "Duel om de tweede bal"
+                    <div class="oef-meta">
+                      <span class="oef-tag" style="background: var(--blauw); color: rgb(255, 255, 255);">
+                        "Tactiek"
+                      <span class="oef-tag">
+                        "Verdedigen"
+                      <span>
+                        <i class="fa-solid fa-clock">
+                        "15'"
+                      <span>
+                        <i class="fa-solid fa-users">
+                        "12"
+                    <div style="font-size: 11px; color: var(--grijs-donker); margin-top: 3px;">
+                      "O12 t/m senioren"
+              <div class="oef-kaart" style="border-left-color: var(--blauw-licht);">
+                <div class="oef-kop" style="align-items: flex-start; gap: 10px;">
+                  <img alt="" src="data:image/png#13366-1979vy7" style="width: 92px; border-radius: 8px; display: block; flex-shrink: 0; background: rgb(46, 125, 50);">
+                  <div style="flex: 1 1 0%; min-width: 0px;">
+                    <div class="oef-naam">
+                      "Een tegen een op de flank"
+                    <div class="oef-meta">
+                      <span class="oef-tag" style="background: var(--succes); color: rgb(255, 255, 255);">
+                        "Techniek"
+                      <span class="oef-tag">
+                        "Dribbelen"
+                      <span>
+                        <i class="fa-solid fa-clock">
+                        "15'"
+                      <span>
+                        <i class="fa-solid fa-users">
+                        "8"
+                    <div style="font-size: 11px; color: var(--grijs-donker); margin-top: 3px;">
+                      "O9 t/m senioren"
+              <div class="oef-kaart" style="border-left-color: var(--blauw-licht);">
+                <div class="oef-kop" style="align-items: flex-start; gap: 10px;">
+                  <img alt="" src="data:image/png#11702-yd57i2" style="width: 92px; border-radius: 8px; display: block; flex-shrink: 0; background: rgb(46, 125, 50);">
+                  <div style="flex: 1 1 0%; min-width: 0px;">
+                    <div class="oef-naam">
+                      "Een tegen een verdedigen"
+                    <div class="oef-meta">
+                      <span class="oef-tag" style="background: var(--succes); color: rgb(255, 255, 255);">
+                        "Techniek"
+                      <span class="oef-tag">
+                        "Verdedigen"
+                      <span>
+                        <i class="fa-solid fa-clock">
+                        "15'"
+                      <span>
+                        <i class="fa-solid fa-users">
+                        "8"
+                    <div style="font-size: 11px; color: var(--grijs-donker); margin-top: 3px;">
+                      "O9 t/m senioren"
+              <div class="oef-kaart" style="border-left-color: var(--blauw-licht);">
+                <div class="oef-kop" style="align-items: flex-start; gap: 10px;">
+                  <img alt="" src="data:image/png#8670-1j3lv1n" style="width: 92px; border-radius: 8px; display: block; flex-shrink: 0; background: rgb(46, 125, 50);">
+                  <div style="flex: 1 1 0%; min-width: 0px;">
+                    <div class="oef-naam">
+                      "Eerste druk op de bal"
+                    <div class="oef-meta">
+                      <span class="oef-tag" style="background: var(--blauw); color: rgb(255, 255, 255);">
+                        "Tactiek"
+                      <span class="oef-tag">
+                        "Verdedigen"
+                      <span>
+                        <i class="fa-solid fa-clock">
+                        "12'"
+                      <span>
+                        <i class="fa-solid fa-users">
+                        "8"
+                    <div style="font-size: 11px; color: var(--grijs-donker); margin-top: 3px;">
+                      "O12 t/m senioren"
+              <div class="oef-kaart" style="border-left-color: var(--succes);">
+                <div class="oef-kop" style="align-items: flex-start; gap: 10px;">
+                  <img alt="" src="data:image/png#12234-1m6vb49" style="width: 92px; border-radius: 8px; display: block; flex-shrink: 0; background: rgb(46, 125, 50);">
+                  <div style="flex: 1 1 0%; min-width: 0px;">
+                    <div class="oef-naam">
+                      "Eerste pass vooruit"
+                    <div class="oef-meta">
+                      <span class="oef-tag" style="background: var(--blauw); color: rgb(255, 255, 255);">
+                        "Tactiek"
+                      <span class="oef-tag">
+                        "Omschakeling V-A"
+                      <span>
+                        <i class="fa-solid fa-clock">
+                        "15'"
+                      <span>
+                        <i class="fa-solid fa-users">
+                        "12"
+                    <div style="font-size: 11px; color: var(--grijs-donker); margin-top: 3px;">
+                      "O12 t/m senioren"
+              <div class="oef-kaart" style="border-left-color: var(--blauw);">
+                <div class="oef-kop" style="align-items: flex-start; gap: 10px;">
+                  <img alt="" src="data:image/png#16634-qvnfus" style="width: 92px; border-radius: 8px; display: block; flex-shrink: 0; background: rgb(46, 125, 50);">
+                  <div style="flex: 1 1 0%; min-width: 0px;">
+                    <div class="oef-naam">
+                      "Herstellen na de tegenaanval"
+                    <div class="oef-meta">
+                      <span class="oef-tag" style="background: var(--blauw); color: rgb(255, 255, 255);">
+                        "Tactiek"
+                      <span class="oef-tag">
+                        "Verdedigen"
+                      <span>
+                        <i class="fa-solid fa-clock">
+                        "18'"
+                      <span>
+                        <i class="fa-solid fa-users">
+                        "12"
+                    <div style="font-size: 11px; color: var(--grijs-donker); margin-top: 3px;">
+                      "O12 t/m senioren"
+              <div class="oef-kaart" style="border-left-color: var(--blauw-licht);">
+                <div class="oef-kop" style="align-items: flex-start; gap: 10px;">
+                  <img alt="" src="data:image/png#11678-1r8pwzu" style="width: 92px; border-radius: 8px; display: block; flex-shrink: 0; background: rgb(46, 125, 50);">
+                  <div style="flex: 1 1 0%; min-width: 0px;">
+                    <div class="oef-naam">
+                      "Insnijden en afronden"
+                    <div class="oef-meta">
+                      <span class="oef-tag" style="background: var(--succes); color: rgb(255, 255, 255);">
+                        "Techniek"
+                      <span class="oef-tag">
+                        "Afwerken"
+                      <span>
+                        <i class="fa-solid fa-clock">
+                        "15'"
+                      <span>
+                        <i class="fa-solid fa-users">
+                        "8"
+                    <div style="font-size: 11px; color: var(--grijs-donker); margin-top: 3px;">
+                      "O12 t/m senioren"
+              <div class="oef-kaart" style="border-left-color: var(--succes);">
+                <div class="oef-kop" style="align-items: flex-start; gap: 10px;">
+                  <img alt="" src="data:image/png#16030-kkwpyk" style="width: 92px; border-radius: 8px; display: block; flex-shrink: 0; background: rgb(46, 125, 50);">
+                  <div style="flex: 1 1 0%; min-width: 0px;">
+                    <div class="oef-naam">
+                      "Jagen op de bal in zones"
+                    <div class="oef-meta">
+                      <span class="oef-tag" style="background: var(--blauw); color: rgb(255, 255, 255);">
+                        "Tactiek"
+                      <span class="oef-tag">
+                        "Verdedigen"
+                      <span>
+                        <i class="fa-solid fa-clock">
+                        "20'"
+                      <span>
+                        <i class="fa-solid fa-users">
+                        "14"
+                    <div style="font-size: 11px; color: var(--grijs-donker); margin-top: 3px;">
+                      "O15 t/m senioren"
+              <div class="oef-kaart" style="border-left-color: var(--blauw-licht);">
+                <div class="oef-kop" style="align-items: flex-start; gap: 10px;">
+                  <img alt="" src="data:image/png#11342-9yc4mn" style="width: 92px; border-radius: 8px; display: block; flex-shrink: 0; background: rgb(46, 125, 50);">
+                  <div style="flex: 1 1 0%; min-width: 0px;">
+                    <div class="oef-naam">
+                      "Kaatsen in de driehoek"
+                    <div class="oef-meta">
+                      <span class="oef-tag" style="background: var(--succes); color: rgb(255, 255, 255);">
+                        "Techniek"
+                      <span class="oef-tag">
+                        "Passen & trappen"
+                      <span>
+                        <i class="fa-solid fa-clock">
+                        "12'"
+                      <span>
+                        <i class="fa-solid fa-users">
+                        "9"
+                    <div style="font-size: 11px; color: var(--grijs-donker); margin-top: 3px;">
+                      "O12 t/m senioren"
+              <div class="oef-kaart" style="border-left-color: var(--blauw-licht);">
+                <div class="oef-kop" style="align-items: flex-start; gap: 10px;">
+                  <img alt="" src="data:image/png#11602-1r4cwgw" style="width: 92px; border-radius: 8px; display: block; flex-shrink: 0; background: rgb(46, 125, 50);">
+                  <div style="flex: 1 1 0%; min-width: 0px;">
+                    <div class="oef-naam">
+                      "Knijpen en kantelen achterin"
+                    <div class="oef-meta">
+                      <span class="oef-tag" style="background: var(--blauw); color: rgb(255, 255, 255);">
+                        "Tactiek"
+                      <span class="oef-tag">
+                        "Verdedigen"
+                      <span>
+                        <i class="fa-solid fa-clock">
+                        "18'"
+                      <span>
+                        <i class="fa-solid fa-users">
+                        "10"
+                    <div style="font-size: 11px; color: var(--grijs-donker); margin-top: 3px;">
+                      "O15 t/m senioren"
+              <div class="oef-kaart" style="border-left-color: var(--blauw-licht);">
+                <div class="oef-kop" style="align-items: flex-start; gap: 10px;">
+                  <img alt="" src="data:image/png#16574-15xe3by" style="width: 92px; border-radius: 8px; display: block; flex-shrink: 0; background: rgb(46, 125, 50);">
+                  <div style="flex: 1 1 0%; min-width: 0px;">
+                    <div class="oef-naam">
+                      "Koning van de cirkel"
+                    <div class="oef-meta">
+                      <span class="oef-tag" style="background: var(--oranje); color: rgb(255, 255, 255);">
+                        "Fun"
+                      <span class="oef-tag">
+                        "Dribbelen"
+                      <span>
+                        <i class="fa-solid fa-clock">
+                        "10'"
+                      <span>
+                        <i class="fa-solid fa-users">
+                        "10"
+                    <div style="font-size: 11px; color: var(--grijs-donker); margin-top: 3px;">
+                      "O9 t/m senioren"
+              <div class="oef-kaart" style="border-left-color: var(--blauw-licht);">
+                <div class="oef-kop" style="align-items: flex-start; gap: 10px;">
+                  <img alt="" src="data:image/png#9262-oqlo4n" style="width: 92px; border-radius: 8px; display: block; flex-shrink: 0; background: rgb(46, 125, 50);">
+                  <div style="flex: 1 1 0%; min-width: 0px;">
+                    <div class="oef-naam">
+                      "Kopbal in tweetallen"
+                    <div class="oef-meta">
+                      <span class="oef-tag" style="background: var(--succes); color: rgb(255, 255, 255);">
+                        "Techniek"
+                      <span class="oef-tag">
+                        "Afwerken"
+                      <span>
+                        <i class="fa-solid fa-clock">
+                        "10'"
+                      <span>
+                        <i class="fa-solid fa-users">
+                        "8"
+                    <div style="font-size: 11px; color: var(--grijs-donker); margin-top: 3px;">
+                      "O12 t/m senioren"
+              <div class="oef-kaart" style="border-left-color: var(--blauw-licht);">
+                <div class="oef-kop" style="align-items: flex-start; gap: 10px;">
+                  <img alt="" src="data:image/png#12746-6tr0c6" style="width: 92px; border-radius: 8px; display: block; flex-shrink: 0; background: rgb(46, 125, 50);">
+                  <div style="flex: 1 1 0%; min-width: 0px;">
+                    <div class="oef-naam">
+                      "Kruisen en doorlopen"
+                    <div class="oef-meta">
+                      <span class="oef-tag" style="background: var(--succes); color: rgb(255, 255, 255);">
+                        "Techniek"
+                      <span class="oef-tag">
+                        "Aanvallen"
+                      <span>
+                        <i class="fa-solid fa-clock">
+                        "15'"
+                      <span>
+                        <i class="fa-solid fa-users">
+                        "8"
+                    <div style="font-size: 11px; color: var(--grijs-donker); margin-top: 3px;">
+                      "O12 t/m senioren"
+              <div class="oef-kaart" style="border-left-color: var(--blauw-licht);">
+                <div class="oef-kop" style="align-items: flex-start; gap: 10px;">
+                  <img alt="" src="data:image/png#15262-1vsbizm" style="width: 92px; border-radius: 8px; display: block; flex-shrink: 0; background: rgb(46, 125, 50);">
+                  <div style="flex: 1 1 0%; min-width: 0px;">
+                    <div class="oef-naam">
+                      "Lange bal en controle"
+                    <div class="oef-meta">
+                      <span class="oef-tag" style="background: var(--succes); color: rgb(255, 255, 255);">
+                        "Techniek"
+                      <span class="oef-tag">
+                        "Passen & trappen"
+                      <span>
+                        <i class="fa-solid fa-clock">
+                        "12'"
+                      <span>
+                        <i class="fa-solid fa-users">
+                        "8"
+                    <div style="font-size: 11px; color: var(--grijs-donker); margin-top: 3px;">
+                      "O15 t/m senioren"
+              <div class="oef-kaart" style="border-left-color: var(--blauw-licht);">
+                <div class="oef-kop" style="align-items: flex-start; gap: 10px;">
+                  <img alt="" src="data:image/png#12318-1xw318o" style="width: 92px; border-radius: 8px; display: block; flex-shrink: 0; background: rgb(46, 125, 50);">
+                  <div style="flex: 1 1 0%; min-width: 0px;">
+                    <div class="oef-naam">
+                      "Muur bij vrije trap"
+                    <div class="oef-meta">
+                      <span class="oef-tag" style="background: var(--blauw); color: rgb(255, 255, 255);">
+                        "Tactiek"
+                      <span class="oef-tag">
+                        "Spelhervatting"
+                      <span>
+                        <i class="fa-solid fa-clock">
+                        "12'"
+                      <span>
+                        <i class="fa-solid fa-users">
+                        "10"
+                    <div style="font-size: 11px; color: var(--grijs-donker); margin-top: 3px;">
+                      "O12 t/m senioren"
+              <div class="oef-kaart" style="border-left-color: var(--oranje);">
+                <div class="oef-kop" style="align-items: flex-start; gap: 10px;">
+                  <img alt="" src="data:image/png#13610-150quef" style="width: 92px; border-radius: 8px; display: block; flex-shrink: 0; background: rgb(46, 125, 50);">
+                  <div style="flex: 1 1 0%; min-width: 0px;">
+                    <div class="oef-naam">
+                      "Nummertjesspel"
+                    <div class="oef-meta">
+                      <span class="oef-tag" style="background: var(--oranje); color: rgb(255, 255, 255);">
+                        "Fun"
+                      <span class="oef-tag">
+                        "Conditie"
+                      <span>
+                        <i class="fa-solid fa-clock">
+                        "10'"
+                      <span>
+                        <i class="fa-solid fa-users">
+                        "10"
+                    <div style="font-size: 11px; color: var(--grijs-donker); margin-top: 3px;">
+                      "O9 t/m senioren"
+              <div class="oef-kaart" style="border-left-color: var(--blauw);">
+                <div class="oef-kop" style="align-items: flex-start; gap: 10px;">
+                  <img alt="" src="data:image/png#17750-18olqd2" style="width: 92px; border-radius: 8px; display: block; flex-shrink: 0; background: rgb(46, 125, 50);">
+                  <div style="flex: 1 1 0%; min-width: 0px;">
+                    <div class="oef-naam">
+                      "Omschakelspel met twee doelen"
+                    <div class="oef-meta">
+                      <span class="oef-tag" style="background: var(--blauw); color: rgb(255, 255, 255);">
+                        "Tactiek"
+                      <span class="oef-tag">
+                        "Omschakeling V-A"
+                      <span>
+                        <i class="fa-solid fa-clock">
+                        "20'"
+                      <span>
+                        <i class="fa-solid fa-users">
+                        "12"
+                    <div style="font-size: 11px; color: var(--grijs-donker); margin-top: 3px;">
+                      "O12 t/m senioren"
+              <div class="oef-kaart" style="border-left-color: var(--succes);">
+                <div class="oef-kop" style="align-items: flex-start; gap: 10px;">
+                  <img alt="" src="data:image/png#12386-13ky71u" style="width: 92px; border-radius: 8px; display: block; flex-shrink: 0; background: rgb(46, 125, 50);">
+                  <div style="flex: 1 1 0%; min-width: 0px;">
+                    <div class="oef-naam">
+                      "Omschakelspel vier tegen vier plus drie"
+                    <div class="oef-meta">
+                      <span class="oef-tag" style="background: var(--blauw); color: rgb(255, 255, 255);">
+                        "Tactiek"
+                      <span class="oef-tag">
+                        "Omschakeling A-V"
+                      <span>
+                        <i class="fa-solid fa-clock">
+                        "20'"
+                      <span>
+                        <i class="fa-solid fa-users">
+                        "11"
+                    <div style="font-size: 11px; color: var(--grijs-donker); margin-top: 3px;">
+                      "O12 t/m senioren"
+              <div class="oef-kaart" style="border-left-color: var(--succes);">
+                <div class="oef-kop" style="align-items: flex-start; gap: 10px;">
+                  <img alt="" src="data:image/png#18290-ivtfac" style="width: 92px; border-radius: 8px; display: block; flex-shrink: 0; background: rgb(46, 125, 50);">
+                  <div style="flex: 1 1 0%; min-width: 0px;">
+                    <div class="oef-naam">
+                      "Opbouwen van achteruit 7 tegen 5"
+                    <div class="oef-meta">
+                      <span class="oef-tag" style="background: var(--blauw); color: rgb(255, 255, 255);">
+                        "Tactiek"
+                      <span class="oef-tag">
+                        "Positiespel"
+                      <span>
+                        <i class="fa-solid fa-clock">
+                        "20'"
+                      <span>
+                        <i class="fa-solid fa-users">
+                        "12"
+                    <div style="font-size: 11px; color: var(--grijs-donker); margin-top: 3px;">
+                      "O12 t/m senioren"
+              <div class="oef-kaart" style="border-left-color: var(--blauw);">
+                <div class="oef-kop" style="align-items: flex-start; gap: 10px;">
+                  <img alt="" src="data:image/png#11158-1mojcov" style="width: 92px; border-radius: 8px; display: block; flex-shrink: 0; background: rgb(46, 125, 50);">
+                  <div style="flex: 1 1 0%; min-width: 0px;">
+                    <div class="oef-naam">
+                      "Panna-kooi 1 tegen 1"
+                    <div class="oef-meta">
+                      <span class="oef-tag" style="background: var(--oranje); color: rgb(255, 255, 255);">
+                        "Fun"
+                      <span class="oef-tag">
+                        "Dribbelen"
+                      <span>
+                        <i class="fa-solid fa-clock">
+                        "12'"
+                      <span>
+                        <i class="fa-solid fa-users">
+                        "6"
+                    <div style="font-size: 11px; color: var(--grijs-donker); margin-top: 3px;">
+                      "O9 t/m senioren"
+              <div class="oef-kaart" style="border-left-color: var(--oranje);">
+                <div class="oef-kop" style="align-items: flex-start; gap: 10px;">
+                  <img alt="" src="data:image/png#9370-trnzcw" style="width: 92px; border-radius: 8px; display: block; flex-shrink: 0; background: rgb(46, 125, 50);">
+                  <div style="flex: 1 1 0%; min-width: 0px;">
+                    <div class="oef-naam">
+                      "Passen en aannemen in tweetallen"
+                    <div class="oef-meta">
+                      <span class="oef-tag" style="background: var(--succes); color: rgb(255, 255, 255);">
+                        "Techniek"
+                      <span class="oef-tag">
+                        "Passen & trappen"
+                      <span>
+                        <i class="fa-solid fa-clock">
+                        "10'"
+                      <span>
+                        <i class="fa-solid fa-users">
+                        "12"
+                    <div style="font-size: 11px; color: var(--grijs-donker); margin-top: 3px;">
+                      "O9 t/m senioren"
+              <div class="oef-kaart" style="border-left-color: var(--succes);">
+                <div class="oef-kop" style="align-items: flex-start; gap: 10px;">
+                  <img alt="" src="data:image/png#17330-5m47ki" style="width: 92px; border-radius: 8px; display: block; flex-shrink: 0; background: rgb(46, 125, 50);">
+                  <div style="flex: 1 1 0%; min-width: 0px;">
+                    <div class="oef-naam">
+                      "Positiespel 6 tegen 4 met kantelen"
+                    <div class="oef-meta">
+                      <span class="oef-tag" style="background: var(--blauw); color: rgb(255, 255, 255);">
+                        "Tactiek"
+                      <span class="oef-tag">
+                        "Positiespel"
+                      <span>
+                        <i class="fa-solid fa-clock">
+                        "20'"
+                      <span>
+                        <i class="fa-solid fa-users">
+                        "12"
+                    <div style="font-size: 11px; color: var(--grijs-donker); margin-top: 3px;">
+                      "O12 t/m senioren"
+              <div class="oef-kaart" style="border-left-color: var(--succes);">
+                <div class="oef-kop" style="align-items: flex-start; gap: 10px;">
+                  <img alt="" src="data:image/png#14994-8uri1k" style="width: 92px; border-radius: 8px; display: block; flex-shrink: 0; background: rgb(46, 125, 50);">
+                  <div style="flex: 1 1 0%; min-width: 0px;">
+                    <div class="oef-naam">
+                      "Pressing in het rondo"
+                    <div class="oef-meta">
+                      <span class="oef-tag" style="background: var(--blauw); color: rgb(255, 255, 255);">
+                        "Tactiek"
+                      <span class="oef-tag">
+                        "Verdedigen"
+                      <span>
+                        <i class="fa-solid fa-clock">
+                        "12'"
+                      <span>
+                        <i class="fa-solid fa-users">
+                        "10"
+                    <div style="font-size: 11px; color: var(--grijs-donker); margin-top: 3px;">
+                      "O12 t/m senioren"
+              <div class="oef-kaart" style="border-left-color: var(--succes);">
+                <div class="oef-kop" style="align-items: flex-start; gap: 10px;">
+                  <img alt="" src="data:image/png#18794-t576xc" style="width: 92px; border-radius: 8px; display: block; flex-shrink: 0; background: rgb(46, 125, 50);">
+                  <div style="flex: 1 1 0%; min-width: 0px;">
+                    <div class="oef-naam">
+                      "Restverdediging bij eigen aanval"
+                    <div class="oef-meta">
+                      <span class="oef-tag" style="background: var(--blauw); color: rgb(255, 255, 255);">
+                        "Tactiek"
+                      <span class="oef-tag">
+                        "Omschakeling A-V"
+                      <span>
+                        <i class="fa-solid fa-clock">
+                        "20'"
+                      <span>
+                        <i class="fa-solid fa-users">
+                        "14"
+                    <div style="font-size: 11px; color: var(--grijs-donker); margin-top: 3px;">
+                      "O15 t/m senioren"
+              <div class="oef-kaart" style="border-left-color: var(--succes);">
+                <div class="oef-kop" style="align-items: flex-start; gap: 10px;">
+                  <img alt="" src="data:image/png#14034-frkle6" style="width: 92px; border-radius: 8px; display: block; flex-shrink: 0; background: rgb(46, 125, 50);">
+                  <div style="flex: 1 1 0%; min-width: 0px;">
+                    <div class="oef-naam">
+                      "Rondo 5 tegen 2"
+                    <div class="oef-meta">
+                      <span class="oef-tag" style="background: var(--blauw); color: rgb(255, 255, 255);">
+                        "Tactiek"
+                      <span class="oef-tag">
+                        "Positiespel"
+                      <span>
+                        <i class="fa-solid fa-clock">
+                        "12'"
+                      <span>
+                        <i class="fa-solid fa-users">
+                        "7"
+                    <div style="font-size: 11px; color: var(--grijs-donker); margin-top: 3px;">
+                      "O9 t/m senioren"
+              <div class="oef-kaart" style="border-left-color: var(--blauw-licht);">
+                <div class="oef-kop" style="align-items: flex-start; gap: 10px;">
+                  <img alt="" src="data:image/png#11018-yl6fej" style="width: 92px; border-radius: 8px; display: block; flex-shrink: 0; background: rgb(46, 125, 50);">
+                  <div style="flex: 1 1 0%; min-width: 0px;">
+                    <div class="oef-naam">
+                      "Schotoefening met draai"
+                    <div class="oef-meta">
+                      <span class="oef-tag" style="background: var(--succes); color: rgb(255, 255, 255);">
+                        "Techniek"
+                      <span class="oef-tag">
+                        "Afwerken"
+                      <span>
+                        <i class="fa-solid fa-clock">
+                        "15'"
+                      <span>
+                        <i class="fa-solid fa-users">
+                        "8"
+                    <div style="font-size: 11px; color: var(--grijs-donker); margin-top: 3px;">
+                      "O12 t/m senioren"
+              <div class="oef-kaart" style="border-left-color: var(--blauw-licht);">
+                <div class="oef-kop" style="align-items: flex-start; gap: 10px;">
+                  <img alt="" src="data:image/png#19262-9vsf5o" style="width: 92px; border-radius: 8px; display: block; flex-shrink: 0; background: rgb(46, 125, 50);">
+                  <div style="flex: 1 1 0%; min-width: 0px;">
+                    <div class="oef-naam">
+                      "Snel omschakelen via de flank"
+                    <div class="oef-meta">
+                      <span class="oef-tag" style="background: var(--blauw); color: rgb(255, 255, 255);">
+                        "Tactiek"
+                      <span class="oef-tag">
+                        "Omschakeling V-A"
+                      <span>
+                        <i class="fa-solid fa-clock">
+                        "18'"
+                      <span>
+                        <i class="fa-solid fa-users">
+                        "12"
+                    <div style="font-size: 11px; color: var(--grijs-donker); margin-top: 3px;">
+                      "O12 t/m senioren"
+              <div class="oef-kaart" style="border-left-color: var(--oranje);">
+                <div class="oef-kop" style="align-items: flex-start; gap: 10px;">
+                  <img alt="" src="data:image/png#8686-1l0lyds" style="width: 92px; border-radius: 8px; display: block; flex-shrink: 0; background: rgb(46, 125, 50);">
+                  <div style="flex: 1 1 0%; min-width: 0px;">
+                    <div class="oef-naam">
+                      "Snelheid: ladder, hordjes en afronden"
+                    <div class="oef-meta">
+                      <span class="oef-tag" style="background: var(--succes); color: rgb(255, 255, 255);">
+                        "Techniek"
+                      <span class="oef-tag">
+                        "Conditie"
+                      <span>
+                        <i class="fa-solid fa-clock">
+                        "10'"
+                      <span>
+                        <i class="fa-solid fa-users">
+                        "10"
+                    <div style="font-size: 11px; color: var(--grijs-donker); margin-top: 3px;">
+                      "O12 t/m senioren"
+              <div class="oef-kaart" style="border-left-color: var(--blauw-licht);">
+                <div class="oef-kop" style="align-items: flex-start; gap: 10px;">
+                  <img alt="" src="data:image/png#10258-jw1dpt" style="width: 92px; border-radius: 8px; display: block; flex-shrink: 0; background: rgb(46, 125, 50);">
+                  <div style="flex: 1 1 0%; min-width: 0px;">
+                    <div class="oef-naam">
+                      "Spits in de rug dekken"
+                    <div class="oef-meta">
+                      <span class="oef-tag" style="background: var(--blauw); color: rgb(255, 255, 255);">
+                        "Tactiek"
+                      <span class="oef-tag">
+                        "Verdedigen"
+                      <span>
+                        <i class="fa-solid fa-clock">
+                        "15'"
+                      <span>
+                        <i class="fa-solid fa-users">
+                        "8"
+                    <div style="font-size: 11px; color: var(--grijs-donker); margin-top: 3px;">
+                      "O12 t/m senioren"
+              <div class="oef-kaart" style="border-left-color: var(--blauw-licht);">
+                <div class="oef-kop" style="align-items: flex-start; gap: 10px;">
+                  <img alt="" src="data:image/png#18130-1iq62tq" style="width: 92px; border-radius: 8px; display: block; flex-shrink: 0; background: rgb(46, 125, 50);">
+                  <div style="flex: 1 1 0%; min-width: 0px;">
+                    <div class="oef-naam">
+                      "Terugsprint na eigen kans"
+                    <div class="oef-meta">
+                      <span class="oef-tag" style="background: var(--blauw); color: rgb(255, 255, 255);">
+                        "Tactiek"
+                      <span class="oef-tag">
+                        "Omschakeling A-V"
+                      <span>
+                        <i class="fa-solid fa-clock">
+                        "15'"
+                      <span>
+                        <i class="fa-solid fa-users">
+                        "10"
+                    <div style="font-size: 11px; color: var(--grijs-donker); margin-top: 3px;">
+                      "O12 t/m senioren"
+              <div class="oef-kaart" style="border-left-color: var(--blauw);">
+                <div class="oef-kop" style="align-items: flex-start; gap: 10px;">
+                  <img alt="" src="data:image/png#18934-1xmh2ok" style="width: 92px; border-radius: 8px; display: block; flex-shrink: 0; background: rgb(46, 125, 50);">
+                  <div style="flex: 1 1 0%; min-width: 0px;">
+                    <div class="oef-naam">
+                      "Terugzakken bij balverlies"
+                    <div class="oef-meta">
+                      <span class="oef-tag" style="background: var(--blauw); color: rgb(255, 255, 255);">
+                        "Tactiek"
+                      <span class="oef-tag">
+                        "Verdedigen"
+                      <span>
+                        <i class="fa-solid fa-clock">
+                        "20'"
+                      <span>
+                        <i class="fa-solid fa-users">
+                        "14"
+                    <div style="font-size: 11px; color: var(--grijs-donker); margin-top: 3px;">
+                      "O15 t/m senioren"
+              <div class="oef-kaart" style="border-left-color: var(--grijs-donker);">
+                <div class="oef-kop" style="align-items: flex-start; gap: 10px;">
+                  <img alt="" src="data:image/png#14626-6qh6ln" style="width: 92px; border-radius: 8px; display: block; flex-shrink: 0; background: rgb(46, 125, 50);">
+                  <div style="flex: 1 1 0%; min-width: 0px;">
+                    <div class="oef-naam">
+                      "Uitlopen en rekken"
+                    <div class="oef-meta">
+                      <span class="oef-tag" style="background: var(--oranje); color: rgb(255, 255, 255);">
+                        "Fun"
+                      <span class="oef-tag">
+                        "Conditie"
+                      <span>
+                        <i class="fa-solid fa-clock">
+                        "5'"
+                      <span>
+                        <i class="fa-solid fa-users">
+                        "12"
+                    <div style="font-size: 11px; color: var(--grijs-donker); margin-top: 3px;">
+                      "Alle leeftijden"
+              <div class="oef-kaart" style="border-left-color: var(--blauw-licht);">
+                <div class="oef-kop" style="align-items: flex-start; gap: 10px;">
+                  <img alt="" src="data:image/png#15286-1jqfhqk" style="width: 92px; border-radius: 8px; display: block; flex-shrink: 0; background: rgb(46, 125, 50);">
+                  <div style="flex: 1 1 0%; min-width: 0px;">
+                    <div class="oef-naam">
+                      "Uitverdedigen naar de spits"
+                    <div class="oef-meta">
+                      <span class="oef-tag" style="background: var(--blauw); color: rgb(255, 255, 255);">
+                        "Tactiek"
+                      <span class="oef-tag">
+                        "Omschakeling V-A"
+                      <span>
+                        <i class="fa-solid fa-clock">
+                        "15'"
+                      <span>
+                        <i class="fa-solid fa-users">
+                        "10"
+                    <div style="font-size: 11px; color: var(--grijs-donker); margin-top: 3px;">
+                      "O12 t/m senioren"
+              <div class="oef-kaart" style="border-left-color: var(--blauw);">
+                <div class="oef-kop" style="align-items: flex-start; gap: 10px;">
+                  <img alt="" src="data:image/png#18374-4u647s" style="width: 92px; border-radius: 8px; display: block; flex-shrink: 0; background: rgb(46, 125, 50);">
+                  <div style="flex: 1 1 0%; min-width: 0px;">
+                    <div class="oef-naam">
+                      "Van aanvallen naar blok in tien seconden"
+                    <div class="oef-meta">
+                      <span class="oef-tag" style="background: var(--blauw); color: rgb(255, 255, 255);">
+                        "Tactiek"
+                      <span class="oef-tag">
+                        "Omschakeling A-V"
+                      <span>
+                        <i class="fa-solid fa-clock">
+                        "20'"
+                      <span>
+                        <i class="fa-solid fa-users">
+                        "16"
+                    <div style="font-size: 11px; color: var(--grijs-donker); margin-top: 3px;">
+                      "O15 t/m senioren"
+              <div class="oef-kaart" style="border-left-color: var(--blauw);">
+                <div class="oef-kop" style="align-items: flex-start; gap: 10px;">
+                  <img alt="" src="data:image/png#12894-1i7jc19" style="width: 92px; border-radius: 8px; display: block; flex-shrink: 0; background: rgb(46, 125, 50);">
+                  <div style="flex: 1 1 0%; min-width: 0px;">
+                    <div class="oef-naam">
+                      "Verdedigen in ondertal"
+                    <div class="oef-meta">
+                      <span class="oef-tag" style="background: var(--blauw); color: rgb(255, 255, 255);">
+                        "Tactiek"
+                      <span class="oef-tag">
+                        "Verdedigen"
+                      <span>
+                        <i class="fa-solid fa-clock">
+                        "15'"
+                      <span>
+                        <i class="fa-solid fa-users">
+                        "10"
+                    <div style="font-size: 11px; color: var(--grijs-donker); margin-top: 3px;">
+                      "O12 t/m senioren"
+              <div class="oef-kaart" style="border-left-color: var(--blauw);">
+                <div class="oef-kop" style="align-items: flex-start; gap: 10px;">
+                  <img alt="" src="data:image/png#23026-1n1q7si" style="width: 92px; border-radius: 8px; display: block; flex-shrink: 0; background: rgb(46, 125, 50);">
+                  <div style="flex: 1 1 0%; min-width: 0px;">
+                    <div class="oef-naam">
+                      "Verdedigen met een man minder"
+                    <div class="oef-meta">
+                      <span class="oef-tag" style="background: var(--blauw); color: rgb(255, 255, 255);">
+                        "Tactiek"
+                      <span class="oef-tag">
+                        "Verdedigen"
+                      <span>
+                        <i class="fa-solid fa-clock">
+                        "20'"
+                      <span>
+                        <i class="fa-solid fa-users">
+                        "15"
+                    <div style="font-size: 11px; color: var(--grijs-donker); margin-top: 3px;">
+                      "O15 t/m senioren"
+              <div class="oef-kaart" style="border-left-color: var(--blauw);">
+                <div class="oef-kop" style="align-items: flex-start; gap: 10px;">
+                  <img alt="" src="data:image/png#15486-cjmp5a" style="width: 92px; border-radius: 8px; display: block; flex-shrink: 0; background: rgb(46, 125, 50);">
+                  <div style="flex: 1 1 0%; min-width: 0px;">
+                    <div class="oef-naam">
+                      "Verdedigen van de voorzet"
+                    <div class="oef-meta">
+                      <span class="oef-tag" style="background: var(--blauw); color: rgb(255, 255, 255);">
+                        "Tactiek"
+                      <span class="oef-tag">
+                        "Verdedigen"
+                      <span>
+                        <i class="fa-solid fa-clock">
+                        "20'"
+                      <span>
+                        <i class="fa-solid fa-users">
+                        "12"
+                    <div style="font-size: 11px; color: var(--grijs-donker); margin-top: 3px;">
+                      "O12 t/m senioren"
+              <div class="oef-kaart" style="border-left-color: var(--blauw);">
+                <div class="oef-kop" style="align-items: flex-start; gap: 10px;">
+                  <img alt="" src="data:image/png#23058-1qz2i8q" style="width: 92px; border-radius: 8px; display: block; flex-shrink: 0; background: rgb(46, 125, 50);">
+                  <div style="flex: 1 1 0%; min-width: 0px;">
+                    <div class="oef-naam">
+                      "Vier goals partij"
+                    <div class="oef-meta">
+                      <span class="oef-tag" style="background: var(--blauw); color: rgb(255, 255, 255);">
+                        "Tactiek"
+                      <span class="oef-tag">
+                        "Aanvallen"
+                      <span>
+                        <i class="fa-solid fa-clock">
+                        "20'"
+                      <span>
+                        <i class="fa-solid fa-users">
+                        "12"
+                    <div style="font-size: 11px; color: var(--grijs-donker); margin-top: 3px;">
+                      "O9 t/m senioren"
+              <div class="oef-kaart" style="border-left-color: var(--succes);">
+                <div class="oef-kop" style="align-items: flex-start; gap: 10px;">
+                  <img alt="" src="data:image/png#14426-gixehl" style="width: 92px; border-radius: 8px; display: block; flex-shrink: 0; background: rgb(46, 125, 50);">
+                  <div style="flex: 1 1 0%; min-width: 0px;">
+                    <div class="oef-naam">
+                      "Vier tegen twee in het blok"
+                    <div class="oef-meta">
+                      <span class="oef-tag" style="background: var(--blauw); color: rgb(255, 255, 255);">
+                        "Tactiek"
+                      <span class="oef-tag">
+                        "Positiespel"
+                      <span>
+                        <i class="fa-solid fa-clock">
+                        "12'"
+                      <span>
+                        <i class="fa-solid fa-users">
+                        "8"
+                    <div style="font-size: 11px; color: var(--grijs-donker); margin-top: 3px;">
+                      "O12 t/m senioren"
+              <div class="oef-kaart" style="border-left-color: var(--blauw-licht);">
+                <div class="oef-kop" style="align-items: flex-start; gap: 10px;">
+                  <img alt="" src="data:image/png#17966-1h8ycde" style="width: 92px; border-radius: 8px; display: block; flex-shrink: 0; background: rgb(46, 125, 50);">
+                  <div style="flex: 1 1 0%; min-width: 0px;">
+                    <div class="oef-naam">
+                      "Voetbalgolf"
+                    <div class="oef-meta">
+                      <span class="oef-tag" style="background: var(--oranje); color: rgb(255, 255, 255);">
+                        "Fun"
+                      <span class="oef-tag">
+                        "Passen & trappen"
+                      <span>
+                        <i class="fa-solid fa-clock">
+                        "15'"
+                      <span>
+                        <i class="fa-solid fa-users">
+                        "8"
+                    <div style="font-size: 11px; color: var(--grijs-donker); margin-top: 3px;">
+                      "O9 t/m senioren"
+              <div class="oef-kaart" style="border-left-color: var(--blauw-licht);">
+                <div class="oef-kop" style="align-items: flex-start; gap: 10px;">
+                  <img alt="" src="data:image/png#14430-mi5edc" style="width: 92px; border-radius: 8px; display: block; flex-shrink: 0; background: rgb(46, 125, 50);">
+                  <div style="flex: 1 1 0%; min-width: 0px;">
+                    <div class="oef-naam">
+                      "Voorzetten en afronden"
+                    <div class="oef-meta">
+                      <span class="oef-tag" style="background: var(--succes); color: rgb(255, 255, 255);">
+                        "Techniek"
+                      <span class="oef-tag">
+                        "Afwerken"
+                      <span>
+                        <i class="fa-solid fa-clock">
+                        "20'"
+                      <span>
+                        <i class="fa-solid fa-users">
+                        "10"
+                    <div style="font-size: 11px; color: var(--grijs-donker); margin-top: 3px;">
+                      "O12 t/m senioren"
+              <div class="oef-kaart" style="border-left-color: var(--blauw-licht);">
+                <div class="oef-kop" style="align-items: flex-start; gap: 10px;">
+                  <img alt="" src="data:image/png#12110-1xyuipn" style="width: 92px; border-radius: 8px; display: block; flex-shrink: 0; background: rgb(46, 125, 50);">
+                  <div style="flex: 1 1 0%; min-width: 0px;">
+                    <div class="oef-naam">
+                      "Vrije trap rond de zestien"
+                    <div class="oef-meta">
+                      <span class="oef-tag" style="background: var(--succes); color: rgb(255, 255, 255);">
+                        "Techniek"
+                      <span class="oef-tag">
+                        "Spelhervatting"
+                      <span>
+                        <i class="fa-solid fa-clock">
+                        "12'"
+                      <span>
+                        <i class="fa-solid fa-users">
+                        "10"
+                    <div style="font-size: 11px; color: var(--grijs-donker); margin-top: 3px;">
+                      "O12 t/m senioren"
+              <div class="oef-kaart" style="border-left-color: var(--oranje);">
+                <div class="oef-kop" style="align-items: flex-start; gap: 10px;">
+                  <img alt="" src="data:image/png#11282-zow0ks" style="width: 92px; border-radius: 8px; display: block; flex-shrink: 0; background: rgb(46, 125, 50);">
+                  <div style="flex: 1 1 0%; min-width: 0px;">
+                    <div class="oef-naam">
+                      "Warming-up met bal en loopscholing"
+                    <div class="oef-meta">
+                      <span class="oef-tag" style="background: var(--succes); color: rgb(255, 255, 255);">
+                        "Techniek"
+                      <span class="oef-tag">
+                        "Passen & trappen"
+                      <span>
+                        <i class="fa-solid fa-clock">
+                        "12'"
+                      <span>
+                        <i class="fa-solid fa-users">
+                        "12"
+                    <div style="font-size: 11px; color: var(--grijs-donker); margin-top: 3px;">
+                      "O12 t/m senioren"
+              <div class="oef-kaart" style="border-left-color: var(--succes);">
+                <div class="oef-kop" style="align-items: flex-start; gap: 10px;">
+                  <img alt="" src="data:image/png#21306-tbsd9u" style="width: 92px; border-radius: 8px; display: block; flex-shrink: 0; background: rgb(46, 125, 50);">
+                  <div style="flex: 1 1 0%; min-width: 0px;">
+                    <div class="oef-naam">
+                      "Wisselen van speelhelft"
+                    <div class="oef-meta">
+                      <span class="oef-tag" style="background: var(--blauw); color: rgb(255, 255, 255);">
+                        "Tactiek"
+                      <span class="oef-tag">
+                        "Positiespel"
+                      <span>
+                        <i class="fa-solid fa-clock">
+                        "18'"
+                      <span>
+                        <i class="fa-solid fa-users">
+                        "14"
+                    <div style="font-size: 11px; color: var(--grijs-donker); margin-top: 3px;">
+                      "O12 t/m senioren"
+              <div class="oef-kaart" style="border-left-color: var(--blauw-licht);">
+                <div class="oef-kop" style="align-items: flex-start; gap: 10px;">
+                  <img alt="" src="data:image/png#14286-1jucuc4" style="width: 92px; border-radius: 8px; display: block; flex-shrink: 0; background: rgb(46, 125, 50);">
+                  <div style="flex: 1 1 0%; min-width: 0px;">
+                    <div class="oef-naam">
+                      "Y-passvorm met doorlopen"
+                    <div class="oef-meta">
+                      <span class="oef-tag" style="background: var(--succes); color: rgb(255, 255, 255);">
+                        "Techniek"
+                      <span class="oef-tag">
+                        "Passen & trappen"
+                      <span>
+                        <i class="fa-solid fa-clock">
+                        "15'"
+                      <span>
+                        <i class="fa-solid fa-users">
+                        "8"
+                    <div style="font-size: 11px; color: var(--grijs-donker); margin-top: 3px;">
+                      "O12 t/m senioren"
+              <div class="oef-kaart" style="border-left-color: var(--succes);">
+                <div class="oef-kop" style="align-items: flex-start; gap: 10px;">
+                  <img alt="" src="data:image/png#12994-1pzto2e" style="width: 92px; border-radius: 8px; display: block; flex-shrink: 0; background: rgb(46, 125, 50);">
+                  <div style="flex: 1 1 0%; min-width: 0px;">
+                    <div class="oef-naam">
+                      "Zonedekking op het middenveld"
+                    <div class="oef-meta">
+                      <span class="oef-tag" style="background: var(--blauw); color: rgb(255, 255, 255);">
+                        "Tactiek"
+                      <span class="oef-tag">
+                        "Verdedigen"
+                      <span>
+                        <i class="fa-solid fa-clock">
+                        "20'"
+                      <span>
+                        <i class="fa-solid fa-users">
+                        "14"
+                    <div style="font-size: 11px; color: var(--grijs-donker); margin-top: 3px;">
+                      "O15 t/m senioren"
     <nav class="bottom-nav">
       <button class="nav-item">
         <div class="nav-pip">
