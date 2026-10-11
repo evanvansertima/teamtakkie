@@ -818,11 +818,13 @@ function verwijderRonde(c, faseId, rondeId) {
 /* Welke teams spelen al in deze ronde? Een team speelt per ronde één keer. */
 /** @param {Fase} f @param {string} rondeId @returns {string[]} */
 function teamsInRonde(f, rondeId) {
+  /** @type {string[]} */
   var uit = [];
   f.wedstrijden.forEach(function (w) { if (w.rondeId === rondeId) { uit.push(w.thuisId); uit.push(w.uitId); } });
   return uit;
 }
 
+/** @type {Object<string, string>} */
 var FOUT_TEKST = {
   "zelf": "Een team kan niet tegen zichzelf spelen.",
   "geen-deelnemer": "Dat team doet niet mee in deze fase.",
