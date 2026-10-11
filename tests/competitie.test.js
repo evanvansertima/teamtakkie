@@ -429,6 +429,51 @@ groep("speelrondes en wedstrijden met de hand");
      uitslagVan(cwE, [{ id: "W", status: s.status, thuis: s.thuis, score: s.score }]), { thuis: 1, uit: 3 });
 }
 
+/* ══ notitie en automatisch schema ══ */
+groep("notitie en automatisch schema");
+{
+  const ids = ["e", "a", "b", "c", "d", "x"];
+  const c0 = competitie(ids.map((t) => team(t, t.toUpperCase(), t === "e")), [fase("f1", ids, [], { rondes: [] })]);
+  const gekoppeld = [];
+  const koppel = (cwId, tegenId, thuis) => { gekoppeld.push([tegenId, thuis]); return "W-" + tegenId + (thuis ? "-thuis" : "-uit"); };
+  const h = maakSchema(c0, "f1", "half", koppel);
+  ok("6 teams, halve competitie: 15 nieuw in 5 rondes", [h.nieuw, h.rondes, h.alAanwezig], [15, 5, 0]);
+  ok("de fase krijgt de gekozen vorm", h.competitie.fases[0].vorm, "half");
+  ok("elke eigen wedstrijd is gekoppeld (5 stuks)",
+     h.competitie.fases[0].wedstrijden.filter((w) => w.thuisId === "e" || w.uitId === "e").every((w) => typeof w.wedstrijdId === "string") && gekoppeld.length === 5, true);
+  ok("wedstrijden tussen andere teams hebben geen koppeling",
+     h.competitie.fases[0].wedstrijden.filter((w) => w.thuisId !== "e" && w.uitId !== "e").some((w) => w.wedstrijdId !== undefined), false);
+  const nogEens = maakSchema(h.competitie, "f1", "half", koppel);
+  ok("nog een keer: niets erbij, 15 staan er al", [nogEens.nieuw, nogEens.alAanwezig, nogEens.competitie.fases[0].rondes.length], [0, 15, 5]);
+  const naarHeel = maakSchema(h.competitie, "f1", "heel", koppel);
+  ok("daarna hele competitie: de 15 returnwedstrijden erbij, in ronde 6 t/m 10",
+     [naarHeel.nieuw, naarHeel.competitie.fases[0].rondes.map((r) => r.nummer).slice(-1)[0]], [15, 10]);
+
+  /* Met al een paar wedstrijden: alleen de ontbrekende */
+  const c1 = voegWedstrijdToe(voegRondeToe(c0, "f1").competitie, "f1",
+    { rondeId: voegRondeToe(c0, "f1").rondeId, thuisId: "a", uitId: "b" });
+  const c1b = (() => { const r = voegRondeToe(c0, "f1"); return voegWedstrijdToe(r.competitie, "f1", { rondeId: r.rondeId, thuisId: "b", uitId: "a" }).competitie; })();
+  const m = maakSchema(c1b, "f1", "half", koppel);
+  ok("B–A stond er al: A–B wordt overgeslagen (halve competitie)", [m.nieuw, m.alAanwezig], [14, 1]);
+  ok("nieuwe rondes komen ná de bestaande", m.competitie.fases[0].rondes[1].nummer, 2);
+  ok("geen team twee keer in een nieuwe ronde",
+     m.competitie.fases[0].rondes.every((r) => { const t = teamsInRonde(m.competitie.fases[0], r.id); return new Set(t).size === t.length; }), true);
+  ok("met minder dan twee teams: weigert", String(veilig(() => maakSchema(competitie([team("e", "E", true)], [fase("f1", ["e"], [])]), "f1", "half", koppel))).indexOf("twee teams") >= 0, true);
+
+  /* Bestaande wedstrijden zonder speelronde (zoals ingedeelde eigen
+     wedstrijden) krijgen de ronde waar ze in het schema horen. */
+  const metLos = competitie(ids.map((t) => team(t, t.toUpperCase(), t === "e")),
+    [fase("f1", ids, [cw("los1", "a", "e", null, { rondeId: "", wedstrijdId: "W1" }), cw("los2", "e", "b", null, { rondeId: "", wedstrijdId: "W2" })], { rondes: [] })]);
+  const ml = maakSchema(metLos, "f1", "half", koppel);
+  ok("de twee losse wedstrijden staan nu in een speelronde", ml.competitie.fases[0].wedstrijden.filter((w) => w.id.indexOf("los") === 0).every((w) => ml.competitie.fases[0].rondes.some((r) => r.id === w.rondeId)), true);
+  ok("met thuis/uit zoals ze waren, en niet dubbel", [ml.nieuw, ml.ingepland, ml.competitie.fases[0].wedstrijden.filter((w) => w.id === "los1")[0].thuisId], [13, 2, "a"]);
+  ok("elke ronde van 6 teams heeft weer 3 wedstrijden", ml.competitie.fases[0].rondes.map((r) => ml.competitie.fases[0].wedstrijden.filter((w) => w.rondeId === r.id).length), [3, 3, 3, 3, 3]);
+
+  const n1 = zetNotitie(h.competitie, "f1", h.competitie.fases[0].wedstrijden[0].id, "  Veld was zwaar  ");
+  ok("notitie bewaard, zonder spaties eromheen", n1.fases[0].wedstrijden[0].notitie, "Veld was zwaar");
+  ok("dezelfde notitie nog eens: niets verandert", zetNotitie(n1, "f1", n1.fases[0].wedstrijden[0].id, "Veld was zwaar") === n1, true);
+}
+
 console.log(`\n${goed} geslaagd, ${fout} gefaald`);
 if (fout) process.exitCode = 1;
 })();

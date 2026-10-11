@@ -142,6 +142,18 @@ MUTATIES = [
      "  if (uitslagVan(w, eigenWedstrijden)) throw new Error(",
      "  if (false) throw new Error("),
 
+    ("N1  het schema maakt bestaande wedstrijden dubbel",
+     "      if (bestaand) {\n        alAanwezig++;",
+     "      if (false) {\n        alAanwezig++;"),
+
+    ("N2  een eigen wedstrijd in het schema wordt niet gekoppeld",
+     "        w.wedstrijdId = koppelEigen(cwId, p[0] === eigenId ? p[1] : p[0], p[0] === eigenId);",
+     ""),
+
+    ("N3  losse wedstrijden krijgen geen speelronde",
+     "        if (!heeftRonde(bestaand.rondeId || \"\")) {",
+     "        if (false) {"),
+
     ("M9  bevestigen past de competitie van vóór het bevestigen aan",
      "  var nieuw = JSON.parse(JSON.stringify(c));\n  var eigen",
      "  var nieuw = c;\n  var eigen"),

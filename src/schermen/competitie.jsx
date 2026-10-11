@@ -394,7 +394,30 @@ function IndeelScherm({ c, wedstrijden, onKlaar, onSluiten }) {
    hij gekoppeld; anders komt hij erbij in de wedstrijdlijst. De uitslag
    die je hier invult, komt in díe Wedstrijd — één registratie, dus stand
    en spelerscijfers kunnen niet uit elkaar lopen. */
+/* Een eigen Wedstrijd voor een competitiewedstrijd van het eigen team:
+   een bestaande, nog niet gekoppelde wedstrijd tegen die tegenstander,
+   of anders een nieuwe in de wedstrijdlijst. "gebruikt" voorkomt dat
+   één bestaande wedstrijd aan twee competitiewedstrijden hangt. */
+function koppelOfMaakEigen(lijst, tegen, eigenThuis, koppeling, gebruikt) {
+  var namen = [tegen.naam].concat(tegen.aliassen || []).map(normaliseerTeamNaam);
+  var kandidaten = lijst.filter(function (w) {
+    return (w.soort || "competitie") === "competitie" && !w.competitie && w.status !== "gespeeld" &&
+           gebruikt.indexOf(w.id) < 0 && namen.indexOf(normaliseerTeamNaam(w.tegenstander)) >= 0;
+  });
+  var bestaand = kandidaten.filter(function (w) { return !!w.thuis === eigenThuis; })[0] || kandidaten[0];
+  if (bestaand) {
+    gebruikt.push(bestaand.id);
+    return { wedstrijdId: bestaand.id, lijst: lijst.map(function (w) {
+      return w.id === bestaand.id ? Object.assign({}, w, { thuis: eigenThuis, competitie: koppeling }) : w; }) };
+  }
+  var id = Date.now() + lijst.length + Math.floor(Math.random() * 1000);
+  return { wedstrijdId: id, lijst: lijst.concat([Object.assign({}, LEEG_WEDSTRIJD, {
+    id: id, tegenstander: tegen.naam, thuis: eigenThuis, status: "gepland",
+    soort: "competitie", speelduur: inst().speelduur || 90, competitie: koppeling })]) };
+}
+
 function CompWedstrijden({ c, faseId, wedstrijden, opWedstrijden, bewaar, magHier }) {
+  const [schemaOpen, setSchemaOpen] = useState(false);
   const fase = c.fases.filter(function (f) { return f.id === faseId; })[0];
   const eigen = c.teams.filter(function (t) { return t.eigen; })[0];
   const rondes = (fase.rondes || []).slice().sort(function (a, b) { return a.nummer - b.nummer; });
@@ -428,32 +451,36 @@ function CompWedstrijden({ c, faseId, wedstrijden, opWedstrijden, bewaar, magHie
     var eigenDoetMee = thuisId === eigen.id || uitId === eigen.id;
     var nieuweLijst = null, wedstrijdId = null;
     if (eigenDoetMee) {
-      var tegenId = thuisId === eigen.id ? uitId : thuisId;
-      var tegen = c.teams.filter(function (t) { return t.id === tegenId; })[0];
-      var namen = [tegen.naam].concat(tegen.aliassen || []).map(normaliseerTeamNaam);
-      var bestaand = (wedstrijden || []).filter(function (w) {
-        return (w.soort || "competitie") === "competitie" && !w.competitie && w.status !== "gespeeld" &&
-               namen.indexOf(normaliseerTeamNaam(w.tegenstander)) >= 0;
-      })[0];
-      var koppeling = { competitieId: c.id, faseId: faseId, compWedstrijdId: cwId };
-      if (bestaand) {
-        wedstrijdId = bestaand.id;
-        nieuweLijst = wedstrijden.map(function (w) {
-          return w.id === bestaand.id ? Object.assign({}, w, { thuis: thuisId === eigen.id, competitie: koppeling }) : w;
-        });
-      } else {
-        wedstrijdId = Date.now();
-        nieuweLijst = (wedstrijden || []).concat([Object.assign({}, LEEG_WEDSTRIJD, {
-          id: wedstrijdId, tegenstander: tegen.naam, thuis: thuisId === eigen.id, status: "gepland",
-          soort: "competitie", speelduur: inst().speelduur || 90, competitie: koppeling
-        })]);
-      }
+      var tegen = c.teams.filter(function (t) { return t.id === (thuisId === eigen.id ? uitId : thuisId); })[0];
+      var k = koppelOfMaakEigen(wedstrijden || [], tegen, thuisId === eigen.id,
+        { competitieId: c.id, faseId: faseId, compWedstrijdId: cwId }, []);
+      nieuweLijst = k.lijst; wedstrijdId = k.wedstrijdId;
     }
     try {
       var r = voegWedstrijdToe(c, faseId, { id: cwId, rondeId: rondeId, thuisId: thuisId, uitId: uitId, wedstrijdId: wedstrijdId });
       bewaar(r.competitie);
       if (nieuweLijst) opWedstrijden(nieuweLijst);
     } catch (e) { meldFout(e.message); }
+  }
+
+  function maakHetSchema(vorm) {
+    var lijst = (wedstrijden || []).slice(), gebruikt = [];
+    try {
+      var r = maakSchema(c, faseId, vorm, function (cwId, tegenId, eigenThuis) {
+        var tegen = c.teams.filter(function (t) { return t.id === tegenId; })[0];
+        var k = koppelOfMaakEigen(lijst, tegen, eigenThuis, { competitieId: c.id, faseId: faseId, compWedstrijdId: cwId }, gebruikt);
+        lijst = k.lijst; return k.wedstrijdId;
+      });
+      bewaar(r.competitie);
+      opWedstrijden(lijst);
+      setSchemaOpen(false);
+      meldGoed(r.nieuw === 0 && r.ingepland === 0 ? "Alle wedstrijden stonden er al" :
+        r.nieuw + " wedstrijden in " + r.rondes + (r.rondes === 1 ? " speelronde" : " speelrondes") + " gemaakt");
+    } catch (e) { meldFout(e.message); }
+  }
+
+  function bewaarNotitie(cw, tekst) {
+    try { bewaar(zetNotitie(c, faseId, cw.id, tekst)); } catch (e) { meldFout(e.message); }
   }
 
   function haalWeg(cw) {
@@ -493,7 +520,8 @@ function CompWedstrijden({ c, faseId, wedstrijden, opWedstrijden, bewaar, magHie
               return <UitslagRegel key={cw.id + "|" + JSON.stringify(uitslagVan(cw, wedstrijden))} cw={cw}
                 thuis={naam(cw.thuisId)} uit={naam(cw.uitId)} eigenId={eigen.id}
                 uitslag={uitslagVan(cw, wedstrijden)} mag={magHier}
-                onUitslag={function (u) { bewaarUitslag(cw, u); }} onWeg={function () { haalWeg(cw); }} />;
+                onUitslag={function (u) { bewaarUitslag(cw, u); }} onWeg={function () { haalWeg(cw); }}
+                  onNotitie={function (t) { bewaarNotitie(cw, t); }} />;
             })}
             {magHier && (
               <NieuweWedstrijdRegel fase={fase} rondeId={r.id} naam={naam}
@@ -512,7 +540,8 @@ function CompWedstrijden({ c, faseId, wedstrijden, opWedstrijden, bewaar, magHie
                 <UitslagRegel key={cw.id + "|" + JSON.stringify(uitslagVan(cw, wedstrijden))} cw={cw}
                   thuis={naam(cw.thuisId)} uit={naam(cw.uitId)} eigenId={eigen.id}
                   uitslag={uitslagVan(cw, wedstrijden)} mag={magHier}
-                  onUitslag={function (u) { bewaarUitslag(cw, u); }} onWeg={function () { haalWeg(cw); }} />
+                  onUitslag={function (u) { bewaarUitslag(cw, u); }} onWeg={function () { haalWeg(cw); }}
+                  onNotitie={function (t) { bewaarNotitie(cw, t); }} />
                 {magHier && rondes.length > 0 && (
                   <select className="formulier-input" style={{marginTop:-4}} value=""
                     onChange={function (e) { try { bewaar(zetWedstrijdInRonde(c, faseId, cw.id, e.target.value)); } catch (er) { meldFout(er.message); } }}>
@@ -526,17 +555,55 @@ function CompWedstrijden({ c, faseId, wedstrijden, opWedstrijden, bewaar, magHie
         </div>
       )}
       {magHier && (
-        <button className="knop" style={{width:"100%",justifyContent:"center",marginBottom:12}} onClick={nieuweRonde}>
-          + Speelronde
-        </button>
+        <div style={{display:"flex",gap:8,marginBottom:12}}>
+          <button className="knop" style={{flex:1,justifyContent:"center"}} onClick={nieuweRonde}>+ Speelronde</button>
+          <button className="knop lijn" style={{flex:1,justifyContent:"center"}} onClick={function () { setSchemaOpen(true); }}>
+            <i className="fa-solid fa-wand-magic-sparkles"/> Schema maken</button>
+        </div>
       )}
+      {schemaOpen && <SchemaVenster c={c} faseId={faseId} onSluiten={function () { setSchemaOpen(false); }} onMaak={maakHetSchema} />}
     </div>
+  );
+}
+
+/* Halve of hele competitie, met vooraf hoeveel er bijkomt. De
+   voorvertoning rekent op een kopie: er wordt pas iets bewaard bij
+   "Maken". */
+function SchemaVenster({ c, faseId, onSluiten, onMaak }) {
+  const [vorm, setVorm] = useState("half");
+  var voorbeeld = null, fout = null;
+  try { voorbeeld = maakSchema(c, faseId, vorm, function () { return "voorbeeld"; }); } catch (e) { fout = e.message; }
+  return (
+    <div className="bevestig-overlay"><div className="bevestig-kaart">
+      <h3>Schema maken</h3>
+      <label className="formulier-label">Vorm</label>
+      <select className="formulier-input" value={vorm} onChange={function (e) { setVorm(e.target.value); }}>
+        <option value="half">Halve competitie</option>
+        <option value="heel">Hele competitie</option>
+      </select>
+      <p style={{fontSize:12,color:"var(--grijs-donker)",lineHeight:1.5,margin:"-4px 0 8px"}}>{VORM_UITLEG[vorm]}</p>
+      {fout ? <p style={{fontSize:13,color:"var(--gevaar)"}}>{fout}</p> : (
+        <p style={{fontSize:13,lineHeight:1.6}}>
+          {voorbeeld.nieuw === 0 && voorbeeld.ingepland === 0 ? "Alle wedstrijden staan er al; er komt niets bij." :
+            voorbeeld.nieuw + " wedstrijden in " + voorbeeld.rondes + (voorbeeld.rondes === 1 ? " nieuwe speelronde" : " nieuwe speelrondes") + "."}
+          {voorbeeld.alAanwezig > 0 && " " + voorbeeld.alAanwezig + " stonden er al en blijven zoals ze zijn" +
+            (voorbeeld.ingepland > 0 ? "; " + voorbeeld.ingepland + " daarvan krijgen een speelronde." : ".")}
+          {" Wedstrijden van je eigen team komen ook in je wedstrijdlijst. Datums kun je daarna per wedstrijd invullen."}
+        </p>
+      )}
+      <div className="bevestig-knoppen">
+        <button className="knop lijn" onClick={onSluiten}>Annuleren</button>
+        <button className="knop" disabled={!!fout || !voorbeeld || (voorbeeld.nieuw === 0 && voorbeeld.ingepland === 0)} onClick={function () { onMaak(vorm); }}>Maken</button>
+      </div>
+    </div></div>
   );
 }
 
 /* Eén wedstrijd met twee invulvakjes. Bewaart zodra beide vakjes iets
    geldigs hebben of allebei leeg zijn (dan geen uitslag, nooit 0–0). */
-function UitslagRegel({ cw, thuis, uit, eigenId, uitslag, mag, onUitslag, onWeg }) {
+function UitslagRegel({ cw, thuis, uit, eigenId, uitslag, mag, onUitslag, onWeg, onNotitie }) {
+  const [notitieOpen, setNotitieOpen] = useState(false);
+  const [notitie, setNotitie] = useState(cw.notitie || "");
   const [a, setA] = useState(uitslag ? String(uitslag.thuis) : "");
   const [b, setB] = useState(uitslag ? String(uitslag.uit) : "");
   function klaar(na, nb) {
@@ -575,11 +642,29 @@ function UitslagRegel({ cw, thuis, uit, eigenId, uitslag, mag, onUitslag, onWeg 
             <i className="fa-solid fa-link"/> Eigen wedstrijd — de uitslag staat ook in je wedstrijdlijst
           </div>
         )}
+        {notitieOpen ? (
+          <textarea className="formulier-input" rows="3" autoFocus value={notitie} disabled={!mag}
+            placeholder="Opmerking of kort verslag" style={{marginTop:6,marginBottom:0,fontSize:13}}
+            onChange={function (e) { setNotitie(e.target.value); }}
+            onBlur={function () { if (mag) onNotitie(notitie); setNotitieOpen(false); }} />
+        ) : (cw.notitie ? (
+          <div style={{fontSize:12,color:"var(--grijs-donker)",marginTop:4,whiteSpace:"pre-wrap",cursor:"pointer"}}
+            onClick={function () { setNotitieOpen(true); }}><i className="fa-solid fa-note-sticky"/> {cw.notitie}</div>
+        ) : null)}
       </div>
-      {mag && (
-        <button className="knop lijn klein" style={{padding:"6px 9px",alignSelf:"center"}} aria-label="Wedstrijd weghalen" onClick={onWeg}>
-          <i className="fa-solid fa-xmark"/></button>
-      )}
+      <div style={{display:"flex",flexDirection:"column",gap:6,alignSelf:"center"}}>
+        {(mag || cw.notitie) && (
+          <button className="knop lijn klein" style={{padding:"6px 9px"}}
+            aria-label={cw.notitie ? "Notitie bekijken of wijzigen" : "Notitie toevoegen"}
+            title={cw.notitie ? "Er is een notitie" : "Notitie toevoegen"}
+            onClick={function () { setNotitieOpen(!notitieOpen); }}>
+            <i className={cw.notitie ? "fa-solid fa-note-sticky" : "fa-regular fa-note-sticky"}/></button>
+        )}
+        {mag && (
+          <button className="knop lijn klein" style={{padding:"6px 9px"}} aria-label="Wedstrijd weghalen" onClick={onWeg}>
+            <i className="fa-solid fa-xmark"/></button>
+        )}
+      </div>
     </div>
   );
 }

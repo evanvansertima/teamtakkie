@@ -3006,7 +3006,7 @@ window.addEventListener("error", function(e){
 });
 </script>
 <script>
-const APP_VERSIE = "f0ea1fd";
+const APP_VERSIE = "b208709";
 const TEAMS_KEY = "tt_teams_v1";
 const ACTIEF_KEY = "tt_actief_v1";
 const VOORKEUR_KEY = "tt_voorkeuren_v1";
@@ -6469,6 +6469,105 @@ function eigenScoreUit(cw, eigenId, uitslag) {
     status: "gespeeld",
     thuis,
     score: thuis ? { fch: uitslag.thuis, teg: uitslag.uit } : { fch: uitslag.uit, teg: uitslag.thuis }
+  };
+}
+function zetNotitie(c, faseId, id, tekst) {
+  var f = zoekFase(c, faseId);
+  var w = f.wedstrijden.filter(function(x) {
+    return x.id === id;
+  })[0];
+  if (!w) throw new Error("Onbekende wedstrijd: " + id);
+  var nieuw = String(tekst || "").trim();
+  if ((w.notitie || "") === nieuw) return c;
+  return Object.assign({}, c, { fases: c.fases.map(function(x) {
+    return x.id !== faseId ? x : Object.assign({}, x, { wedstrijden: x.wedstrijden.map(function(y) {
+      return y.id === id ? Object.assign({}, y, { notitie: nieuw }) : y;
+    }) });
+  }) });
+}
+function maakSchema(c, faseId, vorm, koppelEigen) {
+  var f = zoekFase(c, faseId);
+  if (vorm !== "half" && vorm !== "heel") throw new Error("Kies halve of hele competitie.");
+  if (f.deelnemers.length < 2) throw new Error("Er zijn minstens twee teams nodig.");
+  var eigen = c.teams.filter(function(t2) {
+    return t2.eigen;
+  })[0];
+  var eigenId = eigen ? eigen.id : null;
+  var schema = genereerSchema(f.deelnemers, vorm);
+  var startNummer = (f.rondes || []).reduce(function(m, r) {
+    return Math.max(m, Number(r.nummer) || 0);
+  }, 0);
+  var stempel = Date.now().toString(36);
+  var rondes = (f.rondes || []).slice();
+  var wedstrijden = f.wedstrijden.slice();
+  var nieuw = 0, alAanwezig = 0, ingepland = 0, rondeTeller = 0, volg = 0;
+  function heeftRonde(id) {
+    return rondes.some(function(r) {
+      return r.id === id;
+    });
+  }
+  schema.rondes.forEach(function(sr) {
+    var rondeId = "";
+    function zorgVoorRonde() {
+      if (rondeId) return;
+      rondeTeller++;
+      var nummer = startNummer + rondeTeller;
+      rondeId = "r" + nummer + "-" + stempel;
+      rondes.push({
+        id: rondeId,
+        nummer,
+        naam: "Speelronde " + nummer,
+        datum: "",
+        vrijTeamId: sr.vrijTeamId
+      });
+    }
+    sr.paren.forEach(function(p) {
+      var bestaand = wedstrijden.filter(function(x) {
+        if (x.thuisId === p[0] && x.uitId === p[1]) return true;
+        return vorm === "half" && x.thuisId === p[1] && x.uitId === p[0];
+      })[0];
+      if (bestaand) {
+        alAanwezig++;
+        if (!heeftRonde(bestaand.rondeId || "")) {
+          zorgVoorRonde();
+          var rid = rondeId;
+          wedstrijden = wedstrijden.map(function(x) {
+            return x === bestaand ? Object.assign({}, x, { rondeId: rid }) : x;
+          });
+          ingepland++;
+        }
+        return;
+      }
+      zorgVoorRonde();
+      var cwId = "cw-" + stempel + "-" + volg++;
+      var w = {
+        id: cwId,
+        rondeId,
+        thuisId: p[0],
+        uitId: p[1],
+        datum: "",
+        tijd: "",
+        locatie: "",
+        status: "gepland",
+        uitslag: null,
+        notitie: ""
+      };
+      if (eigenId && (p[0] === eigenId || p[1] === eigenId)) {
+        if (!koppelEigen) throw new Error("Een wedstrijd van het eigen team heeft een koppeling nodig.");
+        w.wedstrijdId = koppelEigen(cwId, p[0] === eigenId ? p[1] : p[0], p[0] === eigenId);
+      }
+      wedstrijden.push(w);
+      nieuw++;
+    });
+  });
+  return {
+    competitie: Object.assign({}, c, { fases: c.fases.map(function(x) {
+      return x.id === faseId ? Object.assign({}, x, { vorm, rondes, wedstrijden }) : x;
+    }) }),
+    nieuw,
+    alAanwezig,
+    ingepland,
+    rondes: rondeTeller
   };
 }
 const FC_CATEGORIEEN = [
@@ -28885,7 +28984,33 @@ function IndeelScherm({ c, wedstrijden, onKlaar, onSluiten }) {
     meldGoed(rijen.length + (rijen.length === 1 ? " wedstrijd ingedeeld" : " wedstrijden ingedeeld"));
   } }, "Indeling bevestigen")));
 }
+function koppelOfMaakEigen(lijst, tegen, eigenThuis, koppeling, gebruikt) {
+  var namen = [tegen.naam].concat(tegen.aliassen || []).map(normaliseerTeamNaam);
+  var kandidaten = lijst.filter(function(w) {
+    return (w.soort || "competitie") === "competitie" && !w.competitie && w.status !== "gespeeld" && gebruikt.indexOf(w.id) < 0 && namen.indexOf(normaliseerTeamNaam(w.tegenstander)) >= 0;
+  });
+  var bestaand = kandidaten.filter(function(w) {
+    return !!w.thuis === eigenThuis;
+  })[0] || kandidaten[0];
+  if (bestaand) {
+    gebruikt.push(bestaand.id);
+    return { wedstrijdId: bestaand.id, lijst: lijst.map(function(w) {
+      return w.id === bestaand.id ? Object.assign({}, w, { thuis: eigenThuis, competitie: koppeling }) : w;
+    }) };
+  }
+  var id = Date.now() + lijst.length + Math.floor(Math.random() * 1e3);
+  return { wedstrijdId: id, lijst: lijst.concat([Object.assign({}, LEEG_WEDSTRIJD, {
+    id,
+    tegenstander: tegen.naam,
+    thuis: eigenThuis,
+    status: "gepland",
+    soort: "competitie",
+    speelduur: inst().speelduur || 90,
+    competitie: koppeling
+  })]) };
+}
 function CompWedstrijden({ c, faseId, wedstrijden, opWedstrijden, bewaar, magHier }) {
+  const [schemaOpen, setSchemaOpen] = useState(false);
   const fase = c.fases.filter(function(f) {
     return f.id === faseId;
   })[0];
@@ -28941,37 +29066,49 @@ function CompWedstrijden({ c, faseId, wedstrijden, opWedstrijden, bewaar, magHie
     var eigenDoetMee = thuisId === eigen.id || uitId === eigen.id;
     var nieuweLijst = null, wedstrijdId = null;
     if (eigenDoetMee) {
-      var tegenId = thuisId === eigen.id ? uitId : thuisId;
       var tegen = c.teams.filter(function(t2) {
-        return t2.id === tegenId;
+        return t2.id === (thuisId === eigen.id ? uitId : thuisId);
       })[0];
-      var namen = [tegen.naam].concat(tegen.aliassen || []).map(normaliseerTeamNaam);
-      var bestaand = (wedstrijden || []).filter(function(w) {
-        return (w.soort || "competitie") === "competitie" && !w.competitie && w.status !== "gespeeld" && namen.indexOf(normaliseerTeamNaam(w.tegenstander)) >= 0;
-      })[0];
-      var koppeling = { competitieId: c.id, faseId, compWedstrijdId: cwId };
-      if (bestaand) {
-        wedstrijdId = bestaand.id;
-        nieuweLijst = wedstrijden.map(function(w) {
-          return w.id === bestaand.id ? Object.assign({}, w, { thuis: thuisId === eigen.id, competitie: koppeling }) : w;
-        });
-      } else {
-        wedstrijdId = Date.now();
-        nieuweLijst = (wedstrijden || []).concat([Object.assign({}, LEEG_WEDSTRIJD, {
-          id: wedstrijdId,
-          tegenstander: tegen.naam,
-          thuis: thuisId === eigen.id,
-          status: "gepland",
-          soort: "competitie",
-          speelduur: inst().speelduur || 90,
-          competitie: koppeling
-        })]);
-      }
+      var k = koppelOfMaakEigen(
+        wedstrijden || [],
+        tegen,
+        thuisId === eigen.id,
+        { competitieId: c.id, faseId, compWedstrijdId: cwId },
+        []
+      );
+      nieuweLijst = k.lijst;
+      wedstrijdId = k.wedstrijdId;
     }
     try {
       var r = voegWedstrijdToe(c, faseId, { id: cwId, rondeId, thuisId, uitId, wedstrijdId });
       bewaar(r.competitie);
       if (nieuweLijst) opWedstrijden(nieuweLijst);
+    } catch (e) {
+      meldFout(e.message);
+    }
+  }
+  function maakHetSchema(vorm) {
+    var lijst = (wedstrijden || []).slice(), gebruikt = [];
+    try {
+      var r = maakSchema(c, faseId, vorm, function(cwId, tegenId, eigenThuis) {
+        var tegen = c.teams.filter(function(t2) {
+          return t2.id === tegenId;
+        })[0];
+        var k = koppelOfMaakEigen(lijst, tegen, eigenThuis, { competitieId: c.id, faseId, compWedstrijdId: cwId }, gebruikt);
+        lijst = k.lijst;
+        return k.wedstrijdId;
+      });
+      bewaar(r.competitie);
+      opWedstrijden(lijst);
+      setSchemaOpen(false);
+      meldGoed(r.nieuw === 0 && r.ingepland === 0 ? "Alle wedstrijden stonden er al" : r.nieuw + " wedstrijden in " + r.rondes + (r.rondes === 1 ? " speelronde" : " speelrondes") + " gemaakt");
+    } catch (e) {
+      meldFout(e.message);
+    }
+  }
+  function bewaarNotitie(cw, tekst) {
+    try {
+      bewaar(zetNotitie(c, faseId, cw.id, tekst));
     } catch (e) {
       meldFout(e.message);
     }
@@ -29025,6 +29162,9 @@ function CompWedstrijden({ c, faseId, wedstrijden, opWedstrijden, bewaar, magHie
           },
           onWeg: function() {
             haalWeg(cw);
+          },
+          onNotitie: function(t2) {
+            bewaarNotitie(cw, t2);
           }
         }
       );
@@ -29055,6 +29195,9 @@ function CompWedstrijden({ c, faseId, wedstrijden, opWedstrijden, bewaar, magHie
         },
         onWeg: function() {
           haalWeg(cw);
+        },
+        onNotitie: function(t2) {
+          bewaarNotitie(cw, t2);
         }
       }
     ), magHier && rondes.length > 0 && /* @__PURE__ */ React.createElement(
@@ -29076,9 +29219,31 @@ function CompWedstrijden({ c, faseId, wedstrijden, opWedstrijden, bewaar, magHie
         return /* @__PURE__ */ React.createElement("option", { key: r.id, value: r.id }, r.naam);
       })
     ));
-  })), magHier && /* @__PURE__ */ React.createElement("button", { className: "knop", style: { width: "100%", justifyContent: "center", marginBottom: 12 }, onClick: nieuweRonde }, "+ Speelronde"));
+  })), magHier && /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 8, marginBottom: 12 } }, /* @__PURE__ */ React.createElement("button", { className: "knop", style: { flex: 1, justifyContent: "center" }, onClick: nieuweRonde }, "+ Speelronde"), /* @__PURE__ */ React.createElement("button", { className: "knop lijn", style: { flex: 1, justifyContent: "center" }, onClick: function() {
+    setSchemaOpen(true);
+  } }, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-wand-magic-sparkles" }), " Schema maken")), schemaOpen && /* @__PURE__ */ React.createElement(SchemaVenster, { c, faseId, onSluiten: function() {
+    setSchemaOpen(false);
+  }, onMaak: maakHetSchema }));
 }
-function UitslagRegel({ cw, thuis, uit, eigenId, uitslag, mag, onUitslag, onWeg }) {
+function SchemaVenster({ c, faseId, onSluiten, onMaak }) {
+  const [vorm, setVorm] = useState("half");
+  var voorbeeld = null, fout = null;
+  try {
+    voorbeeld = maakSchema(c, faseId, vorm, function() {
+      return "voorbeeld";
+    });
+  } catch (e) {
+    fout = e.message;
+  }
+  return /* @__PURE__ */ React.createElement("div", { className: "bevestig-overlay" }, /* @__PURE__ */ React.createElement("div", { className: "bevestig-kaart" }, /* @__PURE__ */ React.createElement("h3", null, "Schema maken"), /* @__PURE__ */ React.createElement("label", { className: "formulier-label" }, "Vorm"), /* @__PURE__ */ React.createElement("select", { className: "formulier-input", value: vorm, onChange: function(e) {
+    setVorm(e.target.value);
+  } }, /* @__PURE__ */ React.createElement("option", { value: "half" }, "Halve competitie"), /* @__PURE__ */ React.createElement("option", { value: "heel" }, "Hele competitie")), /* @__PURE__ */ React.createElement("p", { style: { fontSize: 12, color: "var(--grijs-donker)", lineHeight: 1.5, margin: "-4px 0 8px" } }, VORM_UITLEG[vorm]), fout ? /* @__PURE__ */ React.createElement("p", { style: { fontSize: 13, color: "var(--gevaar)" } }, fout) : /* @__PURE__ */ React.createElement("p", { style: { fontSize: 13, lineHeight: 1.6 } }, voorbeeld.nieuw === 0 && voorbeeld.ingepland === 0 ? "Alle wedstrijden staan er al; er komt niets bij." : voorbeeld.nieuw + " wedstrijden in " + voorbeeld.rondes + (voorbeeld.rondes === 1 ? " nieuwe speelronde" : " nieuwe speelrondes") + ".", voorbeeld.alAanwezig > 0 && " " + voorbeeld.alAanwezig + " stonden er al en blijven zoals ze zijn" + (voorbeeld.ingepland > 0 ? "; " + voorbeeld.ingepland + " daarvan krijgen een speelronde." : "."), " Wedstrijden van je eigen team komen ook in je wedstrijdlijst. Datums kun je daarna per wedstrijd invullen."), /* @__PURE__ */ React.createElement("div", { className: "bevestig-knoppen" }, /* @__PURE__ */ React.createElement("button", { className: "knop lijn", onClick: onSluiten }, "Annuleren"), /* @__PURE__ */ React.createElement("button", { className: "knop", disabled: !!fout || !voorbeeld || voorbeeld.nieuw === 0 && voorbeeld.ingepland === 0, onClick: function() {
+    onMaak(vorm);
+  } }, "Maken"))));
+}
+function UitslagRegel({ cw, thuis, uit, eigenId, uitslag, mag, onUitslag, onWeg, onNotitie }) {
+  const [notitieOpen, setNotitieOpen] = useState(false);
+  const [notitie, setNotitie] = useState(cw.notitie || "");
   const [a, setA] = useState(uitslag ? String(uitslag.thuis) : "");
   const [b, setB] = useState(uitslag ? String(uitslag.uit) : "");
   function klaar(na, nb) {
@@ -29116,7 +29281,48 @@ function UitslagRegel({ cw, thuis, uit, eigenId, uitslag, mag, onUitslag, onWeg 
       }
     ));
   }
-  return /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 8, padding: "8px 0", borderBottom: "1px solid var(--grijs)" } }, /* @__PURE__ */ React.createElement("div", { style: { flex: 1, minWidth: 0 } }, regel(thuis, cw.thuisId === eigenId, a, setA, "a"), regel(uit, cw.uitId === eigenId, b, setB, "b"), eigenWed && /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: "var(--grijs-donker)", marginTop: 2 } }, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-link" }), " Eigen wedstrijd \u2014 de uitslag staat ook in je wedstrijdlijst")), mag && /* @__PURE__ */ React.createElement("button", { className: "knop lijn klein", style: { padding: "6px 9px", alignSelf: "center" }, "aria-label": "Wedstrijd weghalen", onClick: onWeg }, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-xmark" })));
+  return /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 8, padding: "8px 0", borderBottom: "1px solid var(--grijs)" } }, /* @__PURE__ */ React.createElement("div", { style: { flex: 1, minWidth: 0 } }, regel(thuis, cw.thuisId === eigenId, a, setA, "a"), regel(uit, cw.uitId === eigenId, b, setB, "b"), eigenWed && /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: "var(--grijs-donker)", marginTop: 2 } }, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-link" }), " Eigen wedstrijd \u2014 de uitslag staat ook in je wedstrijdlijst"), notitieOpen ? /* @__PURE__ */ React.createElement(
+    "textarea",
+    {
+      className: "formulier-input",
+      rows: "3",
+      autoFocus: true,
+      value: notitie,
+      disabled: !mag,
+      placeholder: "Opmerking of kort verslag",
+      style: { marginTop: 6, marginBottom: 0, fontSize: 13 },
+      onChange: function(e) {
+        setNotitie(e.target.value);
+      },
+      onBlur: function() {
+        if (mag) onNotitie(notitie);
+        setNotitieOpen(false);
+      }
+    }
+  ) : cw.notitie ? /* @__PURE__ */ React.createElement(
+    "div",
+    {
+      style: { fontSize: 12, color: "var(--grijs-donker)", marginTop: 4, whiteSpace: "pre-wrap", cursor: "pointer" },
+      onClick: function() {
+        setNotitieOpen(true);
+      }
+    },
+    /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-note-sticky" }),
+    " ",
+    cw.notitie
+  ) : null), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 6, alignSelf: "center" } }, (mag || cw.notitie) && /* @__PURE__ */ React.createElement(
+    "button",
+    {
+      className: "knop lijn klein",
+      style: { padding: "6px 9px" },
+      "aria-label": cw.notitie ? "Notitie bekijken of wijzigen" : "Notitie toevoegen",
+      title: cw.notitie ? "Er is een notitie" : "Notitie toevoegen",
+      onClick: function() {
+        setNotitieOpen(!notitieOpen);
+      }
+    },
+    /* @__PURE__ */ React.createElement("i", { className: cw.notitie ? "fa-solid fa-note-sticky" : "fa-regular fa-note-sticky" })
+  ), mag && /* @__PURE__ */ React.createElement("button", { className: "knop lijn klein", style: { padding: "6px 9px" }, "aria-label": "Wedstrijd weghalen", onClick: onWeg }, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-xmark" }))));
 }
 function NieuweWedstrijdRegel({ fase, rondeId, naam, onToevoegen }) {
   const [t2, setT] = useState("");

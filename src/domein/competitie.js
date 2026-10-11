@@ -924,3 +924,98 @@ function eigenScoreUit(cw, eigenId, uitslag) {
   return { status: "gespeeld", thuis: thuis,
            score: thuis ? { fch: uitslag.thuis, teg: uitslag.uit } : { fch: uitslag.uit, teg: uitslag.thuis } };
 }
+
+/* ══ NOTITIE EN AUTOMATISCH SCHEMA ════════════════════════════ */
+
+/* Een korte opmerking of verslag bij een wedstrijd. */
+/** @param {Competitie} c @param {string} faseId @param {string} id @param {string} tekst @returns {Competitie} */
+function zetNotitie(c, faseId, id, tekst) {
+  var f = zoekFase(c, faseId);
+  var w = f.wedstrijden.filter(function (x) { return x.id === id; })[0];
+  if (!w) throw new Error("Onbekende wedstrijd: " + id);
+  var nieuw = String(tekst || "").trim();
+  if ((w.notitie || "") === nieuw) return c;
+  return Object.assign({}, c, { fases: c.fases.map(function (x) {
+    return x.id !== faseId ? x : Object.assign({}, x, { wedstrijden: x.wedstrijden.map(function (y) {
+      return y.id === id ? Object.assign({}, y, { notitie: nieuw }) : y; }) });
+  }) });
+}
+
+/* Een volledig schema voor de deelnemers van een fase: halve of hele
+   competitie. Wat er al staat blijft staan; alleen ontbrekende paren
+   komen erbij, in nieuwe speelrondes ná de bestaande. Een ronde zonder
+   nieuwe wedstrijden wordt niet aangemaakt.
+
+   Een wedstrijd van het eigen team moet naar een eigen Wedstrijd
+   verwijzen; koppelEigen(cwId, tegenId, eigenThuis) levert die id (het
+   scherm koppelt aan een bestaande of maakt er een). */
+/**
+ * @param {Competitie} c
+ * @param {string} faseId
+ * @param {"half"|"heel"} vorm
+ * @param {(cwId:string, tegenId:string, eigenThuis:boolean) => any} [koppelEigen]
+ * @returns {{competitie:Competitie, nieuw:number, alAanwezig:number, ingepland:number, rondes:number}}
+ */
+function maakSchema(c, faseId, vorm, koppelEigen) {
+  var f = zoekFase(c, faseId);
+  if (vorm !== "half" && vorm !== "heel") throw new Error("Kies halve of hele competitie.");
+  if (f.deelnemers.length < 2) throw new Error("Er zijn minstens twee teams nodig.");
+  var eigen = c.teams.filter(function (t) { return t.eigen; })[0];
+  var eigenId = eigen ? eigen.id : null;
+  var schema = genereerSchema(f.deelnemers, vorm);
+  var startNummer = (f.rondes || []).reduce(function (m, r) { return Math.max(m, Number(r.nummer) || 0); }, 0);
+  var stempel = Date.now().toString(36);
+  /** @type {any[]} */ var rondes = (f.rondes || []).slice();
+  /** @type {CompWedstrijd[]} */ var wedstrijden = f.wedstrijden.slice();
+  var nieuw = 0, alAanwezig = 0, ingepland = 0, rondeTeller = 0, volg = 0;
+  /** @param {string} id */
+  function heeftRonde(id) { return rondes.some(function (r) { return r.id === id; }); }
+  schema.rondes.forEach(function (sr) {
+    /** @type {string} */
+    var rondeId = "";
+    function zorgVoorRonde() {
+      if (rondeId) return;
+      rondeTeller++;
+      var nummer = startNummer + rondeTeller;
+      rondeId = "r" + nummer + "-" + stempel;
+      rondes.push({ id: rondeId, nummer: nummer, naam: "Speelronde " + nummer, datum: "",
+                    vrijTeamId: sr.vrijTeamId });
+    }
+    sr.paren.forEach(function (p) {
+      var bestaand = wedstrijden.filter(function (x) {
+        if (x.thuisId === p[0] && x.uitId === p[1]) return true;
+        return vorm === "half" && x.thuisId === p[1] && x.uitId === p[0];
+      })[0];
+      if (bestaand) {
+        alAanwezig++;
+        /* Een bestaande wedstrijd zonder speelronde (bijvoorbeeld een
+           ingedeelde eigen wedstrijd) krijgt meteen de ronde waar hij in
+           het schema hoort; thuis/uit blijft zoals hij was. */
+        if (!heeftRonde(bestaand.rondeId || "")) {
+          zorgVoorRonde();
+          var rid = rondeId;
+          wedstrijden = wedstrijden.map(function (x) { return x === bestaand ? Object.assign({}, x, { rondeId: rid }) : x; });
+          ingepland++;
+        }
+        return;
+      }
+      zorgVoorRonde();
+      var cwId = "cw-" + stempel + "-" + (volg++);
+      /** @type {CompWedstrijd} */
+      var w = { id: cwId, rondeId: rondeId, thuisId: p[0], uitId: p[1], datum: "", tijd: "", locatie: "",
+                status: "gepland", uitslag: null, notitie: "" };
+      if (eigenId && (p[0] === eigenId || p[1] === eigenId)) {
+        if (!koppelEigen) throw new Error("Een wedstrijd van het eigen team heeft een koppeling nodig.");
+        w.wedstrijdId = koppelEigen(cwId, p[0] === eigenId ? p[1] : p[0], p[0] === eigenId);
+      }
+      wedstrijden.push(w);
+      nieuw++;
+    });
+  });
+  return {
+    competitie: Object.assign({}, c, { fases: c.fases.map(function (x) {
+      return x.id === faseId ? Object.assign({}, x, { vorm: vorm, rondes: rondes, wedstrijden: wedstrijden }) : x;
+    }) }),
+    nieuw: nieuw, alAanwezig: alAanwezig, ingepland: ingepland, rondes: rondeTeller
+  };
+}
