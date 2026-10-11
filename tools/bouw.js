@@ -79,7 +79,7 @@ const KERN_VOLGORDE = ["sleutels.js", "server.js", "foutmeldingen.js", "rollen.j
    kern (boetepot.js gebruikt sleutelVoor() uit src/kern/sleutels.js)
    en vóór src/app.jsx zelf. Een module die nog niet bestaat wordt
    net als bij de kern overgeslagen. */
-const DOMEIN_VOLGORDE = ["boetepot.js", "wedstrijden.js", "competitie.js", "toernooi.js", "statistieken.js", "opkomst.js"];
+const DOMEIN_VOLGORDE = ["boetepot.js", "wedstrijden.js", "competitie.js", "toernooi.js", "statistieken.js", "opkomst.js", "aitrainer.js"];
 
 /* Sinds P4 (docs/p4-stappenplan.md) komt daar een derde laag bovenop:
    de schermmodules onder src/schermen/ — de React-componenten van
@@ -350,9 +350,24 @@ async function bouwInGeheugen() {
   return { resultaat, bronRegels, uitRegels };
 }
 
+/* De AI-trainer controleert een voorstel in de app én in de edge
+   function ai-trainer (src/domein/aitrainer.js, kop). Deno kan de app
+   niet inladen, dus krijgt de functie een kopie met een export-regel.
+   Nooit met de hand bewerken: de bron is src/domein/aitrainer.js. */
+const AI_KOPIE = path.join(WORTEL, "supabase", "functions", "_gedeeld", "aitrainer.js");
+function aiKopie() {
+  const bron = fs.readFileSync(path.join(WORTEL, "src", "domein", "aitrainer.js"), "utf8");
+  const namen = ["AI_VELDTYPEN", "AI_LIJNSOORTEN", "AI_TRAINING_SCHEMA", "AI_BELASTING", "veiligeContext", "contextRegel",
+                 "controleerTraining", "correctieVraag", "aiSysteemInstructie", "naarTraining", "naarOefening"];
+  return "// GEMAAKT DOOR tools/bouw.js UIT src/domein/aitrainer.js — NIET BEWERKEN\n" +
+         bron.replace(/^\/\/ @ts-check\n/, "") + "\nexport { " + namen.join(", ") + " };\n";
+}
+
 async function bouw() {
   const { resultaat, bronRegels, uitRegels } = await bouwInGeheugen();
   fs.writeFileSync(UITVOER, resultaat);
+  fs.writeFileSync(AI_KOPIE, aiKopie());
+  console.log("  · geschreven:   supabase/functions/_gedeeld/aitrainer.js (kopie voor de edge function)");
   console.log("  · JSX vertaald: " + bronRegels + " regels bron → " + uitRegels + " regels JavaScript");
   console.log("  · geschreven:   online/index.html (" + resultaat.split("\n").length + " regels, " +
               Math.round(Buffer.byteLength(resultaat) / 1024) + " kB)");
@@ -383,6 +398,13 @@ async function controleerActueel() {
   const { resultaat } = await bouwInGeheugen();
   if (!fs.existsSync(UITVOER)) fout("online/index.html bestaat niet — draai eerst node tools/bouw.js");
   const huidig = fs.readFileSync(UITVOER, "utf8");
+  /* Een verouderde kopie zou de edge function een andere mening over
+     een geldige training geven dan de app. */
+  if (!fs.existsSync(AI_KOPIE) || fs.readFileSync(AI_KOPIE, "utf8") !== aiKopie()) {
+    console.log("FOUT  supabase/functions/_gedeeld/aitrainer.js is niet gelijk aan src/domein/aitrainer.js.");
+    console.log("      Draai: node tools/bouw.js");
+    return false;
+  }
   if (zonderVersieRegel(huidig) === zonderVersieRegel(resultaat)) {
     console.log("OK    online/index.html is actueel (komt overeen met src/app.jsx en src/index.html)");
     return true;
