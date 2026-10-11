@@ -474,6 +474,37 @@ groep("notitie en automatisch schema");
   ok("dezelfde notitie nog eens: niets verandert", zetNotitie(n1, "f1", n1.fases[0].wedstrijden[0].id, "Veld was zwaar") === n1, true);
 }
 
+/* ══ statistieken over fases, seizoenen en teams (stap 7) ══ */
+groep("team- en spelertotalen over een selectie");
+{
+  const op = (id, min, status) => ({ spelerId: id, minuten: min, spelStatus: status || "basis" });
+  const w1 = { id: "1", status: "gespeeld", soort: "competitie", score: { fch: 3, teg: 1 },
+    opstelling: [op(11, 90), op(12, 60), op(13, 0, "afwezig")],
+    scorers: [{ spelerId: 11, eigenTeam: true, assist: 12 }, { spelerId: 11, eigenTeam: true, assist: null }, { spelerId: null, eigenTeam: false }],
+    kaarten: [{ spelerId: 12, type: "geel" }] };
+  const w2 = { id: "2", status: "gespeeld", soort: "competitie", score: { fch: 0, teg: 0 }, opstelling: [], scorers: [], kaarten: [] };
+  const w3 = { id: "1", status: "gespeeld", soort: "beker", score: { fch: 1, teg: 2 },
+    opstelling: [op(21, 70)], scorers: [{ spelerId: 21, eigenTeam: true }], kaarten: [] };
+  const jo19 = { teamId: "jo19", seizoen: "2026/2027", wedstrijden: [w1, w2] };
+  const jo17 = { teamId: "jo17", seizoen: "2025/2026", wedstrijden: [w3] };
+  const verz = verzamelWedstrijden([{ bron: jo19, fases: null }, { bron: jo17, fases: null }, { bron: jo19, fases: null }], ["competitie", "beker"]);
+  ok("team: 3 wedstrijden, 1-1-1, 4–3 (dubbele selectie telt één keer)", teamTotalen(verz), { gespeeld: 3, winst: 1, gelijk: 1, verlies: 1, voor: 4, tegen: 3 });
+  const spelers = { jo19: [{ id: 11, naam: "Daan", persoonId: "daan" }, { id: 12, naam: "Sem" }, { id: 13, naam: "Lars" }],
+                    jo17: [{ id: 21, naam: "Daan", persoonId: "daan" }] };
+  const rijen = spelerTotalen(verz, spelers);
+  const van = (n) => rijen.filter((r) => r.naam === n && (n !== "Daan" || r.persoonId === "daan"))[0];
+  ok("Daan over twee teams: 2 wedstrijden, 160 minuten, 3 doelpunten",
+     [van("Daan").wedstrijden, van("Daan").minuten, van("Daan").doelpunten, van("Daan").teams.sort()], [2, 160, 3, ["jo17", "jo19"]]);
+  ok("Sem: 1 assist en 1 gele kaart", [van("Sem").assists, van("Sem").geel], [1, 1]);
+  ok("afwezig telt niet als wedstrijd", van("Lars").wedstrijden, 0);
+  ok("de wedstrijd zonder opstelling is niet stil nul: apart geteld", [van("Sem").zonderOpstelling, van("Lars").zonderOpstelling], [1, 1]);
+  ok("een doelpunt van de tegenstander telt bij niemand", rijen.reduce((s, r) => s + r.doelpunten, 0), 3);
+  ok("hoogste scorer bovenaan", rijen[0].naam, "Daan");
+  const kaal = spelerTotalen([{ teamId: "t", seizoen: "s", wedstrijd: { opstelling: ["a1", "a2"], scorers: [], kaarten: [] } }], { t: [{ id: "a1", naam: "Ad" }] });
+  ok("een kale lijst speler-id's: wel gespeeld, minuten onbekend (niet 0)",
+     [kaal[0].wedstrijden, kaal[0].minuten, kaal[0].minutenOnbekend], [1, 0, 1]);
+}
+
 console.log(`\n${goed} geslaagd, ${fout} gefaald`);
 if (fout) process.exitCode = 1;
 })();

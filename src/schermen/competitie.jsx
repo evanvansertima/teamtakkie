@@ -696,3 +696,296 @@ function NieuweWedstrijdRegel({ fase, rondeId, naam, onToevoegen }) {
     </div>
   );
 }
+
+/* ══ STATISTIEKEN FILTEREN (release 1, stap 7) ══════════════════
+   Bovenaan Statistieken › Team en › Individu. Met de standaardkeuze
+   (dit seizoen, dit team, competitie + beker) verandert er niets: dan
+   staan de bestaande schermen er gewoon. Kies je iets anders, dan komt
+   er een gefilterd overzicht, uitgerekend met verzamelWedstrijden (nooit
+   dubbel), teamTotalen en spelerTotalen (niet bijgehouden is "—").
+
+   Andere seizoenen en teams staan al op dit apparaat: de synchronisatie
+   haalt alle teams van je club binnen. Ze worden hier rechtstreeks uit
+   de opslag gelezen; er verandert niets aan wat er staat. */
+
+const STAT_SOORTEN = [
+  { id: "competitie", label: "Competitie" }, { id: "beker", label: "Beker" },
+  { id: "oefen", label: "Oefen" }, { id: "toernooi", label: "Toernooi" }
+];
+const STANDAARD_STATFILTER = { bereik: "seizoen", fases: [], seizoenen: [], alleTeams: false, soorten: ["competitie", "beker"] };
+
+/* Zelfde knopjes als het filter bij Wedstrijden (Uitslagen/Aankomende/Alle). */
+function chipStijl(aan) {
+  return { borderColor: aan ? "var(--blauw)" : "var(--grijs)", background: aan ? "var(--blauw)" : "var(--wit)",
+           color: aan ? "var(--wit)" : "var(--grijs-donker)" };
+}
+function statFilterStandaard(f) {
+  return f.bereik === "seizoen" && !f.alleTeams && f.soorten.slice().sort().join() === "beker,competitie";
+}
+function leesVolle(team, seizoen, basis) {
+  try { var r = localStorage.getItem("tt_" + team + "__" + seizoen + "::" + basis); return r ? JSON.parse(r) : []; }
+  catch (e) { return []; }
+}
+/* Schrijven onder de sleutel van een ánder team of seizoen, met
+   dezelfde stappen als slaJson (stempels voor het samenvoegen, en
+   melden dat er iets is veranderd zodat het wordt uitgewisseld). */
+function schrijfVolle(volle, data) {
+  var oud = null;
+  try { var t = localStorage.getItem(volle); oud = t ? JSON.parse(t) : null; } catch (e) {}
+  var eruit = Array.isArray(data) ? stempelLijst(data, oud) : data;
+  try { localStorage.setItem(volle, JSON.stringify(eruit)); } catch (e) { meldFout("Opslaan lukte niet."); return; }
+  if (typeof meldWijziging === "function") meldWijziging(volle);
+}
+function teamNaamOpId(id) {
+  var t = teams().filter(function (x) { return x.id === id; })[0];
+  return t ? t.naam : id;
+}
+
+function StatFilterBalk({ filter, opFilter }) {
+  const [open, setOpen] = useState(false);
+  const comp = (laadCompetities() || [])[0] || null;
+  const seizoenen = seizoenenVan(teamId());
+  const meerTeams = teams().length > 1;
+  function zet(wijz) { opFilter(Object.assign({}, filter, wijz)); }
+  function wissel(lijst, id) { return lijst.indexOf(id) >= 0 ? lijst.filter(function (x) { return x !== id; }) : lijst.concat([id]); }
+  var samenvatting = (filter.bereik === "fases" ? (filter.fases.length + (filter.fases.length === 1 ? " fase" : " fases")) :
+    filter.bereik === "seizoenen" ? filter.seizoenen.map(seizoenLabel).join(" + ") || "geen seizoen" : "Dit seizoen") +
+    (filter.alleTeams ? " · alle teams" : "") + " · " +
+    STAT_SOORTEN.filter(function (s) { return filter.soorten.indexOf(s.id) >= 0; }).map(function (s) { return s.label; }).join(", ");
+  return (
+    <div className="kaart" style={{padding:"10px 14px"}}>
+      <button className="knop lijn klein" style={{width:"100%",justifyContent:"space-between"}} onClick={function () { setOpen(!open); }}>
+        <span><i className="fa-solid fa-filter"/> {samenvatting}</span>
+        <i className={open ? "fa-solid fa-chevron-up" : "fa-solid fa-chevron-down"}/>
+      </button>
+      {open && (
+        <div style={{marginTop:10,fontSize:13}}>
+          <label className="formulier-label">Bereik</label>
+          <select className="formulier-input" value={filter.bereik} onChange={function (e) {
+            var b = e.target.value;
+            zet({ bereik: b, alleTeams: b === "fases" ? false : filter.alleTeams,
+                  fases: b === "fases" && !filter.fases.length && comp ? [comp.actieveFaseId] : filter.fases,
+                  seizoenen: b === "seizoenen" && !filter.seizoenen.length ? seizoenen.slice(0, 2) : filter.seizoenen });
+          }}>
+            <option value="seizoen">Dit seizoen</option>
+            {comp && <option value="fases">Competitiefase(s)</option>}
+            {seizoenen.length > 1 && <option value="seizoenen">Meerdere seizoenen</option>}
+          </select>
+          {filter.bereik === "fases" && comp && (
+            <div style={{display:"flex",gap:6,flexWrap:"wrap",margin:"-4px 0 10px"}}>
+              {comp.fases.map(function (f) {
+                var aan = filter.fases.indexOf(f.id) >= 0;
+                return <button key={f.id} className="filter-chip" style={chipStijl(aan)} onClick={function () { zet({ fases: wissel(filter.fases, f.id) }); }}>{f.naam}</button>;
+              })}
+            </div>
+          )}
+          {filter.bereik === "seizoenen" && (
+            <div style={{display:"flex",gap:6,flexWrap:"wrap",margin:"-4px 0 10px"}}>
+              {seizoenen.map(function (s) {
+                var aan = filter.seizoenen.indexOf(s) >= 0;
+                return <button key={s} className="filter-chip" style={chipStijl(aan)} onClick={function () { zet({ seizoenen: wissel(filter.seizoenen, s) }); }}>{seizoenLabel(s)}</button>;
+              })}
+            </div>
+          )}
+          {meerTeams && filter.bereik !== "fases" && (
+            <label style={{display:"flex",gap:8,alignItems:"center",margin:"0 0 10px"}}>
+              <input type="checkbox" checked={filter.alleTeams} onChange={function (e) { zet({ alleTeams: e.target.checked }); }} />
+              Alle teams van de club (gekoppelde spelers tellen als één persoon)
+            </label>
+          )}
+          <label className="formulier-label">Wedstrijdsoorten</label>
+          <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+            {STAT_SOORTEN.map(function (s) {
+              var aan = filter.soorten.indexOf(s.id) >= 0;
+              return <button key={s.id} className="filter-chip" style={chipStijl(aan)} onClick={function () { zet({ soorten: wissel(filter.soorten, s.id) }); }}>{s.label}</button>;
+            })}
+          </div>
+          {!statFilterStandaard(filter) && (
+            <button className="knop lijn klein" style={{marginTop:10}} onClick={function () { opFilter(STANDAARD_STATFILTER); }}>Terug naar dit seizoen</button>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* De bronnen bij een filter: per team en seizoen de wedstrijden, plus
+   per team de spelers (uit het nieuwste gekozen seizoen, voor de naam
+   en de koppeling). */
+function statBronnen(filter) {
+  var tids = filter.alleTeams ? teams().map(function (t) { return t.id; }) : [teamId()];
+  var selecties = [], spelersPerTeam = {};
+  tids.forEach(function (tid) {
+    var ss = filter.bereik === "seizoenen" ? filter.seizoenen.filter(function (s) { return seizoenenVan(tid).indexOf(s) >= 0; })
+                                           : [seizoenNu(tid)];
+    ss.forEach(function (s) {
+      selecties.push({ bron: { teamId: tid, seizoen: s, wedstrijden: leesVolle(tid, s, WEDSTRIJDEN_KEY) },
+                       fases: filter.bereik === "fases" ? filter.fases : null });
+    });
+    var nieuwste = ss.slice().sort().reverse()[0];
+    spelersPerTeam[tid] = nieuwste ? leesVolle(tid, nieuwste, SPELERS_KEY) : [];
+  });
+  return { selecties: selecties, spelersPerTeam: spelersPerTeam };
+}
+
+function GefilterdOverzicht({ filter }) {
+  const [koppelOpen, setKoppelOpen] = useState(false);
+  const b = statBronnen(filter);
+  const verz = verzamelWedstrijden(b.selecties, filter.soorten);
+  const t = teamTotalen(verz);
+  const rijen = spelerTotalen(verz, b.spelersPerTeam);
+  const zonder = verz.filter(function (i) { return !(i.wedstrijd.opstelling || []).length; }).length;
+  const streep = function (r, waarde) { return r.wedstrijden === 0 && r.zonderOpstelling > 0 ? "—" : waarde; };
+  if (koppelOpen) return <KoppelScherm onSluiten={function () { setKoppelOpen(false); }} />;
+  return (
+    <div>
+      <div className="kaart">
+        <div className="kaart-titel"><i className="fa-solid fa-chart-simple"/> Statistieken (gefilterd)</div>
+        <p style={{fontSize:12,color:"var(--grijs-donker)",margin:"0 0 10px"}}>
+          {verz.length + (verz.length === 1 ? " wedstrijd" : " wedstrijden")}
+          {zonder > 0 && " · " + zonder + " zonder opstelling (speelminuten onbekend)"}
+          {filter.bereik === "seizoenen" || filter.alleTeams ? " · dit is een statistiekoverzicht, geen competitiestand" : ""}
+        </p>
+        <div className="stat-raster-3">
+          <div className="stat-pill"><div className="stat-pill-getal">{t.winst}-{t.gelijk}-{t.verlies}</div><div className="stat-pill-label">W-G-V</div></div>
+          <div className="stat-pill"><div className="stat-pill-getal">{t.voor}–{t.tegen}</div><div className="stat-pill-label">Doelpunten</div></div>
+          <div className="stat-pill"><div className="stat-pill-getal">{t.gespeeld}</div><div className="stat-pill-label">Gespeeld</div></div>
+        </div>
+      </div>
+      <div className="kaart">
+        <div className="kaart-titel" style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+          <span><i className="fa-solid fa-user"/> Spelers</span>
+          {filter.alleTeams && magRol("selectie") && (
+            <button className="knop lijn klein" onClick={function () { setKoppelOpen(true); }}><i className="fa-solid fa-link"/> Spelers koppelen</button>
+          )}
+        </div>
+        <div style={{overflowX:"auto"}}>
+          <table className="stand-tabel">
+            <thead><tr><th className="links">Speler</th><th>W</th><th>Min</th><th>G</th><th>A</th><th>Geel</th><th>Rood</th></tr></thead>
+            <tbody>
+              {rijen.map(function (r) {
+                return (
+                  <tr key={r.persoonId}>
+                    <td className="links naam">{r.naam}
+                      {filter.alleTeams && <div style={{fontSize:10,color:"var(--grijs-donker)",fontWeight:400}}>{r.teams.map(teamNaamOpId).join(" + ")}</div>}
+                    </td>
+                    <td>{streep(r, r.wedstrijden)}</td>
+                    <td>{r.minuten === 0 && r.minutenOnbekend > 0 ? "—" : streep(r, r.minuten) + (r.minutenOnbekend > 0 ? "+" : "")}</td>
+                    <td>{r.doelpunten}</td><td>{r.assists}</td><td>{r.geel}</td><td>{r.rood}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+        <p style={{fontSize:11,color:"var(--grijs-donker)",margin:"8px 0 0"}}>W = wedstrijden, G = doelpunten, A = assists. — = niet bijgehouden. Een + achter de minuten: in sommige wedstrijden zijn de minuten onbekend.</p>
+      </div>
+    </div>
+  );
+}
+
+/* ── Spelers koppelen over teams ──
+   Nooit automatisch: voorstellen alleen bij gelijke naam én
+   geboortedatum, en de gebruiker bevestigt. Daarnaast met de hand: een
+   speler uit het ene en een uit het andere team kiezen. De koppeling
+   (persoonId) komt bij die spelers in álle seizoenen van hun team. */
+function KoppelScherm({ onSluiten }) {
+  const [, ververs] = useState(0);
+  const alle = teams();
+  const perTeam = {};
+  alle.forEach(function (t) { var s = seizoenNu(t.id); perTeam[t.id] = s ? leesVolle(t.id, s, SPELERS_KEY) : []; });
+  const [a, setA] = useState(""), [b, setB] = useState("");
+  function opties() {
+    var uit = [];
+    alle.forEach(function (t) { perTeam[t.id].forEach(function (sp) { uit.push({ waarde: t.id + "|" + sp.id, label: sp.naam + " — " + t.naam, teamId: t.id, sp: sp }); }); });
+    return uit;
+  }
+  /* persoonId zetten in elk seizoen van dit team waar deze speler staat */
+  function schrijf(teamIdX, spelerId, persoonId) {
+    seizoenenVan(teamIdX).forEach(function (s) {
+      var lijst = leesVolle(teamIdX, s, SPELERS_KEY);
+      if (!lijst.some(function (x) { return x.id === spelerId; })) return;
+      schrijfVolle("tt_" + teamIdX + "__" + s + "::" + SPELERS_KEY, lijst.map(function (x) {
+        if (x.id !== spelerId) return x;
+        var y = Object.assign({}, x);
+        if (persoonId) y.persoonId = persoonId; else delete y.persoonId;
+        return y;
+      }));
+    });
+  }
+  function koppel(ta, ida, tb, idb) {
+    var spA = perTeam[ta].filter(function (x) { return x.id === ida; })[0];
+    var p = persoonVan(spA, ta);
+    schrijf(ta, ida, p); schrijf(tb, idb, p);
+    meldGoed("Gekoppeld"); ververs(function (n) { return n + 1; });
+  }
+  var voorstellen = [];
+  for (var i = 0; i < alle.length; i++) for (var j = i + 1; j < alle.length; j++) {
+    koppelVoorstellen({ teamId: alle[i].id, spelers: perTeam[alle[i].id] }, { teamId: alle[j].id, spelers: perTeam[alle[j].id] })
+      .forEach(function (v) {
+        var sa = perTeam[alle[i].id].filter(function (x) { return x.id === v.a; })[0];
+        var sb = perTeam[alle[j].id].filter(function (x) { return x.id === v.b; })[0];
+        if (persoonVan(sa, alle[i].id) !== persoonVan(sb, alle[j].id)) voorstellen.push({ ta: alle[i].id, sa: sa, tb: alle[j].id, sb: sb });
+      });
+  }
+  var gekoppeld = [];
+  var groepen = {};
+  alle.forEach(function (t) { perTeam[t.id].forEach(function (sp) { if (sp.persoonId) { (groepen[sp.persoonId] = groepen[sp.persoonId] || []).push({ t: t, sp: sp }); } }); });
+  Object.keys(groepen).forEach(function (k) { if (groepen[k].length > 1) gekoppeld.push(groepen[k]); });
+  var lijst = opties();
+  return (
+    <div>
+      <div className="kaart">
+        <div className="kaart-titel" style={{display:"flex",justifyContent:"space-between"}}>
+          <span><i className="fa-solid fa-link"/> Spelers koppelen</span>
+          <button className="knop lijn klein" onClick={onSluiten}>Klaar</button>
+        </div>
+        <p style={{fontSize:12,color:"var(--grijs-donker)",lineHeight:1.5}}>
+          Speelt iemand nu in een ander team van de club dan eerder? Koppel de twee, dan tellen zijn cijfers als één persoon.
+          Er wordt nooit iets automatisch gekoppeld.
+        </p>
+        {voorstellen.length > 0 && <div className="formulier-label" style={{marginTop:6}}>Voorstellen (zelfde naam en geboortedatum)</div>}
+        {voorstellen.map(function (v, n) {
+          return (
+            <div key={n} style={{display:"flex",gap:8,alignItems:"center",padding:"6px 0",borderBottom:"1px solid var(--grijs)"}}>
+              <span style={{flex:1,fontSize:13}}>{v.sa.naam}: {teamNaamOpId(v.ta)} + {teamNaamOpId(v.tb)}</span>
+              <button className="knop klein" onClick={function () { koppel(v.ta, v.sa.id, v.tb, v.sb.id); }}>Koppelen</button>
+            </div>
+          );
+        })}
+        <div className="formulier-label" style={{marginTop:10}}>Met de hand</div>
+        <select className="formulier-input" value={a} onChange={function (e) { setA(e.target.value); }}>
+          <option value="">Speler…</option>
+          {lijst.map(function (o) { return <option key={o.waarde} value={o.waarde}>{o.label}</option>; })}
+        </select>
+        <select className="formulier-input" value={b} onChange={function (e) { setB(e.target.value); }}>
+          <option value="">is dezelfde persoon als…</option>
+          {lijst.filter(function (o) { return a && o.teamId !== a.split("|")[0]; }).map(function (o) { return <option key={o.waarde} value={o.waarde}>{o.label}</option>; })}
+        </select>
+        <button className="knop" disabled={!a || !b} onClick={function () {
+          var A = lijst.filter(function (o) { return o.waarde === a; })[0], B = lijst.filter(function (o) { return o.waarde === b; })[0];
+          koppel(A.teamId, A.sp.id, B.teamId, B.sp.id); setA(""); setB("");
+        }}>Koppelen</button>
+      </div>
+      {gekoppeld.length > 0 && (
+        <div className="kaart">
+          <div className="kaart-titel"><i className="fa-solid fa-people-arrows"/> Gekoppeld</div>
+          {gekoppeld.map(function (g, n) {
+            return (
+              <div key={n} style={{padding:"6px 0",borderBottom:"1px solid var(--grijs)",fontSize:13}}>
+                {g.map(function (x) { return x.sp.naam + " (" + x.t.naam + ")"; }).join(" = ")}
+                <div style={{display:"flex",gap:6,flexWrap:"wrap",marginTop:4}}>
+                  {g.map(function (x) {
+                    return <button key={x.t.id} className="knop lijn klein" onClick={function () {
+                      schrijf(x.t.id, x.sp.id, null); meldGoed("Ontkoppeld"); ververs(function (k) { return k + 1; });
+                    }}>Ontkoppel {x.t.naam}</button>;
+                  })}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}

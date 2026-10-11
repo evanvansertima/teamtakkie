@@ -154,6 +154,18 @@ MUTATIES = [
      "        if (!heeftRonde(bestaand.rondeId || \"\")) {",
      "        if (false) {"),
 
+    ("T1  een wedstrijd zonder opstelling telt stil als nul",
+     "      ((spelersPerTeam || {})[tid] || []).forEach(function (sp) { persoon(tid, sp.id).zonderOpstelling++; });",
+     ""),
+
+    ("T2  een afwezige speler telt als gespeeld",
+     "        if ((o.spelStatus || \"basis\") === \"afwezig\") return;\n",
+     ""),
+
+    ("T3  onbekende minuten tellen stil als 0",
+     "        if (typeof o === \"string\" || typeof o === \"number\") { var k = persoon(tid, o); k.wedstrijden++; k.minutenOnbekend++; return; }",
+     "        if (typeof o === \"string\" || typeof o === \"number\") { var k = persoon(tid, o); k.wedstrijden++; return; }"),
+
     ("M9  bevestigen past de competitie van vóór het bevestigen aan",
      "  var nieuw = JSON.parse(JSON.stringify(c));\n  var eigen",
      "  var nieuw = c;\n  var eigen"),

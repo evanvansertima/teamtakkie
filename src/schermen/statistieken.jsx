@@ -1308,6 +1308,11 @@ function StandTab() {
 
 function StatistiekenModule({defaultTab}) {
   const [tab, setTab] = useState(defaultTab||"team");
+  /* Filter over fases, seizoenen en teams (src/schermen/competitie.jsx).
+     Met de standaardkeuze staan de schermen hieronder er gewoon; anders
+     het gefilterde overzicht. Voorlopig alleen met de proefschakelaar. */
+  const [statFilter, setStatFilter] = useState(STANDAARD_STATFILTER);
+  const gefilterd = proefCompetitie() && !statFilterStandaard(statFilter);
   return (
     <div>
       <div className="pagina-header" style={{marginBottom:14}}>
@@ -1323,8 +1328,10 @@ function StatistiekenModule({defaultTab}) {
         <button className={"tab-knop"+(tab==="stand"?" actief":"")} onClick={function(){setTab("stand");}}><i className="fa-solid fa-ranking-star"/> Stand</button>
         <button className={"tab-knop"+(tab==="live"?" actief":"")} onClick={function(){setTab("live");}}><i className="fa-solid fa-circle" style={{color:tab==="live"?"var(--gevaar)":"inherit",fontSize:9}}/> Live</button>
       </div>
-      {tab==="team" && <TeamStatistieken />}
-      {tab==="individu" && <IndividuStatistieken />}
+      {proefCompetitie() && (tab==="team" || tab==="individu") && <StatFilterBalk filter={statFilter} opFilter={setStatFilter} />}
+      {(tab==="team" || tab==="individu") && gefilterd && <GefilterdOverzicht filter={statFilter} />}
+      {tab==="team" && !gefilterd && <TeamStatistieken />}
+      {tab==="individu" && !gefilterd && <IndividuStatistieken />}
       {tab==="stand" && <StandTab />}
       {tab==="live" && <LiveAnalyse />}
     </div>

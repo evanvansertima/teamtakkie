@@ -3006,7 +3006,7 @@ window.addEventListener("error", function(e){
 });
 </script>
 <script>
-const APP_VERSIE = "b208709";
+const APP_VERSIE = "fbaf4fe";
 const TEAMS_KEY = "tt_teams_v1";
 const ACTIEF_KEY = "tt_actief_v1";
 const VOORKEUR_KEY = "tt_voorkeuren_v1";
@@ -6569,6 +6569,93 @@ function maakSchema(c, faseId, vorm, koppelEigen) {
     ingepland,
     rondes: rondeTeller
   };
+}
+function teamTotalen(verzameling) {
+  var t2 = { gespeeld: 0, winst: 0, gelijk: 0, verlies: 0, voor: 0, tegen: 0 };
+  (verzameling || []).forEach(function(item) {
+    var s = item.wedstrijd.score || {};
+    var f = Number(s.fch) || 0, g = Number(s.teg) || 0;
+    t2.gespeeld++;
+    t2.voor += f;
+    t2.tegen += g;
+    if (f > g) t2.winst++;
+    else if (f < g) t2.verlies++;
+    else t2.gelijk++;
+  });
+  return t2;
+}
+function spelerTotalen(verzameling, spelersPerTeam) {
+  var rij = {};
+  function persoon(teamId2, spelerId) {
+    var sp = ((spelersPerTeam || {})[teamId2] || []).filter(function(x) {
+      return x.id === spelerId;
+    })[0];
+    var p = persoonVan(sp || { id: spelerId }, teamId2);
+    if (!rij[p]) rij[p] = {
+      persoonId: p,
+      naam: sp ? sp.naam : "Onbekende speler",
+      teams: [],
+      wedstrijden: 0,
+      minuten: 0,
+      minutenOnbekend: 0,
+      doelpunten: 0,
+      assists: 0,
+      geel: 0,
+      rood: 0,
+      zonderOpstelling: 0,
+      _gezien: {}
+    };
+    if (rij[p].teams.indexOf(teamId2) < 0) rij[p].teams.push(teamId2);
+    return rij[p];
+  }
+  var teamsInVerzameling = {};
+  (verzameling || []).forEach(function(i) {
+    teamsInVerzameling[i.teamId] = true;
+  });
+  Object.keys(teamsInVerzameling).forEach(function(tid) {
+    ((spelersPerTeam || {})[tid] || []).forEach(function(sp) {
+      persoon(tid, sp.id);
+    });
+  });
+  (verzameling || []).forEach(function(item) {
+    var w = item.wedstrijd, tid = item.teamId;
+    var heeftOpstelling = (w.opstelling || []).length > 0;
+    if (heeftOpstelling) {
+      (w.opstelling || []).forEach(function(o) {
+        if (typeof o === "string" || typeof o === "number") {
+          var k = persoon(tid, o);
+          k.wedstrijden++;
+          k.minutenOnbekend++;
+          return;
+        }
+        if ((o.spelStatus || "basis") === "afwezig") return;
+        var r = persoon(tid, o.spelerId);
+        r.wedstrijden++;
+        if (o.minuten === void 0 || o.minuten === null || o.minuten === "") r.minutenOnbekend++;
+        else r.minuten += Number(o.minuten) || 0;
+      });
+    } else {
+      ((spelersPerTeam || {})[tid] || []).forEach(function(sp) {
+        persoon(tid, sp.id).zonderOpstelling++;
+      });
+    }
+    (w.scorers || []).forEach(function(s) {
+      if (s.eigenTeam && s.spelerId !== null && s.spelerId !== void 0) persoon(tid, s.spelerId).doelpunten++;
+      if (s.eigenTeam && s.assist !== null && s.assist !== void 0 && s.assist !== "") persoon(tid, s.assist).assists++;
+    });
+    (w.kaarten || []).forEach(function(k) {
+      if (k.spelerId === null || k.spelerId === void 0) return;
+      if (k.type === "geel") persoon(tid, k.spelerId).geel++;
+      else persoon(tid, k.spelerId).rood++;
+    });
+  });
+  return Object.keys(rij).map(function(k) {
+    var r = rij[k];
+    delete r._gezien;
+    return r;
+  }).sort(function(a, b) {
+    return b.doelpunten - a.doelpunten || b.wedstrijden - a.wedstrijden || a.naam.localeCompare(b.naam, "nl");
+  });
 }
 const FC_CATEGORIEEN = [
   { id: "pace", label: "Snelheid", kort: "SNE", kleur: "#22c55e", attrs: [
@@ -11678,6 +11765,8 @@ function StandTab() {
 }
 function StatistiekenModule({ defaultTab }) {
   const [tab, setTab] = useState(defaultTab || "team");
+  const [statFilter, setStatFilter] = useState(STANDAARD_STATFILTER);
+  const gefilterd = proefCompetitie() && !statFilterStandaard(statFilter);
   return /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { className: "pagina-header", style: { marginBottom: 14 } }, /* @__PURE__ */ React.createElement("div", { className: "pagina-header-tekst" }, /* @__PURE__ */ React.createElement("div", { className: "eyebrow" }, "Seizoensdata"), /* @__PURE__ */ React.createElement("h2", null, "Statistieken"), /* @__PURE__ */ React.createElement("p", { style: { fontSize: 12, color: "var(--grijs-donker)" } }, "Seizoen " + inst().seizoen))), /* @__PURE__ */ React.createElement("div", { className: "tabs" }, /* @__PURE__ */ React.createElement("button", { className: "tab-knop" + (tab === "team" ? " actief" : ""), onClick: function() {
     setTab("team");
   } }, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-users" }), " Team"), /* @__PURE__ */ React.createElement("button", { className: "tab-knop" + (tab === "individu" ? " actief" : ""), onClick: function() {
@@ -11686,7 +11775,7 @@ function StatistiekenModule({ defaultTab }) {
     setTab("stand");
   } }, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-ranking-star" }), " Stand"), /* @__PURE__ */ React.createElement("button", { className: "tab-knop" + (tab === "live" ? " actief" : ""), onClick: function() {
     setTab("live");
-  } }, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-circle", style: { color: tab === "live" ? "var(--gevaar)" : "inherit", fontSize: 9 } }), " Live")), tab === "team" && /* @__PURE__ */ React.createElement(TeamStatistieken, null), tab === "individu" && /* @__PURE__ */ React.createElement(IndividuStatistieken, null), tab === "stand" && /* @__PURE__ */ React.createElement(StandTab, null), tab === "live" && /* @__PURE__ */ React.createElement(LiveAnalyse, null));
+  } }, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-circle", style: { color: tab === "live" ? "var(--gevaar)" : "inherit", fontSize: 9 } }), " Live")), proefCompetitie() && (tab === "team" || tab === "individu") && /* @__PURE__ */ React.createElement(StatFilterBalk, { filter: statFilter, opFilter: setStatFilter }), (tab === "team" || tab === "individu") && gefilterd && /* @__PURE__ */ React.createElement(GefilterdOverzicht, { filter: statFilter }), tab === "team" && !gefilterd && /* @__PURE__ */ React.createElement(TeamStatistieken, null), tab === "individu" && !gefilterd && /* @__PURE__ */ React.createElement(IndividuStatistieken, null), tab === "stand" && /* @__PURE__ */ React.createElement(StandTab, null), tab === "live" && /* @__PURE__ */ React.createElement(LiveAnalyse, null));
 }
 function StaafGrafiek({ reeksen, labels, kleuren, hoogte }) {
   const H = hoogte || 150;
@@ -29353,6 +29442,250 @@ function NieuweWedstrijdRegel({ fase, rondeId, naam, onToevoegen }) {
     setT("");
     setU("");
   } }, "+ Toevoegen"));
+}
+const STAT_SOORTEN = [
+  { id: "competitie", label: "Competitie" },
+  { id: "beker", label: "Beker" },
+  { id: "oefen", label: "Oefen" },
+  { id: "toernooi", label: "Toernooi" }
+];
+const STANDAARD_STATFILTER = { bereik: "seizoen", fases: [], seizoenen: [], alleTeams: false, soorten: ["competitie", "beker"] };
+function chipStijl(aan) {
+  return {
+    borderColor: aan ? "var(--blauw)" : "var(--grijs)",
+    background: aan ? "var(--blauw)" : "var(--wit)",
+    color: aan ? "var(--wit)" : "var(--grijs-donker)"
+  };
+}
+function statFilterStandaard(f) {
+  return f.bereik === "seizoen" && !f.alleTeams && f.soorten.slice().sort().join() === "beker,competitie";
+}
+function leesVolle(team, seizoen, basis) {
+  try {
+    var r = localStorage.getItem("tt_" + team + "__" + seizoen + "::" + basis);
+    return r ? JSON.parse(r) : [];
+  } catch (e) {
+    return [];
+  }
+}
+function schrijfVolle(volle, data) {
+  var oud = null;
+  try {
+    var t2 = localStorage.getItem(volle);
+    oud = t2 ? JSON.parse(t2) : null;
+  } catch (e) {
+  }
+  var eruit = Array.isArray(data) ? stempelLijst(data, oud) : data;
+  try {
+    localStorage.setItem(volle, JSON.stringify(eruit));
+  } catch (e) {
+    meldFout("Opslaan lukte niet.");
+    return;
+  }
+  if (typeof meldWijziging === "function") meldWijziging(volle);
+}
+function teamNaamOpId(id) {
+  var t2 = teams().filter(function(x) {
+    return x.id === id;
+  })[0];
+  return t2 ? t2.naam : id;
+}
+function StatFilterBalk({ filter, opFilter }) {
+  const [open, setOpen] = useState(false);
+  const comp = (laadCompetities() || [])[0] || null;
+  const seizoenen = seizoenenVan(teamId());
+  const meerTeams = teams().length > 1;
+  function zet(wijz) {
+    opFilter(Object.assign({}, filter, wijz));
+  }
+  function wissel(lijst, id) {
+    return lijst.indexOf(id) >= 0 ? lijst.filter(function(x) {
+      return x !== id;
+    }) : lijst.concat([id]);
+  }
+  var samenvatting = (filter.bereik === "fases" ? filter.fases.length + (filter.fases.length === 1 ? " fase" : " fases") : filter.bereik === "seizoenen" ? filter.seizoenen.map(seizoenLabel).join(" + ") || "geen seizoen" : "Dit seizoen") + (filter.alleTeams ? " \xB7 alle teams" : "") + " \xB7 " + STAT_SOORTEN.filter(function(s) {
+    return filter.soorten.indexOf(s.id) >= 0;
+  }).map(function(s) {
+    return s.label;
+  }).join(", ");
+  return /* @__PURE__ */ React.createElement("div", { className: "kaart", style: { padding: "10px 14px" } }, /* @__PURE__ */ React.createElement("button", { className: "knop lijn klein", style: { width: "100%", justifyContent: "space-between" }, onClick: function() {
+    setOpen(!open);
+  } }, /* @__PURE__ */ React.createElement("span", null, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-filter" }), " ", samenvatting), /* @__PURE__ */ React.createElement("i", { className: open ? "fa-solid fa-chevron-up" : "fa-solid fa-chevron-down" })), open && /* @__PURE__ */ React.createElement("div", { style: { marginTop: 10, fontSize: 13 } }, /* @__PURE__ */ React.createElement("label", { className: "formulier-label" }, "Bereik"), /* @__PURE__ */ React.createElement("select", { className: "formulier-input", value: filter.bereik, onChange: function(e) {
+    var b = e.target.value;
+    zet({
+      bereik: b,
+      alleTeams: b === "fases" ? false : filter.alleTeams,
+      fases: b === "fases" && !filter.fases.length && comp ? [comp.actieveFaseId] : filter.fases,
+      seizoenen: b === "seizoenen" && !filter.seizoenen.length ? seizoenen.slice(0, 2) : filter.seizoenen
+    });
+  } }, /* @__PURE__ */ React.createElement("option", { value: "seizoen" }, "Dit seizoen"), comp && /* @__PURE__ */ React.createElement("option", { value: "fases" }, "Competitiefase(s)"), seizoenen.length > 1 && /* @__PURE__ */ React.createElement("option", { value: "seizoenen" }, "Meerdere seizoenen")), filter.bereik === "fases" && comp && /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 6, flexWrap: "wrap", margin: "-4px 0 10px" } }, comp.fases.map(function(f) {
+    var aan = filter.fases.indexOf(f.id) >= 0;
+    return /* @__PURE__ */ React.createElement("button", { key: f.id, className: "filter-chip", style: chipStijl(aan), onClick: function() {
+      zet({ fases: wissel(filter.fases, f.id) });
+    } }, f.naam);
+  })), filter.bereik === "seizoenen" && /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 6, flexWrap: "wrap", margin: "-4px 0 10px" } }, seizoenen.map(function(s) {
+    var aan = filter.seizoenen.indexOf(s) >= 0;
+    return /* @__PURE__ */ React.createElement("button", { key: s, className: "filter-chip", style: chipStijl(aan), onClick: function() {
+      zet({ seizoenen: wissel(filter.seizoenen, s) });
+    } }, seizoenLabel(s));
+  })), meerTeams && filter.bereik !== "fases" && /* @__PURE__ */ React.createElement("label", { style: { display: "flex", gap: 8, alignItems: "center", margin: "0 0 10px" } }, /* @__PURE__ */ React.createElement("input", { type: "checkbox", checked: filter.alleTeams, onChange: function(e) {
+    zet({ alleTeams: e.target.checked });
+  } }), "Alle teams van de club (gekoppelde spelers tellen als \xE9\xE9n persoon)"), /* @__PURE__ */ React.createElement("label", { className: "formulier-label" }, "Wedstrijdsoorten"), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 6, flexWrap: "wrap" } }, STAT_SOORTEN.map(function(s) {
+    var aan = filter.soorten.indexOf(s.id) >= 0;
+    return /* @__PURE__ */ React.createElement("button", { key: s.id, className: "filter-chip", style: chipStijl(aan), onClick: function() {
+      zet({ soorten: wissel(filter.soorten, s.id) });
+    } }, s.label);
+  })), !statFilterStandaard(filter) && /* @__PURE__ */ React.createElement("button", { className: "knop lijn klein", style: { marginTop: 10 }, onClick: function() {
+    opFilter(STANDAARD_STATFILTER);
+  } }, "Terug naar dit seizoen")));
+}
+function statBronnen(filter) {
+  var tids = filter.alleTeams ? teams().map(function(t2) {
+    return t2.id;
+  }) : [teamId()];
+  var selecties = [], spelersPerTeam = {};
+  tids.forEach(function(tid) {
+    var ss = filter.bereik === "seizoenen" ? filter.seizoenen.filter(function(s) {
+      return seizoenenVan(tid).indexOf(s) >= 0;
+    }) : [seizoenNu(tid)];
+    ss.forEach(function(s) {
+      selecties.push({
+        bron: { teamId: tid, seizoen: s, wedstrijden: leesVolle(tid, s, WEDSTRIJDEN_KEY) },
+        fases: filter.bereik === "fases" ? filter.fases : null
+      });
+    });
+    var nieuwste = ss.slice().sort().reverse()[0];
+    spelersPerTeam[tid] = nieuwste ? leesVolle(tid, nieuwste, SPELERS_KEY) : [];
+  });
+  return { selecties, spelersPerTeam };
+}
+function GefilterdOverzicht({ filter }) {
+  const [koppelOpen, setKoppelOpen] = useState(false);
+  const b = statBronnen(filter);
+  const verz = verzamelWedstrijden(b.selecties, filter.soorten);
+  const t2 = teamTotalen(verz);
+  const rijen = spelerTotalen(verz, b.spelersPerTeam);
+  const zonder = verz.filter(function(i) {
+    return !(i.wedstrijd.opstelling || []).length;
+  }).length;
+  const streep = function(r, waarde) {
+    return r.wedstrijden === 0 && r.zonderOpstelling > 0 ? "\u2014" : waarde;
+  };
+  if (koppelOpen) return /* @__PURE__ */ React.createElement(KoppelScherm, { onSluiten: function() {
+    setKoppelOpen(false);
+  } });
+  return /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { className: "kaart" }, /* @__PURE__ */ React.createElement("div", { className: "kaart-titel" }, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-chart-simple" }), " Statistieken (gefilterd)"), /* @__PURE__ */ React.createElement("p", { style: { fontSize: 12, color: "var(--grijs-donker)", margin: "0 0 10px" } }, verz.length + (verz.length === 1 ? " wedstrijd" : " wedstrijden"), zonder > 0 && " \xB7 " + zonder + " zonder opstelling (speelminuten onbekend)", filter.bereik === "seizoenen" || filter.alleTeams ? " \xB7 dit is een statistiekoverzicht, geen competitiestand" : ""), /* @__PURE__ */ React.createElement("div", { className: "stat-raster-3" }, /* @__PURE__ */ React.createElement("div", { className: "stat-pill" }, /* @__PURE__ */ React.createElement("div", { className: "stat-pill-getal" }, t2.winst, "-", t2.gelijk, "-", t2.verlies), /* @__PURE__ */ React.createElement("div", { className: "stat-pill-label" }, "W-G-V")), /* @__PURE__ */ React.createElement("div", { className: "stat-pill" }, /* @__PURE__ */ React.createElement("div", { className: "stat-pill-getal" }, t2.voor, "\u2013", t2.tegen), /* @__PURE__ */ React.createElement("div", { className: "stat-pill-label" }, "Doelpunten")), /* @__PURE__ */ React.createElement("div", { className: "stat-pill" }, /* @__PURE__ */ React.createElement("div", { className: "stat-pill-getal" }, t2.gespeeld), /* @__PURE__ */ React.createElement("div", { className: "stat-pill-label" }, "Gespeeld")))), /* @__PURE__ */ React.createElement("div", { className: "kaart" }, /* @__PURE__ */ React.createElement("div", { className: "kaart-titel", style: { display: "flex", justifyContent: "space-between", alignItems: "center" } }, /* @__PURE__ */ React.createElement("span", null, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-user" }), " Spelers"), filter.alleTeams && magRol("selectie") && /* @__PURE__ */ React.createElement("button", { className: "knop lijn klein", onClick: function() {
+    setKoppelOpen(true);
+  } }, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-link" }), " Spelers koppelen")), /* @__PURE__ */ React.createElement("div", { style: { overflowX: "auto" } }, /* @__PURE__ */ React.createElement("table", { className: "stand-tabel" }, /* @__PURE__ */ React.createElement("thead", null, /* @__PURE__ */ React.createElement("tr", null, /* @__PURE__ */ React.createElement("th", { className: "links" }, "Speler"), /* @__PURE__ */ React.createElement("th", null, "W"), /* @__PURE__ */ React.createElement("th", null, "Min"), /* @__PURE__ */ React.createElement("th", null, "G"), /* @__PURE__ */ React.createElement("th", null, "A"), /* @__PURE__ */ React.createElement("th", null, "Geel"), /* @__PURE__ */ React.createElement("th", null, "Rood"))), /* @__PURE__ */ React.createElement("tbody", null, rijen.map(function(r) {
+    return /* @__PURE__ */ React.createElement("tr", { key: r.persoonId }, /* @__PURE__ */ React.createElement("td", { className: "links naam" }, r.naam, filter.alleTeams && /* @__PURE__ */ React.createElement("div", { style: { fontSize: 10, color: "var(--grijs-donker)", fontWeight: 400 } }, r.teams.map(teamNaamOpId).join(" + "))), /* @__PURE__ */ React.createElement("td", null, streep(r, r.wedstrijden)), /* @__PURE__ */ React.createElement("td", null, r.minuten === 0 && r.minutenOnbekend > 0 ? "\u2014" : streep(r, r.minuten) + (r.minutenOnbekend > 0 ? "+" : "")), /* @__PURE__ */ React.createElement("td", null, r.doelpunten), /* @__PURE__ */ React.createElement("td", null, r.assists), /* @__PURE__ */ React.createElement("td", null, r.geel), /* @__PURE__ */ React.createElement("td", null, r.rood));
+  })))), /* @__PURE__ */ React.createElement("p", { style: { fontSize: 11, color: "var(--grijs-donker)", margin: "8px 0 0" } }, "W = wedstrijden, G = doelpunten, A = assists. \u2014 = niet bijgehouden. Een + achter de minuten: in sommige wedstrijden zijn de minuten onbekend.")));
+}
+function KoppelScherm({ onSluiten }) {
+  const [, ververs] = useState(0);
+  const alle = teams();
+  const perTeam = {};
+  alle.forEach(function(t2) {
+    var s = seizoenNu(t2.id);
+    perTeam[t2.id] = s ? leesVolle(t2.id, s, SPELERS_KEY) : [];
+  });
+  const [a, setA] = useState(""), [b, setB] = useState("");
+  function opties() {
+    var uit = [];
+    alle.forEach(function(t2) {
+      perTeam[t2.id].forEach(function(sp) {
+        uit.push({ waarde: t2.id + "|" + sp.id, label: sp.naam + " \u2014 " + t2.naam, teamId: t2.id, sp });
+      });
+    });
+    return uit;
+  }
+  function schrijf(teamIdX, spelerId, persoonId) {
+    seizoenenVan(teamIdX).forEach(function(s) {
+      var lijst2 = leesVolle(teamIdX, s, SPELERS_KEY);
+      if (!lijst2.some(function(x) {
+        return x.id === spelerId;
+      })) return;
+      schrijfVolle("tt_" + teamIdX + "__" + s + "::" + SPELERS_KEY, lijst2.map(function(x) {
+        if (x.id !== spelerId) return x;
+        var y = Object.assign({}, x);
+        if (persoonId) y.persoonId = persoonId;
+        else delete y.persoonId;
+        return y;
+      }));
+    });
+  }
+  function koppel(ta, ida, tb, idb) {
+    var spA = perTeam[ta].filter(function(x) {
+      return x.id === ida;
+    })[0];
+    var p = persoonVan(spA, ta);
+    schrijf(ta, ida, p);
+    schrijf(tb, idb, p);
+    meldGoed("Gekoppeld");
+    ververs(function(n) {
+      return n + 1;
+    });
+  }
+  var voorstellen = [];
+  for (var i = 0; i < alle.length; i++) for (var j = i + 1; j < alle.length; j++) {
+    koppelVoorstellen({ teamId: alle[i].id, spelers: perTeam[alle[i].id] }, { teamId: alle[j].id, spelers: perTeam[alle[j].id] }).forEach(function(v) {
+      var sa = perTeam[alle[i].id].filter(function(x) {
+        return x.id === v.a;
+      })[0];
+      var sb = perTeam[alle[j].id].filter(function(x) {
+        return x.id === v.b;
+      })[0];
+      if (persoonVan(sa, alle[i].id) !== persoonVan(sb, alle[j].id)) voorstellen.push({ ta: alle[i].id, sa, tb: alle[j].id, sb });
+    });
+  }
+  var gekoppeld = [];
+  var groepen = {};
+  alle.forEach(function(t2) {
+    perTeam[t2.id].forEach(function(sp) {
+      if (sp.persoonId) {
+        (groepen[sp.persoonId] = groepen[sp.persoonId] || []).push({ t: t2, sp });
+      }
+    });
+  });
+  Object.keys(groepen).forEach(function(k) {
+    if (groepen[k].length > 1) gekoppeld.push(groepen[k]);
+  });
+  var lijst = opties();
+  return /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { className: "kaart" }, /* @__PURE__ */ React.createElement("div", { className: "kaart-titel", style: { display: "flex", justifyContent: "space-between" } }, /* @__PURE__ */ React.createElement("span", null, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-link" }), " Spelers koppelen"), /* @__PURE__ */ React.createElement("button", { className: "knop lijn klein", onClick: onSluiten }, "Klaar")), /* @__PURE__ */ React.createElement("p", { style: { fontSize: 12, color: "var(--grijs-donker)", lineHeight: 1.5 } }, "Speelt iemand nu in een ander team van de club dan eerder? Koppel de twee, dan tellen zijn cijfers als \xE9\xE9n persoon. Er wordt nooit iets automatisch gekoppeld."), voorstellen.length > 0 && /* @__PURE__ */ React.createElement("div", { className: "formulier-label", style: { marginTop: 6 } }, "Voorstellen (zelfde naam en geboortedatum)"), voorstellen.map(function(v, n) {
+    return /* @__PURE__ */ React.createElement("div", { key: n, style: { display: "flex", gap: 8, alignItems: "center", padding: "6px 0", borderBottom: "1px solid var(--grijs)" } }, /* @__PURE__ */ React.createElement("span", { style: { flex: 1, fontSize: 13 } }, v.sa.naam, ": ", teamNaamOpId(v.ta), " + ", teamNaamOpId(v.tb)), /* @__PURE__ */ React.createElement("button", { className: "knop klein", onClick: function() {
+      koppel(v.ta, v.sa.id, v.tb, v.sb.id);
+    } }, "Koppelen"));
+  }), /* @__PURE__ */ React.createElement("div", { className: "formulier-label", style: { marginTop: 10 } }, "Met de hand"), /* @__PURE__ */ React.createElement("select", { className: "formulier-input", value: a, onChange: function(e) {
+    setA(e.target.value);
+  } }, /* @__PURE__ */ React.createElement("option", { value: "" }, "Speler\u2026"), lijst.map(function(o) {
+    return /* @__PURE__ */ React.createElement("option", { key: o.waarde, value: o.waarde }, o.label);
+  })), /* @__PURE__ */ React.createElement("select", { className: "formulier-input", value: b, onChange: function(e) {
+    setB(e.target.value);
+  } }, /* @__PURE__ */ React.createElement("option", { value: "" }, "is dezelfde persoon als\u2026"), lijst.filter(function(o) {
+    return a && o.teamId !== a.split("|")[0];
+  }).map(function(o) {
+    return /* @__PURE__ */ React.createElement("option", { key: o.waarde, value: o.waarde }, o.label);
+  })), /* @__PURE__ */ React.createElement("button", { className: "knop", disabled: !a || !b, onClick: function() {
+    var A = lijst.filter(function(o) {
+      return o.waarde === a;
+    })[0], B = lijst.filter(function(o) {
+      return o.waarde === b;
+    })[0];
+    koppel(A.teamId, A.sp.id, B.teamId, B.sp.id);
+    setA("");
+    setB("");
+  } }, "Koppelen")), gekoppeld.length > 0 && /* @__PURE__ */ React.createElement("div", { className: "kaart" }, /* @__PURE__ */ React.createElement("div", { className: "kaart-titel" }, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-people-arrows" }), " Gekoppeld"), gekoppeld.map(function(g, n) {
+    return /* @__PURE__ */ React.createElement("div", { key: n, style: { padding: "6px 0", borderBottom: "1px solid var(--grijs)", fontSize: 13 } }, g.map(function(x) {
+      return x.sp.naam + " (" + x.t.naam + ")";
+    }).join(" = "), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 6, flexWrap: "wrap", marginTop: 4 } }, g.map(function(x) {
+      return /* @__PURE__ */ React.createElement("button", { key: x.t.id, className: "knop lijn klein", onClick: function() {
+        schrijf(x.t.id, x.sp.id, null);
+        meldGoed("Ontkoppeld");
+        ververs(function(k) {
+          return k + 1;
+        });
+      } }, "Ontkoppel ", x.t.naam);
+    })));
+  })));
 }
 const NL_MAANDEN = { jan: 1, feb: 2, mrt: 3, maa: 3, apr: 4, mei: 5, jun: 6, jul: 7, aug: 8, sep: 9, okt: 10, nov: 11, dec: 12 };
 function padGetal(n) {

@@ -1019,3 +1019,81 @@ function maakSchema(c, faseId, vorm, koppelEigen) {
     nieuw: nieuw, alAanwezig: alAanwezig, ingepland: ingepland, rondes: rondeTeller
   };
 }
+
+/* ══ STATISTIEKEN OVER FASES, SEIZOENEN EN TEAMS (stap 7) ══════
+   Rekent over een verzameling uit verzamelWedstrijden(): dus nooit een
+   wedstrijd dubbel. Wat niet is bijgehouden is GEEN nul: een wedstrijd
+   zonder opstelling zegt niets over wie meedeed of hoe lang, en wordt
+   apart geteld (zonderOpstelling) zodat het scherm "—" kan tonen. */
+
+/**
+ * @param {{teamId:string, seizoen:string, wedstrijd:any}[]} verzameling
+ * @returns {{gespeeld:number, winst:number, gelijk:number, verlies:number, voor:number, tegen:number}}
+ */
+function teamTotalen(verzameling) {
+  var t = { gespeeld: 0, winst: 0, gelijk: 0, verlies: 0, voor: 0, tegen: 0 };
+  (verzameling || []).forEach(function (item) {
+    var s = item.wedstrijd.score || {};
+    var f = Number(s.fch) || 0, g = Number(s.teg) || 0;
+    t.gespeeld++; t.voor += f; t.tegen += g;
+    if (f > g) t.winst++; else if (f < g) t.verlies++; else t.gelijk++;
+  });
+  return t;
+}
+
+/**
+ * @param {{teamId:string, seizoen:string, wedstrijd:any}[]} verzameling
+ * @param {Object<string, any[]>} spelersPerTeam  per team-id de spelers (laatste seizoen eerst is het handigst voor de naam)
+ * @returns {any[]}  per persoon: naam, teams, wedstrijden, minuten, doelpunten, assists, geel, rood, zonderOpstelling
+ */
+function spelerTotalen(verzameling, spelersPerTeam) {
+  /** @type {Object<string, any>} */
+  var rij = {};
+  /** @param {string} teamId @param {any} spelerId */
+  function persoon(teamId, spelerId) {
+    var sp = ((spelersPerTeam || {})[teamId] || []).filter(function (x) { return x.id === spelerId; })[0];
+    var p = persoonVan(sp || { id: spelerId }, teamId);
+    if (!rij[p]) rij[p] = { persoonId: p, naam: sp ? sp.naam : "Onbekende speler", teams: [],
+      wedstrijden: 0, minuten: 0, minutenOnbekend: 0, doelpunten: 0, assists: 0, geel: 0, rood: 0, zonderOpstelling: 0, _gezien: {} };
+    if (rij[p].teams.indexOf(teamId) < 0) rij[p].teams.push(teamId);
+    return rij[p];
+  }
+  /* Iedereen die in een gekozen team zit, staat in de lijst — ook met
+     nul doelpunten. Wie in een wedstrijd zonder opstelling zat, weten
+     we niet: die wedstrijd telt voor iedereen van dat team als
+     "zonder opstelling". */
+  /** @type {Object<string, boolean>} */
+  var teamsInVerzameling = {};
+  (verzameling || []).forEach(function (i) { teamsInVerzameling[i.teamId] = true; });
+  Object.keys(teamsInVerzameling).forEach(function (tid) {
+    ((spelersPerTeam || {})[tid] || []).forEach(function (sp) { persoon(tid, sp.id); });
+  });
+  (verzameling || []).forEach(function (item) {
+    var w = item.wedstrijd, tid = item.teamId;
+    var heeftOpstelling = (w.opstelling || []).length > 0;
+    if (heeftOpstelling) {
+      (w.opstelling || []).forEach(function (/** @type {any} */ o) {
+        /* Oude of geïmporteerde gegevens kunnen een kale lijst speler-id's
+           zijn: wel meegedaan, maar hoe lang is onbekend — niet 0. */
+        if (typeof o === "string" || typeof o === "number") { var k = persoon(tid, o); k.wedstrijden++; k.minutenOnbekend++; return; }
+        if ((o.spelStatus || "basis") === "afwezig") return;
+        var r = persoon(tid, o.spelerId);
+        r.wedstrijden++;
+        if (o.minuten === undefined || o.minuten === null || o.minuten === "") r.minutenOnbekend++;
+        else r.minuten += Number(o.minuten) || 0;
+      });
+    } else {
+      ((spelersPerTeam || {})[tid] || []).forEach(function (sp) { persoon(tid, sp.id).zonderOpstelling++; });
+    }
+    (w.scorers || []).forEach(function (/** @type {any} */ s) {
+      if (s.eigenTeam && s.spelerId !== null && s.spelerId !== undefined) persoon(tid, s.spelerId).doelpunten++;
+      if (s.eigenTeam && s.assist !== null && s.assist !== undefined && s.assist !== "") persoon(tid, s.assist).assists++;
+    });
+    (w.kaarten || []).forEach(function (/** @type {any} */ k) {
+      if (k.spelerId === null || k.spelerId === undefined) return;
+      if (k.type === "geel") persoon(tid, k.spelerId).geel++; else persoon(tid, k.spelerId).rood++;
+    });
+  });
+  return Object.keys(rij).map(function (k) { var r = rij[k]; delete r._gezien; return r; })
+    .sort(function (a, b) { return b.doelpunten - a.doelpunten || b.wedstrijden - a.wedstrijden || a.naam.localeCompare(b.naam, "nl"); });
+}
