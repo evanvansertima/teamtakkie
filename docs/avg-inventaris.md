@@ -263,6 +263,7 @@ Deze staan er niet bij als "opslag", maar ze zien wel gegevens.
 | **Cloudflare** | De app laadt React, Babel, Three.js, jsPDF en Font Awesome van `cdnjs.cloudflare.com`. Het IP-adres van elke bezoeker gaat daarheen. | `online/index.html` regel 72–76 en `online/sw.js` regel 20–30 |
 | **Google** | Het lettertype komt van `fonts.googleapis.com` en `fonts.gstatic.com`. Ook daar gaat het IP-adres van elke bezoeker heen. | `online/index.html` regel 13–15 |
 | **Apple (iCloud)** | De back-ups, zie 1.3. | Gemeten op deze Mac |
+| **Anthropic (Claude)** | Sinds release 4 (11 oktober 2026): de AI-trainer. Per vraag gaan leeftijdscategorie, niveau, aantal spelers en keepers, duur, ruimte, doel, materiaal en de getypte vraag naar Anthropic, via de edge function `ai-trainer` (nooit rechtstreeks vanuit de app). Geen namen van spelers, club of team, geen e-mail of gezondheidsgegevens; e-mailadressen en telefoonnummers worden uit de vraag gehaald. De trainer kan wel zelf een naam typen — de app vraagt dat niet te doen. In onze eigen database staat alleen het aantal vragen en tokens per club per maand (`public.ai_gebruik`), nooit de inhoud. | `src/domein/aitrainer.js` (veiligeContext), `supabase/functions/ai-trainer/index.ts` (schoonVraag), `server/24-ai-gebruik.sql` |
 | **Sportlink / Voetbal.nl** | Alleen als een gebruiker zelf een kalenderlink plakt. Dan gaat er een verzoek naar `data.sportlink.com` mét de persoonlijke token uit die link. Er gaan geen spelersgegevens naartoe; het is alleen ophalen. | `online/index.html` regel 18705–18709 |
 
 De service worker (`online/sw.js`) bewaart de bestanden van Cloudflare en Google
@@ -273,6 +274,12 @@ bezoek en elke versie-update leveren ze wel op.
 - Welke logs houdt Netlify bij, hoe lang, en is daar een verwerkersovereenkomst
   voor? Netlify Inc. is een Amerikaans bedrijf.
 - Hoe lang bewaart Supabase zijn logs op het gratis plan?
+- **Anthropic (AI-trainer):** verwerkersovereenkomst (DPA) controleren en
+  accepteren in de console van Anthropic, nagaan hoe lang Anthropic vragen
+  bewaart en of ze voor training worden gebruikt (bij de betaalde API volgens
+  Anthropic standaard niet — zelf nalezen in hun voorwaarden), en Anthropic als
+  verwerker noemen in het privacybeleid op de website. Anthropic is een
+  Amerikaans bedrijf: dat is een doorgifte buiten de EU, vraag voor de jurist.
 - Is het gebruik van Cloudflare en Google Fonts hier een probleem? Over Google
   Fonts en IP-adressen is in Europa het een en ander te doen geweest. Dit is
   precies een vraag voor de jurist, en het is technisch oplosbaar door die
