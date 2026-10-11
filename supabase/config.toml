@@ -56,3 +56,10 @@ verify_jwt = true
 #  verify_jwt blijft AAN: alleen een ingelogde eigenaar kan herroepen.
 [functions.abonnement-herroepen]
 verify_jwt = true
+
+# ── ai-trainer ───────────────────────────────────────────────
+#  verify_jwt blijft AAN. De functie vraagt met het token van de
+#  gebruiker "mag jij dit?" (Coach of Club, trainer of eigenaar), en
+#  zonder token kan iedereen op kosten van TEAMTAKKIE vragen stellen.
+[functions.ai-trainer]
+verify_jwt = true
