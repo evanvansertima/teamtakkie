@@ -223,6 +223,23 @@ ok("met 10 minuten rust: in orde", conflicten(tr).some((c) => c.soort === "rust"
 ok("buiten de dag (na 17:00) wordt gemeld", conflicten(plan(ts, ws[0].id, "d1", "v1", "16:50")).some((c) => c.soort === "tijd"), true);
 ok("een onbekend veld: weigert", String(veilig(() => plan(ts, ws[0].id, "d1", "vX", "09:00"))).indexOf("WERPT") === 0, true);
 
+groep("downloads: schema en CSV");
+{
+  let td = basis();
+  ["Één; twee", "B \"bee\""].forEach((n) => { td = voegDeelnemerToe(td, { categorieId: "c11", naam: n, email: "geheim@club.nl", telefoon: "0612345678" }).toernooi; });
+  td = Object.assign({}, td, { scheidsrechters: [{ id: "s1", naam: "Piet", email: "piet@mail.nl", telefoon: "0699999999" }] });
+  td = maakGroepsfase(td, "c11", { poules: [td.deelnemers.map((d) => d.id)], perPoule: 1, besteNummers: null });
+  const wid = td.wedstrijden[0].id;
+  td = planWedstrijd(td, wid, { dagId: "d1", veldId: "v3", start: "10:00" });
+  td = Object.assign({}, td, { wedstrijden: td.wedstrijden.map((w) => Object.assign({}, w, { scheidsId: "s1" })) });
+  const r = schemaRegels(td)[0];
+  ok("regel met dag, tijd, locatie, veld, scheidsrechter", [r.dag, r.tijd, r.locatie, r.veld, r.scheids], ["2027-04-17", "10:00", "Sportpark B", "Veld 3", "Piet"]);
+  const csv = schemaCsv(td);
+  ok("CSV met puntkomma's en een kopregel", csv.split("\n")[0], "Nr;Dag;Tijd;Locatie;Veld;Categorie;Ronde;Thuis;Uit;Scheidsrechter;Uitslag");
+  ok("een naam met een puntkomma of aanhalingsteken wordt netjes ingepakt", csv.indexOf('"Één; twee"') >= 0 && csv.indexOf('"B ""bee"""') >= 0, true);
+  ok("geen e-mailadres of telefoonnummer in de download", /geheim@|0612345678|piet@|0699999999/.test(csv), false);
+}
+
 groep("oude toernooien omzetten (v1)");
 {
   const oud = { id: 123, naam: "Zomertoernooi", datum: "2026-06-20", locatie: "Sportpark", aantalVelden: 2, speelduur: 12, pauze: 3, starttijd: "10:00",

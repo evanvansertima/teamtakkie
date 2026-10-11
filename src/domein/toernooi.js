@@ -619,3 +619,44 @@ function migreerToernooiV1(oud) {
   }
   return t;
 }
+
+/* ── Downloads ─────────────────────────────────────────────────
+   Het schema als regels, gesorteerd op dag, tijd en veld (ongeplande
+   wedstrijden achteraan). Alleen namen: contactgegevens van teams en
+   scheidsrechters komen NOOIT in een download (hoofdstuk 4e). */
+/** @param {any} t @returns {{nummer:number, dag:string, tijd:string, veld:string, locatie:string, categorie:string, ronde:string, thuis:string, uit:string, scheids:string, uitslag:string}[]} */
+function schemaRegels(t) {
+  /** @type {Object<string, any>} */ var veldInfo = {};
+  t.locaties.forEach(function (/** @type {any} */ l) { l.velden.forEach(function (/** @type {any} */ v) { veldInfo[v.id] = { veld: v.naam, locatie: l.naam }; }); });
+  /** @type {Object<string, any>} */ var dagInfo = {};
+  t.dagen.forEach(function (/** @type {any} */ d, /** @type {number} */ i) { dagInfo[d.id] = { datum: d.datum, i: i }; });
+  return t.wedstrijden.slice().sort(function (/** @type {any} */ a, /** @type {any} */ b) {
+    var da = a.dagId ? dagInfo[a.dagId].i : 99, db = b.dagId ? dagInfo[b.dagId].i : 99;
+    return da - db || minVan(a.start || "99:99") - minVan(b.start || "99:99") ||
+           String(a.veldId || "").localeCompare(String(b.veldId || "")) || a.nummer - b.nummer;
+  }).map(function (/** @type {any} */ w) {
+    var cat = categorieVan(t, w.categorieId);
+    var d = deelnemersVan(t, w);
+    /** @param {string|null} id @param {Bron} bron */
+    function naam(id, bron) { var x = id && t.deelnemers.filter(function (/** @type {any} */ y) { return y.id === id; })[0]; return x ? x.naam : bronTekst(t, bron); }
+    var s = w.scheidsId && t.scheidsrechters.filter(function (/** @type {any} */ y) { return y.id === w.scheidsId; })[0];
+    return { nummer: w.nummer, dag: w.dagId ? dagInfo[w.dagId].datum : "", tijd: w.start || "",
+             veld: w.veldId && veldInfo[w.veldId] ? veldInfo[w.veldId].veld : "",
+             locatie: w.veldId && veldInfo[w.veldId] ? veldInfo[w.veldId].locatie : "",
+             categorie: cat.naam, ronde: w.rondeNaam, thuis: naam(d.thuis, w.thuis), uit: naam(d.uit, w.uit),
+             scheids: s ? s.naam : "",
+             uitslag: w.uitslag ? w.uitslag.thuis + "-" + w.uitslag.uit + (w.strafschoppen ? " (" + w.strafschoppen.thuis + "-" + w.strafschoppen.uit + " n.s.)" : "") : "" };
+  });
+}
+/* CSV met puntkomma's (wat Excel in Nederland verwacht), velden met
+   een puntkomma of aanhalingsteken tussen aanhalingstekens. */
+/** @param {any} t @returns {string} */
+function schemaCsv(t) {
+  /** @type {any[]} */
+  var kop = ["Nr", "Dag", "Tijd", "Locatie", "Veld", "Categorie", "Ronde", "Thuis", "Uit", "Scheidsrechter", "Uitslag"];
+  /** @param {any} v */
+  function cel(v) { var s = String(v == null ? "" : v); return /[;"\n]/.test(s) ? "\"" + s.replace(/"/g, "\"\"") + "\"" : s; }
+  return /** @type {any[][]} */ ([kop]).concat(schemaRegels(t).map(function (r) {
+    return [r.nummer, r.dag, r.tijd, r.locatie, r.veld, r.categorie, r.ronde, r.thuis, r.uit, r.scheids, r.uitslag];
+  })).map(function (rij) { return rij.map(cel).join(";"); }).join("\n");
+}
