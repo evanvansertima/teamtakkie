@@ -534,6 +534,7 @@ function planWedstrijd(t, wId, plek) {
      team   — een team speelt twee wedstrijden tegelijk
      rust   — te weinig rust tussen twee wedstrijden van een team
      tijd   — buiten de begin- en eindtijd van de dag
+     scheids — dezelfde scheidsrechter bij twee wedstrijden tegelijk
      volgorde — een vervolgwedstrijd begint voordat zijn bron klaar is */
 /** @param {any} t @returns {{soort:string, wedstrijden:string[], tekst:string}[]} */
 function conflicten(t) {
@@ -561,6 +562,9 @@ function conflicten(t) {
     if (a.w.dagId !== b.w.dagId) continue;
     if (a.w.veldId === b.w.veldId && a.b < b.bezet && b.b < a.bezet) {
       uit.push({ soort: "veld", wedstrijden: [a.w.id, b.w.id], tekst: "Wedstrijd " + a.w.nummer + " en " + b.w.nummer + " staan tegelijk op hetzelfde veld." });
+    }
+    if (a.w.scheidsId && a.w.scheidsId === b.w.scheidsId && a.b < b.e && b.b < a.e) {
+      uit.push({ soort: "scheids", wedstrijden: [a.w.id, b.w.id], tekst: "Dezelfde scheidsrechter fluit wedstrijd " + a.w.nummer + " en " + b.w.nummer + " tegelijk." });
     }
     var samen = a.teams.filter(function (/** @type {string} */ id) { return b.teams.indexOf(id) >= 0; });
     if (!samen.length) continue;
@@ -659,4 +663,251 @@ function schemaCsv(t) {
   return /** @type {any[][]} */ ([kop]).concat(schemaRegels(t).map(function (r) {
     return [r.nummer, r.dag, r.tijd, r.locatie, r.veld, r.categorie, r.ronde, r.thuis, r.uit, r.scheids, r.uitslag];
   })).map(function (rij) { return rij.map(cel).join(";"); }).join("\n");
+}
+
+/* ── Planner (release 3, hoofdstuk 5f) ─────────────────────────
+   Gretig en voorspelbaar: dezelfde invoer geeft altijd hetzelfde
+   schema, en elke keuze is na te rekenen. Per wedstrijd het vroegste
+   tijdstip (eerste dag eerst, dan vroegste tijd, dan eerste veld) dat
+   aan álle harde regels voldoet:
+     - binnen de begin- en eindtijd van de dag;
+     - het veld is vrij (inclusief wisseltijd);
+     - geen evenement op dat veld of die locatie (prijsuitreiking …);
+     - beide teams spelen niet tegelijk en hebben genoeg rust;
+     - een vervolgwedstrijd ("winnaar wedstrijd 14", "1e poule A")
+       begint pas als alles waar hij op wacht klaar is, plus rust.
+   Waarom alleen dag.start en "eindtijden" als kandidaat-tijdstip: elke
+   regel hierboven zegt "niet vóór X" of "klaar vóór Y". Het vroegste
+   tijdstip dat aan alles voldoet is dus altijd de begintijd van de dag
+   of het moment waarop iets anders vrijkomt. Meer proberen levert
+   niets op, minder mist een plek. */
+
+/** @param {number} m @returns {string} */
+function tijdVanMin(m) { return String(Math.floor(m / 60)).padStart(2, "0") + ":" + String(m % 60).padStart(2, "0"); }
+
+/** @param {any} t */
+function planContext(t) {
+  /** @type {Object<string, any>} */ var cats = {};
+  t.categorieen.forEach(function (/** @type {any} */ c) { cats[c.id] = c; });
+  /** @type {Object<string, number>} */ var dagIndex = {};
+  t.dagen.forEach(function (/** @type {any} */ d, /** @type {number} */ i) { dagIndex[d.id] = i; });
+  /** @type {{id:string, locId:string}[]} */ var velden = [];
+  /** @type {Object<string, string>} */ var veldLoc = {};
+  t.locaties.forEach(function (/** @type {any} */ l) { l.velden.forEach(function (/** @type {any} */ v) { velden.push({ id: v.id, locId: l.id }); veldLoc[v.id] = l.id; }); });
+  /** @type {Object<string, any>} */ var opId = {};
+  t.wedstrijden.forEach(function (/** @type {any} */ w) { opId[w.id] = w; });
+  return { cats: cats, dagIndex: dagIndex, velden: velden, veldLoc: veldLoc, opId: opId };
+}
+
+/* Op welke wedstrijden wacht deze? Een plek uit de groepsfase hangt af
+   van ALLE wedstrijden van die groepsfase. */
+/** @param {any} t @param {any} w @returns {string[]} */
+function wachtOp(t, w) {
+  /** @type {string[]} */ var uit = [];
+  [w.thuis, w.uit].forEach(function (/** @type {Bron} */ b) {
+    if (!b) return;
+    if (b.winnaarVan) uit.push(b.winnaarVan);
+    if (b.verliezerVan) uit.push(b.verliezerVan);
+    var st = (b.poulePlek && b.poulePlek.stadiumId) || (b.besteNummer && b.besteNummer.stadiumId);
+    if (st) t.wedstrijden.forEach(function (/** @type {any} */ x) { if (x.stadiumId === st && uit.indexOf(x.id) < 0) uit.push(x.id); });
+  });
+  return uit;
+}
+
+/** @param {any} t @param {any} ctx @param {any} w @param {string} dagId @param {string} veldId @param {number} b */
+function planRegel(t, ctx, w, dagId, veldId, b) {
+  var c = ctx.cats[w.categorieId] || {};
+  var d = deelnemersVan(t, w);
+  var duur = c.wedstrijdduur || 0;
+  return { id: w.id, nummer: w.nummer, dagId: dagId, veldId: veldId, b: b, e: b + duur, bezet: b + duur + (c.wisseltijd || 0),
+           rust: c.minRust || 0, teams: /** @type {string[]} */ ([d.thuis, d.uit].filter(Boolean)), scheidsId: w.scheidsId || null };
+}
+
+/* Wat er mis is met wedstrijd w op (dag, veld, start). Leeg = past.
+   o.geenRust en o.eindPlus zijn voor het voorstel bij een wedstrijd die
+   nergens past: "zou hij passen met minder rust / een langere dag?" */
+/**
+ * @param {any} t @param {any} ctx @param {any[]} geplaatst @param {any} w
+ * @param {string} dagId @param {string} veldId @param {number} s
+ * @param {{geenRust?:boolean, eindPlus?:number}} [o]
+ * @returns {string[]}
+ */
+function slotProblemen(t, ctx, geplaatst, w, dagId, veldId, s, o) {
+  o = o || {};
+  /** @type {string[]} */ var uit = [];
+  var dag = t.dagen.filter(function (/** @type {any} */ x) { return x.id === dagId; })[0];
+  var me = planRegel(t, ctx, w, dagId, veldId, s);
+  var rust = o.geenRust ? 0 : me.rust;
+  if (s < minVan(dag.start) || me.e > minVan(dag.eind) + (o.eindPlus || 0)) uit.push("buiten " + dag.start + "–" + dag.eind);
+  (t.evenementen || []).forEach(function (/** @type {any} */ ev) {
+    if (ev.dagId !== dagId || (ev.locatieId && ev.locatieId !== ctx.veldLoc[veldId])) return;
+    var eb = minVan(ev.start), ee = eb + (Number(ev.duur) || 0);
+    if (s < ee && eb < me.e) uit.push(ev.naam || "evenement");
+  });
+  geplaatst.forEach(function (x) {
+    if (x.id === w.id || x.dagId !== dagId) return;
+    if (x.veldId === veldId && s < x.bezet && x.b < me.bezet) uit.push("veld bezet door wedstrijd " + x.nummer);
+    var samen = me.teams.filter(function (/** @type {string} */ id) { return x.teams.indexOf(id) >= 0; });
+    if (!samen.length) return;
+    var r = o.geenRust ? 0 : Math.max(rust, x.rust);
+    if (s < x.e && x.b < me.e) uit.push("team speelt al wedstrijd " + x.nummer);
+    else if ((s >= x.e && s - x.e < r) || (x.b >= me.e && x.b - me.e < r)) uit.push("te weinig rust rond wedstrijd " + x.nummer);
+  });
+  wachtOp(t, w).forEach(function (id) {
+    var x = geplaatst.filter(function (y) { return y.id === id; })[0];
+    var nr = ctx.opId[id] ? ctx.opId[id].nummer : "?";
+    if (!x) { uit.push("wacht op wedstrijd " + nr + " (nog niet ingepland)"); return; }
+    var dx = ctx.dagIndex[x.dagId], dy = ctx.dagIndex[dagId];
+    if (dx > dy || (dx === dy && s < x.e + rust)) uit.push("wedstrijd " + nr + " is dan nog niet klaar");
+  });
+  return uit;
+}
+
+/* Het vroegste passende tijdstip voor w, of null. */
+/** @param {any} t @param {any} ctx @param {any[]} geplaatst @param {any} w @param {any} [o] */
+function vroegsteSlot(t, ctx, geplaatst, w, o) {
+  var c = ctx.cats[w.categorieId] || {};
+  var me0 = planRegel(t, ctx, w, "", "", 0);
+  var wacht = wachtOp(t, w);
+  for (var di = 0; di < t.dagen.length; di++) {
+    var dag = t.dagen[di];
+    var vandaag = geplaatst.filter(function (x) { return x.dagId === dag.id; });
+    /** @type {any} */ var beste = null;
+    for (var vi = 0; vi < ctx.velden.length; vi++) {
+      var veld = ctx.velden[vi];
+      var kand = [minVan(dag.start)];
+      vandaag.forEach(function (x) {
+        if (x.veldId === veld.id) kand.push(x.bezet);
+        if (x.teams.some(function (/** @type {string} */ id) { return me0.teams.indexOf(id) >= 0; })) kand.push(x.e + (o && o.geenRust ? 0 : Math.max(c.minRust || 0, x.rust)));
+        if (wacht.indexOf(x.id) >= 0) kand.push(x.e + (o && o.geenRust ? 0 : (c.minRust || 0)));
+      });
+      (t.evenementen || []).forEach(function (/** @type {any} */ ev) { if (ev.dagId === dag.id) kand.push(minVan(ev.start) + (Number(ev.duur) || 0)); });
+      kand = kand.filter(function (k, i) { return kand.indexOf(k) === i; }).sort(function (a, b) { return a - b; });
+      for (var k = 0; k < kand.length; k++) {
+        if (beste && kand[k] >= beste.s) break;
+        if (!slotProblemen(t, ctx, geplaatst, w, dag.id, veld.id, kand[k], o).length) { beste = { dagId: dag.id, veldId: veld.id, s: kand[k] }; break; }
+      }
+    }
+    if (beste) return beste;
+  }
+  return null;
+}
+
+/* Het hele schema automatisch. Wat blijft staan: vastgezette en al
+   gespeelde wedstrijden, en met alleenOngepland ook alles wat al een
+   plek heeft. De rest wordt (opnieuw) ingepland.
+   Geeft per wedstrijd die nergens past een reden en een voorstel. */
+/**
+ * @param {any} t
+ * @param {{alleenOngepland?:boolean}} [o]
+ * @returns {{toernooi:any, gepland:number, ongepland:{wedstrijdId:string, nummer:number, reden:string, voorstel:string}[]}}
+ */
+function planAutomatisch(t, o) {
+  o = o || {};
+  var ctx = planContext(t);
+  /** @type {any[]} */ var geplaatst = [];
+  /** @type {Object<string, boolean>} */ var blijft = {};
+  t.wedstrijden.forEach(function (/** @type {any} */ w) {
+    if (w.dagId && w.veldId && w.start && ctx.dagIndex[w.dagId] !== undefined && ctx.veldLoc[w.veldId] &&
+        (w.vastgezet || w.status === "gespeeld" || o.alleenOngepland)) {
+      blijft[w.id] = true;
+      geplaatst.push(planRegel(t, ctx, w, w.dagId, w.veldId, minVan(w.start)));
+    }
+  });
+  /** @type {Object<string, number>} */ var soortVolgorde = {};
+  t.stadia.forEach(function (/** @type {any} */ s) { soortVolgorde[s.id] = s.soort === "poule" ? 0 : 1; });
+  var teDoen = t.wedstrijden.filter(function (/** @type {any} */ w) { return !blijft[w.id]; })
+    .sort(function (/** @type {any} */ a, /** @type {any} */ b) { return (soortVolgorde[a.stadiumId] || 0) - (soortVolgorde[b.stadiumId] || 0) || a.nummer - b.nummer; });
+  /** @type {Object<string, any>} */ var plek = {};
+  /** @type {any[]} */ var ongepland = [];
+  teDoen.forEach(function (/** @type {any} */ w) {
+    var s = vroegsteSlot(t, ctx, geplaatst, w);
+    if (s) { plek[w.id] = s; geplaatst.push(planRegel(t, ctx, w, s.dagId, s.veldId, s.s)); return; }
+    var cat = ctx.cats[w.categorieId];
+    var wacht = wachtOp(t, w).filter(function (id) { return !geplaatst.some(function (x) { return x.id === id; }); });
+    var reden, voorstel;
+    if (wacht.length) {
+      reden = "Wacht op wedstrijd " + ctx.opId[wacht[0]].nummer + ", die zelf nergens past.";
+      voorstel = "Los eerst die wedstrijd op.";
+    } else {
+      var namen = planRegel(t, ctx, w, "", "", 0).teams.map(function (/** @type {string} */ id) {
+        var d = t.deelnemers.filter(function (/** @type {any} */ x) { return x.id === id; })[0]; return d ? d.naam : "";
+      }).filter(Boolean);
+      reden = "Geen veld vrij binnen de speeltijden met " + (cat.minRust || 0) + " min rust" + (namen.length ? " voor " + namen.join(" en ") : "") + ".";
+      if (cat.minRust && vroegsteSlot(t, ctx, geplaatst, w, { geenRust: true })) voorstel = "Verlaag de minimale rust van " + cat.naam + " (nu " + cat.minRust + " min).";
+      else if (vroegsteSlot(t, ctx, geplaatst, w, { eindPlus: 60 })) voorstel = "Laat een dag een uur later eindigen.";
+      else voorstel = "Voeg een veld of een dag toe, of maak de wedstrijden van " + cat.naam + " korter.";
+    }
+    ongepland.push({ wedstrijdId: w.id, nummer: w.nummer, reden: reden, voorstel: voorstel });
+  });
+  var nt = Object.assign({}, t, { wedstrijden: t.wedstrijden.map(function (/** @type {any} */ w) {
+    if (blijft[w.id]) return w;
+    var p = plek[w.id];
+    return Object.assign({}, w, p ? { dagId: p.dagId, veldId: p.veldId, start: tijdVanMin(p.s) } : { dagId: null, veldId: null, start: null });
+  }) });
+  return { toernooi: nt, gepland: Object.keys(plek).length, ongepland: ongepland };
+}
+
+/* Verplaatsen zonder slepen: alle tijdvakken voor één wedstrijd, elk
+   met wat er mis zou zijn (leeg = vrij). Tijdvakken in stappen van
+   wedstrijdduur + wisseltijd vanaf de begintijd van de dag. */
+/** @param {any} t @param {string} wId @returns {{dagId:string, veldId:string, start:string, problemen:string[]}[]} */
+function vrijeSlots(t, wId) {
+  var ctx = planContext(t);
+  var w = wedstrijdVan(t, wId);
+  var c = ctx.cats[w.categorieId];
+  var stap = Math.max(5, (c.wedstrijdduur || 0) + (c.wisseltijd || 0));
+  var geplaatst = t.wedstrijden.filter(function (/** @type {any} */ x) { return x.id !== wId && x.dagId && x.veldId && x.start; })
+    .map(function (/** @type {any} */ x) { return planRegel(t, ctx, x, x.dagId, x.veldId, minVan(x.start)); });
+  /** @type {any[]} */ var uit = [];
+  t.dagen.forEach(function (/** @type {any} */ dag) {
+    for (var s = minVan(dag.start); s + (c.wedstrijdduur || 0) <= minVan(dag.eind); s += stap) {
+      ctx.velden.forEach(function (v) {
+        uit.push({ dagId: dag.id, veldId: v.id, start: tijdVanMin(s), problemen: slotProblemen(t, ctx, geplaatst, w, dag.id, v.id, s) });
+      });
+    }
+  });
+  return uit;
+}
+
+/* Scheidsrechters indelen. Per geplande wedstrijd zonder scheidsrechter
+   (op volgorde van dag en tijd): wie beschikbaar is, niet tegelijk een
+   andere wedstrijd fluit en niet is uitgesloten voor de categorie.
+   Voorkeur voor de categorie gaat voor; daarna wie het minst fluit.
+   Met opnieuw: true eerst alle niet-vastgezette toewijzingen weg. */
+/** @param {any} t @param {{opnieuw?:boolean}} [o] @returns {{toernooi:any, toegewezen:number, zonder:string[]}} */
+function deelScheidsrechtersIn(t, o) {
+  o = o || {};
+  var ctx = planContext(t);
+  var ws = t.wedstrijden.map(function (/** @type {any} */ w) {
+    return o.opnieuw && !w.vastgezet && w.status !== "gespeeld" ? Object.assign({}, w, { scheidsId: null }) : w;
+  });
+  /** @type {Object<string, any[]>} */ var bezet = {};
+  t.scheidsrechters.forEach(function (/** @type {any} */ s) { bezet[s.id] = []; });
+  /** @param {any} w */
+  function blok(w) { var c = ctx.cats[w.categorieId] || {}; var b = minVan(w.start); return { dagId: w.dagId, b: b, e: b + (c.wedstrijdduur || 0) }; }
+  ws.forEach(function (/** @type {any} */ w) { if (w.scheidsId && w.start && bezet[w.scheidsId]) bezet[w.scheidsId].push(blok(w)); });
+  var volgorde = ws.filter(function (/** @type {any} */ w) { return w.dagId && w.start && !w.scheidsId; })
+    .sort(function (/** @type {any} */ a, /** @type {any} */ b) { return ctx.dagIndex[a.dagId] - ctx.dagIndex[b.dagId] || minVan(a.start) - minVan(b.start) || a.nummer - b.nummer; });
+  /** @type {Object<string, string>} */ var nieuw = {};
+  /** @type {string[]} */ var zonder = [];
+  volgorde.forEach(function (/** @type {any} */ w) {
+    var x = blok(w);
+    var kandidaten = t.scheidsrechters.filter(function (/** @type {any} */ s) {
+      if ((s.nietCategorieen || []).indexOf(w.categorieId) >= 0) return false;
+      var besch = s.beschikbaar || [];
+      if (besch.length && !besch.some(function (/** @type {any} */ v) { return v.dagId === x.dagId && minVan(v.van) <= x.b && x.e <= minVan(v.tot); })) return false;
+      return !bezet[s.id].some(function (y) { return y.dagId === x.dagId && x.b < y.e && y.b < x.e; });
+    }).sort(function (/** @type {any} */ a, /** @type {any} */ b) {
+      var va = (a.voorkeurCategorieen || []).indexOf(w.categorieId) >= 0 ? 0 : 1, vb = (b.voorkeurCategorieen || []).indexOf(w.categorieId) >= 0 ? 0 : 1;
+      return va - vb || bezet[a.id].length - bezet[b.id].length;
+    });
+    if (!kandidaten.length) { zonder.push(w.id); return; }
+    nieuw[w.id] = kandidaten[0].id;
+    bezet[kandidaten[0].id].push(x);
+  });
+  return {
+    toernooi: Object.assign({}, t, { wedstrijden: ws.map(function (/** @type {any} */ w) { return nieuw[w.id] ? Object.assign({}, w, { scheidsId: nieuw[w.id] }) : w; }) }),
+    toegewezen: Object.keys(nieuw).length, zonder: zonder
+  };
 }

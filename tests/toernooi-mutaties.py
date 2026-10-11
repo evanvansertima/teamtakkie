@@ -18,7 +18,7 @@ import os, shutil, subprocess, sys, tempfile
 HIER = os.path.dirname(os.path.abspath(__file__))
 WORTEL = os.path.dirname(HIER)
 BRON = os.path.join(WORTEL, "src", "domein", "toernooi.js")
-TESTS = [os.path.join(HIER, "toernooi.test.js")]
+TESTS = [os.path.join(HIER, "toernooi.test.js"), os.path.join(HIER, "toernooi-planner.test.js")]
 
 MUTATIES = [
     ("K1  een gelijke knock-out zonder strafschoppen mag",
@@ -60,6 +60,46 @@ MUTATIES = [
     ("K13 tijd buiten de dag niet gemeld",
      "    if (dag && (x.b < minVan(dag.start) || x.e > minVan(dag.eind))) {",
      "    if (false) {"),
+    # ── Planner en scheidsrechters (release 3) ──
+    ("P1  planner negeert het bezette veld",
+     "    if (x.veldId === veldId && s < x.bezet && x.b < me.bezet) uit.push(",
+     "    if (false) uit.push("),
+    ("P2  planner negeert de rust",
+     "    else if ((s >= x.e && s - x.e < r) || (x.b >= me.e && x.b - me.e < r)) uit.push(",
+     "    else if (false) uit.push("),
+    ("P3  vervolgwedstrijd hoeft niet te wachten",
+     "    if (dx > dy || (dx === dy && s < x.e + rust)) uit.push(",
+     "    if (false) uit.push("),
+    ("P4  vastgezette wedstrijd wordt verplaatst",
+     "        (w.vastgezet || w.status === \"gespeeld\" || o.alleenOngepland)) {",
+     "        (w.status === \"gespeeld\" || o.alleenOngepland)) {"),
+    ("P5  evenement blokkeert niets",
+     "    if (s < ee && eb < me.e) uit.push(ev.naam || \"evenement\");",
+     ""),
+    ("P6  planner kijkt niet naar het einde van de dag",
+     "  if (s < minVan(dag.start) || me.e > minVan(dag.eind) + (o.eindPlus || 0)) uit.push(",
+     "  if (s < minVan(dag.start)) uit.push("),
+    ("P7  groepsfase-plek wacht niet op de groepsfase",
+     "    if (st) t.wedstrijden.forEach(",
+     "    if (false) t.wedstrijden.forEach("),
+    ("P8  scheidsrechter tegelijk bij twee wedstrijden",
+     "      return !bezet[s.id].some(function (y) { return y.dagId === x.dagId && x.b < y.e && y.b < x.e; });",
+     "      return true;"),
+    ("P9  scheidsrechter buiten beschikbaarheid",
+     "      if (besch.length && !besch.some(",
+     "      if (false && !besch.some("),
+    ("P10 scheidsrechter niet eerlijk verdeeld",
+     "      return va - vb || bezet[a.id].length - bezet[b.id].length;",
+     "      return va - vb;"),
+    ("P11 dubbel ingedeelde scheidsrechter niet gemeld",
+     "    if (a.w.scheidsId && a.w.scheidsId === b.w.scheidsId && a.b < b.e && b.b < a.e) {",
+     "    if (false) {"),
+    ("P12 uitgesloten categorie toch toegewezen",
+     "      if ((s.nietCategorieen || []).indexOf(w.categorieId) >= 0) return false;",
+     ""),
+    ("P13 kandidaat-tijden missen de rust na een eigen wedstrijd",
+     "        if (x.teams.some(function (/** @type {string} */ id) { return me0.teams.indexOf(id) >= 0; })) kand.push(",
+     "        if (false) kand.push("),
 ]
 
 
