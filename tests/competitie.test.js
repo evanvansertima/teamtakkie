@@ -360,6 +360,31 @@ groep("statistieken: niets dubbel (7, 20)");
      doelpuntenPerPersoon(verz, spelers), { daan: 4, sem: 1 });
 }
 
+/* ══ bewerkingen voor het scherm (stap 5) ══ */
+groep("teams toevoegen en verwijderen, fase afsluiten");
+{
+  const f1 = fase("f1", ["e", "a"], [cw("w1", "e", "a", null)]);
+  const f2 = fase("f2", ["e", "a"], []);
+  const c = competitie([team("e", "Eigen", true), team("a", "V.V. Bolsward", false)], [f1, f2], "f2");
+  const r1 = voegTeamToe(c, "f2", "SC Nieuw");
+  ok("nieuw team: in de competitie en in de fase", [r1.nieuw, r1.competitie.teams.length, r1.competitie.fases[1].deelnemers.indexOf(r1.teamId) >= 0], [true, 3, true]);
+  const r2 = voegTeamToe(c, "f2", "vv bolsward");
+  ok("zelfde club anders geschreven: geen tweede team", [r2.nieuw, r2.teamId, r2.competitie.teams.length], [false, "a", 2]);
+  ok("leeg: weigert", veilig(() => voegTeamToe(c, "f2", "  ")).toString().indexOf("WERPT") === 0, true);
+  ok("de invoer is niet aangepast", c.teams.length, 2);
+  ok("team zonder wedstrijden in fase 2 verwijderen mag",
+     verwijderDeelnemer(c, "f2", "a").fases[1].deelnemers, ["e"]);
+  ok("en fase 1 blijft zoals hij was", verwijderDeelnemer(c, "f2", "a").fases[0].deelnemers, ["e", "a"]);
+  ok("team met een wedstrijd in fase 1 verwijderen: weigert met uitleg",
+     String(veilig(() => verwijderDeelnemer(c, "f1", "a"))).indexOf("1 wedstrijd") >= 0, true);
+  ok("het eigen team kan er niet uit", String(veilig(() => verwijderDeelnemer(c, "f2", "e"))).indexOf("WERPT") === 0, true);
+  const dicht = zetFaseStatus(c, "f1", "afgesloten", { tijd: "t", door: "evan" });
+  ok("afsluiten zet de status en schrijft een logregel", [dicht.fases[0].status, dicht.logboek.length], ["afgesloten", 1]);
+  ok("nog eens afsluiten verandert niets", zetFaseStatus(dicht, "f1", "afgesloten", { tijd: "t2", door: "evan" }).logboek.length, 1);
+  const metEigen = competitie([team("e", "Eigen", true)], [fase("f1", ["e"], [cw("c1", "e", "x", null, { wedstrijdId: "w1" })])]);
+  ok("niet ingedeelde eigen wedstrijden", nietIngedeeld(metEigen, [{ id: "w1", soort: "competitie" }, { id: "w2" }, { id: "w3", soort: "oefen" }]).map((w) => w.id), ["w2"]);
+}
+
 console.log(`\n${goed} geslaagd, ${fout} gefaald`);
 if (fout) process.exitCode = 1;
 })();

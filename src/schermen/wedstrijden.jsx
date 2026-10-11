@@ -6309,22 +6309,35 @@ function WedstrijdenModule() {
     </>
   );
 
+  /* De tabbladen bovenaan. Competitie staat er voorlopig alleen met de
+     proefschakelaar (src/schermen/competitie.jsx). */
+  const hoofdTabs = (
+    <div className="tabs">
+      <button className={"tab-knop"+(hoofdTab==="wedstrijden"?" actief":"")} onClick={function(){setHoofdTab("wedstrijden");}}><i className="fa-solid fa-futbol"/> Wedstrijden</button>
+      {proefCompetitie() && (
+        <button className={"tab-knop"+(hoofdTab==="competitie"?" actief":"")} onClick={function(){setHoofdTab("competitie");}}><i className="fa-solid fa-ranking-star"/> Competitie</button>
+      )}
+      <button className={"tab-knop"+(hoofdTab==="toernooien"?" actief":"")} onClick={function(){setHoofdTab("toernooien");}}><i className="fa-solid fa-trophy"/> Toernooien</button>
+    </div>
+  );
+
   if (hoofdTab==="toernooien") return (
     <div>
-      <div className="tabs">
-        <button className="tab-knop" onClick={function(){setHoofdTab("wedstrijden");}}><i className="fa-solid fa-futbol"/> Wedstrijden</button>
-        <button className="tab-knop actief" onClick={function(){setHoofdTab("toernooien");}}><i className="fa-solid fa-trophy"/> Toernooien</button>
-      </div>
+      {hoofdTabs}
       <ToernooienTab />
+    </div>
+  );
+
+  if (hoofdTab==="competitie" && proefCompetitie()) return (
+    <div>
+      {hoofdTabs}
+      <CompetitieTab wedstrijden={wedstrijden} opWedstrijden={setWedstrijden} />
     </div>
   );
 
   return (
     <div>
-      <div className="tabs">
-        <button className="tab-knop actief" onClick={function(){setHoofdTab("wedstrijden");}}><i className="fa-solid fa-futbol"/> Wedstrijden</button>
-        <button className="tab-knop" onClick={function(){setHoofdTab("toernooien");}}><i className="fa-solid fa-trophy"/> Toernooien</button>
-      </div>
+      {hoofdTabs}
       <div className="pagina-header">
         <div className="pagina-header-tekst"><div className="eyebrow">Programma &amp; uitslagen</div><h2>Wedstrijden</h2><p>{wedstrijden.length} wedstrijd{wedstrijden.length!==1?"en":""} gepland</p></div>
         <div style={{display:"flex",gap:8,alignItems:"center"}}>

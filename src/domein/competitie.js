@@ -690,3 +690,90 @@ function ontkoppelPersoon(spelersPerTeam, x, maakId) {
   sp.persoonId = (maakId || nieuwPersoonId)();
   return kopie;
 }
+
+/* ══ BEWERKINGEN VOOR HET SCHERM (release 1, stap 5) ═══════════
+   Klein en puur, zodat het scherm geen eigen regels hoeft te kennen. */
+
+/* Een team aan een fase toevoegen. Bestaat het team al in de competitie
+   (ook onder een andere schrijfwijze), dan wordt dát team gebruikt: geen
+   dubbel. Geeft {competitie, teamId, nieuw} terug. */
+/**
+ * @param {Competitie} c
+ * @param {string} faseId
+ * @param {string} naam
+ * @returns {{competitie:Competitie, teamId:string, nieuw:boolean}}
+ */
+function voegTeamToe(c, faseId, naam) {
+  var schoon = String(naam || "").trim();
+  if (!normaliseerTeamNaam(schoon)) throw new Error("Vul een teamnaam in.");
+  zoekFase(c, faseId);
+  /** @type {Competitie} */
+  var kopie = JSON.parse(JSON.stringify(c));
+  var bestaand = zoekTeamOpNaam(kopie.teams, schoon);
+  var id = bestaand ? bestaand.id : teamIdUitNaam(schoon);
+  if (!bestaand) {
+    var basis = id, n = 2;
+    while (kopie.teams.some(function (t) { return t.id === id; })) id = basis + "-" + (n++);
+    kopie.teams.push({ id: id, naam: schoon, eigen: false, aliassen: [] });
+  }
+  var f = zoekFase(kopie, faseId);
+  if (f.deelnemers.indexOf(id) < 0) f.deelnemers.push(id);
+  return { competitie: kopie, teamId: id, nieuw: !bestaand };
+}
+
+/* Een team uit een fase halen. Heeft het in die fase wedstrijden, dan
+   niet: die zouden dan naar een team wijzen dat er niet meer bij hoort.
+   Andere fases merken er niets van. Het eigen team kan er niet uit. */
+/**
+ * @param {Competitie} c
+ * @param {string} faseId
+ * @param {string} teamId
+ * @returns {Competitie}
+ */
+function verwijderDeelnemer(c, faseId, teamId) {
+  var f = zoekFase(c, faseId);
+  var team = c.teams.filter(function (t) { return t.id === teamId; })[0];
+  if (team && team.eigen) throw new Error("Je eigen team hoort altijd bij de competitie.");
+  var aantal = f.wedstrijden.filter(function (w) { return w.thuisId === teamId || w.uitId === teamId; }).length;
+  if (aantal > 0) {
+    throw new Error("Dit team heeft " + aantal + (aantal === 1 ? " wedstrijd" : " wedstrijden") +
+                    " in " + f.naam + ". Haal die eerst weg.");
+  }
+  return Object.assign({}, c, { fases: c.fases.map(function (x) {
+    return x.id !== faseId ? x : Object.assign({}, x, { deelnemers: x.deelnemers.filter(function (d) { return d !== teamId; }) });
+  }) });
+}
+
+/* Fase afsluiten of heropenen, met een logregel. */
+/**
+ * @param {Competitie} c
+ * @param {string} faseId
+ * @param {"open"|"afgesloten"} status
+ * @param {{tijd:string, door:string}} wie
+ * @returns {Competitie}
+ */
+function zetFaseStatus(c, faseId, status, wie) {
+  var f = zoekFase(c, faseId);
+  if (status !== "open" && status !== "afgesloten") throw new Error("Onbekende status: " + status);
+  if (f.status === status) return c;
+  return Object.assign({}, c, {
+    fases: c.fases.map(function (x) { return x.id === faseId ? Object.assign({}, x, { status: status }) : x; }),
+    logboek: (c.logboek || []).concat([{ tijd: wie.tijd, door: wie.door, wat: "fase-status", faseId: faseId,
+      voor: { status: f.status }, na: { status: status } }])
+  });
+}
+
+/* Welke eigen competitiewedstrijden zitten nog in geen enkele fase? Die
+   wachten op het indeelscherm; tot die tijd is de stand onvolledig. */
+/**
+ * @param {Competitie} c
+ * @param {any[]} wedstrijden
+ * @returns {any[]}
+ */
+function nietIngedeeld(c, wedstrijden) {
+  return (wedstrijden || []).filter(function (w) {
+    return isEigenCompetitie(w) && !c.fases.some(function (f) {
+      return f.wedstrijden.some(function (x) { return x.wedstrijdId === w.id; });
+    });
+  });
+}

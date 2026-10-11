@@ -118,6 +118,14 @@ MUTATIES = [
      "  return speler && speler.persoonId ? speler.persoonId : (\"p-\" + teamId + \"-\" + (speler ? speler.id : \"\"));",
      "  return speler && speler.persoonId ? speler.persoonId : (\"p-\" + (speler ? speler.id : \"\"));"),
 
+    ("S1  een team met wedstrijden mag uit de fase",
+     "  if (aantal > 0) {\n    throw new Error(",
+     "  if (false) {\n    throw new Error("),
+
+    ("S2  dezelfde club anders geschreven wordt bij toevoegen een tweede team",
+     "  var bestaand = zoekTeamOpNaam(kopie.teams, schoon);\n  var id",
+     "  var bestaand = null;\n  var id"),
+
     ("M9  bevestigen past de competitie van vóór het bevestigen aan",
      "  var nieuw = JSON.parse(JSON.stringify(c));\n  var eigen",
      "  var nieuw = c;\n  var eigen"),
