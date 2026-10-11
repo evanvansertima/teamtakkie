@@ -64,7 +64,20 @@ SQL Editor van Supabase draaien (pas dan werkt publiceren).
   locaties telt niet mee in de planner. Gebruik bij twee locaties zo nodig
   een ruimere minimale rust.
 
-Volgende: release 4 (AI-trainer).
+Wens van Evan (11 oktober 2026), voor later: een mooiere lay-out voor de
+tv-stand van de presentatie. Voor nu is de huidige goed.
+
+**Release 4 (AI-trainer) vervalt — besluit van Evan, 11 oktober 2026.** Hij
+is gebouwd (commits 8115696, e904084, beaa1b1) en dezelfde dag weer
+teruggedraaid, vóórdat er een sleutel, tabel of functie live stond: Evan wil
+geen doorlopende kosten per vraag bij een externe AI-dienst. Misschien later
+een eigen model. Wie het terug wil halen: `git revert` van de terugdraai-
+commit geeft het complete werk terug (controle, edge function, database,
+chatscherm, tests). Hoofdstuk 5h en de besluiten 1 hierboven gelden tot dan
+niet.
+
+In plaats daarvan: een uitgebreidere oefeningenbibliotheek met tekeningen,
+leeftijden en thematrainingen (vraag van een tester, 11 oktober 2026).
 
 ## 0. Besluiten van Evan (9 oktober 2026) en wat ze veranderen
 
