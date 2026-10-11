@@ -450,8 +450,7 @@ function OefeningDetail({ oefening, onTerug, onBewerken, onVerwijderen }) {
     <div className="pagina-slide">
       <button className="back-knop" onClick={onTerug}><i className="fa-solid fa-arrow-left"/> Terug naar bibliotheek</button>
       <div style={{background:"linear-gradient(135deg,var(--blauw) 0%,#0063cc 100%)",color:"var(--op-kleur)",borderRadius:16,padding:"18px 16px",marginBottom:12}}>
-        <div style={{fontSize:11,opacity:.75,textTransform:"uppercase",letterSpacing:.7,fontWeight:700,fontFamily:"'Helvetica Neue',Arial"}}>
-          {oefening.type}{oefening.ai ? " · AI-trainer" : ""}{oefening.ongecontroleerd ? " · nakijken" : ""}</div>
+        <div style={{fontSize:11,opacity:.75,textTransform:"uppercase",letterSpacing:.7,fontWeight:700,fontFamily:"'Helvetica Neue',Arial"}}>{oefening.type}</div>
         <div style={{fontSize:21,fontWeight:700,fontFamily:"'Helvetica Neue',Arial",margin:"6px 0 6px",lineHeight:1.25}}>{oefening.naam}</div>
         <div style={{fontSize:12,opacity:.87,display:"flex",flexWrap:"wrap",gap:12}}>
           <span><i className="fa-solid fa-bullseye"/>{" "+oefening.doel}</span>
@@ -1409,16 +1408,8 @@ function TrainingenModule() {
   const [formulierOpen, setFormulier] = useState(false);
   const [bewerkT, setBewerkT] = useState(null);
   const [zoekT, setZoekT] = useState("");
-  const [aiOpen, setAiOpen] = useState(false);
 
   useEffect(() => { slaJson(TRAININGEN_KEY, trainingen); }, [trainingen]);
-
-  /* De AI-trainer (src/schermen/aitrainer.jsx) praat met de server, dus
-     alleen met een account. Trainingen zelf horen al bij Coach en Club. */
-  function openAi() {
-    if (!serverAan() || !ingelogd()) { meldFout("Log in om de AI-trainer te gebruiken."); return; }
-    setAiOpen(true);
-  }
 
   function slaOp(t) {
     const bestond = trainingen.some(x=>x.id===t.id);
@@ -1484,11 +1475,7 @@ function TrainingenModule() {
       {tabBalk()}
       <div className="pagina-header">
         <div className="pagina-header-tekst"><div className="eyebrow">Weekplanning</div><h2>Trainingen</h2><p>{trainingen.length} training{trainingen.length!==1?"en":""}</p></div>
-        <div style={{display:"flex",gap:8,alignItems:"center"}}>
-          <button className="knop lijn klein" style={{minHeight:44}} onClick={openAi} title="Vraag de AI-trainer om een training">
-            <i className="fa-solid fa-wand-magic-sparkles"/> AI-trainer</button>
-          <button className="knop-plus" onClick={()=>{setBewerkT(null);setFormulier(true);}}>+</button>
-        </div>
+        <button className="knop-plus" onClick={()=>{setBewerkT(null);setFormulier(true);}}>+</button>
       </div>
       {trainingen.length>0&&(
         <input className="zoekbalk" placeholder="Zoek op locatie, oefening of notitie…" value={zoekT}
@@ -1499,11 +1486,8 @@ function TrainingenModule() {
         <div className="leeg">
           <div className="leeg-icoon"><i className="fa-solid fa-person-running"/></div>
           <h3>Nog geen trainingen</h3>
-          <p>Voeg je eerste training toe en plan oefeningen, doelstellingen en aanwezigheid. Of laat de AI-trainer een voorstel doen.</p>
-          <div style={{display:"flex",gap:8,justifyContent:"center",flexWrap:"wrap"}}>
-            <button className="knop" onClick={()=>{setBewerkT(null);setFormulier(true);}}>+ Training toevoegen</button>
-            <button className="knop lijn" onClick={openAi}><i className="fa-solid fa-wand-magic-sparkles"/> Vraag de AI-trainer</button>
-          </div>
+          <p>Voeg je eerste training toe en plan oefeningen, doelstellingen en aanwezigheid.</p>
+          <button className="knop" onClick={()=>{setBewerkT(null);setFormulier(true);}}>+ Training toevoegen</button>
         </div>
       ):(
         <div>
@@ -1542,9 +1526,7 @@ function TrainingenModule() {
                     {t.tijd&&<span style={{marginRight:8}}>⏰ {t.tijd}</span>}
                     {t.duur&&<span style={{marginRight:8}}>⏱ {t.duur}{"'"}</span>}
                     {t.onderdelen&&t.onderdelen.length>0&&<span style={{marginRight:8}}><i className="fa-solid fa-list-ul"/> {t.onderdelen.length} onderdelen</span>}
-                    {totaal>0&&<span style={t.ai||t.ongecontroleerd?{marginRight:8}:undefined}>👥 {aanwezig}/{totaal}</span>}
-                    {t.ai&&<span style={{marginRight:8}} title="Opgesteld met de AI-trainer"><i className="fa-solid fa-wand-magic-sparkles"/> AI</span>}
-                    {t.ongecontroleerd&&<span style={{color:"var(--oranje)",fontWeight:700}} title="Opgeslagen ondanks meldingen van de controle">nakijken</span>}
+                    {totaal>0&&<span>👥 {aanwezig}/{totaal}</span>}
                   </div>
                 </div>
                 <div className="tr-badge">{t.onderdelen&&t.onderdelen.length>0?t.onderdelen[0].type:"Training"}</div>
@@ -1559,7 +1541,6 @@ function TrainingenModule() {
       )}
 
       {formulierOpen&&<TrainingFormulier training={bewerkT} onOpslaan={slaOp} onSluiten={()=>{setFormulier(false);setBewerkT(null);}} />}
-      {aiOpen&&<AiTrainer onSluiten={()=>setAiOpen(false)} onTrainingOpslaan={function(t){ slaOp(t); }} />}
     </div>
   );
 }

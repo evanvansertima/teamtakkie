@@ -64,29 +64,7 @@ SQL Editor van Supabase draaien (pas dan werkt publiceren).
   locaties telt niet mee in de planner. Gebruik bij twee locaties zo nodig
   een ruimere minimale rust.
 
-Wens van Evan (11 oktober 2026), voor later: een mooiere lay-out voor de
-tv-stand van de presentatie. Voor nu is de huidige goed.
-
-**Release 4 (AI-trainer) is gebouwd — 11 oktober 2026.** AI-dienst: Claude
-van Anthropic (besluit van Evan, 11 oktober 2026), model `claude-sonnet-5-5`
-(in te stellen met het geheim `AI_MODEL`).
-- `src/domein/aitrainer.js`: vast antwoordformaat (tool-schema met coördinaten
-  in procenten), controle (tijd incl. 2 min per overgang, spelers, keeper,
-  materiaal, veld, labels, belasting per leeftijd), omzetten naar oefening en
-  training, `veiligeContext`. `tools/bouw.js` schrijft een kopie naar
-  `supabase/functions/_gedeeld/aitrainer.js` en bewaakt dat die gelijk blijft.
-- `supabase/functions/ai-trainer`: trainer/eigenaar met Coach of Club, rem,
-  één correctieronde, logboek zonder inhoud; `server/24-ai-gebruik.sql` met
-  `ai_maandoverzicht()` voor Evan.
-- Chatpaneel "AI-trainer" in Trainingen: context aanpassen, kaarten met
-  tekening, Makkelijker / Moeilijker / Vervangen, In bibliotheek, Training
-  opslaan met datum; met meldingen alleen via "Toch opslaan" (markering
-  "nakijken").
-- Afwijking: afdrukken/PDF gaat via de bestaande trainings- en oefening-
-  schermen nadat het voorstel is opgeslagen (geen aparte PDF in de chat).
-- Nog te doen door Evan: Anthropic-account en sleutel, SQL draaien, functie
-  uitrollen, verwerkersovereenkomst en privacybeleid (zie docs/avg-inventaris.md
-  1.7). Daarna: proef met echte trainers.
+Volgende: release 4 (AI-trainer).
 
 ## 0. Besluiten van Evan (9 oktober 2026) en wat ze veranderen
 

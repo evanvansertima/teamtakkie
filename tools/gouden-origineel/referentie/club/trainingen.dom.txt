@@ -102,12 +102,8 @@
               "4"
               "training"
               "en"
-          <div style="display: flex; gap: 8px; align-items: center;">
-            <button class="knop lijn klein" style="min-height: 44px;" title="Vraag de AI-trainer om een training">
-              <i class="fa-solid fa-wand-magic-sparkles">
-              "AI-trainer"
-            <button class="knop-plus">
-              "+"
+          <button class="knop-plus">
+            "+"
         <input class="zoekbalk" placeholder="Zoek op locatie, oefening of notitie…" value="">
         <div>
           <div class="week-groep">
