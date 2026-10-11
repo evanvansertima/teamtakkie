@@ -3006,7 +3006,7 @@ window.addEventListener("error", function(e){
 });
 </script>
 <script>
-const APP_VERSIE = "eb79fc7";
+const APP_VERSIE = "9976e14";
 const TEAMS_KEY = "tt_teams_v1";
 const ACTIEF_KEY = "tt_actief_v1";
 const VOORKEUR_KEY = "tt_voorkeuren_v1";
@@ -6656,6 +6656,683 @@ function spelerTotalen(verzameling, spelersPerTeam) {
   }).sort(function(a, b) {
     return b.doelpunten - a.doelpunten || b.wedstrijden - a.wedstrijden || a.naam.localeCompare(b.naam, "nl");
   });
+}
+const SPELVORMEN = ["11x11", "9x9", "8x8", "6x6", "4x4", "2x2", "1x1"];
+const GESLACHTEN = ["jongens", "meisjes", "heren", "dames"];
+var _tVolg = 0;
+function tId(voor) {
+  _tVolg++;
+  return voor + Date.now().toString(36) + "-" + _tVolg;
+}
+function minVan(tijd) {
+  var d = String(tijd || "0:0").split(":");
+  return (Number(d[0]) || 0) * 60 + (Number(d[1]) || 0);
+}
+function nieuweCategorie() {
+  return {
+    id: tId("c"),
+    naam: "Categorie",
+    spelvorm: "11x11",
+    geslacht: "jongens",
+    leeftijd: "",
+    niveau: "",
+    wedstrijdduur: 20,
+    wisseltijd: 5,
+    minRust: 10,
+    regels: JSON.parse(JSON.stringify(STANDAARD_REGELS)),
+    knockoutGelijk: "strafschoppen",
+    bonus: { aan: false, regels: [] },
+    spelerStats: false
+  };
+}
+function maakToernooi(o) {
+  var c = nieuweCategorie();
+  return {
+    id: o.id || tId("t"),
+    naam: o.naam || "Toernooi",
+    versie: 2,
+    dagen: [{ id: tId("d"), datum: o.datum || "", start: "09:00", eind: "17:00" }],
+    locaties: [{ id: tId("l"), naam: "Locatie", adres: "", velden: [{ id: tId("v"), naam: "Veld 1" }] }],
+    categorieen: [c],
+    deelnemers: [],
+    scheidsrechters: [],
+    stadia: [],
+    wedstrijden: [],
+    evenementen: [],
+    presentatie: {},
+    logboek: []
+  };
+}
+function categorieVan(t2, id) {
+  var c = t2.categorieen.filter(function(x) {
+    return x.id === id;
+  })[0];
+  if (!c) throw new Error("Onbekende categorie");
+  return c;
+}
+function voegDeelnemerToe(t2, d) {
+  var naam = String(d.naam || "").trim();
+  if (!normaliseerTeamNaam(naam)) throw new Error("Vul een naam in.");
+  var cat = categorieVan(t2, d.categorieId);
+  var n = normaliseerTeamNaam(naam);
+  var bestaand = t2.deelnemers.filter(function(x) {
+    return x.categorieId === cat.id && normaliseerTeamNaam(x.naam) === n;
+  })[0];
+  if (bestaand) return { toernooi: t2, id: bestaand.id, nieuw: false };
+  var id = tId("dn");
+  var nieuw = {
+    id,
+    categorieId: cat.id,
+    soort: cat.spelvorm === "1x1" ? "speler" : "team",
+    naam,
+    logo: d.logo || "",
+    spelers: d.spelers || [],
+    coach: d.coach || "",
+    email: d.email || "",
+    telefoon: d.telefoon || "",
+    sterkte: d.sterkte || null
+  };
+  return { toernooi: Object.assign({}, t2, { deelnemers: t2.deelnemers.concat([nieuw]) }), id, nieuw: true };
+}
+function verdeelPoules(ids, aantal, sterkte, zaad) {
+  var n = Math.max(1, Math.floor(aantal || 1));
+  var geplaatst = ids.filter(function(id) {
+    return sterkte && sterkte[id];
+  }).sort(function(a, b) {
+    return sterkte[a] - sterkte[b];
+  });
+  var rest = ids.filter(function(id) {
+    return !(sterkte && sterkte[id]);
+  }).slice();
+  var s = (Math.floor(zaad) || 1) >>> 0;
+  function toeval() {
+    s = (s * 1103515245 + 12345) % 2147483648;
+    return s / 2147483648;
+  }
+  for (var i = rest.length - 1; i > 0; i--) {
+    var j = Math.floor(toeval() * (i + 1));
+    var x = rest[i];
+    rest[i] = rest[j];
+    rest[j] = x;
+  }
+  var volgorde = geplaatst.concat(rest);
+  var poules = [];
+  for (var p = 0; p < n; p++) poules.push([]);
+  volgorde.forEach(function(id, k) {
+    var ronde = Math.floor(k / n), pos = k % n;
+    poules[ronde % 2 === 0 ? pos : n - 1 - pos].push(id);
+  });
+  return poules.map(function(l, k) {
+    return { l, k };
+  }).sort(function(a, b) {
+    return b.l.length - a.l.length || a.k - b.k;
+  }).map(function(x2) {
+    return x2.l;
+  });
+}
+function volgendNummer(t2) {
+  return t2.wedstrijden.reduce(function(m, w) {
+    return Math.max(m, w.nummer || 0);
+  }, 0) + 1;
+}
+function zonderStadia(t2, catId, soort) {
+  var weg = t2.stadia.filter(function(s) {
+    return s.categorieId === catId && (!soort || s.soort === soort);
+  }).map(function(s) {
+    return s.id;
+  });
+  return Object.assign({}, t2, {
+    stadia: t2.stadia.filter(function(s) {
+      return weg.indexOf(s.id) < 0;
+    }),
+    wedstrijden: t2.wedstrijden.filter(function(w) {
+      return weg.indexOf(w.stadiumId) < 0;
+    })
+  });
+}
+function pouleNaam(k) {
+  return "Poule " + String.fromCharCode(65 + k);
+}
+function leegWedstrijd(catId, stadiumId) {
+  return {
+    id: tId("tw"),
+    nummer: 0,
+    categorieId: catId,
+    stadiumId,
+    pouleId: null,
+    rondeNaam: "",
+    thuis: {},
+    uit: {},
+    thuisVast: null,
+    uitVast: null,
+    dagId: null,
+    veldId: null,
+    start: null,
+    scheidsId: null,
+    vastgezet: false,
+    status: "gepland",
+    uitslag: null,
+    strafschoppen: null,
+    notitie: ""
+  };
+}
+function maakGroepsfase(t2, catId, o) {
+  categorieVan(t2, catId);
+  o.poules.forEach(function(p) {
+    p.forEach(function(id) {
+      var d = t2.deelnemers.filter(function(x) {
+        return x.id === id;
+      })[0];
+      if (!d || d.categorieId !== catId) throw new Error("Een deelnemer hoort niet bij deze categorie.");
+    });
+  });
+  var nt = zonderStadia(t2, catId, null);
+  var stadium = {
+    id: tId("s"),
+    categorieId: catId,
+    soort: "poule",
+    naam: "Groepsfase",
+    poules: o.poules.map(function(p, k) {
+      return { id: tId("p"), naam: pouleNaam(k), deelnemers: p.slice() };
+    }),
+    doorgaan: { perPoule: o.perPoule || 0, besteNummers: o.besteNummers || null }
+  };
+  var schemas = stadium.poules.map(function(p) {
+    return maakPouleSchema(p.deelnemers);
+  });
+  var rondes = schemas.reduce(function(m, s) {
+    return Math.max(m, s.length);
+  }, 0);
+  var nummer = volgendNummer(nt);
+  var ws = [];
+  for (var r = 0; r < rondes; r++) {
+    stadium.poules.forEach(function(p, k) {
+      (schemas[k][r] || []).forEach(function(paar) {
+        var w = leegWedstrijd(catId, stadium.id);
+        w.nummer = nummer++;
+        w.pouleId = p.id;
+        w.rondeNaam = "Groepsfase \xB7 ronde " + (r + 1);
+        w.thuis = { deelnemerId: paar[0] };
+        w.uit = { deelnemerId: paar[1] };
+        ws.push(w);
+      });
+    });
+  }
+  return Object.assign({}, nt, { stadia: nt.stadia.concat([stadium]), wedstrijden: nt.wedstrijden.concat(ws) });
+}
+function stadiumVan(t2, id) {
+  var s = t2.stadia.filter(function(x) {
+    return x.id === id;
+  })[0];
+  if (!s) throw new Error("Onbekend toernooistadium");
+  return s;
+}
+function pouleStand(t2, stadiumId, pouleId) {
+  var s = stadiumVan(t2, stadiumId);
+  var p = s.poules.filter(function(x) {
+    return x.id === pouleId;
+  })[0];
+  var cat = categorieVan(t2, s.categorieId);
+  var c = {
+    id: "x",
+    naam: "",
+    actieveFaseId: "f",
+    logboek: [],
+    teams: t2.deelnemers.filter(function(d) {
+      return d.categorieId === s.categorieId;
+    }).map(function(d) {
+      return { id: d.id, naam: d.naam, eigen: false, aliassen: [] };
+    }),
+    fases: [{
+      id: "f",
+      naam: "",
+      status: "open",
+      vorm: "handmatig",
+      regels: cat.regels,
+      deelnemers: p.deelnemers,
+      rondes: [],
+      wedstrijden: t2.wedstrijden.filter(function(w) {
+        return w.pouleId === pouleId;
+      }).map(function(w) {
+        return {
+          id: w.id,
+          thuisId: w.thuis.deelnemerId,
+          uitId: w.uit.deelnemerId,
+          status: w.status,
+          uitslag: w.uitslag
+        };
+      })
+    }]
+  };
+  return standVanFase(c, "f", []);
+}
+function groepsfaseCompleet(t2, stadiumId) {
+  var ws = t2.wedstrijden.filter(function(w) {
+    return w.stadiumId === stadiumId;
+  });
+  return ws.length > 0 && ws.every(function(w) {
+    return w.status === "gespeeld" && w.uitslag;
+  });
+}
+function besteNummers(t2, stadiumId) {
+  var s = stadiumVan(t2, stadiumId);
+  var b = s.doorgaan && s.doorgaan.besteNummers;
+  if (!b) return [];
+  var kandidaten = [];
+  s.poules.forEach(function(p) {
+    var rij = pouleStand(t2, stadiumId, p.id)[b.plek - 1];
+    if (rij) kandidaten.push(rij);
+  });
+  function gem(r, veld) {
+    return r.gespeeld ? r[veld] / r.gespeeld : 0;
+  }
+  return kandidaten.sort(function(x, y) {
+    return gem(y, "punten") - gem(x, "punten") || gem(y, "saldo") - gem(x, "saldo") || gem(y, "voor") - gem(x, "voor");
+  }).slice(0, b.aantal);
+}
+function doorgaanders(t2, stadiumId) {
+  var s = stadiumVan(t2, stadiumId);
+  var uit = [];
+  for (var plek = 1; plek <= (s.doorgaan.perPoule || 0); plek++) {
+    s.poules.forEach(function(p) {
+      var r = pouleStand(t2, stadiumId, p.id)[plek - 1];
+      if (r) uit.push(r.teamId);
+    });
+  }
+  return uit.concat(besteNummers(t2, stadiumId).map(function(r) {
+    return r.teamId;
+  }));
+}
+function plaatsingsVolgorde(grootte) {
+  var v = [1, 2];
+  while (v.length < grootte) {
+    var m = v.length * 2 + 1;
+    var n = [];
+    v.forEach(function(s) {
+      n.push(s, m - s);
+    });
+    v = n;
+  }
+  return v;
+}
+function rondeNaamVoor(m) {
+  return m === 2 ? "Finale" : m === 4 ? "Halve finale" : m === 8 ? "Kwartfinale" : m === 16 ? "Achtste finale" : "Ronde van " + m;
+}
+function maakKnockout(t2, catId, bronnen, o) {
+  categorieVan(t2, catId);
+  if (bronnen.length < 2) throw new Error("Een knock-out heeft minstens twee deelnemers nodig.");
+  var grootte = 2;
+  while (grootte < bronnen.length) grootte *= 2;
+  var stadium = {
+    id: tId("s"),
+    categorieId: catId,
+    soort: "knockout",
+    naam: "Knock-out",
+    bracket: { grootte, troostfinale: !!(o && o.troostfinale), vrijstellingen: (
+      /** @type {Bron[]} */
+      []
+    ) }
+  };
+  var plekken = plaatsingsVolgorde(grootte).map(function(s) {
+    return s <= bronnen.length ? bronnen[s - 1] : null;
+  });
+  var nummer = volgendNummer(t2), halve = (
+    /** @type {string[]} */
+    []
+  );
+  var ws = [];
+  var m = grootte;
+  while (plekken.length > 1) {
+    var naam = rondeNaamVoor(m);
+    var volgende = [];
+    if (m === 2 && stadium.bracket.troostfinale && halve.length === 2) {
+      var tf = leegWedstrijd(catId, stadium.id);
+      tf.nummer = nummer++;
+      tf.rondeNaam = "Troostfinale";
+      tf.thuis = { verliezerVan: halve[0] };
+      tf.uit = { verliezerVan: halve[1] };
+      ws.push(tf);
+    }
+    for (var i = 0; i < plekken.length; i += 2) {
+      var a = plekken[i], b = plekken[i + 1];
+      if (!a && !b) {
+        volgende.push(null);
+        continue;
+      }
+      if (!a || !b) {
+        var vrij = (
+          /** @type {Bron} */
+          a || b
+        );
+        if (m === grootte) stadium.bracket.vrijstellingen.push(vrij);
+        volgende.push(vrij);
+        continue;
+      }
+      var w = leegWedstrijd(catId, stadium.id);
+      w.nummer = nummer++;
+      w.rondeNaam = naam;
+      w.thuis = a;
+      w.uit = b;
+      ws.push(w);
+      if (m === 4) halve.push(w.id);
+      volgende.push({ winnaarVan: w.id });
+    }
+    plekken = volgende;
+    m = m / 2;
+  }
+  return Object.assign({}, t2, { stadia: t2.stadia.concat([stadium]), wedstrijden: t2.wedstrijden.concat(ws) });
+}
+function maakKnockoutNaGroepsfase(t2, catId, gfId, o) {
+  var s = stadiumVan(t2, gfId);
+  var bronnen = [];
+  for (var plek = 1; plek <= (s.doorgaan.perPoule || 0); plek++) {
+    s.poules.forEach(function(p) {
+      bronnen.push({ poulePlek: { stadiumId: gfId, pouleId: p.id, plek } });
+    });
+  }
+  var b = s.doorgaan.besteNummers;
+  if (b) for (var r = 1; r <= b.aantal; r++) bronnen.push({ besteNummer: { stadiumId: gfId, plek: b.plek, rang: r } });
+  return maakKnockout(zonderStadia(t2, catId, "knockout"), catId, bronnen, o);
+}
+function wedstrijdVan(t2, id) {
+  var w = t2.wedstrijden.filter(function(x) {
+    return x.id === id;
+  })[0];
+  if (!w) throw new Error("Onbekende wedstrijd");
+  return w;
+}
+function huidigePlaatsing(t2, bron) {
+  if (bron.poulePlek) {
+    var r = pouleStand(t2, bron.poulePlek.stadiumId, bron.poulePlek.pouleId)[bron.poulePlek.plek - 1];
+    return r ? r.teamId : null;
+  }
+  if (bron.besteNummer) {
+    var b = besteNummers(t2, bron.besteNummer.stadiumId)[bron.besteNummer.rang - 1];
+    return b ? b.teamId : null;
+  }
+  return null;
+}
+function winnaarVan(t2, wOfId) {
+  var w = wedstrijdVan(t2, typeof wOfId === "string" ? wOfId : wOfId.id);
+  if (w.status !== "gespeeld" || !w.uitslag) return null;
+  var d = deelnemersVan(t2, w);
+  if (!d.thuis || !d.uit) return null;
+  var a = w.uitslag.thuis, b = w.uitslag.uit;
+  if (a === b && w.strafschoppen) {
+    a = w.strafschoppen.thuis;
+    b = w.strafschoppen.uit;
+  }
+  return a > b ? d.thuis : a < b ? d.uit : null;
+}
+function verliezerVan(t2, wOfId) {
+  var w = wedstrijdVan(t2, typeof wOfId === "string" ? wOfId : wOfId.id);
+  var win = winnaarVan(t2, w);
+  if (!win) return null;
+  var d = deelnemersVan(t2, w);
+  return win === d.thuis ? d.uit : d.thuis;
+}
+function bronDeelnemer(t2, bron) {
+  if (!bron) return null;
+  if (bron.deelnemerId) return bron.deelnemerId;
+  if (bron.winnaarVan) return winnaarVan(t2, bron.winnaarVan);
+  if (bron.verliezerVan) return verliezerVan(t2, bron.verliezerVan);
+  return null;
+}
+function deelnemersVan(t2, w) {
+  w = t2.wedstrijden.filter(function(x) {
+    return x.id === (typeof w === "string" ? w : w.id);
+  })[0] || w;
+  return { thuis: w.thuisVast || bronDeelnemer(t2, w.thuis), uit: w.uitVast || bronDeelnemer(t2, w.uit) };
+}
+function bronTekst(t2, bron) {
+  function naam(id) {
+    var d = t2.deelnemers.filter(function(x) {
+      return x.id === id;
+    })[0];
+    return d ? d.naam : "?";
+  }
+  if (bron.deelnemerId) return naam(bron.deelnemerId);
+  if (bron.poulePlek) {
+    var s = stadiumVan(t2, bron.poulePlek.stadiumId);
+    var pp = bron.poulePlek;
+    var p = s.poules.filter(function(x) {
+      return x.id === pp.pouleId;
+    })[0];
+    return bron.poulePlek.plek + "e " + (p ? p.naam : "poule");
+  }
+  if (bron.besteNummer) return "Beste nummer " + bron.besteNummer.plek + (bron.besteNummer.rang > 1 ? " (" + bron.besteNummer.rang + ")" : "");
+  if (bron.winnaarVan) return "Winnaar wedstrijd " + wedstrijdVan(t2, bron.winnaarVan).nummer;
+  if (bron.verliezerVan) return "Verliezer wedstrijd " + wedstrijdVan(t2, bron.verliezerVan).nummer;
+  return "?";
+}
+function startKnockout(t2, koId) {
+  stadiumVan(t2, koId);
+  var bronStadia = {};
+  t2.wedstrijden.forEach(function(w) {
+    if (w.stadiumId !== koId) return;
+    [w.thuis, w.uit].forEach(function(b) {
+      if (b.poulePlek) bronStadia[b.poulePlek.stadiumId] = true;
+      if (b.besteNummer) bronStadia[b.besteNummer.stadiumId] = true;
+    });
+  });
+  Object.keys(bronStadia).forEach(function(id) {
+    if (!groepsfaseCompleet(t2, id)) throw new Error("De groepsfase is nog niet compleet: vul eerst alle uitslagen in.");
+  });
+  return Object.assign({}, t2, { wedstrijden: t2.wedstrijden.map(function(w) {
+    if (w.stadiumId !== koId) return w;
+    var n = Object.assign({}, w);
+    if (w.thuis.poulePlek || w.thuis.besteNummer) n.thuisVast = huidigePlaatsing(t2, w.thuis);
+    if (w.uit.poulePlek || w.uit.besteNummer) n.uitVast = huidigePlaatsing(t2, w.uit);
+    return n;
+  }) });
+}
+function plaatsingAfwijkingen(t2) {
+  var uit = [];
+  t2.wedstrijden.forEach(function(w) {
+    [["thuis", "thuisVast"], ["uit", "uitVast"]].forEach(function(k) {
+      var bron = w[k[0]], vast = w[k[1]];
+      if (!vast || !(bron.poulePlek || bron.besteNummer)) return;
+      var nu = huidigePlaatsing(t2, bron);
+      if (nu !== vast) uit.push({ wedstrijdId: w.id, kant: k[0], was: vast, nu, gespeeld: w.status === "gespeeld" });
+    });
+  });
+  return uit;
+}
+function bijwerkPlaatsing(t2, wId) {
+  var w = wedstrijdVan(t2, wId);
+  if (w.status === "gespeeld") return t2;
+  var n = Object.assign({}, w);
+  if (w.thuisVast && (w.thuis.poulePlek || w.thuis.besteNummer)) n.thuisVast = huidigePlaatsing(t2, w.thuis);
+  if (w.uitVast && (w.uit.poulePlek || w.uit.besteNummer)) n.uitVast = huidigePlaatsing(t2, w.uit);
+  return Object.assign({}, t2, { wedstrijden: t2.wedstrijden.map(function(x) {
+    return x.id === wId ? n : x;
+  }) });
+}
+function zetUitslag(t2, wId, uitslag, straf) {
+  var w = wedstrijdVan(t2, wId);
+  function geldig(u) {
+    return u && [u.thuis, u.uit].every(function(n2) {
+      return typeof n2 === "number" && isFinite(n2) && n2 >= 0 && Math.floor(n2) === n2;
+    });
+  }
+  var n;
+  if (!uitslag) {
+    n = Object.assign({}, w, { status: "gepland", uitslag: null, strafschoppen: null });
+  } else {
+    if (!geldig(uitslag)) throw new Error("Een score is een heel getal vanaf 0.");
+    var ko = stadiumVan(t2, w.stadiumId).soort === "knockout";
+    var d = deelnemersVan(t2, w);
+    if (ko && (!d.thuis || !d.uit)) throw new Error("Het is nog niet bekend wie deze wedstrijd speelt.");
+    if (straf && !geldig(straf)) throw new Error("Een score is een heel getal vanaf 0.");
+    if (straf && (!ko || uitslag.thuis !== uitslag.uit)) throw new Error("Strafschoppen horen alleen bij een gelijke knock-outwedstrijd.");
+    if (ko && uitslag.thuis === uitslag.uit) {
+      var cat = categorieVan(t2, w.categorieId);
+      if (cat.knockoutGelijk !== "loting" && (!straf || straf.thuis === straf.uit)) {
+        throw new Error("Gelijk in de knock-out: vul de strafschoppen in (met een winnaar).");
+      }
+    }
+    n = Object.assign({}, w, {
+      status: "gespeeld",
+      uitslag: { thuis: uitslag.thuis, uit: uitslag.uit },
+      strafschoppen: straf ? { thuis: straf.thuis, uit: straf.uit } : null
+    });
+  }
+  return Object.assign({}, t2, { wedstrijden: t2.wedstrijden.map(function(x) {
+    return x.id === wId ? n : x;
+  }) });
+}
+function vrijgesteld(t2, catId) {
+  var uit = [];
+  t2.stadia.forEach(function(s) {
+    if (s.categorieId !== catId || s.soort !== "knockout") return;
+    (s.bracket.vrijstellingen || []).forEach(function(b) {
+      if (b.deelnemerId) uit.push(b.deelnemerId);
+    });
+  });
+  return uit;
+}
+function planWedstrijd(t2, wId, plek) {
+  var w = wedstrijdVan(t2, wId);
+  var n;
+  if (!plek) n = Object.assign({}, w, { dagId: null, veldId: null, start: null });
+  else {
+    if (!t2.dagen.some(function(d) {
+      return d.id === plek.dagId;
+    })) throw new Error("Onbekende dag");
+    if (!t2.locaties.some(function(l) {
+      return l.velden.some(function(v) {
+        return v.id === plek.veldId;
+      });
+    })) throw new Error("Onbekend veld");
+    if (!/^\d{1,2}:\d{2}$/.test(String(plek.start))) throw new Error("Vul een tijd in als 09:30.");
+    n = Object.assign({}, w, { dagId: plek.dagId, veldId: plek.veldId, start: plek.start });
+  }
+  return Object.assign({}, t2, { wedstrijden: t2.wedstrijden.map(function(x) {
+    return x.id === wId ? n : x;
+  }) });
+}
+function conflicten(t2) {
+  var gepland = t2.wedstrijden.filter(function(w) {
+    return w.dagId && w.veldId && w.start;
+  }).map(function(w) {
+    var cat = categorieVan(t2, w.categorieId);
+    var b2 = minVan(w.start);
+    var d = deelnemersVan(t2, w);
+    return {
+      w,
+      b: b2,
+      e: b2 + (cat.wedstrijdduur || 0),
+      bezet: b2 + (cat.wedstrijdduur || 0) + (cat.wisseltijd || 0),
+      rust: cat.minRust || 0,
+      teams: [d.thuis, d.uit].filter(Boolean)
+    };
+  });
+  var uit = [];
+  var dagIndex = {};
+  t2.dagen.forEach(function(d, i2) {
+    dagIndex[d.id] = i2;
+  });
+  gepland.forEach(function(x) {
+    var dag = t2.dagen.filter(function(d) {
+      return d.id === x.w.dagId;
+    })[0];
+    if (dag && (x.b < minVan(dag.start) || x.e > minVan(dag.eind))) {
+      uit.push({ soort: "tijd", wedstrijden: [x.w.id], tekst: "Wedstrijd " + x.w.nummer + " valt buiten " + dag.start + "\u2013" + dag.eind + "." });
+    }
+  });
+  for (var i = 0; i < gepland.length; i++) for (var j = i + 1; j < gepland.length; j++) {
+    var a = gepland[i], b = gepland[j];
+    if (a.w.dagId !== b.w.dagId) continue;
+    if (a.w.veldId === b.w.veldId && a.b < b.bezet && b.b < a.bezet) {
+      uit.push({ soort: "veld", wedstrijden: [a.w.id, b.w.id], tekst: "Wedstrijd " + a.w.nummer + " en " + b.w.nummer + " staan tegelijk op hetzelfde veld." });
+    }
+    var samen = a.teams.filter(function(id) {
+      return b.teams.indexOf(id) >= 0;
+    });
+    if (!samen.length) continue;
+    if (a.b < b.e && b.b < a.e) {
+      uit.push({ soort: "team", wedstrijden: [a.w.id, b.w.id], tekst: "Een team speelt wedstrijd " + a.w.nummer + " en " + b.w.nummer + " tegelijk." });
+    } else {
+      var eerst = a.b <= b.b ? a : b, later = eerst === a ? b : a;
+      var rust = later.b - eerst.e;
+      if (rust < Math.max(eerst.rust, later.rust)) {
+        uit.push({
+          soort: "rust",
+          wedstrijden: [eerst.w.id, later.w.id],
+          tekst: "Te weinig rust tussen wedstrijd " + eerst.w.nummer + " en " + later.w.nummer + " (" + rust + " min)."
+        });
+      }
+    }
+  }
+  gepland.forEach(function(x) {
+    [x.w.thuis, x.w.uit].forEach(function(bron) {
+      var bronId = bron.winnaarVan || bron.verliezerVan;
+      if (!bronId) return;
+      var y = gepland.filter(function(g) {
+        return g.w.id === bronId;
+      })[0];
+      if (!y) return;
+      var dx = (
+        /** @type {any} */
+        dagIndex[x.w.dagId]
+      ), dy = (
+        /** @type {any} */
+        dagIndex[y.w.dagId]
+      );
+      if (dx < dy || dx === dy && x.b < y.e + x.rust) {
+        uit.push({ soort: "volgorde", wedstrijden: [y.w.id, x.w.id], tekst: "Wedstrijd " + x.w.nummer + " begint voordat wedstrijd " + y.w.nummer + " klaar is." });
+      }
+    });
+  });
+  return uit;
+}
+function migreerToernooiV1(oud) {
+  var t2 = maakToernooi({ id: String(oud.id), naam: oud.naam || "Toernooi", datum: oud.datum || "" });
+  var dag = t2.dagen[0], loc = t2.locaties[0], cat = t2.categorieen[0];
+  dag.start = oud.starttijd || "09:00";
+  dag.eind = "18:00";
+  loc.naam = oud.locatie || "Locatie";
+  loc.velden = [];
+  for (var v = 1; v <= Math.max(1, Number(oud.aantalVelden) || 1); v++) loc.velden.push({ id: loc.id + "-v" + v, naam: "Veld " + v });
+  cat.naam = "Toernooi";
+  cat.wedstrijdduur = Number(oud.speelduur) || 15;
+  cat.wisseltijd = Number(oud.pauze) || 0;
+  t2.deelnemers = (oud.teams || []).map(function(x) {
+    return { id: String(x.id), categorieId: cat.id, soort: "team", naam: x.naam, logo: "", spelers: [], coach: "", email: "", telefoon: "", sterkte: null, eigen: !!x.eigen };
+  });
+  if ((oud.wedstrijden || []).length) {
+    var st = {
+      id: t2.id + "-gf",
+      categorieId: cat.id,
+      soort: "poule",
+      naam: "Groepsfase",
+      poules: [{ id: t2.id + "-p1", naam: "Poule A", deelnemers: t2.deelnemers.map(function(d) {
+        return d.id;
+      }) }],
+      doorgaan: { perPoule: 0, besteNummers: null }
+    };
+    t2.stadia = [st];
+    t2.wedstrijden = oud.wedstrijden.map(function(w, i) {
+      var n = leegWedstrijd(cat.id, st.id);
+      n.id = String(w.id);
+      n.nummer = i + 1;
+      n.pouleId = st.poules[0].id;
+      n.rondeNaam = "Groepsfase";
+      n.thuis = { deelnemerId: String(w.thuisId) };
+      n.uit = { deelnemerId: String(w.uitId) };
+      if (w.tijd) {
+        n.dagId = dag.id;
+        n.veldId = loc.id + "-v" + (Number(w.veld) || 1);
+        n.start = w.tijd;
+      }
+      if (w.gespeeld) {
+        n.status = "gespeeld";
+        n.uitslag = { thuis: Number(w.score && w.score.thuis) || 0, uit: Number(w.score && w.score.uit) || 0 };
+      }
+      return n;
+    });
+  }
+  return t2;
 }
 const FC_CATEGORIEEN = [
   { id: "pace", label: "Snelheid", kort: "SNE", kleur: "#22c55e", attrs: [
@@ -33321,7 +33998,7 @@ function DSMSectie({ wedstrijd, spelers, onOpslaan }) {
     }));
     setGekozenLijnId(null);
   }
-  function volgendNummer() {
+  function volgendNummer2() {
     var gebruikt = bord.lijnen.map(function(l) {
       return Number(l.nummer) || 0;
     });
@@ -33528,7 +34205,7 @@ function DSMSectie({ wedstrijd, spelers, onOpslaan }) {
     {
       className: "knop lijn klein",
       onClick: function() {
-        wijzigLijn(gekozenLijn.id, { nummer: volgendNummer() });
+        wijzigLijn(gekozenLijn.id, { nummer: volgendNummer2() });
       }
     },
     /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-hashtag" }),
