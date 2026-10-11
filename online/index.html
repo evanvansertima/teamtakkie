@@ -3006,7 +3006,7 @@ window.addEventListener("error", function(e){
 });
 </script>
 <script>
-const APP_VERSIE = "f156f69";
+const APP_VERSIE = "b460e81";
 const TEAMS_KEY = "tt_teams_v1";
 const ACTIEF_KEY = "tt_actief_v1";
 const VOORKEUR_KEY = "tt_voorkeuren_v1";
@@ -3628,6 +3628,31 @@ function _leesSessie() {
   }
 }
 var _sessie = _leesSessie();
+const EIGENAAR_KEY = "tt_eigenaar_v1";
+try {
+  if (_sessie && _sessie.gebruikerId && !localStorage.getItem(EIGENAAR_KEY)) localStorage.setItem(EIGENAAR_KEY, _sessie.gebruikerId);
+} catch (e) {
+}
+function wisselAccount(s) {
+  var nieuw = s && s.gebruikerId;
+  if (!nieuw) return false;
+  var vorige = null;
+  try {
+    vorige = localStorage.getItem(EIGENAAR_KEY);
+  } catch (e) {
+  }
+  var gewist = false;
+  if (vorige && vorige !== nieuw) {
+    wisAllesLokaal();
+    herlaadInstellingen();
+    gewist = true;
+  }
+  try {
+    localStorage.setItem(EIGENAAR_KEY, nieuw);
+  } catch (e) {
+  }
+  return gewist;
+}
 function sessieNu() {
   return _sessie;
 }
@@ -3833,8 +3858,9 @@ function serverAanmelden(email, wachtwoord) {
   ).then(function(r) {
     var s = r.ok ? sessieUit(r.gegevens) : null;
     if (!s) return serverFout("aanmelding", serverBoodschap(r));
+    var gewist = wisselAccount(s);
     zetSessie(s);
-    return { ok: true, gegevens: s };
+    return { ok: true, gegevens: s, gewist };
   }).catch(verbindingsFout);
 }
 function serverRegistreren(email, wachtwoord) {
@@ -3846,8 +3872,9 @@ function serverRegistreren(email, wachtwoord) {
     if (!r.ok) return serverFout("aanmelding", serverBoodschap(r));
     var s = sessieUit(r.gegevens);
     if (s) {
+      var gewist = wisselAccount(s);
       zetSessie(s);
-      return { ok: true, gegevens: s };
+      return { ok: true, gegevens: s, gewist };
     }
     return { ok: true, gegevens: null, bevestigen: true };
   }).catch(verbindingsFout);
@@ -11315,7 +11342,7 @@ function AccountSheet({ onSluiten, onGewisseld }) {
   }
   function afmelden() {
     serverAfmelden().then(function() {
-      setMelding("Uitgelogd. Je gegevens staan nog gewoon op dit apparaat.");
+      setMelding("Uitgelogd. De gegevens van dit account zijn van dit apparaat gehaald.");
       setUitslag(null);
       setBeheerder(false);
       setBeheerOpen(false);

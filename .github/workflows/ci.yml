@@ -117,6 +117,8 @@ jobs:
         run: node tests/toernooi.test.js
       - name: node tests/toernooi-planner.test.js
         run: node tests/toernooi-planner.test.js
+      - name: node tests/ander-account.test.js
+        run: node tests/ander-account.test.js
 
       # vulling.test.js controleert de vaste vulling van het gouden
       # origineel tegen wat de app werkelijk schrijft. Dat klinkt als een

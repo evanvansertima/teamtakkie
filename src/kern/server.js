@@ -144,6 +144,45 @@ function _leesSessie() {
 }
 /** @type {Sessie|null} */
 var _sessie = _leesSessie();
+
+/* ── Van wie zijn de gegevens op dit apparaat? ────────────────
+   Uitloggen haalt alles weg (wisAllesLokaal). Maar er zijn twee
+   manieren om bij het inlogscherm te komen zónder uit te loggen: een
+   verlopen aanmelding (verversAanmelding gooit dan alleen de sessie
+   weg) en "account aanmaken" in een browser waar al iemand werkte.
+   Logde daarna een ánder account in, dan zag dat account de teams,
+   spelers en toernooien van de vorige — en probeerde de app ze zelfs
+   naar de vereniging van het nieuwe account te sturen. Gemeld door
+   Evan op 11 oktober 2026 ("ik zie met een ander account de oefen cup").
+
+   Daarom staat hier wie de eigenaar van de gegevens op dit apparaat
+   is. Begint dit met tt_, dan gaat het bij uitloggen vanzelf mee weg. */
+const EIGENAAR_KEY = "tt_eigenaar_v1";
+/* Al ingelogd van vóór deze regel: die gebruiker is de eigenaar. */
+try { if (_sessie && _sessie.gebruikerId && !localStorage.getItem(EIGENAAR_KEY)) localStorage.setItem(EIGENAAR_KEY, _sessie.gebruikerId); } catch(e) {}
+/**
+ * Vlak vóór een nieuwe aanmelding: zijn de gegevens hier van iemand
+ * anders, dan eerst alles weghalen — precies wat uitloggen ook doet.
+ * Gegevens zonder bekende eigenaar (de app werd nog zonder account
+ * gebruikt) blijven staan: die neemt het eerste account mee.
+ * @param {Sessie} s
+ * @returns {boolean} true als er gegevens van een ander account zijn weggehaald
+ */
+function wisselAccount(s) {
+  var nieuw = s && s.gebruikerId;
+  if (!nieuw) return false;
+  var vorige = null;
+  try { vorige = localStorage.getItem(EIGENAAR_KEY); } catch(e) {}
+  var gewist = false;
+  if (vorige && vorige !== nieuw) {
+    wisAllesLokaal();
+    // @ts-ignore — staat in src/app.jsx, net als bij serverAfmelden hieronder
+    herlaadInstellingen();
+    gewist = true;
+  }
+  try { localStorage.setItem(EIGENAAR_KEY, nieuw); } catch(e) {}
+  return gewist;
+}
 /** @returns {Sessie|null} */
 function sessieNu() { return _sessie; }
 /** @returns {boolean} */
@@ -430,8 +469,9 @@ function serverAanmelden(email, wachtwoord) {
     .then(function (r) {
       var s = r.ok ? sessieUit(r.gegevens) : null;
       if (!s) return serverFout("aanmelding", serverBoodschap(r));
+      var gewist = wisselAccount(s);
       zetSessie(s);
-      return {ok:true, gegevens:s};
+      return {ok:true, gegevens:s, gewist:gewist};
     })
     .catch(verbindingsFout);
 }
@@ -445,7 +485,7 @@ function serverRegistreren(email, wachtwoord) {
       var s = sessieUit(r.gegevens);
       /* Staat bevestiging per e-mail aan, dan krijg je nog geen token
          terug. Dat is geen fout: je moet eerst je mail openen. */
-      if (s) { zetSessie(s); return {ok:true, gegevens:s}; }
+      if (s) { var gewist = wisselAccount(s); zetSessie(s); return {ok:true, gegevens:s, gewist:gewist}; }
       return {ok:true, gegevens:null, bevestigen:true};
     })
     .catch(verbindingsFout);

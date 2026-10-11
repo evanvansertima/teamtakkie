@@ -1466,7 +1466,7 @@ function AccountSheet({ onSluiten, onGewisseld }) {
   }
   function afmelden() {
     serverAfmelden().then(function () {
-      setMelding("Uitgelogd. Je gegevens staan nog gewoon op dit apparaat.");
+      setMelding("Uitgelogd. De gegevens van dit account zijn van dit apparaat gehaald.");
       setUitslag(null);
       setBeheerder(false);
       setBeheerOpen(false);
