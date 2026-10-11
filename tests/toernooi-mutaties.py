@@ -100,6 +100,12 @@ MUTATIES = [
     ("P13 kandidaat-tijden missen de rust na een eigen wedstrijd",
      "        if (x.teams.some(function (/** @type {string} */ id) { return me0.teams.indexOf(id) >= 0; })) kand.push(",
      "        if (false) kand.push("),
+    ("P14 momentopname neemt het hele team mee (met contactgegevens)",
+     "    deelnemers: t.deelnemers.map(function (/** @type {any} */ d) { return alleen(d, [\"id\", \"categorieId\", \"soort\", \"naam\", \"logo\", \"eigen\"]); }),",
+     "    deelnemers: t.deelnemers,"),
+    ("P15 momentopname neemt notities bij wedstrijden mee",
+     "                        \"dagId\", \"veldId\", \"start\", \"scheidsId\", \"status\", \"uitslag\", \"strafschoppen\"]);",
+     "                        \"dagId\", \"veldId\", \"start\", \"scheidsId\", \"status\", \"uitslag\", \"strafschoppen\", \"notitie\"]);"),
 ]
 
 

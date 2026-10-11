@@ -3006,7 +3006,7 @@ window.addEventListener("error", function(e){
 });
 </script>
 <script>
-const APP_VERSIE = "79b7ddf";
+const APP_VERSIE = "f156f69";
 const TEAMS_KEY = "tt_teams_v1";
 const ACTIEF_KEY = "tt_actief_v1";
 const VOORKEUR_KEY = "tt_voorkeuren_v1";
@@ -7664,6 +7664,68 @@ function deelScheidsrechtersIn(t2, o) {
     }) }),
     toegewezen: Object.keys(nieuw).length,
     zonder
+  };
+}
+function alleen(bron, velden) {
+  var uit = {};
+  velden.forEach(function(v) {
+    if (bron[v] !== void 0) uit[v] = bron[v];
+  });
+  return uit;
+}
+function publiekeMomentopname(t2, o) {
+  o = o || {};
+  var p = t2.presentatie || {};
+  return {
+    id: t2.id,
+    naam: t2.naam,
+    versie: 2,
+    publiekVersie: 1,
+    gepubliceerdOp: o.nu || (/* @__PURE__ */ new Date()).toISOString(),
+    dagen: t2.dagen.map(function(d) {
+      return alleen(d, ["id", "datum", "start", "eind"]);
+    }),
+    locaties: t2.locaties.map(function(l) {
+      return { id: l.id, naam: l.naam, adres: l.adres || "", velden: l.velden.map(function(v) {
+        return alleen(v, ["id", "naam"]);
+      }) };
+    }),
+    categorieen: t2.categorieen.map(function(c) {
+      return alleen(c, ["id", "naam", "spelvorm", "geslacht", "leeftijd", "niveau", "wedstrijdduur", "wisseltijd", "minRust", "regels", "knockoutGelijk"]);
+    }),
+    deelnemers: t2.deelnemers.map(function(d) {
+      return alleen(d, ["id", "categorieId", "soort", "naam", "logo", "eigen"]);
+    }),
+    scheidsrechters: t2.scheidsrechters.map(function(s) {
+      return alleen(s, ["id", "naam"]);
+    }),
+    stadia: t2.stadia,
+    wedstrijden: t2.wedstrijden.map(function(w) {
+      return alleen(w, [
+        "id",
+        "nummer",
+        "categorieId",
+        "stadiumId",
+        "pouleId",
+        "rondeNaam",
+        "thuis",
+        "uit",
+        "thuisVast",
+        "uitVast",
+        "dagId",
+        "veldId",
+        "start",
+        "scheidsId",
+        "status",
+        "uitslag",
+        "strafschoppen"
+      ]);
+    }),
+    evenementen: (t2.evenementen || []).map(function(e) {
+      return alleen(e, ["id", "naam", "dagId", "start", "duur", "locatieId"]);
+    }),
+    presentatie: { kleur: p.kleur || "", mededeling: p.mededeling || "", logo: o.logo || "" },
+    logboek: []
   };
 }
 const FC_CATEGORIEEN = [
@@ -30642,7 +30704,9 @@ const TOERNOOI_STAPPEN = [
   { id: "deelnemers", label: "Deelnemers", icoon: "fa-solid fa-users" },
   { id: "indeling", label: "Indeling", icoon: "fa-solid fa-diagram-project" },
   { id: "schema", label: "Schema", icoon: "fa-solid fa-clock" },
-  { id: "resultaten", label: "Resultaten", icoon: "fa-solid fa-ranking-star" }
+  { id: "resultaten", label: "Resultaten", icoon: "fa-solid fa-ranking-star" },
+  { id: "presentatie", label: "Presentatie", icoon: "fa-solid fa-tv" }
+  // src/schermen/toernooi-publiek.jsx
 ];
 const KNOCKOUT_GELIJK_LABEL = {
   "strafschoppen": "Direct strafschoppen",
@@ -30755,6 +30819,7 @@ function ToernooiModule() {
     ref.current = l;
     setLijst(l);
     slaJson(TOERNOOIEN2_KEY, l);
+    publiceerLater(nt);
     return true;
   }
   function zetLijst(l) {
@@ -30887,7 +30952,7 @@ function ToernooiScherm({ t: t2, mag, wijzig, onTerug, onWeg }) {
       }
     },
     /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-chevron-right" })
-  )), !mag && /* @__PURE__ */ React.createElement("div", { className: "melding" }, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-eye" }), " Je kijkt mee. Een trainer of eigenaar kan het toernooi aanpassen."), stap === "instellingen" && /* @__PURE__ */ React.createElement(StapInstellingen, { ...props, onWeg }), stap === "deelnemers" && /* @__PURE__ */ React.createElement(StapDeelnemers, { ...props }), stap === "indeling" && /* @__PURE__ */ React.createElement(StapIndeling, { ...props }), stap === "schema" && /* @__PURE__ */ React.createElement(StapSchema, { ...props }), stap === "resultaten" && /* @__PURE__ */ React.createElement(StapResultaten, { ...props }));
+  )), !mag && /* @__PURE__ */ React.createElement("div", { className: "melding" }, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-eye" }), " Je kijkt mee. Een trainer of eigenaar kan het toernooi aanpassen."), stap === "instellingen" && /* @__PURE__ */ React.createElement(StapInstellingen, { ...props, onWeg }), stap === "deelnemers" && /* @__PURE__ */ React.createElement(StapDeelnemers, { ...props }), stap === "indeling" && /* @__PURE__ */ React.createElement(StapIndeling, { ...props }), stap === "schema" && /* @__PURE__ */ React.createElement(StapSchema, { ...props }), stap === "resultaten" && /* @__PURE__ */ React.createElement(StapResultaten, { ...props }), stap === "presentatie" && /* @__PURE__ */ React.createElement(StapPresentatie, { ...props }));
 }
 function StapInstellingen({ t: t2, mag, wijzig, onWeg }) {
   const [vraag, setVraag] = useState(null);
@@ -32724,6 +32789,436 @@ function toernooiBriefjesPdf(t2, catId) {
   });
   return doc;
 }
+function publiekeLink(slug, groot) {
+  var basis = location.origin + location.pathname;
+  return basis + "?toernooi=" + encodeURIComponent(slug) + (groot ? "&scherm=groot" : "");
+}
+function publiceerToernooi(t2) {
+  if (!serverAan() || !ingelogd()) return Promise.resolve({ ok: false, tekst: "Log in om een toernooi openbaar te maken." });
+  if (!_actiefTeam) return Promise.resolve({ ok: false, tekst: "Geen team gekozen." });
+  var p = t2.presentatie || {};
+  var inhoud = publiekeMomentopname(t2, { logo: p.metLogo ? inst().logo || "" : "" });
+  return serverVraag("/rest/v1/rpc/toernooi_publiceren", { methode: "POST", lichaam: { p_team: _actiefTeam, p_toernooi: t2.id, p_inhoud: inhoud } }).then(function(r) {
+    if (r.ok && typeof r.gegevens === "string") return { ok: true, slug: r.gegevens };
+    var tekst = r.fout && r.fout.tekst || "Publiceren lukte niet.";
+    if (/function .* does not exist|Could not find the function|PGRST202/i.test(tekst)) tekst = "De server kent publiceren nog niet. Draai eerst server/23-toernooi-publiek.sql in Supabase.";
+    return { ok: false, tekst };
+  }).catch(function() {
+    return { ok: false, tekst: "Geen verbinding met de server." };
+  });
+}
+function trekToernooiIn(t2) {
+  if (!serverAan() || !ingelogd()) return Promise.resolve({ ok: false, tekst: "Log in om de link in te trekken." });
+  return serverVraag("/rest/v1/rpc/toernooi_intrekken", { methode: "POST", lichaam: { p_team: _actiefTeam, p_toernooi: t2.id } }).then(function(r) {
+    return r.ok ? { ok: true } : { ok: false, tekst: r.fout && r.fout.tekst || "Intrekken lukte niet." };
+  }).catch(function() {
+    return { ok: false, tekst: "Geen verbinding met de server." };
+  });
+}
+var _publiceerWacht = {};
+function publiceerLater(t2) {
+  if (!t2.publiek || !t2.publiek.slug || !t2.publiek.automatisch) return;
+  clearTimeout(_publiceerWacht[t2.id]);
+  _publiceerWacht[t2.id] = setTimeout(function() {
+    var nieuwste = (laadJson(TOERNOOIEN2_KEY) || []).filter(function(x) {
+      return x.id === t2.id;
+    })[0];
+    if (nieuwste && nieuwste.publiek && nieuwste.publiek.automatisch) publiceerToernooi(nieuwste);
+  }, 5e3);
+}
+function StapPresentatie({ t: t2, mag, wijzig }) {
+  const [bezig, setBezig] = useState(false);
+  var pub = t2.publiek || null;
+  var p = t2.presentatie || {};
+  function zetPresentatie(w) {
+    wijzig(function(x) {
+      return Object.assign({}, x, { presentatie: Object.assign({}, x.presentatie || {}, w) });
+    });
+  }
+  function publiceer() {
+    setBezig(true);
+    publiceerToernooi(t2).then(function(r) {
+      setBezig(false);
+      if (!r.ok) {
+        meldFout(r.tekst);
+        return;
+      }
+      wijzig(function(x) {
+        return Object.assign({}, x, { publiek: { slug: r.slug, gepubliceerdOp: (/* @__PURE__ */ new Date()).toISOString(), automatisch: x.publiek ? x.publiek.automatisch !== false : true } });
+      });
+      meldGoed(pub ? "Bijgewerkt" : "Het toernooi is openbaar");
+    });
+  }
+  function kopieer(tekst) {
+    try {
+      navigator.clipboard.writeText(tekst).then(function() {
+        meldGoed("Link gekopieerd");
+      }, function() {
+        meldFout("Kopi\xEBren lukte niet. Houd de link ingedrukt om hem te kopi\xEBren.");
+      });
+    } catch (e) {
+      meldFout("Kopi\xEBren lukte niet.");
+    }
+  }
+  function deel(tekst) {
+    if (navigator.share) navigator.share({ title: t2.naam, text: t2.naam + " \u2014 schema, uitslagen en standen", url: tekst }).catch(function() {
+    });
+    else kopieer(tekst);
+  }
+  var heeftLogo = !!inst().logo;
+  return /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { className: "kaart" }, /* @__PURE__ */ React.createElement("div", { className: "kaart-titel" }, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-tv" }), " Openbaar maken"), /* @__PURE__ */ React.createElement("p", { style: { fontSize: 13, color: "var(--grijs-donker)", lineHeight: 1.6, margin: "0 0 10px" } }, "Met een openbare link kan iedereen het schema, de uitslagen en de standen volgen \u2014 ook zonder account. Handig voor ouders langs de lijn en voor een tv in de kantine. Contactgegevens, notities en spelerslijsten komen er nooit in."), !pub ? mag && /* @__PURE__ */ React.createElement("button", { className: "knop", disabled: bezig, onClick: publiceer }, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-globe" }), " ", bezig ? "Bezig\u2026" : "Publiceren") : /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { className: "melding" }, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-circle-check", style: { color: "var(--succes)" } }), /* @__PURE__ */ React.createElement("div", null, "Openbaar sinds " + new Date(pub.gepubliceerdOp).toLocaleString("nl-NL", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) + ".")), /* @__PURE__ */ React.createElement(LinkRegel, { label: "Voor telefoons", link: publiekeLink(pub.slug, false), opKopieer: kopieer, opDeel: deel }), /* @__PURE__ */ React.createElement(LinkRegel, { label: "Voor een tv of groot scherm", link: publiekeLink(pub.slug, true), opKopieer: kopieer, opDeel: deel }), mag && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("label", { style: { display: "flex", gap: 8, alignItems: "flex-start", fontSize: 13, margin: "10px 0" } }, /* @__PURE__ */ React.createElement("input", { type: "checkbox", checked: pub.automatisch !== false, onChange: function(e) {
+    var aan = e.target.checked;
+    wijzig(function(x) {
+      return Object.assign({}, x, { publiek: Object.assign({}, x.publiek, { automatisch: aan }) });
+    });
+  } }), /* @__PURE__ */ React.createElement("span", null, "Automatisch bijwerken \u2014 elke uitslag of wijziging staat binnen een halve minuut op de openbare pagina.")), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 8, flexWrap: "wrap" } }, /* @__PURE__ */ React.createElement("button", { className: "knop klein", disabled: bezig, onClick: publiceer }, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-rotate" }), " ", bezig ? "Bezig\u2026" : "Nu bijwerken"), /* @__PURE__ */ React.createElement("button", { className: "knop lijn klein", style: { color: "var(--gevaar)" }, disabled: bezig, onClick: function() {
+    setBezig(true);
+    trekToernooiIn(t2).then(function(r) {
+      setBezig(false);
+      if (!r.ok) {
+        meldFout(r.tekst);
+        return;
+      }
+      wijzig(function(x) {
+        var n = Object.assign({}, x);
+        delete n.publiek;
+        return n;
+      });
+      meldGoed("De link werkt niet meer");
+    });
+  } }, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-ban" }), " Intrekken"))))), /* @__PURE__ */ React.createElement("div", { className: "kaart" }, /* @__PURE__ */ React.createElement("div", { className: "kaart-titel" }, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-palette" }), " Uiterlijk"), /* @__PURE__ */ React.createElement("label", { className: "formulier-label" }, "Kleur"), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 8, alignItems: "center", marginBottom: 12 } }, /* @__PURE__ */ React.createElement(
+    "input",
+    {
+      type: "color",
+      "aria-label": "Kleur van de openbare pagina",
+      value: p.kleur || "#004aad",
+      disabled: !mag,
+      style: { width: 48, height: 40, border: "none", background: "none", padding: 0 },
+      onChange: function(e) {
+        zetPresentatie({ kleur: e.target.value });
+      }
+    }
+  ), p.kleur && mag && /* @__PURE__ */ React.createElement("button", { className: "knop lijn klein", onClick: function() {
+    zetPresentatie({ kleur: "" });
+  } }, "Standaard")), /* @__PURE__ */ React.createElement("label", { style: { display: "flex", gap: 8, alignItems: "center", fontSize: 13, marginBottom: 12, opacity: heeftLogo ? 1 : 0.55 } }, /* @__PURE__ */ React.createElement("input", { type: "checkbox", checked: !!p.metLogo && heeftLogo, disabled: !mag || !heeftLogo, onChange: function(e) {
+    zetPresentatie({ metLogo: e.target.checked });
+  } }), heeftLogo ? "Clublogo tonen" : "Clublogo tonen (stel eerst een logo in bij Instellingen)"), /* @__PURE__ */ React.createElement("label", { className: "formulier-label" }, "Mededeling"), /* @__PURE__ */ React.createElement(
+    TVeld,
+    {
+      waarde: p.mededeling || "",
+      disabled: !mag,
+      placeholder: "Bijv. Prijsuitreiking om 16:30 bij het clubhuis",
+      opKlaar: function(v) {
+        zetPresentatie({ mededeling: v.trim().slice(0, 200) });
+      }
+    }
+  ), /* @__PURE__ */ React.createElement("p", { style: { fontSize: 11, color: "var(--grijs-donker)", margin: 0 } }, "Bovenaan de openbare pagina, en op een groot scherm als eigen paneel.", pub && " Kleur, logo en mededeling verschijnen na het bijwerken.")), /* @__PURE__ */ React.createElement("div", { className: "kaart" }, /* @__PURE__ */ React.createElement("div", { className: "kaart-titel" }, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-circle-question" }), " Op een tv in de kantine"), /* @__PURE__ */ React.createElement("ul", { style: { fontSize: 13, lineHeight: 1.7, margin: 0, paddingLeft: 18 } }, /* @__PURE__ */ React.createElement("li", null, "Een laptop aan de tv: open de tv-link en klik op ", /* @__PURE__ */ React.createElement("b", null, "Volledig scherm"), "."), /* @__PURE__ */ React.createElement("li", null, "Chromecast: open de tv-link in Chrome op een laptop, kies \u22EE \u2192 ", /* @__PURE__ */ React.createElement("b", null, "Casten"), " \u2192 ", /* @__PURE__ */ React.createElement("b", null, "Tabblad casten"), "."), /* @__PURE__ */ React.createElement("li", null, "Apple TV: open de tv-link op een Mac of iPad en kies ", /* @__PURE__ */ React.createElement("b", null, "Scherm synchroniseren"), ".")), /* @__PURE__ */ React.createElement("p", { style: { fontSize: 11, color: "var(--grijs-donker)", margin: "8px 0 0" } }, "De pagina ververst zichzelf; je hoeft er niets meer aan te doen.")));
+}
+function LinkRegel({ label, link, opKopieer, opDeel }) {
+  return /* @__PURE__ */ React.createElement("div", { style: { marginBottom: 10 } }, /* @__PURE__ */ React.createElement("label", { className: "formulier-label" }, label), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 6 } }, /* @__PURE__ */ React.createElement(
+    "input",
+    {
+      className: "formulier-input",
+      readOnly: true,
+      value: link,
+      style: { flex: 1, marginBottom: 0, fontSize: 12, minWidth: 0 },
+      onFocus: function(e) {
+        e.target.select();
+      },
+      "aria-label": label
+    }
+  ), /* @__PURE__ */ React.createElement("button", { className: "knop lijn klein", "aria-label": "Kopi\xEBren", onClick: function() {
+    opKopieer(link);
+  } }, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-copy" })), /* @__PURE__ */ React.createElement("button", { className: "knop lijn klein", "aria-label": "Delen", onClick: function() {
+    opDeel(link);
+  } }, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-share-nodes" })), /* @__PURE__ */ React.createElement("a", { className: "knop lijn klein", "aria-label": "Openen", href: link, target: "_blank", rel: "noopener" }, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-up-right-from-square" }))));
+}
+function haalPubliek(slug, alleenVersie) {
+  if (!serverAan()) return Promise.resolve({ ok: false, soort: "server" });
+  var fn = alleenVersie ? "toernooi_publiek_versie" : "toernooi_publiek_lezen";
+  return _haalOp("/rest/v1/rpc/" + fn, { methode: "POST", lichaam: { p_slug: slug } }).then(function(r) {
+    if (!r.ok) return { ok: false, soort: "server" };
+    if (alleenVersie) return { ok: true, versie: r.gegevens };
+    var rij = Array.isArray(r.gegevens) ? r.gegevens[0] : null;
+    return rij ? { ok: true, t: rij.inhoud, versie: rij.bijgewerkt_op } : { ok: false, soort: "weg" };
+  }).catch(function() {
+    return { ok: false, soort: "verbinding" };
+  });
+}
+function vandaagIso() {
+  var d = /* @__PURE__ */ new Date();
+  return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+}
+function nuMinuten() {
+  var d = /* @__PURE__ */ new Date();
+  return d.getHours() * 60 + d.getMinutes();
+}
+function nuBezig(t2, w) {
+  if (!w.start || w.uitslag) return false;
+  var dag = t2.dagen.filter(function(d) {
+    return d.id === w.dagId;
+  })[0];
+  if (!dag || dag.datum !== vandaagIso()) return false;
+  var c = t2.categorieen.filter(function(x) {
+    return x.id === w.categorieId;
+  })[0] || {};
+  var b = minVan(w.start), n = nuMinuten();
+  return n >= b && n < b + (c.wedstrijdduur || 0);
+}
+function PubliekToernooi({ slug, groot }) {
+  const [stand, setStand] = useState({ laden: true });
+  const versieRef = useRef(null);
+  useEffect(function() {
+    var weg = false;
+    function laad() {
+      haalPubliek(slug, false).then(function(r) {
+        if (weg) return;
+        if (r.ok) {
+          versieRef.current = r.versie;
+          setStand({ t: r.t, versie: r.versie });
+        } else setStand(function(oud) {
+          return oud.t && r.soort === "verbinding" ? oud : { fout: r.soort };
+        });
+      });
+    }
+    laad();
+    var klok = setInterval(function() {
+      haalPubliek(slug, true).then(function(r) {
+        if (weg || !r.ok) return;
+        if (!r.versie) {
+          setStand({ fout: "weg" });
+          return;
+        }
+        if (r.versie !== versieRef.current) laad();
+      });
+    }, 2e4);
+    return function() {
+      weg = true;
+      clearInterval(klok);
+    };
+  }, [slug]);
+  useEffect(function() {
+    document.title = stand.t ? stand.t.naam + " \xB7 TEAMTAKKIE" : "Toernooi \xB7 TEAMTAKKIE";
+  }, [stand.t && stand.t.naam]);
+  if (stand.laden) return /* @__PURE__ */ React.createElement(PubliekKader, null, /* @__PURE__ */ React.createElement("p", { style: { textAlign: "center", padding: 40 } }, "Laden\u2026"));
+  if (stand.fout) {
+    return /* @__PURE__ */ React.createElement(PubliekKader, null, /* @__PURE__ */ React.createElement("div", { className: "leeg", style: { marginTop: 40 } }, /* @__PURE__ */ React.createElement("div", { className: "leeg-icoon" }, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-trophy" })), /* @__PURE__ */ React.createElement("h3", null, stand.fout === "weg" ? "Dit toernooi is niet (meer) openbaar" : "Het toernooi kon niet worden geladen"), /* @__PURE__ */ React.createElement("p", null, stand.fout === "weg" ? "Misschien is de link ingetrokken, of is hij niet helemaal goed overgenomen." : "Controleer je internetverbinding en probeer het opnieuw."), /* @__PURE__ */ React.createElement("button", { className: "knop", onClick: function() {
+      location.reload();
+    } }, "Opnieuw proberen")));
+  }
+  return groot ? /* @__PURE__ */ React.createElement(GrootScherm, { t: stand.t }) : /* @__PURE__ */ React.createElement(PubliekPagina, { t: stand.t });
+}
+function PubliekKader({ children, kleur }) {
+  return /* @__PURE__ */ React.createElement("div", { style: { minHeight: "100vh", background: "var(--achtergrond, #f4f6f9)", color: "var(--tekst)" } }, /* @__PURE__ */ React.createElement("div", { style: { maxWidth: 760, margin: "0 auto", padding: "0 16px 40px" } }, children));
+}
+function PubliekKop({ t: t2, klein }) {
+  var p = t2.presentatie || {};
+  var kleur = p.kleur || "#004aad";
+  return /* @__PURE__ */ React.createElement("div", { style: { background: "linear-gradient(150deg," + kleur + " 0%," + kleur + "cc 100%)", color: "#fff", borderRadius: "0 0 18px 18px", padding: klein ? "14px 16px" : "20px 18px", margin: "0 -16px 12px" } }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 12, alignItems: "center" } }, p.logo && /* @__PURE__ */ React.createElement("img", { src: p.logo, alt: "", style: { width: 44, height: 44, objectFit: "contain", background: "#fff", borderRadius: 10, padding: 3 } }), /* @__PURE__ */ React.createElement("div", { style: { minWidth: 0 } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 10, opacity: 0.8, textTransform: "uppercase", letterSpacing: 1.2, fontWeight: 700 } }, "Toernooi"), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 22, fontWeight: 700, lineHeight: 1.15, overflowWrap: "anywhere" } }, t2.naam), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, opacity: 0.85, marginTop: 3 } }, t2.dagen.filter(function(d) {
+    return d.datum;
+  }).map(function(d) {
+    return formateerDatumKort(d.datum);
+  }).join(", "), t2.locaties.length === 1 ? " \xB7 " + t2.locaties[0].naam : ""))));
+}
+function PubliekPagina({ t: t2 }) {
+  const [tab, setTab] = useState("programma");
+  const [catId, setCatId] = useState("");
+  const [volg, setVolg] = useState(function() {
+    try {
+      return localStorage.getItem("tt_volg_" + t2.id) || "";
+    } catch (e) {
+      return "";
+    }
+  });
+  function zetVolg(id) {
+    setVolg(id);
+    try {
+      localStorage.setItem("tt_volg_" + t2.id, id);
+    } catch (e) {
+    }
+  }
+  var p = t2.presentatie || {};
+  var heeftKo = t2.stadia.some(function(s) {
+    return s.soort === "knockout" && (!catId || s.categorieId === catId);
+  });
+  var tabs = [["programma", "Programma"], ["standen", "Standen"]];
+  if (heeftKo) tabs.push(["knockout", "Knock-out"]);
+  var tt = catId ? filterCategorie(t2, catId) : t2;
+  var regels = schemaRegels(tt);
+  var opNummer = {};
+  t2.wedstrijden.forEach(function(w) {
+    opNummer[w.nummer] = w;
+  });
+  if (volg) regels = regels.filter(function(r) {
+    var d = deelnemersVan(t2, opNummer[r.nummer]);
+    return d.thuis === volg || d.uit === volg;
+  });
+  var volgNaam = tNaam(t2, volg);
+  var dagKop = null;
+  return /* @__PURE__ */ React.createElement(PubliekKader, null, /* @__PURE__ */ React.createElement(PubliekKop, { t: t2 }), p.mededeling && /* @__PURE__ */ React.createElement("div", { className: "melding" }, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-bullhorn" }), " ", p.mededeling), /* @__PURE__ */ React.createElement("div", { className: "tabs" }, tabs.map(function(x) {
+    return /* @__PURE__ */ React.createElement("button", { key: x[0], className: "tab-knop" + (tab === x[0] ? " actief" : ""), onClick: function() {
+      setTab(x[0]);
+    } }, x[1]);
+  })), t2.categorieen.length > 1 && /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 10 } }, /* @__PURE__ */ React.createElement("button", { className: "filter-chip", style: chipStijl(!catId), onClick: function() {
+    setCatId("");
+  } }, "Alle"), t2.categorieen.map(function(c) {
+    return /* @__PURE__ */ React.createElement("button", { key: c.id, className: "filter-chip", style: chipStijl(catId === c.id), onClick: function() {
+      setCatId(c.id);
+      zetVolg("");
+    } }, c.naam);
+  })), tab === "programma" && /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("select", { className: "formulier-input", value: volg, "aria-label": "Volg een team", onChange: function(e) {
+    zetVolg(e.target.value);
+  } }, /* @__PURE__ */ React.createElement("option", { value: "" }, "Alle wedstrijden"), tt.deelnemers.filter(function(d) {
+    return !catId || d.categorieId === catId;
+  }).map(function(d) {
+    return /* @__PURE__ */ React.createElement("option", { key: d.id, value: d.id }, "Volg " + d.naam);
+  })), /* @__PURE__ */ React.createElement("div", { className: "kaart", style: { padding: "6px 14px" } }, regels.length === 0 && /* @__PURE__ */ React.createElement("p", { style: { fontSize: 13, color: "var(--grijs-donker)" } }, volg ? "Nog geen wedstrijden bekend voor " + volgNaam + "." : "Nog geen wedstrijden."), regels.map(function(r) {
+    var w = opNummer[r.nummer];
+    var kop = !w.dagId ? "Tijd nog niet bekend" : r.dag ? new Date(r.dag).toLocaleDateString("nl-NL", { weekday: "long", day: "numeric", month: "long" }) : "";
+    kop = kop.charAt(0).toUpperCase() + kop.slice(1);
+    var toonKop = kop && kop !== dagKop;
+    dagKop = kop;
+    var bezig = nuBezig(t2, w);
+    var d = deelnemersVan(t2, w);
+    var wint = w.uitslag ? winnaarVan(t2, w) : null;
+    return /* @__PURE__ */ React.createElement("div", { key: w.id }, toonKop && /* @__PURE__ */ React.createElement("div", { className: "review-label", style: { margin: "10px 0 4px", textTransform: "none" } }, kop), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 10, alignItems: "center", padding: "8px 0", borderBottom: "1px solid var(--grijs)", background: bezig ? "var(--vlak-info)" : "transparent" } }, /* @__PURE__ */ React.createElement("span", { style: { width: 48, flexShrink: 0, fontWeight: 700, fontSize: 14 } }, w.start || "\u2014"), /* @__PURE__ */ React.createElement("span", { style: { flex: 1, minWidth: 0 } }, /* @__PURE__ */ React.createElement("span", { style: { display: "block", fontSize: 14, lineHeight: 1.35, fontWeight: d.thuis === volg || wint && wint === d.thuis ? 700 : 400 } }, r.thuis), /* @__PURE__ */ React.createElement("span", { style: { display: "block", fontSize: 14, lineHeight: 1.35, fontWeight: d.uit === volg || wint && wint === d.uit ? 700 : 400 } }, r.uit), /* @__PURE__ */ React.createElement("span", { style: { display: "block", fontSize: 11, color: "var(--grijs-donker)", marginTop: 2 } }, [r.veld && (t2.locaties.length > 1 ? r.locatie + " \xB7 " : "") + r.veld, t2.categorieen.length > 1 && !catId && r.categorie, r.ronde].filter(Boolean).join(" \xB7 "))), bezig && /* @__PURE__ */ React.createElement("span", { style: { fontSize: 11, fontWeight: 700, color: "var(--succes)" } }, "BEZIG"), w.uitslag && /* @__PURE__ */ React.createElement("span", { style: { textAlign: "right" } }, /* @__PURE__ */ React.createElement("span", { style: { display: "block", fontWeight: 700, fontSize: 15 } }, w.uitslag.thuis), /* @__PURE__ */ React.createElement("span", { style: { display: "block", fontWeight: 700, fontSize: 15 } }, w.uitslag.uit))), w.strafschoppen && /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: "var(--grijs-donker)", textAlign: "right" } }, "na strafschoppen " + w.strafschoppen.thuis + "\u2013" + w.strafschoppen.uit));
+  }))), tab === "standen" && /* @__PURE__ */ React.createElement(PubliekStanden, { t: t2, catId, volg }), tab === "knockout" && /* @__PURE__ */ React.createElement(PubliekKnockout, { t: t2, catId }), /* @__PURE__ */ React.createElement("p", { style: { fontSize: 11, color: "var(--grijs-donker)", textAlign: "center", marginTop: 16 } }, "Ververst vanzelf \xB7 gemaakt met TEAMTAKKIE"));
+}
+function PubliekStanden({ t: t2, catId, volg, groot }) {
+  var stadia = t2.stadia.filter(function(s) {
+    return s.soort === "poule" && (!catId || s.categorieId === catId);
+  });
+  if (!stadia.length) return /* @__PURE__ */ React.createElement("div", { className: "kaart" }, /* @__PURE__ */ React.createElement("p", { style: { fontSize: 13, color: "var(--grijs-donker)", margin: 0 } }, "Nog geen poules."));
+  return /* @__PURE__ */ React.createElement("div", null, stadia.map(function(s) {
+    var cat = categorieVan(t2, s.categorieId);
+    return s.poules.map(function(p) {
+      return /* @__PURE__ */ React.createElement("div", { key: p.id, className: "kaart" }, /* @__PURE__ */ React.createElement("div", { className: "kaart-titel" }, (t2.categorieen.length > 1 ? cat.naam + " \xB7 " : "") + (s.poules.length > 1 ? p.naam : s.naam)), /* @__PURE__ */ React.createElement(PouleTabel, { t: t2, s, p, volg }));
+    });
+  }));
+}
+function PouleTabel({ t: t2, s, p, volg, groot }) {
+  var stand = pouleStand(t2, s.id, p.id);
+  var f = groot ? 1.6 : 1;
+  return /* @__PURE__ */ React.createElement("div", { style: { overflowX: "auto" } }, /* @__PURE__ */ React.createElement("table", { className: "stand-tabel", style: groot ? { fontSize: 22 } : null }, /* @__PURE__ */ React.createElement("thead", null, /* @__PURE__ */ React.createElement("tr", null, /* @__PURE__ */ React.createElement("th", { style: { width: 30 * f } }, "#"), /* @__PURE__ */ React.createElement("th", { className: "links" }, "Team"), /* @__PURE__ */ React.createElement("th", null, "G"), /* @__PURE__ */ React.createElement("th", null, "W"), /* @__PURE__ */ React.createElement("th", null, "GL"), /* @__PURE__ */ React.createElement("th", null, "V"), /* @__PURE__ */ React.createElement("th", null, "DS"), /* @__PURE__ */ React.createElement("th", null, "P"))), /* @__PURE__ */ React.createElement("tbody", null, stand.map(function(r) {
+    var door = r.plek <= (s.doorgaan.perPoule || 0);
+    return /* @__PURE__ */ React.createElement("tr", { key: r.teamId, className: r.teamId === volg ? "eigen" : "" }, /* @__PURE__ */ React.createElement("td", null, /* @__PURE__ */ React.createElement("span", { className: "stand-pos", style: door ? { background: "var(--succes)", color: "#fff" } : null }, r.plek, r.gedeeld ? "=" : "")), /* @__PURE__ */ React.createElement("td", { className: "links naam" }, r.naam), /* @__PURE__ */ React.createElement("td", null, r.gespeeld), /* @__PURE__ */ React.createElement("td", null, r.winst), /* @__PURE__ */ React.createElement("td", null, r.gelijk), /* @__PURE__ */ React.createElement("td", null, r.verlies), /* @__PURE__ */ React.createElement("td", null, (r.saldo > 0 ? "+" : "") + r.saldo), /* @__PURE__ */ React.createElement("td", { style: { fontWeight: 700 } }, r.punten));
+  }))));
+}
+function PubliekKnockout({ t: t2, catId, groot }) {
+  var stadia = t2.stadia.filter(function(s) {
+    return s.soort === "knockout" && (!catId || s.categorieId === catId);
+  });
+  return /* @__PURE__ */ React.createElement("div", null, stadia.map(function(s) {
+    var cat = categorieVan(t2, s.categorieId);
+    var ws = t2.wedstrijden.filter(function(w) {
+      return w.stadiumId === s.id;
+    }).sort(function(a, b) {
+      return a.nummer - b.nummer;
+    });
+    var rondes = [];
+    ws.forEach(function(w) {
+      if (rondes.indexOf(w.rondeNaam) < 0) rondes.push(w.rondeNaam);
+    });
+    var finale = ws.filter(function(w) {
+      return w.rondeNaam === "Finale";
+    })[0];
+    var kampioen = finale && winnaarVan(t2, finale);
+    return /* @__PURE__ */ React.createElement("div", { key: s.id, className: "kaart" }, /* @__PURE__ */ React.createElement("div", { className: "kaart-titel" }, (t2.categorieen.length > 1 ? cat.naam + " \xB7 " : "") + "Knock-out"), kampioen && /* @__PURE__ */ React.createElement("div", { style: { fontWeight: 700, fontSize: groot ? 30 : 16, marginBottom: 10 } }, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-trophy", style: { color: "var(--oranje)" } }), " Winnaar: " + tNaam(t2, kampioen)), rondes.map(function(r) {
+      return /* @__PURE__ */ React.createElement("div", { key: r, style: { marginBottom: 8 } }, /* @__PURE__ */ React.createElement("div", { className: "review-label", style: { margin: "6px 0 2px" } }, r), ws.filter(function(w) {
+        return w.rondeNaam === r;
+      }).map(function(w) {
+        var win = winnaarVan(t2, w), d = deelnemersVan(t2, w);
+        return /* @__PURE__ */ React.createElement("div", { key: w.id, style: { display: "flex", gap: 8, alignItems: "center", padding: "5px 0", borderBottom: "1px solid var(--grijs)", fontSize: groot ? 24 : 14 } }, /* @__PURE__ */ React.createElement("span", { style: { flex: 1, minWidth: 0 } }, /* @__PURE__ */ React.createElement("span", { style: { display: "block", fontWeight: win && win === d.thuis ? 700 : 400, color: d.thuis ? "inherit" : "var(--grijs-donker)" } }, kantNaam(t2, w, "thuis")), /* @__PURE__ */ React.createElement("span", { style: { display: "block", fontWeight: win && win === d.uit ? 700 : 400, color: d.uit ? "inherit" : "var(--grijs-donker)" } }, kantNaam(t2, w, "uit"))), w.uitslag ? /* @__PURE__ */ React.createElement("span", { style: { fontWeight: 700, textAlign: "right" } }, w.uitslag.thuis + "\u2013" + w.uitslag.uit, w.strafschoppen && /* @__PURE__ */ React.createElement("span", { style: { display: "block", fontSize: "0.7em", fontWeight: 400 } }, "(" + w.strafschoppen.thuis + "\u2013" + w.strafschoppen.uit + " n.s.)")) : /* @__PURE__ */ React.createElement("span", { style: { color: "var(--grijs-donker)" } }, w.start || ""));
+      }));
+    }));
+  }));
+}
+function GrootScherm({ t: t2 }) {
+  const [i, setI] = useState(0);
+  const [, setTik] = useState(0);
+  const [vol, setVol] = useState(false);
+  var p = t2.presentatie || {};
+  var kleur = p.kleur || "#004aad";
+  var opNummer = {};
+  t2.wedstrijden.forEach(function(w) {
+    opNummer[w.nummer] = w;
+  });
+  var regels = schemaRegels(t2);
+  var vandaag = vandaagIso(), nu = nuMinuten();
+  var dagVan = {};
+  t2.dagen.forEach(function(d) {
+    dagVan[d.id] = d.datum;
+  });
+  var aankomend = regels.filter(function(r) {
+    var w = opNummer[r.nummer];
+    if (w.uitslag || !w.start) return false;
+    var dd = dagVan[w.dagId] || "";
+    return dd > vandaag || dd === vandaag && minVan(w.start) + 30 >= nu || !dd || dd < vandaag;
+  }).slice(0, 8);
+  var uitslagen = regels.filter(function(r) {
+    return opNummer[r.nummer].uitslag;
+  }).slice(-8).reverse();
+  var panelen = [];
+  if (p.mededeling) panelen.push({ id: "mededeling", titel: "Mededeling" });
+  if (aankomend.length) panelen.push({ id: "aankomend", titel: "Volgende wedstrijden" });
+  if (uitslagen.length) panelen.push({ id: "uitslagen", titel: "Laatste uitslagen" });
+  t2.stadia.forEach(function(s) {
+    var cat = categorieVan(t2, s.categorieId);
+    if (s.soort === "poule") s.poules.forEach(function(pl) {
+      panelen.push({ id: "poule-" + pl.id, titel: "Stand " + (t2.categorieen.length > 1 ? cat.naam + " \xB7 " : "") + (s.poules.length > 1 ? pl.naam : s.naam), s, p: pl });
+    });
+    else panelen.push({ id: "ko-" + s.id, titel: (t2.categorieen.length > 1 ? cat.naam + " \xB7 " : "") + "Knock-out", ko: s });
+  });
+  if (!panelen.length) panelen.push({ id: "leeg", titel: t2.naam });
+  var paneel = panelen[i % panelen.length];
+  useEffect(function() {
+    var a = setInterval(function() {
+      setI(function(x) {
+        return x + 1;
+      });
+    }, 12e3);
+    var b = setInterval(function() {
+      setTik(function(x) {
+        return x + 1;
+      });
+    }, 3e4);
+    function fs() {
+      setVol(!!document.fullscreenElement);
+    }
+    document.addEventListener("fullscreenchange", fs);
+    return function() {
+      clearInterval(a);
+      clearInterval(b);
+      document.removeEventListener("fullscreenchange", fs);
+    };
+  }, []);
+  var rustig = false;
+  try {
+    rustig = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  } catch (e) {
+  }
+  function lijst(rs, metUitslag) {
+    return rs.map(function(r) {
+      var w = opNummer[r.nummer];
+      var bezig = nuBezig(t2, w);
+      return /* @__PURE__ */ React.createElement("div", { key: w.id, style: { display: "flex", gap: 24, alignItems: "center", padding: "14px 0", borderBottom: "1px solid rgba(255,255,255,.15)", fontSize: "2.4vw" } }, /* @__PURE__ */ React.createElement("span", { style: { width: "9vw", fontWeight: 700 } }, w.start), /* @__PURE__ */ React.createElement("span", { style: { flex: 1, minWidth: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" } }, r.thuis + "  \u2013  " + r.uit), metUitslag ? /* @__PURE__ */ React.createElement("span", { style: { fontWeight: 800 } }, w.uitslag.thuis + " \u2013 " + w.uitslag.uit) : /* @__PURE__ */ React.createElement("span", { style: { opacity: 0.75, fontSize: "1.8vw" } }, bezig ? "\u25CF bezig \xB7 " : "", r.veld));
+    });
+  }
+  return /* @__PURE__ */ React.createElement("div", { style: { minHeight: "100vh", background: "#0b1424", color: "#fff", display: "flex", flexDirection: "column", fontFamily: "'Helvetica Neue',Arial,sans-serif" } }, /* @__PURE__ */ React.createElement("div", { style: { background: kleur, padding: "1.6vw 3vw", display: "flex", alignItems: "center", gap: "2vw" } }, p.logo && /* @__PURE__ */ React.createElement("img", { src: p.logo, alt: "", style: { height: "5vw", background: "#fff", borderRadius: 12, padding: 6 } }), /* @__PURE__ */ React.createElement("div", { style: { flex: 1, minWidth: 0 } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: "3vw", fontWeight: 800, lineHeight: 1.1 } }, t2.naam), /* @__PURE__ */ React.createElement("div", { style: { fontSize: "1.6vw", opacity: 0.85 } }, paneel.titel)), /* @__PURE__ */ React.createElement("div", { style: { fontSize: "3vw", fontWeight: 700 } }, (/* @__PURE__ */ new Date()).toLocaleTimeString("nl-NL", { hour: "2-digit", minute: "2-digit" })), !vol && document.fullscreenEnabled && /* @__PURE__ */ React.createElement(
+    "button",
+    {
+      onClick: function() {
+        document.documentElement.requestFullscreen().catch(function() {
+        });
+      },
+      style: { background: "rgba(255,255,255,.2)", color: "#fff", border: 0, borderRadius: 10, padding: "10px 16px", fontSize: 16, cursor: "pointer" }
+    },
+    /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-expand" }),
+    " Volledig scherm"
+  )), /* @__PURE__ */ React.createElement("div", { key: paneel.id + i % panelen.length, style: { flex: 1, padding: "2vw 3vw", animation: rustig ? "none" : "ttFade .6s ease" } }, paneel.id === "mededeling" && /* @__PURE__ */ React.createElement("div", { style: { fontSize: "5vw", fontWeight: 800, lineHeight: 1.2, marginTop: "8vh", textAlign: "center" } }, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-bullhorn" }), /* @__PURE__ */ React.createElement("div", null, p.mededeling)), paneel.id === "aankomend" && lijst(aankomend, false), paneel.id === "uitslagen" && lijst(uitslagen, true), paneel.s && /* @__PURE__ */ React.createElement("div", { style: { background: "#fff", color: "#111", borderRadius: 16, padding: "1vw 2vw", fontSize: "2vw" } }, /* @__PURE__ */ React.createElement(PouleTabel, { t: t2, s: paneel.s, p: paneel.p, groot: true })), paneel.ko && /* @__PURE__ */ React.createElement("div", { style: { background: "#fff", color: "#111", borderRadius: 16, padding: "1vw 2vw" } }, /* @__PURE__ */ React.createElement(PubliekKnockout, { t: t2, catId: paneel.ko.categorieId, groot: true })), paneel.id === "leeg" && /* @__PURE__ */ React.createElement("div", { style: { fontSize: "3vw", textAlign: "center", marginTop: "10vh" } }, "Het schema volgt.")), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", justifyContent: "center", gap: 8, padding: "1vw" } }, panelen.map(function(x, k) {
+    return /* @__PURE__ */ React.createElement("span", { key: x.id, style: { width: 10, height: 10, borderRadius: 5, background: k === i % panelen.length ? "#fff" : "rgba(255,255,255,.3)" } });
+  })), /* @__PURE__ */ React.createElement("style", null, "@keyframes ttFade{from{opacity:0}to{opacity:1}}"));
+}
 const NL_MAANDEN = { jan: 1, feb: 2, mrt: 3, maa: 3, apr: 4, mei: 5, jun: 6, jul: 7, aug: 8, sep: 9, okt: 10, nov: 11, dec: 12 };
 function padGetal(n) {
   return (n < 10 ? "0" : "") + n;
@@ -33700,7 +34195,7 @@ function exporteerWedstrijdplanPDF(wedstrijd, spelers, deelIpvOpslaan, alleWedst
 }
 function SpelerKeuzeModal({ titel, spelers, onKies, onSluiten, plekRol, bezet, rolLabels, uitleg }) {
   const [zoek, setZoek] = useState("");
-  const [alleen, setAlleen] = useState(false);
+  const [alleen2, setAlleen] = useState(false);
   const bezetMap = bezet || {};
   const q = zoek.toLowerCase();
   let lijst = spelers.filter(function(s) {
@@ -33716,7 +34211,7 @@ function SpelerKeuzeModal({ titel, spelers, onKies, onSluiten, plekRol, bezet, r
     }).map(function(x) {
       return x.s;
     });
-    if (alleen) lijst = lijst.filter(function(s) {
+    if (alleen2) lijst = lijst.filter(function(s) {
       return positiePassendheid(plekRol, s.positie) === 0;
     });
   }
@@ -33740,9 +34235,9 @@ function SpelerKeuzeModal({ titel, spelers, onKies, onSluiten, plekRol, bezet, r
     "button",
     {
       className: "filter-chip",
-      style: { borderColor: alleen ? "var(--blauw)" : "var(--grijs)", background: alleen ? "var(--blauw)" : "var(--wit)", color: alleen ? "var(--op-kleur)" : "var(--grijs-donker)" },
+      style: { borderColor: alleen2 ? "var(--blauw)" : "var(--grijs)", background: alleen2 ? "var(--blauw)" : "var(--wit)", color: alleen2 ? "var(--op-kleur)" : "var(--grijs-donker)" },
       onClick: function() {
-        setAlleen(!alleen);
+        setAlleen(!alleen2);
       }
     },
     "Alleen " + plekRol.toLowerCase() + "s"
@@ -40267,7 +40762,16 @@ class FoutOpvang extends React.Component {
     )));
   }
 }
-ReactDOM.createRoot(document.getElementById("root")).render(/* @__PURE__ */ React.createElement(FoutOpvang, null, /* @__PURE__ */ React.createElement(App, null)));
+var _publiekToernooi = (function() {
+  try {
+    var q = new URLSearchParams(location.search);
+    var s = q.get("toernooi");
+    return s && /^[a-z0-9]{20}$/.test(s) ? { slug: s, groot: q.get("scherm") === "groot" } : null;
+  } catch (e) {
+    return null;
+  }
+})();
+ReactDOM.createRoot(document.getElementById("root")).render(/* @__PURE__ */ React.createElement(FoutOpvang, null, _publiekToernooi ? /* @__PURE__ */ React.createElement(PubliekToernooi, { slug: _publiekToernooi.slug, groot: _publiekToernooi.groot }) : /* @__PURE__ */ React.createElement(App, null)));
 </script>
 </body>
 </html>

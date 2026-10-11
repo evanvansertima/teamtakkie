@@ -44,7 +44,8 @@ const TOERNOOI_STAPPEN = [
   { id: "deelnemers",   label: "Deelnemers",   icoon: "fa-solid fa-users" },
   { id: "indeling",     label: "Indeling",     icoon: "fa-solid fa-diagram-project" },
   { id: "schema",       label: "Schema",       icoon: "fa-solid fa-clock" },
-  { id: "resultaten",   label: "Resultaten",   icoon: "fa-solid fa-ranking-star" }
+  { id: "resultaten",   label: "Resultaten",   icoon: "fa-solid fa-ranking-star" },
+  { id: "presentatie",  label: "Presentatie",  icoon: "fa-solid fa-tv" }   // src/schermen/toernooi-publiek.jsx
 ];
 const KNOCKOUT_GELIJK_LABEL = {
   "strafschoppen": "Direct strafschoppen",
@@ -149,6 +150,7 @@ function ToernooiModule() {
     try { nt = maak(t); } catch (e) { meldFout((e && e.message) || "Dat lukte niet."); return false; }
     var l = oud.map(function (x) { return x.id === id ? nt : x; });
     ref.current = l; setLijst(l); slaJson(TOERNOOIEN2_KEY, l);
+    publiceerLater(nt);   // alleen als het toernooi openbaar is en automatisch bijwerken aan staat
     return true;
   }
   function zetLijst(l) { ref.current = l; setLijst(l); slaJson(TOERNOOIEN2_KEY, l); }
@@ -271,6 +273,7 @@ function ToernooiScherm({ t, mag, wijzig, onTerug, onWeg }) {
       {stap === "indeling" && <StapIndeling {...props} />}
       {stap === "schema" && <StapSchema {...props} />}
       {stap === "resultaten" && <StapResultaten {...props} />}
+      {stap === "presentatie" && <StapPresentatie {...props} />}
     </div>
   );
 }

@@ -240,6 +240,31 @@ groep("downloads: schema en CSV");
   ok("geen e-mailadres of telefoonnummer in de download", /geheim@|0612345678|piet@|0699999999/.test(csv), false);
 }
 
+groep("publiceren: momentopname zonder contactgegevens");
+{
+  let tp = basis();
+  tp = voegDeelnemerToe(tp, { categorieId: "c11", naam: "VV A", email: "geheim@a.nl", telefoon: "0612345678", coach: "Jan Geheim", spelers: ["Kind Een"] }).toernooi;
+  tp = voegDeelnemerToe(tp, { categorieId: "c11", naam: "VV B" }).toernooi;
+  tp = voegDeelnemerToe(tp, { categorieId: "c11", naam: "VV C" }).toernooi;
+  tp = Object.assign({}, tp, { scheidsrechters: [{ id: "s1", naam: "Piet", email: "piet@x.nl", telefoon: "0699999999", beschikbaar: [{ dagId: "d1", van: "09:00", tot: "12:00" }] }],
+    logboek: [{ op: "x" }], presentatie: { kleur: "#ff0000", mededeling: "Welkom!" } });
+  tp = maakGroepsfase(tp, "c11", { poules: [tp.deelnemers.map((d) => d.id)], perPoule: 0, besteNummers: null });
+  tp = zetUitslag(tp, tp.wedstrijden[0].id, { thuis: 2, uit: 1 }, null);
+  tp = Object.assign({}, tp, { wedstrijden: tp.wedstrijden.map((w, i) => i === 0 ? Object.assign({}, w, { notitie: "blessure van Kind Een" }) : w) });
+  const kopie = JSON.stringify(tp);
+  const m = publiekeMomentopname(tp, { nu: "2027-04-17T10:00:00.000Z" });
+  const tekst = JSON.stringify(m);
+  ok("geen e-mail, telefoon, contactpersoon, spelers of notitie", /geheim@|0612345678|Jan Geheim|Kind Een|piet@|0699999999|blessure/.test(tekst), false);
+  ok("ook de veldnamen email en telefoon komen niet voor (de server weigert ze)", /"email"|"telefoon"/.test(tekst), false);
+  ok("geen logboek en geen beschikbaarheid", [m.logboek.length, /beschikbaar/.test(tekst)], [0, false]);
+  ok("namen, schema en uitslag staan er wel in", [m.deelnemers.map((d) => d.naam), m.wedstrijden[0].uitslag, m.scheidsrechters[0].naam], [["VV A", "VV B", "VV C"], { thuis: 2, uit: 1 }, "Piet"]);
+  ok("de stand op de openbare pagina is dezelfde als in de app",
+     pouleStand(m, m.stadia[0].id, m.stadia[0].poules[0].id), pouleStand(tp, tp.stadia[0].id, tp.stadia[0].poules[0].id));
+  ok("schemaRegels werkt op de momentopname", schemaRegels(m).length, tp.wedstrijden.length);
+  ok("kleur en mededeling gaan mee, het logo alleen als je het meegeeft", [m.presentatie.kleur, m.presentatie.mededeling, m.presentatie.logo], ["#ff0000", "Welkom!", ""]);
+  ok("het toernooi zelf is niet aangepast", JSON.stringify(tp), kopie);
+}
+
 groep("oude toernooien omzetten (v1)");
 {
   const oud = { id: 123, naam: "Zomertoernooi", datum: "2026-06-20", locatie: "Sportpark", aantalVelden: 2, speelduur: 12, pauze: 3, starttijd: "10:00",

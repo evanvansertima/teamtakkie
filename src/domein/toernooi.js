@@ -911,3 +911,50 @@ function deelScheidsrechtersIn(t, o) {
     toegewezen: Object.keys(nieuw).length, zonder: zonder
   };
 }
+
+/* ── Publiceren (release 3, hoofdstuk 5g) ──────────────────────
+   De momentopname die openbaar gaat. Een volledig toernooi-object,
+   zodat de openbare pagina dezelfde rekenfuncties kan gebruiken
+   (pouleStand, deelnemersVan, schemaRegels) — maar zonder alles wat
+   niet openbaar hoort: geen e-mail, telefoon, contactpersoon of
+   spelerslijst van een team, geen notities bij wedstrijden, geen
+   beschikbaarheid van scheidsrechters, geen logboek.
+   Een lijst met TOEGESTANE velden, geen lijst met verboden velden:
+   een veld dat er later bijkomt gaat dan niet ongemerkt mee naar
+   buiten. server/23-toernooi-publiek.sql weigert bovendien elke
+   inhoud met een veld "email" of "telefoon". */
+/** @param {any} bron @param {string[]} velden */
+function alleen(bron, velden) {
+  /** @type {any} */ var uit = {};
+  velden.forEach(function (v) { if (bron[v] !== undefined) uit[v] = bron[v]; });
+  return uit;
+}
+/**
+ * @param {any} t
+ * @param {{logo?:string, nu?:string}} [o]  logo: data-url van het clublogo (optioneel)
+ * @returns {any}
+ */
+function publiekeMomentopname(t, o) {
+  o = o || {};
+  var p = t.presentatie || {};
+  return {
+    id: t.id, naam: t.naam, versie: 2, publiekVersie: 1, gepubliceerdOp: o.nu || new Date().toISOString(),
+    dagen: t.dagen.map(function (/** @type {any} */ d) { return alleen(d, ["id", "datum", "start", "eind"]); }),
+    locaties: t.locaties.map(function (/** @type {any} */ l) {
+      return { id: l.id, naam: l.naam, adres: l.adres || "", velden: l.velden.map(function (/** @type {any} */ v) { return alleen(v, ["id", "naam"]); }) };
+    }),
+    categorieen: t.categorieen.map(function (/** @type {any} */ c) {
+      return alleen(c, ["id", "naam", "spelvorm", "geslacht", "leeftijd", "niveau", "wedstrijdduur", "wisseltijd", "minRust", "regels", "knockoutGelijk"]);
+    }),
+    deelnemers: t.deelnemers.map(function (/** @type {any} */ d) { return alleen(d, ["id", "categorieId", "soort", "naam", "logo", "eigen"]); }),
+    scheidsrechters: t.scheidsrechters.map(function (/** @type {any} */ s) { return alleen(s, ["id", "naam"]); }),
+    stadia: t.stadia,
+    wedstrijden: t.wedstrijden.map(function (/** @type {any} */ w) {
+      return alleen(w, ["id", "nummer", "categorieId", "stadiumId", "pouleId", "rondeNaam", "thuis", "uit", "thuisVast", "uitVast",
+                        "dagId", "veldId", "start", "scheidsId", "status", "uitslag", "strafschoppen"]);
+    }),
+    evenementen: (t.evenementen || []).map(function (/** @type {any} */ e) { return alleen(e, ["id", "naam", "dagId", "start", "duur", "locatieId"]); }),
+    presentatie: { kleur: p.kleur || "", mededeling: p.mededeling || "", logo: o.logo || "" },
+    logboek: []
+  };
+}

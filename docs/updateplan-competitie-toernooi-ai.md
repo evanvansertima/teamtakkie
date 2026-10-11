@@ -42,7 +42,29 @@ keuzes:
   De kolom `modules` in `pakket_grenzen` (server) wordt nog nergens
   gebruikt en is niet bijgewerkt.
 
-Volgende: release 3 (planner, scheidsrechters indelen, presentatie).
+**Release 3 (planner en presentatie) is gebouwd — 11 oktober 2026.**
+Wacht nog op één handeling van Evan: `server/23-toernooi-publiek.sql` in de
+SQL Editor van Supabase draaien (pas dan werkt publiceren).
+- Planner (`planAutomatisch`): gretig en voorspelbaar, met reden en voorstel
+  bij wat niet past; vastzetten per wedstrijd; gespeelde wedstrijden blijven
+  staan. Laadproef 224 wedstrijden / 4 dagen / 12 velden: ~0,2 s.
+- Scheidsrechters: beschikbaarheid per dag, voorkeur of uitsluiting per
+  categorie, automatisch indelen (eerlijk verdeeld), conflict "scheids".
+- Weergaven: lijst, tijdlijn per veld, per team (met rust), per
+  scheidsrechter; "Verplaatsen" met vrije tijdvakken of de reden van botsen.
+- Evenementen (opening, prijsuitreiking) blokkeren velden.
+- Presentatie: stap 6 "Presentatie" met publiceren, automatisch bijwerken
+  (5 s na een wijziging), intrekken, kleur, clublogo en mededeling. Openbare
+  pagina op `?toernooi=<code>`, tv-stand met `&scherm=groot` (wisselende
+  panelen, klok, volledig scherm, geen beweging bij "minder beweging").
+  Momentopname via een lijst toegestane velden; de server weigert ook nog
+  elke inhoud met "email" of "telefoon" (`tests/toernooi-publiek.test.sql`,
+  12 scenario's, drie opzettelijke lekken gevangen).
+- Afwijking: velden krijgen (nog) geen spelvorm per dag, en reistijd tussen
+  locaties telt niet mee in de planner. Gebruik bij twee locaties zo nodig
+  een ruimere minimale rust.
+
+Volgende: release 4 (AI-trainer).
 
 ## 0. Besluiten van Evan (9 oktober 2026) en wat ze veranderen
 

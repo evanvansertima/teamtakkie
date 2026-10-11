@@ -2188,4 +2188,13 @@ class FoutOpvang extends React.Component {
   }
 }
 
-ReactDOM.createRoot(document.getElementById("root")).render(<FoutOpvang><App /></FoutOpvang>);
+/* ?toernooi=<code> is de openbare toernooipagina (src/schermen/
+   toernooi-publiek.jsx): geen aanmelding, geen teams, geen sync — alleen
+   die ene momentopname. Daarom vóór App, en niet als pagina erin. */
+var _publiekToernooi = (function () {
+  try { var q = new URLSearchParams(location.search); var s = q.get("toernooi"); return s && /^[a-z0-9]{20}$/.test(s) ? { slug: s, groot: q.get("scherm") === "groot" } : null; }
+  catch (e) { return null; }
+})();
+ReactDOM.createRoot(document.getElementById("root")).render(<FoutOpvang>
+  {_publiekToernooi ? <PubliekToernooi slug={_publiekToernooi.slug} groot={_publiekToernooi.groot} /> : <App />}
+</FoutOpvang>);
