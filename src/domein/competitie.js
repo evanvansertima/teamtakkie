@@ -416,3 +416,262 @@ function doelpuntenPerPersoon(verzameling, spelersPerTeam) {
   });
   return tel;
 }
+
+/* ══ OMZETTEN VAN BESTAANDE GEGEVENS ══════════════════════════
+   Release 1, stap 3 (hoofdstuk 6 van het plan). Uitgangspunt: niets
+   verdwijnt en niets wordt geraden. De oude handmatige stand
+   (fch_stand_v1) en de eigen wedstrijden blijven precies zoals ze waren;
+   deze functies lezen ze alleen en geven nieuwe objecten terug. */
+
+/* Een team-id dat volgt uit de naam: dezelfde club, anders geschreven,
+   geeft hetzelfde id — dus nooit twee keer hetzelfde team. */
+/** @param {string} naam @returns {string} */
+function teamIdUitNaam(naam) {
+  return "t-" + normaliseerTeamNaam(naam).replace(/ /g, "-");
+}
+/** @param {CompTeam[]} teams @param {string} naam @returns {CompTeam|null} */
+function zoekTeamOpNaam(teams, naam) {
+  var n = normaliseerTeamNaam(naam);
+  if (!n) return null;
+  return teams.filter(function (t) {
+    return normaliseerTeamNaam(t.naam) === n ||
+      (t.aliassen || []).some(function (a) { return normaliseerTeamNaam(a) === n; });
+  })[0] || null;
+}
+/** @param {any} w @returns {boolean} */
+function isEigenCompetitie(w) { return (w.soort || "competitie") === "competitie"; }
+
+/* M1, deel 1: de competitie zelf. Eén fase, handmatig, met alle teams
+   die we al kennen: het eigen team, de tegenstanders uit de eigen
+   competitiewedstrijden en de teams uit de oude handmatige stand. Nog
+   GEEN wedstrijden: die komen pas na bevestiging (bevestigIndeling). */
+/**
+ * @param {{id?:string, faseId?:string, eigenNaam:string, oudeStand?:any[], wedstrijden?:any[]}} o
+ * @returns {Competitie}
+ */
+function migreerNaarCompetitie(o) {
+  /** @type {CompTeam[]} */
+  var teams = [{ id: "t-eigen", naam: o.eigenNaam || "Eigen team", eigen: true, aliassen: [] }];
+  /** @param {string} naam */
+  function voegToe(naam) {
+    var schoon = String(naam || "").trim();
+    if (!normaliseerTeamNaam(schoon)) return;
+    var bestaand = zoekTeamOpNaam(teams, schoon);
+    if (bestaand) {
+      if (!bestaand.eigen && bestaand.naam !== schoon && (bestaand.aliassen || []).indexOf(schoon) < 0) {
+        bestaand.aliassen = (bestaand.aliassen || []).concat([schoon]);
+      }
+      return;
+    }
+    teams.push({ id: teamIdUitNaam(schoon), naam: schoon, eigen: false, aliassen: [] });
+  }
+  (o.wedstrijden || []).filter(isEigenCompetitie).forEach(function (w) { voegToe(w.tegenstander); });
+  (o.oudeStand || []).forEach(function (t) { voegToe(t.naam); });
+  var faseId = o.faseId || ("f" + Date.now().toString(36));
+  return {
+    id: o.id || ("c" + Date.now().toString(36)),
+    naam: "Competitie",
+    actieveFaseId: faseId,
+    teams: teams,
+    fases: [{
+      id: faseId, naam: "Fase 1", van: "", tot: "", status: "open", vorm: "handmatig",
+      regels: JSON.parse(JSON.stringify(STANDAARD_REGELS)),
+      deelnemers: teams.map(function (t) { return t.id; }), rondes: [], wedstrijden: []
+    }],
+    logboek: []
+  };
+}
+
+/* M1, deel 2: het VOORSTEL. Elke eigen competitiewedstrijd, ook de
+   geplande, met als voorgestelde fase: de fase waar hij al in zit, of
+   anders de actieve. Het scherm laat de gebruiker per wedstrijd of per
+   datum kiezen; pas daarna bevestigIndeling. */
+/**
+ * @param {Competitie} c
+ * @param {any[]} wedstrijden
+ * @returns {{wedstrijdId:any, faseId:string, datum:string, tegenstander:string, status:string}[]}
+ */
+function voorstelIndeling(c, wedstrijden) {
+  return (wedstrijden || []).filter(isEigenCompetitie).map(function (w) {
+    var al = w.competitie && w.competitie.competitieId === c.id ? w.competitie.faseId : null;
+    return { wedstrijdId: w.id, faseId: al || c.actieveFaseId, datum: w.datum || "",
+             tegenstander: w.tegenstander || "", status: w.status };
+  });
+}
+
+/* M1, deel 3: na "Indeling bevestigen". Maakt per eigen wedstrijd één
+   competitiewedstrijd die ernaar verwijst (geen eigen uitslag: die
+   blijft in de Wedstrijd), en zet in de Wedstrijd in welke fase hij zit.
+   Een wedstrijd die al gekoppeld is, wordt overgeslagen — twee keer
+   bevestigen maakt geen tweede set. */
+/**
+ * @param {Competitie} c
+ * @param {any[]} wedstrijden
+ * @param {{wedstrijdId:any, faseId:string}[]} indeling
+ * @returns {{competitie:Competitie, wedstrijden:any[]}}
+ */
+function bevestigIndeling(c, wedstrijden, indeling) {
+  /** @type {Competitie} */
+  var nieuw = JSON.parse(JSON.stringify(c));
+  var eigen = nieuw.teams.filter(function (t) { return t.eigen; })[0];
+  /** @type {Object<string, {competitieId:string, faseId:string, compWedstrijdId:string}>} */
+  var koppeling = {};
+  /** @param {any} id */
+  function alGekoppeld(id) {
+    return nieuw.fases.some(function (f) { return f.wedstrijden.some(function (x) { return x.wedstrijdId === id; }); });
+  }
+  (indeling || []).forEach(function (keuze) {
+    var w = (wedstrijden || []).filter(function (x) { return x.id === keuze.wedstrijdId; })[0];
+    if (!w || !isEigenCompetitie(w) || alGekoppeld(w.id)) return;
+    var f = nieuw.fases.filter(function (x) { return x.id === keuze.faseId; })[0];
+    if (!f) return;
+    var tegen = zoekTeamOpNaam(nieuw.teams, w.tegenstander);
+    if (!tegen) {
+      tegen = { id: teamIdUitNaam(w.tegenstander || "onbekend"), naam: w.tegenstander || "Onbekend", eigen: false, aliassen: [] };
+      nieuw.teams.push(tegen);
+    }
+    [eigen.id, tegen.id].forEach(function (id) { if (f.deelnemers.indexOf(id) < 0) f.deelnemers.push(id); });
+    var cwId = "cw-" + w.id;
+    f.wedstrijden.push({
+      id: cwId, rondeId: "", thuisId: w.thuis ? eigen.id : tegen.id, uitId: w.thuis ? tegen.id : eigen.id,
+      datum: w.datum || "", tijd: w.tijd || "", locatie: w.locatie || "",
+      status: "gepland", uitslag: null, notitie: "", wedstrijdId: w.id
+    });
+    koppeling[String(w.id)] = { competitieId: nieuw.id, faseId: f.id, compWedstrijdId: cwId };
+  });
+  return {
+    competitie: nieuw,
+    wedstrijden: (wedstrijden || []).map(function (w) {
+      var k = koppeling[String(w.id)];
+      return k ? Object.assign({}, w, { competitie: k }) : w;
+    })
+  };
+}
+
+/* De controle na het omzetten. Drie dingen moeten waar zijn, anders is
+   de omzetting niet in orde en blijft de oude weergave staan:
+   1. elke eigen competitiewedstrijd staat in precies één fase;
+   2. geen enkele uitslag is veranderd;
+   3. de eigen winst/gelijk/verlies/voor/tegen over alle fases samen is
+      precies wat de oude app (eigenStandRij) uitrekende. */
+/**
+ * @param {any[]} voor   eigen wedstrijden vóór het omzetten
+ * @param {Competitie} c
+ * @param {any[]} na     eigen wedstrijden ná het omzetten
+ * @returns {{ok:boolean, meldingen:string[]}}
+ */
+function controleMigratie(voor, c, na) {
+  /** @type {string[]} */
+  var meldingen = [];
+  var eigenVoor = (voor || []).filter(isEigenCompetitie);
+  eigenVoor.forEach(function (w) {
+    var keer = 0;
+    c.fases.forEach(function (f) { f.wedstrijden.forEach(function (x) { if (x.wedstrijdId === w.id) keer++; }); });
+    if (keer === 0) meldingen.push("Wedstrijd " + w.id + " (" + (w.tegenstander || "?") + ") staat in geen enkele fase.");
+    if (keer > 1) meldingen.push("Wedstrijd " + w.id + " (" + (w.tegenstander || "?") + ") staat in " + keer + " fases.");
+    var n = (na || []).filter(function (x) { return x.id === w.id; })[0];
+    if (!n || n.status !== w.status || JSON.stringify(n.score) !== JSON.stringify(w.score)) {
+      meldingen.push("De uitslag of status van wedstrijd " + w.id + " is veranderd.");
+    }
+  });
+  /** @param {any[]} ws */
+  function oud(ws) {
+    var g = ws.filter(function (w) { return w.status === "gespeeld" && isEigenCompetitie(w); });
+    return [g.filter(function (w) { return w.score.fch > w.score.teg; }).length,
+            g.filter(function (w) { return w.score.fch === w.score.teg; }).length,
+            g.filter(function (w) { return w.score.fch < w.score.teg; }).length,
+            g.reduce(function (s, w) { return s + (Number(w.score.fch) || 0); }, 0),
+            g.reduce(function (s, w) { return s + (Number(w.score.teg) || 0); }, 0)];
+  }
+  var som = [0, 0, 0, 0, 0];
+  c.fases.forEach(function (f) {
+    var r = standVanFase(c, f.id, na || []).filter(function (x) { return x.eigen; })[0];
+    if (r) { som[0] += r.winst; som[1] += r.gelijk; som[2] += r.verlies; som[3] += r.voor; som[4] += r.tegen; }
+  });
+  var verwacht = oud(eigenVoor);
+  if (som.join(",") !== verwacht.join(",")) {
+    meldingen.push("De eigen totalen kloppen niet: vóór W/GL/V/voor/tegen " + verwacht.join("/") +
+                   ", ná " + som.join("/") + ".");
+  }
+  return { ok: meldingen.length === 0, meldingen: meldingen };
+}
+
+/* ══ SPELERS OVER TEAMS HEEN (besluit 3) ══════════════════════
+   Elke speler heeft per team een eigen id. persoonId koppelt dezelfde
+   persoon over seizoenen en teams. Binnen één team over seizoenen is
+   dat zeker (de id blijft gelijk bij het kopiëren naar een nieuw
+   seizoen); over teams heen NOOIT automatisch: twee keer "Daan" is
+   niet per se dezelfde Daan. Daar alleen een voorstel, bij gelijke
+   naam én geboortedatum, dat de gebruiker bevestigt. */
+
+/** @returns {string} */
+function nieuwPersoonId() {
+  try { if (typeof crypto !== "undefined" && crypto.randomUUID) return crypto.randomUUID(); } catch (e) {}
+  return "p-" + Date.now().toString(36) + Math.random().toString(36).slice(2, 10);
+}
+/**
+ * @param {{seizoen:string, spelers:any[]}[]} perSeizoen  oudste seizoen eerst
+ * @param {() => string} [maakId]
+ * @returns {{seizoen:string, spelers:any[]}[]}
+ */
+function geefPersoonIds(perSeizoen, maakId) {
+  var nieuwId = maakId || nieuwPersoonId;
+  /** @type {Object<string, string>} */
+  var perId = {};
+  (perSeizoen || []).forEach(function (s) {
+    (s.spelers || []).forEach(function (sp) { if (sp.persoonId && !perId[String(sp.id)]) perId[String(sp.id)] = sp.persoonId; });
+  });
+  return (perSeizoen || []).map(function (s) {
+    return { seizoen: s.seizoen, spelers: (s.spelers || []).map(function (sp) {
+      if (sp.persoonId) return sp;
+      var k = String(sp.id);
+      if (!perId[k]) perId[k] = nieuwId();
+      return Object.assign({}, sp, { persoonId: perId[k] });
+    }) };
+  });
+}
+/**
+ * @param {{teamId:string, spelers:any[]}} a
+ * @param {{teamId:string, spelers:any[]}} b
+ * @returns {{a:any, b:any}[]}
+ */
+function koppelVoorstellen(a, b) {
+  /** @type {{a:any, b:any}[]} */
+  var uit = [];
+  (a.spelers || []).forEach(function (sa) {
+    if (!sa.geboortedatum) return;
+    (b.spelers || []).forEach(function (sb) {
+      if (sb.geboortedatum === sa.geboortedatum && normaliseerTeamNaam(sb.naam) === normaliseerTeamNaam(sa.naam)) {
+        uit.push({ a: sa.id, b: sb.id });
+      }
+    });
+  });
+  return uit;
+}
+/**
+ * @param {Object<string, any[]>} spelersPerTeam
+ * @param {{teamId:string, spelerId:any}} a
+ * @param {{teamId:string, spelerId:any}} b
+ * @returns {Object<string, any[]>}
+ */
+function koppelPersonen(spelersPerTeam, a, b) {
+  var kopie = JSON.parse(JSON.stringify(spelersPerTeam || {}));
+  var sa = (kopie[a.teamId] || []).filter(function (/** @type {any} */ x) { return x.id === a.spelerId; })[0];
+  var sb = (kopie[b.teamId] || []).filter(function (/** @type {any} */ x) { return x.id === b.spelerId; })[0];
+  if (!sa || !sb || !sa.persoonId) throw new Error("Speler om te koppelen niet gevonden");
+  sb.persoonId = sa.persoonId;
+  return kopie;
+}
+/**
+ * @param {Object<string, any[]>} spelersPerTeam
+ * @param {{teamId:string, spelerId:any}} x
+ * @param {() => string} [maakId]
+ * @returns {Object<string, any[]>}
+ */
+function ontkoppelPersoon(spelersPerTeam, x, maakId) {
+  var kopie = JSON.parse(JSON.stringify(spelersPerTeam || {}));
+  var sp = (kopie[x.teamId] || []).filter(function (/** @type {any} */ s) { return s.id === x.spelerId; })[0];
+  if (!sp) throw new Error("Speler om te ontkoppelen niet gevonden");
+  sp.persoonId = (maakId || nieuwPersoonId)();
+  return kopie;
+}

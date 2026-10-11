@@ -18,7 +18,7 @@ import os, shutil, subprocess, sys, tempfile
 HIER = os.path.dirname(os.path.abspath(__file__))
 WORTEL = os.path.dirname(HIER)
 BRON = os.path.join(WORTEL, "src", "domein", "competitie.js")
-TEST = os.path.join(HIER, "competitie.test.js")
+TESTS = [os.path.join(HIER, "competitie.test.js"), os.path.join(HIER, "competitie-migratie.test.js")]
 
 MUTATIES = [
     ("C1  onderling wordt niet opnieuw toegepast op de deelgroep",
@@ -80,14 +80,56 @@ MUTATIES = [
     ("C15 punten uit alle fases lopen door in de stand (het oude probleem)",
      "  (f.wedstrijden || []).forEach(function (w) {\n    var u = uitslagVan(w, eigenWedstrijden);",
      "  [].concat.apply([], c.fases.map(function (x) { return x.wedstrijden; })).forEach(function (w) {\n    var u = uitslagVan(w, eigenWedstrijden);"),
+
+    # ── omzetten van bestaande gegevens (stap 3) ──────────────
+    ("M1  dezelfde club anders geschreven wordt een tweede team",
+     "    if (bestaand) {\n      if (!bestaand.eigen",
+     "    if (false) {\n      if (!bestaand.eigen"),
+
+    ("M2  opnieuw bevestigen maakt een tweede set wedstrijden",
+     "    if (!w || !isEigenCompetitie(w) || alGekoppeld(w.id)) return;",
+     "    if (!w || !isEigenCompetitie(w)) return;"),
+
+    ("M3  bij het omzetten is elk eigen duel een thuiswedstrijd",
+     "      id: cwId, rondeId: \"\", thuisId: w.thuis ? eigen.id : tegen.id, uitId: w.thuis ? tegen.id : eigen.id,",
+     "      id: cwId, rondeId: \"\", thuisId: eigen.id, uitId: tegen.id,"),
+
+    ("M4  de controle ziet een ontbrekende wedstrijd niet",
+     "    if (keer === 0) meldingen.push(",
+     "    if (false) meldingen.push("),
+
+    ("M5  de controle ziet een veranderde uitslag niet",
+     "    if (!n || n.status !== w.status || JSON.stringify(n.score) !== JSON.stringify(w.score)) {",
+     "    if (!n) {"),
+
+    ("M6  elk seizoen krijgt een nieuwe persoonId",
+     "      if (!perId[k]) perId[k] = nieuwId();",
+     "      perId[k] = nieuwId();"),
+
+    ("M7  koppelvoorstel op alleen de naam",
+     "      if (sb.geboortedatum === sa.geboortedatum && normaliseerTeamNaam(sb.naam) === normaliseerTeamNaam(sa.naam)) {",
+     "      if (normaliseerTeamNaam(sb.naam) === normaliseerTeamNaam(sa.naam)) {"),
+
+    ("M8  een oefenwedstrijd komt in het voorstel",
+     "  return (wedstrijden || []).filter(isEigenCompetitie).map(function (w) {\n    var al",
+     "  return (wedstrijden || []).map(function (w) {\n    var al"),
+
+    ("M9  bevestigen past de competitie van vóór het bevestigen aan",
+     "  var nieuw = JSON.parse(JSON.stringify(c));\n  var eigen",
+     "  var nieuw = c;\n  var eigen"),
 ]
 
 
 def draai(module):
+    """Beide testbestanden tegen deze module; rood als een van de twee rood is."""
     env = dict(os.environ, TT_COMPETITIE=module)
-    r = subprocess.run(["node", TEST], capture_output=True, text=True, env=env)
-    regels = [l for l in r.stdout.splitlines() if "geslaagd" in l]
-    return r.returncode, (regels[-1].strip() if regels else r.stderr.strip()[-200:])
+    code, samen = 0, []
+    for test in TESTS:
+        r = subprocess.run(["node", test], capture_output=True, text=True, env=env)
+        regels = [l for l in r.stdout.splitlines() if "geslaagd" in l]
+        samen.append(regels[-1].strip() if regels else "vastgelopen")
+        code = code or r.returncode
+    return code, " | ".join(samen)
 
 
 def main():

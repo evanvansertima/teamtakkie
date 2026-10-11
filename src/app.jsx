@@ -1129,6 +1129,14 @@ const OPGAVE_OPTIES = [
    src/domein/statistieken.js. Wat hier blijft is opslag. */
 const STAND_KEY = "fch_stand_v1";
 const laadStand = () => laadJson(STAND_KEY);
+/* De nieuwe competitie (release 1 van docs/updateplan-competitie-
+   toernooi-ai.md): een lijst Competitie-objecten per team en seizoen,
+   zie src/domein/competitie.js. STAND_KEY hierboven blijft bestaan en
+   wordt nooit overschreven: dat is de oude, met de hand ingevulde stand,
+   en daarmee de terugvalroute. Synchroniseert vanzelf mee — sync neemt
+   elke teamsleutel mee (teamSleutelsVan in src/kern/sync.js). */
+const COMPETITIES_KEY = "fch_competities_v1";
+const laadCompetities = () => laadJson(COMPETITIES_KEY);
 
 const TRAINING_TYPES = ["Warming-up","Oefening","Positiespel","Wedstrijdvorm","Conditie","Afkoelen"];
 
