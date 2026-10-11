@@ -3006,7 +3006,7 @@ window.addEventListener("error", function(e){
 });
 </script>
 <script>
-const APP_VERSIE = "e8b2856";
+const APP_VERSIE = "79b7ddf";
 const TEAMS_KEY = "tt_teams_v1";
 const ACTIEF_KEY = "tt_actief_v1";
 const VOORKEUR_KEY = "tt_voorkeuren_v1";
@@ -7246,6 +7246,9 @@ function conflicten(t2) {
     if (a.w.veldId === b.w.veldId && a.b < b.bezet && b.b < a.bezet) {
       uit.push({ soort: "veld", wedstrijden: [a.w.id, b.w.id], tekst: "Wedstrijd " + a.w.nummer + " en " + b.w.nummer + " staan tegelijk op hetzelfde veld." });
     }
+    if (a.w.scheidsId && a.w.scheidsId === b.w.scheidsId && a.b < b.e && b.b < a.e) {
+      uit.push({ soort: "scheids", wedstrijden: [a.w.id, b.w.id], tekst: "Dezelfde scheidsrechter fluit wedstrijd " + a.w.nummer + " en " + b.w.nummer + " tegelijk." });
+    }
     var samen = a.teams.filter(function(id) {
       return b.teams.indexOf(id) >= 0;
     });
@@ -7389,6 +7392,279 @@ function schemaCsv(t2) {
       return rij.map(cel).join(";");
     }).join("\n")
   );
+}
+function tijdVanMin(m) {
+  return String(Math.floor(m / 60)).padStart(2, "0") + ":" + String(m % 60).padStart(2, "0");
+}
+function planContext(t2) {
+  var cats = {};
+  t2.categorieen.forEach(function(c) {
+    cats[c.id] = c;
+  });
+  var dagIndex = {};
+  t2.dagen.forEach(function(d, i) {
+    dagIndex[d.id] = i;
+  });
+  var velden = [];
+  var veldLoc = {};
+  t2.locaties.forEach(function(l) {
+    l.velden.forEach(function(v) {
+      velden.push({ id: v.id, locId: l.id });
+      veldLoc[v.id] = l.id;
+    });
+  });
+  var opId = {};
+  t2.wedstrijden.forEach(function(w) {
+    opId[w.id] = w;
+  });
+  return { cats, dagIndex, velden, veldLoc, opId };
+}
+function wachtOp(t2, w) {
+  var uit = [];
+  [w.thuis, w.uit].forEach(function(b) {
+    if (!b) return;
+    if (b.winnaarVan) uit.push(b.winnaarVan);
+    if (b.verliezerVan) uit.push(b.verliezerVan);
+    var st = b.poulePlek && b.poulePlek.stadiumId || b.besteNummer && b.besteNummer.stadiumId;
+    if (st) t2.wedstrijden.forEach(function(x) {
+      if (x.stadiumId === st && uit.indexOf(x.id) < 0) uit.push(x.id);
+    });
+  });
+  return uit;
+}
+function planRegel(t2, ctx, w, dagId, veldId, b) {
+  var c = ctx.cats[w.categorieId] || {};
+  var d = deelnemersVan(t2, w);
+  var duur = c.wedstrijdduur || 0;
+  return {
+    id: w.id,
+    nummer: w.nummer,
+    dagId,
+    veldId,
+    b,
+    e: b + duur,
+    bezet: b + duur + (c.wisseltijd || 0),
+    rust: c.minRust || 0,
+    teams: (
+      /** @type {string[]} */
+      [d.thuis, d.uit].filter(Boolean)
+    ),
+    scheidsId: w.scheidsId || null
+  };
+}
+function slotProblemen(t2, ctx, geplaatst, w, dagId, veldId, s, o) {
+  o = o || {};
+  var uit = [];
+  var dag = t2.dagen.filter(function(x) {
+    return x.id === dagId;
+  })[0];
+  var me = planRegel(t2, ctx, w, dagId, veldId, s);
+  var rust = o.geenRust ? 0 : me.rust;
+  if (s < minVan(dag.start) || me.e > minVan(dag.eind) + (o.eindPlus || 0)) uit.push("buiten " + dag.start + "\u2013" + dag.eind);
+  (t2.evenementen || []).forEach(function(ev) {
+    if (ev.dagId !== dagId || ev.locatieId && ev.locatieId !== ctx.veldLoc[veldId]) return;
+    var eb = minVan(ev.start), ee = eb + (Number(ev.duur) || 0);
+    if (s < ee && eb < me.e) uit.push(ev.naam || "evenement");
+  });
+  geplaatst.forEach(function(x) {
+    if (x.id === w.id || x.dagId !== dagId) return;
+    if (x.veldId === veldId && s < x.bezet && x.b < me.bezet) uit.push("veld bezet door wedstrijd " + x.nummer);
+    var samen = me.teams.filter(function(id) {
+      return x.teams.indexOf(id) >= 0;
+    });
+    if (!samen.length) return;
+    var r = o.geenRust ? 0 : Math.max(rust, x.rust);
+    if (s < x.e && x.b < me.e) uit.push("team speelt al wedstrijd " + x.nummer);
+    else if (s >= x.e && s - x.e < r || x.b >= me.e && x.b - me.e < r) uit.push("te weinig rust rond wedstrijd " + x.nummer);
+  });
+  wachtOp(t2, w).forEach(function(id) {
+    var x = geplaatst.filter(function(y) {
+      return y.id === id;
+    })[0];
+    var nr = ctx.opId[id] ? ctx.opId[id].nummer : "?";
+    if (!x) {
+      uit.push("wacht op wedstrijd " + nr + " (nog niet ingepland)");
+      return;
+    }
+    var dx = ctx.dagIndex[x.dagId], dy = ctx.dagIndex[dagId];
+    if (dx > dy || dx === dy && s < x.e + rust) uit.push("wedstrijd " + nr + " is dan nog niet klaar");
+  });
+  return uit;
+}
+function vroegsteSlot(t2, ctx, geplaatst, w, o) {
+  var c = ctx.cats[w.categorieId] || {};
+  var me0 = planRegel(t2, ctx, w, "", "", 0);
+  var wacht = wachtOp(t2, w);
+  for (var di = 0; di < t2.dagen.length; di++) {
+    var dag = t2.dagen[di];
+    var vandaag = geplaatst.filter(function(x) {
+      return x.dagId === dag.id;
+    });
+    var beste = null;
+    for (var vi = 0; vi < ctx.velden.length; vi++) {
+      var veld = ctx.velden[vi];
+      var kand = [minVan(dag.start)];
+      vandaag.forEach(function(x) {
+        if (x.veldId === veld.id) kand.push(x.bezet);
+        if (x.teams.some(function(id) {
+          return me0.teams.indexOf(id) >= 0;
+        })) kand.push(x.e + (o && o.geenRust ? 0 : Math.max(c.minRust || 0, x.rust)));
+        if (wacht.indexOf(x.id) >= 0) kand.push(x.e + (o && o.geenRust ? 0 : c.minRust || 0));
+      });
+      (t2.evenementen || []).forEach(function(ev) {
+        if (ev.dagId === dag.id) kand.push(minVan(ev.start) + (Number(ev.duur) || 0));
+      });
+      kand = kand.filter(function(k2, i) {
+        return kand.indexOf(k2) === i;
+      }).sort(function(a, b) {
+        return a - b;
+      });
+      for (var k = 0; k < kand.length; k++) {
+        if (beste && kand[k] >= beste.s) break;
+        if (!slotProblemen(t2, ctx, geplaatst, w, dag.id, veld.id, kand[k], o).length) {
+          beste = { dagId: dag.id, veldId: veld.id, s: kand[k] };
+          break;
+        }
+      }
+    }
+    if (beste) return beste;
+  }
+  return null;
+}
+function planAutomatisch(t2, o) {
+  o = o || {};
+  var ctx = planContext(t2);
+  var geplaatst = [];
+  var blijft = {};
+  t2.wedstrijden.forEach(function(w) {
+    if (w.dagId && w.veldId && w.start && ctx.dagIndex[w.dagId] !== void 0 && ctx.veldLoc[w.veldId] && (w.vastgezet || w.status === "gespeeld" || o.alleenOngepland)) {
+      blijft[w.id] = true;
+      geplaatst.push(planRegel(t2, ctx, w, w.dagId, w.veldId, minVan(w.start)));
+    }
+  });
+  var soortVolgorde = {};
+  t2.stadia.forEach(function(s) {
+    soortVolgorde[s.id] = s.soort === "poule" ? 0 : 1;
+  });
+  var teDoen = t2.wedstrijden.filter(function(w) {
+    return !blijft[w.id];
+  }).sort(function(a, b) {
+    return (soortVolgorde[a.stadiumId] || 0) - (soortVolgorde[b.stadiumId] || 0) || a.nummer - b.nummer;
+  });
+  var plek = {};
+  var ongepland = [];
+  teDoen.forEach(function(w) {
+    var s = vroegsteSlot(t2, ctx, geplaatst, w);
+    if (s) {
+      plek[w.id] = s;
+      geplaatst.push(planRegel(t2, ctx, w, s.dagId, s.veldId, s.s));
+      return;
+    }
+    var cat = ctx.cats[w.categorieId];
+    var wacht = wachtOp(t2, w).filter(function(id) {
+      return !geplaatst.some(function(x) {
+        return x.id === id;
+      });
+    });
+    var reden, voorstel;
+    if (wacht.length) {
+      reden = "Wacht op wedstrijd " + ctx.opId[wacht[0]].nummer + ", die zelf nergens past.";
+      voorstel = "Los eerst die wedstrijd op.";
+    } else {
+      var namen = planRegel(t2, ctx, w, "", "", 0).teams.map(function(id) {
+        var d = t2.deelnemers.filter(function(x) {
+          return x.id === id;
+        })[0];
+        return d ? d.naam : "";
+      }).filter(Boolean);
+      reden = "Geen veld vrij binnen de speeltijden met " + (cat.minRust || 0) + " min rust" + (namen.length ? " voor " + namen.join(" en ") : "") + ".";
+      if (cat.minRust && vroegsteSlot(t2, ctx, geplaatst, w, { geenRust: true })) voorstel = "Verlaag de minimale rust van " + cat.naam + " (nu " + cat.minRust + " min).";
+      else if (vroegsteSlot(t2, ctx, geplaatst, w, { eindPlus: 60 })) voorstel = "Laat een dag een uur later eindigen.";
+      else voorstel = "Voeg een veld of een dag toe, of maak de wedstrijden van " + cat.naam + " korter.";
+    }
+    ongepland.push({ wedstrijdId: w.id, nummer: w.nummer, reden, voorstel });
+  });
+  var nt = Object.assign({}, t2, { wedstrijden: t2.wedstrijden.map(function(w) {
+    if (blijft[w.id]) return w;
+    var p = plek[w.id];
+    return Object.assign({}, w, p ? { dagId: p.dagId, veldId: p.veldId, start: tijdVanMin(p.s) } : { dagId: null, veldId: null, start: null });
+  }) });
+  return { toernooi: nt, gepland: Object.keys(plek).length, ongepland };
+}
+function vrijeSlots(t2, wId) {
+  var ctx = planContext(t2);
+  var w = wedstrijdVan(t2, wId);
+  var c = ctx.cats[w.categorieId];
+  var stap = Math.max(5, (c.wedstrijdduur || 0) + (c.wisseltijd || 0));
+  var geplaatst = t2.wedstrijden.filter(function(x) {
+    return x.id !== wId && x.dagId && x.veldId && x.start;
+  }).map(function(x) {
+    return planRegel(t2, ctx, x, x.dagId, x.veldId, minVan(x.start));
+  });
+  var uit = [];
+  t2.dagen.forEach(function(dag) {
+    for (var s = minVan(dag.start); s + (c.wedstrijdduur || 0) <= minVan(dag.eind); s += stap) {
+      ctx.velden.forEach(function(v) {
+        uit.push({ dagId: dag.id, veldId: v.id, start: tijdVanMin(s), problemen: slotProblemen(t2, ctx, geplaatst, w, dag.id, v.id, s) });
+      });
+    }
+  });
+  return uit;
+}
+function deelScheidsrechtersIn(t2, o) {
+  o = o || {};
+  var ctx = planContext(t2);
+  var ws = t2.wedstrijden.map(function(w) {
+    return o.opnieuw && !w.vastgezet && w.status !== "gespeeld" ? Object.assign({}, w, { scheidsId: null }) : w;
+  });
+  var bezet = {};
+  t2.scheidsrechters.forEach(function(s) {
+    bezet[s.id] = [];
+  });
+  function blok(w) {
+    var c = ctx.cats[w.categorieId] || {};
+    var b = minVan(w.start);
+    return { dagId: w.dagId, b, e: b + (c.wedstrijdduur || 0) };
+  }
+  ws.forEach(function(w) {
+    if (w.scheidsId && w.start && bezet[w.scheidsId]) bezet[w.scheidsId].push(blok(w));
+  });
+  var volgorde = ws.filter(function(w) {
+    return w.dagId && w.start && !w.scheidsId;
+  }).sort(function(a, b) {
+    return ctx.dagIndex[a.dagId] - ctx.dagIndex[b.dagId] || minVan(a.start) - minVan(b.start) || a.nummer - b.nummer;
+  });
+  var nieuw = {};
+  var zonder = [];
+  volgorde.forEach(function(w) {
+    var x = blok(w);
+    var kandidaten = t2.scheidsrechters.filter(function(s) {
+      if ((s.nietCategorieen || []).indexOf(w.categorieId) >= 0) return false;
+      var besch = s.beschikbaar || [];
+      if (besch.length && !besch.some(function(v) {
+        return v.dagId === x.dagId && minVan(v.van) <= x.b && x.e <= minVan(v.tot);
+      })) return false;
+      return !bezet[s.id].some(function(y) {
+        return y.dagId === x.dagId && x.b < y.e && y.b < x.e;
+      });
+    }).sort(function(a, b) {
+      var va = (a.voorkeurCategorieen || []).indexOf(w.categorieId) >= 0 ? 0 : 1, vb = (b.voorkeurCategorieen || []).indexOf(w.categorieId) >= 0 ? 0 : 1;
+      return va - vb || bezet[a.id].length - bezet[b.id].length;
+    });
+    if (!kandidaten.length) {
+      zonder.push(w.id);
+      return;
+    }
+    nieuw[w.id] = kandidaten[0].id;
+    bezet[kandidaten[0].id].push(x);
+  });
+  return {
+    toernooi: Object.assign({}, t2, { wedstrijden: ws.map(function(w) {
+      return nieuw[w.id] ? Object.assign({}, w, { scheidsId: nieuw[w.id] }) : w;
+    }) }),
+    toegewezen: Object.keys(nieuw).length,
+    zonder
+  };
 }
 const FC_CATEGORIEEN = [
   { id: "pace", label: "Snelheid", kort: "SNE", kleur: "#22c55e", attrs: [
@@ -30670,9 +30946,20 @@ function StapInstellingen({ t: t2, mag, wijzig, onWeg }) {
         x = losVanPlek(x, function(w) {
           return w.dagId === d.id;
         });
-        return Object.assign({}, x, { dagen: x.dagen.filter(function(y) {
-          return y.id !== d.id;
-        }) });
+        return Object.assign({}, x, {
+          dagen: x.dagen.filter(function(y) {
+            return y.id !== d.id;
+          }),
+          evenementen: (x.evenementen || []).filter(function(e) {
+            return e.dagId !== d.id;
+          }),
+          scheidsrechters: x.scheidsrechters.map(function(sr) {
+            if (!(sr.beschikbaar || []).length) return sr;
+            return Object.assign({}, sr, { beschikbaar: sr.beschikbaar.filter(function(b) {
+              return b.dagId !== d.id;
+            }) });
+          })
+        });
       });
     } }, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-trash" }))), /* @__PURE__ */ React.createElement("div", { className: "formulier-rij", style: { marginTop: 8 } }, /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("label", { className: "formulier-label" }, "Begint"), /* @__PURE__ */ React.createElement(
       "input",
@@ -30765,7 +31052,7 @@ function StapInstellingen({ t: t2, mag, wijzig, onWeg }) {
       }, 0) + 1;
       return Object.assign({}, x, { locaties: x.locaties.concat([{ id: tId("l"), naam: "Locatie " + (x.locaties.length + 1), adres: "", velden: [{ id: tId("v"), naam: "Veld " + nr }] }]) });
     });
-  } }, "+ Locatie toevoegen")), /* @__PURE__ */ React.createElement("div", { className: "kaart" }, /* @__PURE__ */ React.createElement("div", { className: "kaart-titel" }, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-layer-group" }), " Categorie\xEBn"), /* @__PURE__ */ React.createElement("p", { style: { fontSize: 12, color: "var(--grijs-donker)", margin: "0 0 10px", lineHeight: 1.5 } }, "Teams spelen alleen tegen teams uit dezelfde categorie. Zo speelt een 11x11-team nooit tegen een 6x6-team."), t2.categorieen.map(function(c) {
+  } }, "+ Locatie toevoegen")), /* @__PURE__ */ React.createElement(EvenementenKaart, { t: t2, mag, wijzig }), /* @__PURE__ */ React.createElement("div", { className: "kaart" }, /* @__PURE__ */ React.createElement("div", { className: "kaart-titel" }, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-layer-group" }), " Categorie\xEBn"), /* @__PURE__ */ React.createElement("p", { style: { fontSize: 12, color: "var(--grijs-donker)", margin: "0 0 10px", lineHeight: 1.5 } }, "Teams spelen alleen tegen teams uit dezelfde categorie. Zo speelt een 11x11-team nooit tegen een 6x6-team."), t2.categorieen.map(function(c) {
     var dn = t2.deelnemers.filter(function(d) {
       return d.categorieId === c.id;
     }).length;
@@ -30853,6 +31140,56 @@ function StapInstellingen({ t: t2, mag, wijzig, onWeg }) {
       }
     }
   ));
+}
+function EvenementenKaart({ t: t2, mag, wijzig }) {
+  var evs = t2.evenementen || [];
+  function zetEv(id, w) {
+    wijzig(function(x) {
+      return Object.assign({}, x, { evenementen: (x.evenementen || []).map(function(e) {
+        return e.id === id ? Object.assign({}, e, w) : e;
+      }) });
+    });
+  }
+  return /* @__PURE__ */ React.createElement("div", { className: "kaart" }, /* @__PURE__ */ React.createElement("div", { className: "kaart-titel" }, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-bullhorn" }), " Evenementen"), /* @__PURE__ */ React.createElement("p", { style: { fontSize: 12, color: "var(--grijs-donker)", margin: "0 0 10px", lineHeight: 1.5 } }, "Opening, pauze of prijsuitreiking. Automatisch plannen zet daar geen wedstrijden."), evs.map(function(e) {
+    return /* @__PURE__ */ React.createElement("div", { key: e.id, style: { borderBottom: "1px solid var(--grijs)", paddingBottom: 8, marginBottom: 8 } }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 8 } }, /* @__PURE__ */ React.createElement(TVeld, { waarde: e.naam, disabled: !mag, style: { flex: 1, marginBottom: 6 }, "aria-label": "Naam van het evenement", opKlaar: function(v) {
+      if (v.trim()) zetEv(e.id, { naam: v.trim() });
+    } }), mag && /* @__PURE__ */ React.createElement("button", { className: "knop lijn klein", "aria-label": "Evenement weghalen", style: { marginBottom: 6 }, onClick: function() {
+      wijzig(function(x) {
+        return Object.assign({}, x, { evenementen: (x.evenementen || []).filter(function(y) {
+          return y.id !== e.id;
+        }) });
+      });
+    } }, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-xmark" }))), /* @__PURE__ */ React.createElement("div", { style: { display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(100px,1fr))", gap: 8 } }, t2.dagen.length > 1 && /* @__PURE__ */ React.createElement("select", { className: "formulier-input", "aria-label": "Dag", style: { marginBottom: 0 }, value: e.dagId, disabled: !mag, onChange: function(ev) {
+      zetEv(e.id, { dagId: ev.target.value });
+    } }, t2.dagen.map(function(d, k) {
+      return /* @__PURE__ */ React.createElement("option", { key: d.id, value: d.id }, d.datum ? formateerDatumKort(d.datum) : "Dag " + (k + 1));
+    })), /* @__PURE__ */ React.createElement(
+      "input",
+      {
+        className: "formulier-input",
+        type: "time",
+        "aria-label": "Begint",
+        style: { marginBottom: 0 },
+        value: e.start,
+        disabled: !mag,
+        onChange: function(ev) {
+          if (ev.target.value) zetEv(e.id, { start: ev.target.value });
+        }
+      }
+    ), /* @__PURE__ */ React.createElement("select", { className: "formulier-input", "aria-label": "Duur", style: { marginBottom: 0 }, value: e.duur, disabled: !mag, onChange: function(ev) {
+      zetEv(e.id, { duur: Number(ev.target.value) });
+    } }, [10, 15, 20, 30, 45, 60, 90, 120].map(function(m) {
+      return /* @__PURE__ */ React.createElement("option", { key: m, value: m }, m + " min");
+    })), t2.locaties.length > 1 && /* @__PURE__ */ React.createElement("select", { className: "formulier-input", "aria-label": "Locatie", style: { marginBottom: 0 }, value: e.locatieId || "", disabled: !mag, onChange: function(ev) {
+      zetEv(e.id, { locatieId: ev.target.value || null });
+    } }, /* @__PURE__ */ React.createElement("option", { value: "" }, "Alle locaties"), t2.locaties.map(function(l) {
+      return /* @__PURE__ */ React.createElement("option", { key: l.id, value: l.id }, l.naam);
+    }))));
+  }), mag && /* @__PURE__ */ React.createElement("button", { className: "knop lijn klein", onClick: function() {
+    wijzig(function(x) {
+      return Object.assign({}, x, { evenementen: (x.evenementen || []).concat([{ id: tId("e"), naam: "Prijsuitreiking", dagId: x.dagen[0].id, start: "16:30", duur: 30, locatieId: null }]) });
+    });
+  } }, "+ Evenement"));
 }
 function CategorieInstellingen({ c, mag, aantalDeelnemers, opZet, opWeg }) {
   const [open, setOpen] = useState(false);
@@ -31119,7 +31456,7 @@ function StapDeelnemers({ t: t2, mag, wijzig }) {
           return y.id === s.id ? Object.assign({}, y, { telefoon: v.trim() }) : y;
         }) });
       });
-    } }))), mag && /* @__PURE__ */ React.createElement("button", { className: "knop lijn klein", style: { color: "var(--gevaar)" }, onClick: function() {
+    } }))), /* @__PURE__ */ React.createElement(ScheidsBeschikbaar, { t: t2, s, mag, wijzig }), mag && /* @__PURE__ */ React.createElement("button", { className: "knop lijn klein", style: { color: "var(--gevaar)" }, onClick: function() {
       wijzig(function(x) {
         return Object.assign({}, x, {
           scheidsrechters: x.scheidsrechters.filter(function(y) {
@@ -31133,6 +31470,74 @@ function StapDeelnemers({ t: t2, mag, wijzig }) {
       setOpen(null);
     } }, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-trash" }), " Weghalen" + (aantal ? " (en losmaken van " + aantalTekst(aantal, "wedstrijd", "wedstrijden") + ")" : ""))));
   })));
+}
+function ScheidsBeschikbaar({ t: t2, s, mag, wijzig }) {
+  function zet(w) {
+    wijzig(function(x) {
+      return Object.assign({}, x, { scheidsrechters: x.scheidsrechters.map(function(y) {
+        return y.id === s.id ? Object.assign({}, y, w) : y;
+      }) });
+    });
+  }
+  var besch = s.beschikbaar || [];
+  var voorkeur = s.voorkeurCategorieen || [], niet = s.nietCategorieen || [];
+  return /* @__PURE__ */ React.createElement("div", { style: { marginBottom: 10 } }, /* @__PURE__ */ React.createElement("label", { className: "formulier-label" }, "Beschikbaar"), /* @__PURE__ */ React.createElement("label", { style: { display: "flex", gap: 8, alignItems: "center", fontSize: 13, marginBottom: 6 } }, /* @__PURE__ */ React.createElement("input", { type: "checkbox", checked: !besch.length, disabled: !mag, onChange: function(e) {
+    zet({ beschikbaar: e.target.checked ? [] : t2.dagen.map(function(d) {
+      return { dagId: d.id, van: d.start, tot: d.eind };
+    }) });
+  } }), " Het hele toernooi"), besch.length > 0 && t2.dagen.map(function(d, k) {
+    var b = besch.filter(function(x) {
+      return x.dagId === d.id;
+    })[0];
+    function zetDag(nieuw) {
+      var rest = besch.filter(function(x) {
+        return x.dagId !== d.id;
+      });
+      zet({ beschikbaar: nieuw ? rest.concat([nieuw]) : rest });
+    }
+    return /* @__PURE__ */ React.createElement("div", { key: d.id, style: { display: "flex", gap: 6, alignItems: "center", marginBottom: 6, flexWrap: "wrap" } }, /* @__PURE__ */ React.createElement("label", { style: { display: "flex", gap: 6, alignItems: "center", fontSize: 13, minWidth: 90 } }, /* @__PURE__ */ React.createElement("input", { type: "checkbox", checked: !!b, disabled: !mag, onChange: function(e) {
+      zetDag(e.target.checked ? { dagId: d.id, van: d.start, tot: d.eind } : null);
+    } }), d.datum ? formateerDatumKort(d.datum) : "Dag " + (k + 1)), b && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement(
+      "input",
+      {
+        className: "formulier-input",
+        type: "time",
+        "aria-label": "Vanaf",
+        value: b.van,
+        disabled: !mag,
+        style: { width: "auto", marginBottom: 0, padding: "4px 6px" },
+        onChange: function(e) {
+          if (e.target.value) zetDag(Object.assign({}, b, { van: e.target.value }));
+        }
+      }
+    ), /* @__PURE__ */ React.createElement("span", null, "\u2013"), /* @__PURE__ */ React.createElement(
+      "input",
+      {
+        className: "formulier-input",
+        type: "time",
+        "aria-label": "Tot",
+        value: b.tot,
+        disabled: !mag,
+        style: { width: "auto", marginBottom: 0, padding: "4px 6px" },
+        onChange: function(e) {
+          if (e.target.value) zetDag(Object.assign({}, b, { tot: e.target.value }));
+        }
+      }
+    )));
+  }), t2.categorieen.length > 1 && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("label", { className: "formulier-label", style: { marginTop: 6 } }, "Categorie\xEBn (tik: voorkeur \u2192 niet \u2192 maakt niet uit)"), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexWrap: "wrap", gap: 6 } }, t2.categorieen.map(function(c) {
+    var stand = voorkeur.indexOf(c.id) >= 0 ? "voorkeur" : niet.indexOf(c.id) >= 0 ? "niet" : "";
+    var stijl = stand === "voorkeur" ? chipStijl(true) : stand === "niet" ? { borderColor: "var(--gevaar)", background: "var(--wit)", color: "var(--gevaar)", textDecoration: "line-through" } : chipStijl(false);
+    return /* @__PURE__ */ React.createElement("button", { key: c.id, className: "filter-chip", style: stijl, disabled: !mag, onClick: function() {
+      var v = voorkeur.filter(function(x) {
+        return x !== c.id;
+      }), n = niet.filter(function(x) {
+        return x !== c.id;
+      });
+      if (stand === "") v = v.concat([c.id]);
+      else if (stand === "voorkeur") n = n.concat([c.id]);
+      zet({ voorkeurCategorieen: v, nietCategorieen: n });
+    } }, (stand === "voorkeur" ? "\u2605 " : "") + c.naam);
+  }))));
 }
 function StapIndeling({ t: t2, mag, wijzig }) {
   const [catId, setCatId] = useCategorie(t2);
@@ -31395,9 +31800,11 @@ function IndelingMaken({ t: t2, cat, deelnemers, mag, wijzig, bestaand, onKlaar 
   ));
 }
 function StapSchema({ t: t2, mag, wijzig }) {
+  const [weergave, setWeergave] = useState("lijst");
   const [filter, setFilter] = useState("alles");
   const [catFilter, setCatFilter] = useState("");
   const [open, setOpen] = useState(null);
+  const [planner, setPlanner] = useState(false);
   var lijst = conflicten(t2);
   var perWedstrijd = {};
   lijst.forEach(function(c) {
@@ -31423,10 +31830,39 @@ function StapSchema({ t: t2, mag, wijzig }) {
   if (!t2.wedstrijden.length) {
     return /* @__PURE__ */ React.createElement("div", { className: "kaart" }, /* @__PURE__ */ React.createElement("p", { style: { fontSize: 13, color: "var(--grijs-donker)", margin: 0 } }, "Er zijn nog geen wedstrijden. Maak eerst de indeling bij stap 3."));
   }
+  var weergaven = [["lijst", "Lijst"], ["veld", "Per veld"], ["team", "Per team"]];
+  if (t2.scheidsrechters.length) weergaven.push(["scheids", "Per scheidsrechter"]);
+  function rij(r, extra) {
+    var w = opNummer[r.nummer];
+    var fout = perWedstrijd[w.id];
+    return /* @__PURE__ */ React.createElement("div", { key: w.id }, extra, /* @__PURE__ */ React.createElement(
+      "button",
+      {
+        onClick: function() {
+          setOpen(open === w.id ? null : w.id);
+        },
+        "aria-expanded": open === w.id,
+        style: { display: "flex", width: "100%", gap: 10, alignItems: "center", background: "none", border: 0, borderBottom: "1px solid var(--grijs)", padding: "8px 0", cursor: "pointer", color: "inherit", textAlign: "left" }
+      },
+      /* @__PURE__ */ React.createElement("span", { style: { width: 48, flexShrink: 0, fontWeight: 700, fontSize: 14, color: w.start ? "inherit" : "var(--grijs-donker)" } }, w.start || "\u2014", w.vastgezet && /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-thumbtack", style: { fontSize: 10, marginLeft: 3, color: "var(--grijs-donker)" }, title: "Vastgezet" })),
+      /* @__PURE__ */ React.createElement("span", { style: { flex: 1, minWidth: 0 } }, /* @__PURE__ */ React.createElement("span", { style: { display: "block", fontSize: 14, lineHeight: 1.35 } }, r.thuis), /* @__PURE__ */ React.createElement("span", { style: { display: "block", fontSize: 14, lineHeight: 1.35 } }, r.uit), /* @__PURE__ */ React.createElement("span", { style: { display: "block", fontSize: 11, color: "var(--grijs-donker)", marginTop: 2 } }, ["#" + r.nummer, r.veld && (t2.locaties.length > 1 ? r.locatie + " \xB7 " : "") + r.veld, t2.categorieen.length > 1 && r.categorie, r.ronde, r.scheids && "Scheids: " + r.scheids].filter(Boolean).join(" \xB7 "))),
+      fout && /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-triangle-exclamation", style: { color: "var(--gevaar)" }, title: fout.join("\n"), "aria-label": "Conflict" }),
+      w.uitslag && /* @__PURE__ */ React.createElement("span", { style: { fontWeight: 700, fontSize: 13 } }, w.uitslag.thuis + "\u2013" + w.uitslag.uit)
+    ), open === w.id && /* @__PURE__ */ React.createElement(PlanVenster, { t: t2, w, mag, fouten: fout || [], wijzig, onKlaar: function() {
+      setOpen(null);
+    } }));
+  }
   var dagKop = null;
   return /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { className: "kaart", style: { padding: "12px 14px" } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 14, fontWeight: 700 } }, gepland + " van " + aantalTekst(t2.wedstrijden.length, "wedstrijd", "wedstrijden") + " ingepland"), lijst.length > 0 ? /* @__PURE__ */ React.createElement("div", { className: "melding", style: { margin: "10px 0 0", background: "var(--vlak-gevaar, #fdecec)" } }, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-triangle-exclamation", style: { color: "var(--gevaar)" } }), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", null, aantalTekst(lijst.length, "conflict", "conflicten") + " in het schema:"), lijst.slice(0, 6).map(function(c, k) {
     return /* @__PURE__ */ React.createElement("div", { key: k, style: { fontWeight: 400 } }, "\u2022 " + c.tekst);
-  }), lijst.length > 6 && /* @__PURE__ */ React.createElement("div", { style: { fontWeight: 400 } }, "\u2026 en nog " + (lijst.length - 6)))) : gepland > 0 && /* @__PURE__ */ React.createElement("p", { style: { fontSize: 12, color: "var(--succes)", margin: "6px 0 0" } }, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-check" }), " Geen conflicten.")), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 10 } }, [["alles", "Alles"], ["ongepland", "Nog in te plannen"], ["conflicten", "Conflicten"]].map(function(f) {
+  }), lijst.length > 6 && /* @__PURE__ */ React.createElement("div", { style: { fontWeight: 400 } }, "\u2026 en nog " + (lijst.length - 6)))) : gepland > 0 && /* @__PURE__ */ React.createElement("p", { style: { fontSize: 12, color: "var(--succes)", margin: "6px 0 0" } }, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-check" }), " Geen conflicten."), mag && /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 8, flexWrap: "wrap", marginTop: 10 } }, /* @__PURE__ */ React.createElement("button", { className: "knop klein", onClick: function() {
+    setPlanner(true);
+  } }, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-wand-magic-sparkles" }), " Automatisch plannen"), t2.scheidsrechters.length > 0 && gepland > 0 && /* @__PURE__ */ React.createElement(ScheidsKnop, { t: t2, wijzig }))), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 10 } }, weergaven.map(function(f) {
+    return /* @__PURE__ */ React.createElement("button", { key: f[0], className: "filter-chip", style: chipStijl(weergave === f[0]), onClick: function() {
+      setWeergave(f[0]);
+      setOpen(null);
+    } }, f[1]);
+  })), weergave === "lijst" && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 10, alignItems: "center" } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 12, color: "var(--grijs-donker)" } }, "Toon:"), [["alles", "Alles"], ["ongepland", "Nog in te plannen"], ["conflicten", "Conflicten"]].map(function(f) {
     return /* @__PURE__ */ React.createElement("button", { key: f[0], className: "filter-chip", style: chipStijl(filter === f[0]), onClick: function() {
       setFilter(f[0]);
     } }, f[1]);
@@ -31454,24 +31890,201 @@ function StapSchema({ t: t2, mag, wijzig }) {
       return !opNummer[x.nummer].dagId;
     })) && kop !== dagKop;
     dagKop = kop;
-    var fout = perWedstrijd[w.id];
-    return /* @__PURE__ */ React.createElement("div", { key: w.id }, toonKop && /* @__PURE__ */ React.createElement("div", { className: "review-label", style: { margin: "10px 0 4px" } }, kop), /* @__PURE__ */ React.createElement(
-      "button",
+    return rij(r, toonKop ? /* @__PURE__ */ React.createElement("div", { className: "review-label", style: { margin: "10px 0 4px" } }, kop) : null);
+  }))), weergave === "veld" && /* @__PURE__ */ React.createElement(TijdlijnPerVeld, { t: t2, perWedstrijd, opKies: function(id) {
+    setOpen(id);
+    setWeergave("lijst");
+    setFilter("alles");
+    setCatFilter("");
+  } }), weergave === "team" && /* @__PURE__ */ React.createElement(OverzichtPer, { t: t2, soort: "team", regels, opNummer, rij }), weergave === "scheids" && /* @__PURE__ */ React.createElement(OverzichtPer, { t: t2, soort: "scheids", regels, opNummer, rij }), /* @__PURE__ */ React.createElement(ToernooiDownloads, { t: t2 }), planner && /* @__PURE__ */ React.createElement(PlannerVenster, { t: t2, wijzig, onSluiten: function() {
+    setPlanner(false);
+  } }));
+}
+function PlannerVenster({ t: t2, wijzig, onSluiten }) {
+  const [alleenNieuw, setAlleenNieuw] = useState(t2.wedstrijden.some(function(w) {
+    return w.start;
+  }));
+  var r = planAutomatisch(t2, { alleenOngepland: alleenNieuw });
+  var blijft = t2.wedstrijden.filter(function(w) {
+    return w.start && (w.vastgezet || w.status === "gespeeld" || alleenNieuw);
+  }).length;
+  var verschuift = t2.wedstrijden.filter(function(w) {
+    var n = r.toernooi.wedstrijden.filter(function(x) {
+      return x.id === w.id;
+    })[0];
+    return w.start && (n.start !== w.start || n.veldId !== w.veldId || n.dagId !== w.dagId);
+  }).length;
+  return /* @__PURE__ */ React.createElement("div", { className: "bevestig-overlay", onClick: function(e) {
+    if (e.target === e.currentTarget) onSluiten();
+  } }, /* @__PURE__ */ React.createElement("div", { className: "bevestig-kaart", style: { textAlign: "left", maxHeight: "85vh", overflowY: "auto" } }, /* @__PURE__ */ React.createElement("h3", null, "Automatisch plannen"), /* @__PURE__ */ React.createElement("p", { style: { fontSize: 13 } }, "Elke wedstrijd krijgt het vroegste veld en tijdstip waarop beide teams genoeg rust hebben en het veld vrij is. Een vervolgronde komt pas na de ronde waar hij op wacht."), /* @__PURE__ */ React.createElement("label", { style: { display: "flex", gap: 8, alignItems: "flex-start", fontSize: 13, margin: "8px 0" } }, /* @__PURE__ */ React.createElement("input", { type: "radio", checked: alleenNieuw, onChange: function() {
+    setAlleenNieuw(true);
+  } }), /* @__PURE__ */ React.createElement("span", null, /* @__PURE__ */ React.createElement("b", null, "Alleen wat nog geen plek heeft"), /* @__PURE__ */ React.createElement("br", null), "Wat al gepland is, blijft staan.")), /* @__PURE__ */ React.createElement("label", { style: { display: "flex", gap: 8, alignItems: "flex-start", fontSize: 13, margin: "8px 0 12px" } }, /* @__PURE__ */ React.createElement("input", { type: "radio", checked: !alleenNieuw, onChange: function() {
+    setAlleenNieuw(false);
+  } }), /* @__PURE__ */ React.createElement("span", null, /* @__PURE__ */ React.createElement("b", null, "Alles opnieuw"), /* @__PURE__ */ React.createElement("br", null), "Alleen vastgezette ", /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-thumbtack" }), " en gespeelde wedstrijden blijven staan.")), /* @__PURE__ */ React.createElement("div", { className: "melding" }, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-circle-info" }), /* @__PURE__ */ React.createElement("div", null, aantalTekst(r.gepland, "wedstrijd krijgt", "wedstrijden krijgen") + " een plek" + (blijft ? ", " + blijft + " blijven staan" : "") + (verschuift ? ", " + verschuift + " schuiven naar een andere plek" : "") + ".", r.ongepland.length > 0 && /* @__PURE__ */ React.createElement("div", { style: { color: "var(--gevaar)" } }, aantalTekst(r.ongepland.length, "wedstrijd past", "wedstrijden passen") + " nergens."))), r.ongepland.slice(0, 8).map(function(o) {
+    return /* @__PURE__ */ React.createElement("div", { key: o.wedstrijdId, style: { fontSize: 12, borderTop: "1px solid var(--grijs)", padding: "6px 0" } }, /* @__PURE__ */ React.createElement("b", null, "Wedstrijd " + o.nummer + ": "), o.reden, /* @__PURE__ */ React.createElement("div", { style: { color: "var(--blauw)" } }, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-lightbulb" }), " ", o.voorstel));
+  }), r.ongepland.length > 8 && /* @__PURE__ */ React.createElement("p", { style: { fontSize: 12 } }, "\u2026 en nog " + (r.ongepland.length - 8)), /* @__PURE__ */ React.createElement("div", { className: "bevestig-knoppen" }, /* @__PURE__ */ React.createElement("button", { className: "knop lijn", onClick: onSluiten }, "Annuleren"), /* @__PURE__ */ React.createElement("button", { className: "knop", disabled: !r.gepland && !verschuift, onClick: function() {
+    if (wijzig(function(x) {
+      return planAutomatisch(x, { alleenOngepland: alleenNieuw }).toernooi;
+    })) {
+      meldGoed(aantalTekst(r.gepland, "wedstrijd", "wedstrijden") + " ingepland");
+      onSluiten();
+    }
+  } }, "Toepassen"))));
+}
+function ScheidsKnop({ t: t2, wijzig }) {
+  const [vraag, setVraag] = useState(false);
+  var zonder = t2.wedstrijden.filter(function(w) {
+    return w.start && !w.scheidsId;
+  }).length;
+  function doe(opnieuw) {
+    var r = deelScheidsrechtersIn(t2, { opnieuw });
+    if (wijzig(function(x) {
+      return deelScheidsrechtersIn(x, { opnieuw }).toernooi;
+    })) {
+      if (r.zonder.length) meldFout(aantalTekst(r.toegewezen, "wedstrijd", "wedstrijden") + " ingedeeld; voor " + r.zonder.length + " was niemand vrij.");
+      else meldGoed(aantalTekst(r.toegewezen, "wedstrijd", "wedstrijden") + " ingedeeld");
+    }
+    setVraag(false);
+  }
+  return /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("button", { className: "knop lijn klein", onClick: function() {
+    setVraag(true);
+  } }, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-flag" }), " Scheidsrechters indelen"), vraag && /* @__PURE__ */ React.createElement("div", { className: "bevestig-overlay", onClick: function(e) {
+    if (e.target === e.currentTarget) setVraag(false);
+  } }, /* @__PURE__ */ React.createElement("div", { className: "bevestig-kaart" }, /* @__PURE__ */ React.createElement("h3", null, "Scheidsrechters indelen"), /* @__PURE__ */ React.createElement("p", null, "Per wedstrijd een scheidsrechter die dan vrij en beschikbaar is; wie de minste wedstrijden heeft gaat voor. " + (zonder ? zonder + " geplande wedstrijden hebben nog niemand." : "Alle geplande wedstrijden hebben al iemand.")), /* @__PURE__ */ React.createElement("div", { className: "bevestig-knoppen", style: { flexWrap: "wrap" } }, /* @__PURE__ */ React.createElement("button", { className: "knop lijn", onClick: function() {
+    setVraag(false);
+  } }, "Annuleren"), /* @__PURE__ */ React.createElement("button", { className: "knop lijn", onClick: function() {
+    doe(true);
+  } }, "Alles opnieuw"), /* @__PURE__ */ React.createElement("button", { className: "knop", disabled: !zonder, onClick: function() {
+    doe(false);
+  } }, "Alleen lege")))));
+}
+function TijdlijnPerVeld({ t: t2, perWedstrijd, opKies }) {
+  const [dagId, setDagId] = useState(t2.dagen[0].id);
+  var dag = t2.dagen.filter(function(d) {
+    return d.id === dagId;
+  })[0] || t2.dagen[0];
+  var velden = [];
+  t2.locaties.forEach(function(l) {
+    l.velden.forEach(function(v) {
+      velden.push({ id: v.id, naam: v.naam, loc: l.naam });
+    });
+  });
+  var ws = t2.wedstrijden.filter(function(w) {
+    return w.dagId === dag.id && w.start;
+  });
+  var begin = minVan(dag.start), eind = minVan(dag.eind);
+  ws.forEach(function(w) {
+    var c = categorieVan(t2, w.categorieId);
+    begin = Math.min(begin, minVan(w.start));
+    eind = Math.max(eind, minVan(w.start) + c.wedstrijdduur);
+  });
+  var pxMin = 2.2;
+  var hoogte = Math.max(60, (eind - begin) * pxMin);
+  var uren = [];
+  for (var u = Math.ceil(begin / 60) * 60; u <= eind; u += 60) uren.push(u);
+  var evs = (t2.evenementen || []).filter(function(e) {
+    return e.dagId === dag.id;
+  });
+  return /* @__PURE__ */ React.createElement("div", { className: "kaart", style: { padding: "10px 12px" } }, t2.dagen.length > 1 && /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 10 } }, t2.dagen.map(function(d, k) {
+    return /* @__PURE__ */ React.createElement("button", { key: d.id, className: "filter-chip", style: chipStijl(d.id === dag.id), onClick: function() {
+      setDagId(d.id);
+    } }, d.datum ? formateerDatumKort(d.datum) : "Dag " + (k + 1));
+  })), /* @__PURE__ */ React.createElement("div", { style: { overflowX: "auto" } }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", minWidth: 44 + velden.length * 120 } }, /* @__PURE__ */ React.createElement("div", { style: { width: 44, flexShrink: 0, position: "relative", height: hoogte + 24 } }, uren.map(function(m) {
+    return /* @__PURE__ */ React.createElement("div", { key: m, style: { position: "absolute", top: 24 + (m - begin) * pxMin - 6, fontSize: 10, color: "var(--grijs-donker)" } }, tijdVanMin(m));
+  })), velden.map(function(v) {
+    return /* @__PURE__ */ React.createElement("div", { key: v.id, style: { flex: 1, minWidth: 120, position: "relative", height: hoogte + 24, borderLeft: "1px solid var(--grijs)" } }, /* @__PURE__ */ React.createElement(
+      "div",
       {
-        onClick: function() {
-          setOpen(open === w.id ? null : w.id);
-        },
-        "aria-expanded": open === w.id,
-        style: { display: "flex", width: "100%", gap: 10, alignItems: "center", background: "none", border: 0, borderBottom: "1px solid var(--grijs)", padding: "8px 0", cursor: "pointer", color: "inherit", textAlign: "left" }
+        style: { height: 24, fontSize: 11, fontWeight: 700, textAlign: "center", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", padding: "0 4px" },
+        title: v.loc + " \xB7 " + v.naam
       },
-      /* @__PURE__ */ React.createElement("span", { style: { width: 48, flexShrink: 0, fontWeight: 700, fontSize: 14, color: w.start ? "inherit" : "var(--grijs-donker)" } }, w.start || "\u2014"),
-      /* @__PURE__ */ React.createElement("span", { style: { flex: 1, minWidth: 0 } }, /* @__PURE__ */ React.createElement("span", { style: { display: "block", fontSize: 14, lineHeight: 1.35 } }, r.thuis), /* @__PURE__ */ React.createElement("span", { style: { display: "block", fontSize: 14, lineHeight: 1.35 } }, r.uit), /* @__PURE__ */ React.createElement("span", { style: { display: "block", fontSize: 11, color: "var(--grijs-donker)", marginTop: 2 } }, ["#" + r.nummer, r.veld && (t2.locaties.length > 1 ? r.locatie + " \xB7 " : "") + r.veld, t2.categorieen.length > 1 && r.categorie, r.ronde, r.scheids && "Scheids: " + r.scheids].filter(Boolean).join(" \xB7 "))),
-      fout && /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-triangle-exclamation", style: { color: "var(--gevaar)" }, title: fout.join("\n"), "aria-label": "Conflict" }),
-      w.uitslag && /* @__PURE__ */ React.createElement("span", { style: { fontWeight: 700, fontSize: 13 } }, w.uitslag.thuis + "\u2013" + w.uitslag.uit)
-    ), open === w.id && /* @__PURE__ */ React.createElement(PlanVenster, { t: t2, w, mag, fouten: fout || [], wijzig, onKlaar: function() {
-      setOpen(null);
-    } }));
-  })), /* @__PURE__ */ React.createElement(ToernooiDownloads, { t: t2 }));
+      v.naam
+    ), evs.filter(function(e) {
+      return !e.locatieId || velden.some(function(x) {
+        return x.id === v.id;
+      }) && t2.locaties.some(function(l) {
+        return l.id === e.locatieId && l.velden.some(function(x) {
+          return x.id === v.id;
+        });
+      });
+    }).map(function(e) {
+      return /* @__PURE__ */ React.createElement("div", { key: e.id, style: {
+        position: "absolute",
+        left: 2,
+        right: 2,
+        top: 24 + (minVan(e.start) - begin) * pxMin,
+        height: Math.max(14, e.duur * pxMin),
+        background: "repeating-linear-gradient(45deg,var(--grijs-licht),var(--grijs-licht) 4px,var(--grijs) 4px,var(--grijs) 8px)",
+        borderRadius: 6,
+        fontSize: 10,
+        padding: "2px 4px",
+        overflow: "hidden"
+      } }, e.naam);
+    }), ws.filter(function(w) {
+      return w.veldId === v.id;
+    }).map(function(w) {
+      var c = categorieVan(t2, w.categorieId);
+      var fout = perWedstrijd[w.id];
+      return /* @__PURE__ */ React.createElement(
+        "button",
+        {
+          key: w.id,
+          onClick: function() {
+            opKies(w.id);
+          },
+          title: kantNaam(t2, w, "thuis") + " \u2013 " + kantNaam(t2, w, "uit"),
+          style: {
+            position: "absolute",
+            left: 3,
+            right: 3,
+            top: 24 + (minVan(w.start) - begin) * pxMin,
+            height: Math.max(18, c.wedstrijdduur * pxMin - 2),
+            background: fout ? "var(--vlak-gevaar, #fdecec)" : "var(--vlak-info)",
+            border: "1px solid " + (fout ? "var(--gevaar)" : "var(--blauw)"),
+            borderRadius: 6,
+            fontSize: 10,
+            lineHeight: 1.25,
+            padding: "2px 4px",
+            textAlign: "left",
+            overflow: "hidden",
+            cursor: "pointer",
+            color: "inherit"
+          }
+        },
+        /* @__PURE__ */ React.createElement("b", null, w.start + " #" + w.nummer),
+        /* @__PURE__ */ React.createElement("div", { style: { whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" } }, kantNaam(t2, w, "thuis")),
+        /* @__PURE__ */ React.createElement("div", { style: { whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" } }, kantNaam(t2, w, "uit"))
+      );
+    }));
+  }))), /* @__PURE__ */ React.createElement("p", { style: { fontSize: 11, color: "var(--grijs-donker)", margin: "8px 0 0" } }, "Tik op een wedstrijd om hem te verplaatsen."));
+}
+function OverzichtPer({ t: t2, soort, regels, opNummer, rij }) {
+  var keuzes = soort === "team" ? t2.deelnemers.map(function(d) {
+    return { id: d.id, naam: d.naam + (t2.categorieen.length > 1 ? " (" + categorieVan(t2, d.categorieId).naam + ")" : "") };
+  }) : t2.scheidsrechters.map(function(s) {
+    return { id: s.id, naam: s.naam };
+  });
+  const [id, setId] = useState(keuzes[0] ? keuzes[0].id : "");
+  var eigen = regels.filter(function(r) {
+    var w = opNummer[r.nummer];
+    if (soort === "scheids") return w.scheidsId === id;
+    var d = deelnemersVan(t2, w);
+    return d.thuis === id || d.uit === id;
+  });
+  var vorige = null;
+  return /* @__PURE__ */ React.createElement("div", { className: "kaart", style: { padding: "10px 14px" } }, /* @__PURE__ */ React.createElement("select", { className: "formulier-input", value: id, "aria-label": soort === "team" ? "Team" : "Scheidsrechter", onChange: function(e) {
+    setId(e.target.value);
+  } }, keuzes.map(function(k) {
+    return /* @__PURE__ */ React.createElement("option", { key: k.id, value: k.id }, k.naam);
+  })), eigen.length === 0 && /* @__PURE__ */ React.createElement("p", { style: { fontSize: 13, color: "var(--grijs-donker)" } }, soort === "team" ? "Nog geen wedstrijden bekend voor dit team (een knock-out volgt pas na de groepsfase)." : "Nog geen wedstrijden voor deze scheidsrechter."), eigen.map(function(r) {
+    var w = opNummer[r.nummer];
+    var rust = null;
+    if (vorige && w.start && vorige.start && vorige.dagId === w.dagId) {
+      rust = minVan(w.start) - minVan(vorige.start) - categorieVan(t2, vorige.categorieId).wedstrijdduur;
+    }
+    vorige = w;
+    return rij(r, rust !== null ? /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: rust < categorieVan(t2, w.categorieId).minRust ? "var(--gevaar)" : "var(--grijs-donker)", padding: "4px 0 0 58px" } }, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-mug-hot" }), " " + rust + " min rust") : null);
+  }));
 }
 function eersteVrijeTijd(t2, w, dagId, veldId) {
   var dag = t2.dagen.filter(function(d) {
@@ -31500,10 +32113,20 @@ function PlanVenster({ t: t2, w, mag, fouten, wijzig, onKlaar }) {
   const [veldId, setVeldId] = useState(startVeld);
   const [start, setStart] = useState(w.start || eersteVrijeTijd(t2, w, startDag, startVeld));
   const [scheids, setScheids] = useState(w.scheidsId || "");
+  const [slots, setSlots] = useState(false);
   function kiesPlek(d, v) {
     setDagId(d);
     setVeldId(v);
     if (!w.start) setStart(eersteVrijeTijd(t2, w, d, v));
+  }
+  function bewaar(plek) {
+    var ok = wijzig(function(x) {
+      var nt = planWedstrijd(x, w.id, plek);
+      return Object.assign({}, nt, { wedstrijden: nt.wedstrijden.map(function(y) {
+        return y.id === w.id ? Object.assign({}, y, { scheidsId: scheids || null }) : y;
+      }) });
+    });
+    if (ok) onKlaar();
   }
   return /* @__PURE__ */ React.createElement("div", { style: { background: "var(--grijs-licht)", borderRadius: 12, padding: "10px 12px", margin: "6px 0 10px" } }, fouten.map(function(f, k) {
     return /* @__PURE__ */ React.createElement("div", { key: k, style: { fontSize: 12, color: "var(--gevaar)", marginBottom: 4 } }, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-triangle-exclamation" }), " ", f);
@@ -31521,19 +32144,63 @@ function PlanVenster({ t: t2, w, mag, fouten, wijzig, onKlaar }) {
     setScheids(e.target.value);
   } }, /* @__PURE__ */ React.createElement("option", { value: "" }, "\u2014"), t2.scheidsrechters.map(function(s) {
     return /* @__PURE__ */ React.createElement("option", { key: s.id, value: s.id }, s.naam);
-  })))), mag && /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 8, flexWrap: "wrap" } }, /* @__PURE__ */ React.createElement("button", { className: "knop klein", onClick: function() {
-    var ok = wijzig(function(x) {
-      var nt = planWedstrijd(x, w.id, { dagId, veldId, start });
-      return Object.assign({}, nt, { wedstrijden: nt.wedstrijden.map(function(y) {
-        return y.id === w.id ? Object.assign({}, y, { scheidsId: scheids || null }) : y;
+  })))), mag && /* @__PURE__ */ React.createElement("label", { style: { display: "flex", gap: 8, alignItems: "center", fontSize: 13, marginBottom: 10 } }, /* @__PURE__ */ React.createElement("input", { type: "checkbox", checked: !!w.vastgezet, onChange: function(e) {
+    var aan = e.target.checked;
+    wijzig(function(x) {
+      return Object.assign({}, x, { wedstrijden: x.wedstrijden.map(function(y) {
+        return y.id === w.id ? Object.assign({}, y, { vastgezet: aan }) : y;
       }) });
     });
-    if (ok) onKlaar();
-  } }, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-check" }), " Opslaan"), w.start && /* @__PURE__ */ React.createElement("button", { className: "knop lijn klein", onClick: function() {
-    if (wijzig(function(x) {
-      return planWedstrijd(x, w.id, null);
-    })) onKlaar();
-  } }, "Losmaken"), /* @__PURE__ */ React.createElement("button", { className: "knop lijn klein", onClick: onKlaar }, "Sluiten")));
+  } }), /* @__PURE__ */ React.createElement("span", null, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-thumbtack" }), " Vastzetten \u2014 automatisch plannen laat deze wedstrijd staan")), mag && /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 8, flexWrap: "wrap" } }, /* @__PURE__ */ React.createElement("button", { className: "knop klein", onClick: function() {
+    bewaar({ dagId, veldId, start });
+  } }, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-check" }), " Opslaan"), /* @__PURE__ */ React.createElement("button", { className: "knop lijn klein", onClick: function() {
+    setSlots(!slots);
+  } }, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-arrows-up-down-left-right" }), " Verplaatsen"), w.start && /* @__PURE__ */ React.createElement("button", { className: "knop lijn klein", onClick: function() {
+    bewaar(null);
+  } }, "Losmaken"), /* @__PURE__ */ React.createElement("button", { className: "knop lijn klein", onClick: onKlaar }, "Sluiten")), mag && slots && /* @__PURE__ */ React.createElement(VrijeSlots, { t: t2, w, opKies: function(s) {
+    bewaar({ dagId: s.dagId, veldId: s.veldId, start: s.start });
+  } }));
+}
+function VrijeSlots({ t: t2, w, opKies }) {
+  const [alles, setAlles] = useState(false);
+  var lijst = vrijeSlots(t2, w.id);
+  var vrij = lijst.filter(function(s) {
+    return !s.problemen.length;
+  });
+  var toon2 = (alles ? lijst : vrij).slice(0, alles ? 60 : 24);
+  function veldNaam(id) {
+    var n = "";
+    t2.locaties.forEach(function(l) {
+      l.velden.forEach(function(v) {
+        if (v.id === id) n = (t2.locaties.length > 1 ? l.naam + " \xB7 " : "") + v.naam;
+      });
+    });
+    return n;
+  }
+  function dagNaam(id) {
+    var k = t2.dagen.map(function(d2) {
+      return d2.id;
+    }).indexOf(id);
+    var d = t2.dagen[k];
+    return d && d.datum ? formateerDatumKort(d.datum) : "Dag " + (k + 1);
+  }
+  return /* @__PURE__ */ React.createElement("div", { style: { marginTop: 10 } }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 8, marginBottom: 6 } }, /* @__PURE__ */ React.createElement("span", { style: { flex: 1, fontSize: 12, fontWeight: 700 } }, aantalTekst(vrij.length, "vrij tijdvak", "vrije tijdvakken")), /* @__PURE__ */ React.createElement("label", { style: { fontSize: 12, display: "flex", gap: 4, alignItems: "center" } }, /* @__PURE__ */ React.createElement("input", { type: "checkbox", checked: alles, onChange: function(e) {
+    setAlles(e.target.checked);
+  } }), " ook bezette")), toon2.map(function(s, k) {
+    var goed = !s.problemen.length;
+    return /* @__PURE__ */ React.createElement(
+      "button",
+      {
+        key: k,
+        onClick: function() {
+          opKies(s);
+        },
+        style: { display: "flex", width: "100%", gap: 8, alignItems: "flex-start", textAlign: "left", background: "var(--wit)", border: "1px solid var(--grijs)", borderRadius: 8, padding: "7px 9px", marginBottom: 4, cursor: "pointer", color: "inherit", fontSize: 13 }
+      },
+      /* @__PURE__ */ React.createElement("i", { className: goed ? "fa-solid fa-circle-check" : "fa-solid fa-circle-xmark", style: { color: goed ? "var(--succes)" : "var(--gevaar)", marginTop: 2 } }),
+      /* @__PURE__ */ React.createElement("span", { style: { flex: 1, minWidth: 0 } }, /* @__PURE__ */ React.createElement("b", null, (t2.dagen.length > 1 ? dagNaam(s.dagId) + " \xB7 " : "") + s.start), " \xB7 " + veldNaam(s.veldId), !goed && /* @__PURE__ */ React.createElement("span", { style: { display: "block", fontSize: 11, color: "var(--grijs-donker)" } }, s.problemen.join("; ")))
+    );
+  }), vrij.length === 0 && !alles && /* @__PURE__ */ React.createElement("p", { style: { fontSize: 12, color: "var(--grijs-donker)" } }, 'Geen enkel tijdvak is helemaal vrij. Zet "ook bezette" aan om te zien wat er botst.'));
 }
 function StapResultaten({ t: t2, mag, wijzig }) {
   const [catId, setCatId] = useCategorie(t2);

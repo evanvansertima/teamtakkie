@@ -317,7 +317,13 @@ function StapInstellingen({ t, mag, wijzig, onWeg }) {
                   <button className="knop lijn klein" style={{minHeight:44}} aria-label="Dag weghalen" onClick={function () {
                     weghalen("Dag weghalen?", geplandOp(function (w) { return w.dagId === d.id; }), function (x) {
                       x = losVanPlek(x, function (w) { return w.dagId === d.id; });
-                      return Object.assign({}, x, { dagen: x.dagen.filter(function (y) { return y.id !== d.id; }) });
+                      /* Evenementen en beschikbaarheid op die dag gaan mee weg. */
+                      return Object.assign({}, x, { dagen: x.dagen.filter(function (y) { return y.id !== d.id; }),
+                        evenementen: (x.evenementen || []).filter(function (e) { return e.dagId !== d.id; }),
+                        scheidsrechters: x.scheidsrechters.map(function (sr) {
+                          if (!(sr.beschikbaar || []).length) return sr;
+                          return Object.assign({}, sr, { beschikbaar: sr.beschikbaar.filter(function (b) { return b.dagId !== d.id; }) });
+                        }) });
                     });
                   }}><i className="fa-solid fa-trash"/></button>
                 )}
@@ -400,6 +406,8 @@ function StapInstellingen({ t, mag, wijzig, onWeg }) {
         }}>+ Locatie toevoegen</button>}
       </div>
 
+      <EvenementenKaart t={t} mag={mag} wijzig={wijzig} />
+
       <div className="kaart">
         <div className="kaart-titel"><i className="fa-solid fa-layer-group"/> Categorieën</div>
         <p style={{fontSize:12,color:"var(--grijs-donker)",margin:"0 0 10px",lineHeight:1.5}}>
@@ -453,6 +461,52 @@ function StapInstellingen({ t, mag, wijzig, onWeg }) {
       {vraag && <Bevestig titel={vraag.titel} tekst={vraag.tekst} knop={vraag.knop} gevaar
         onNee={function () { setVraag(null); }}
         onJa={function () { var v = vraag; setVraag(null); if (v.weg) onWeg(); else wijzig(v.doe); }} />}
+    </div>
+  );
+}
+
+/* Evenementen: een opening, lunchpauze of prijsuitreiking. Tijdens een
+   evenement plant de planner geen wedstrijden — op één locatie of overal. */
+function EvenementenKaart({ t, mag, wijzig }) {
+  var evs = t.evenementen || [];
+  function zetEv(id, w) { wijzig(function (x) { return Object.assign({}, x, { evenementen: (x.evenementen || []).map(function (e) { return e.id === id ? Object.assign({}, e, w) : e; }) }); }); }
+  return (
+    <div className="kaart">
+      <div className="kaart-titel"><i className="fa-solid fa-bullhorn"/> Evenementen</div>
+      <p style={{fontSize:12,color:"var(--grijs-donker)",margin:"0 0 10px",lineHeight:1.5}}>Opening, pauze of prijsuitreiking. Automatisch plannen zet daar geen wedstrijden.</p>
+      {evs.map(function (e) {
+        return (
+          <div key={e.id} style={{borderBottom:"1px solid var(--grijs)",paddingBottom:8,marginBottom:8}}>
+            <div style={{display:"flex",gap:8}}>
+              <TVeld waarde={e.naam} disabled={!mag} style={{flex:1,marginBottom:6}} aria-label="Naam van het evenement" opKlaar={function (v) { if (v.trim()) zetEv(e.id, { naam: v.trim() }); }} />
+              {mag && <button className="knop lijn klein" aria-label="Evenement weghalen" style={{marginBottom:6}} onClick={function () {
+                wijzig(function (x) { return Object.assign({}, x, { evenementen: (x.evenementen || []).filter(function (y) { return y.id !== e.id; }) }); });
+              }}><i className="fa-solid fa-xmark"/></button>}
+            </div>
+            <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(100px,1fr))",gap:8}}>
+              {t.dagen.length > 1 && (
+                <select className="formulier-input" aria-label="Dag" style={{marginBottom:0}} value={e.dagId} disabled={!mag} onChange={function (ev) { zetEv(e.id, { dagId: ev.target.value }); }}>
+                  {t.dagen.map(function (d, k) { return <option key={d.id} value={d.id}>{d.datum ? formateerDatumKort(d.datum) : "Dag " + (k + 1)}</option>; })}
+                </select>
+              )}
+              <input className="formulier-input" type="time" aria-label="Begint" style={{marginBottom:0}} value={e.start} disabled={!mag}
+                onChange={function (ev) { if (ev.target.value) zetEv(e.id, { start: ev.target.value }); }} />
+              <select className="formulier-input" aria-label="Duur" style={{marginBottom:0}} value={e.duur} disabled={!mag} onChange={function (ev) { zetEv(e.id, { duur: Number(ev.target.value) }); }}>
+                {[10, 15, 20, 30, 45, 60, 90, 120].map(function (m) { return <option key={m} value={m}>{m + " min"}</option>; })}
+              </select>
+              {t.locaties.length > 1 && (
+                <select className="formulier-input" aria-label="Locatie" style={{marginBottom:0}} value={e.locatieId || ""} disabled={!mag} onChange={function (ev) { zetEv(e.id, { locatieId: ev.target.value || null }); }}>
+                  <option value="">Alle locaties</option>
+                  {t.locaties.map(function (l) { return <option key={l.id} value={l.id}>{l.naam}</option>; })}
+                </select>
+              )}
+            </div>
+          </div>
+        );
+      })}
+      {mag && <button className="knop lijn klein" onClick={function () {
+        wijzig(function (x) { return Object.assign({}, x, { evenementen: (x.evenementen || []).concat([{ id: tId("e"), naam: "Prijsuitreiking", dagId: x.dagen[0].id, start: "16:30", duur: 30, locatieId: null }]) }); });
+      }}>+ Evenement</button>}
     </div>
   );
 }
@@ -677,6 +731,7 @@ function StapDeelnemers({ t, mag, wijzig }) {
                         wijzig(function (x) { return Object.assign({}, x, { scheidsrechters: x.scheidsrechters.map(function (y) { return y.id === s.id ? Object.assign({}, y, { telefoon: v.trim() }) : y; }) }); });
                       }} /></div>
                   </div>
+                  <ScheidsBeschikbaar t={t} s={s} mag={mag} wijzig={wijzig} />
                   {mag && (
                     <button className="knop lijn klein" style={{color:"var(--gevaar)"}} onClick={function () {
                       wijzig(function (x) {
@@ -694,6 +749,62 @@ function StapDeelnemers({ t, mag, wijzig }) {
           );
         })}
       </div>
+    </div>
+  );
+}
+
+/* Beschikbaarheid en voorkeur van één scheidsrechter. Leeg = het hele
+   toernooi beschikbaar, voor elke categorie. */
+function ScheidsBeschikbaar({ t, s, mag, wijzig }) {
+  function zet(w) {
+    wijzig(function (x) { return Object.assign({}, x, { scheidsrechters: x.scheidsrechters.map(function (y) { return y.id === s.id ? Object.assign({}, y, w) : y; }) }); });
+  }
+  var besch = s.beschikbaar || [];
+  var voorkeur = s.voorkeurCategorieen || [], niet = s.nietCategorieen || [];
+  return (
+    <div style={{marginBottom:10}}>
+      <label className="formulier-label">Beschikbaar</label>
+      <label style={{display:"flex",gap:8,alignItems:"center",fontSize:13,marginBottom:6}}>
+        <input type="checkbox" checked={!besch.length} disabled={!mag} onChange={function (e) {
+          zet({ beschikbaar: e.target.checked ? [] : t.dagen.map(function (d) { return { dagId: d.id, van: d.start, tot: d.eind }; }) });
+        }} /> Het hele toernooi
+      </label>
+      {besch.length > 0 && t.dagen.map(function (d, k) {
+        var b = besch.filter(function (x) { return x.dagId === d.id; })[0];
+        function zetDag(nieuw) {
+          var rest = besch.filter(function (x) { return x.dagId !== d.id; });
+          zet({ beschikbaar: nieuw ? rest.concat([nieuw]) : rest });
+        }
+        return (
+          <div key={d.id} style={{display:"flex",gap:6,alignItems:"center",marginBottom:6,flexWrap:"wrap"}}>
+            <label style={{display:"flex",gap:6,alignItems:"center",fontSize:13,minWidth:90}}>
+              <input type="checkbox" checked={!!b} disabled={!mag} onChange={function (e) { zetDag(e.target.checked ? { dagId: d.id, van: d.start, tot: d.eind } : null); }} />
+              {d.datum ? formateerDatumKort(d.datum) : "Dag " + (k + 1)}
+            </label>
+            {b && <>
+              <input className="formulier-input" type="time" aria-label="Vanaf" value={b.van} disabled={!mag} style={{width:"auto",marginBottom:0,padding:"4px 6px"}}
+                onChange={function (e) { if (e.target.value) zetDag(Object.assign({}, b, { van: e.target.value })); }} />
+              <span>–</span>
+              <input className="formulier-input" type="time" aria-label="Tot" value={b.tot} disabled={!mag} style={{width:"auto",marginBottom:0,padding:"4px 6px"}}
+                onChange={function (e) { if (e.target.value) zetDag(Object.assign({}, b, { tot: e.target.value })); }} />
+            </>}
+          </div>
+        );
+      })}
+      {t.categorieen.length > 1 && <>
+        <label className="formulier-label" style={{marginTop:6}}>Categorieën (tik: voorkeur → niet → maakt niet uit)</label>
+        <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
+          {t.categorieen.map(function (c) {
+            var stand = voorkeur.indexOf(c.id) >= 0 ? "voorkeur" : niet.indexOf(c.id) >= 0 ? "niet" : "";
+            var stijl = stand === "voorkeur" ? chipStijl(true) : stand === "niet" ? { borderColor: "var(--gevaar)", background: "var(--wit)", color: "var(--gevaar)", textDecoration: "line-through" } : chipStijl(false);
+            return <button key={c.id} className="filter-chip" style={stijl} disabled={!mag} onClick={function () {
+              var v = voorkeur.filter(function (x) { return x !== c.id; }), n = niet.filter(function (x) { return x !== c.id; });
+              if (stand === "") v = v.concat([c.id]); else if (stand === "voorkeur") n = n.concat([c.id]);
+              zet({ voorkeurCategorieen: v, nietCategorieen: n });
+            }}>{(stand === "voorkeur" ? "★ " : "") + c.naam}</button>;
+          })}
+        </div>
+      </>}
     </div>
   );
 }
@@ -949,14 +1060,17 @@ function IndelingMaken({ t, cat, deelnemers, mag, wijzig, bestaand, onKlaar }) {
 }
 
 /* ═══ Stap 4: Schema ═══
-   Met de hand: per wedstrijd dag, veld, tijd en scheidsrechter kiezen.
-   Geen slepen — dat werkt niet op een telefoon langs de lijn. De
-   automatische planner komt in release 3. Conflicten worden getoond,
-   niet tegengehouden: de organisator beslist. */
+   Automatisch plannen (planAutomatisch, release 3) of per wedstrijd met
+   de hand: dag, veld, tijd en scheidsrechter, of "Verplaatsen" naar een
+   vrij tijdvak. Geen slepen — dat werkt niet op een telefoon langs de
+   lijn. Conflicten worden getoond, niet tegengehouden: de organisator
+   beslist. */
 function StapSchema({ t, mag, wijzig }) {
+  const [weergave, setWeergave] = useState("lijst");
   const [filter, setFilter] = useState("alles");
   const [catFilter, setCatFilter] = useState("");
   const [open, setOpen] = useState(null);
+  const [planner, setPlanner] = useState(false);
   var lijst = conflicten(t);
   var perWedstrijd = {};
   lijst.forEach(function (c) { c.wedstrijden.forEach(function (id) { (perWedstrijd[id] = perWedstrijd[id] || []).push(c.tekst); }); });
@@ -975,6 +1089,34 @@ function StapSchema({ t, mag, wijzig }) {
   if (!t.wedstrijden.length) {
     return <div className="kaart"><p style={{fontSize:13,color:"var(--grijs-donker)",margin:0}}>Er zijn nog geen wedstrijden. Maak eerst de indeling bij stap 3.</p></div>;
   }
+  var weergaven = [["lijst", "Lijst"], ["veld", "Per veld"], ["team", "Per team"]];
+  if (t.scheidsrechters.length) weergaven.push(["scheids", "Per scheidsrechter"]);
+  /* Eén wedstrijd in een lijst; tik = plannen/verplaatsen. */
+  function rij(r, extra) {
+    var w = opNummer[r.nummer];
+    var fout = perWedstrijd[w.id];
+    return (
+      <div key={w.id}>
+        {extra}
+        <button onClick={function () { setOpen(open === w.id ? null : w.id); }} aria-expanded={open === w.id}
+          style={{display:"flex",width:"100%",gap:10,alignItems:"center",background:"none",border:0,borderBottom:"1px solid var(--grijs)",padding:"8px 0",cursor:"pointer",color:"inherit",textAlign:"left"}}>
+          <span style={{width:48,flexShrink:0,fontWeight:700,fontSize:14,color:w.start ? "inherit" : "var(--grijs-donker)"}}>
+            {w.start || "—"}{w.vastgezet && <i className="fa-solid fa-thumbtack" style={{fontSize:10,marginLeft:3,color:"var(--grijs-donker)"}} title="Vastgezet"/>}
+          </span>
+          <span style={{flex:1,minWidth:0}}>
+            <span style={{display:"block",fontSize:14,lineHeight:1.35}}>{r.thuis}</span>
+            <span style={{display:"block",fontSize:14,lineHeight:1.35}}>{r.uit}</span>
+            <span style={{display:"block",fontSize:11,color:"var(--grijs-donker)",marginTop:2}}>
+              {["#" + r.nummer, r.veld && (t.locaties.length > 1 ? r.locatie + " · " : "") + r.veld, t.categorieen.length > 1 && r.categorie, r.ronde, r.scheids && "Scheids: " + r.scheids].filter(Boolean).join(" · ")}
+            </span>
+          </span>
+          {fout && <i className="fa-solid fa-triangle-exclamation" style={{color:"var(--gevaar)"}} title={fout.join("\n")} aria-label="Conflict"/>}
+          {w.uitslag && <span style={{fontWeight:700,fontSize:13}}>{w.uitslag.thuis + "–" + w.uitslag.uit}</span>}
+        </button>
+        {open === w.id && <PlanVenster t={t} w={w} mag={mag} fouten={fout || []} wijzig={wijzig} onKlaar={function () { setOpen(null); }} />}
+      </div>
+    );
+  }
   var dagKop = null;
   return (
     <div>
@@ -990,53 +1132,232 @@ function StapSchema({ t, mag, wijzig }) {
             </div>
           </div>
         ) : gepland > 0 && <p style={{fontSize:12,color:"var(--succes)",margin:"6px 0 0"}}><i className="fa-solid fa-check"/> Geen conflicten.</p>}
-      </div>
-
-      <div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:10}}>
-        {[["alles", "Alles"], ["ongepland", "Nog in te plannen"], ["conflicten", "Conflicten"]].map(function (f) {
-          return <button key={f[0]} className="filter-chip" style={chipStijl(filter === f[0])} onClick={function () { setFilter(f[0]); }}>{f[1]}</button>;
-        })}
-        {t.categorieen.length > 1 && (
-          <select className="formulier-input" style={{width:"auto",marginBottom:0,padding:"4px 8px",fontSize:12}} value={catFilter}
-            aria-label="Categorie" onChange={function (e) { setCatFilter(e.target.value); }}>
-            <option value="">Alle categorieën</option>
-            {t.categorieen.map(function (c) { return <option key={c.id} value={c.id}>{c.naam}</option>; })}
-          </select>
+        {mag && (
+          <div style={{display:"flex",gap:8,flexWrap:"wrap",marginTop:10}}>
+            <button className="knop klein" onClick={function () { setPlanner(true); }}><i className="fa-solid fa-wand-magic-sparkles"/> Automatisch plannen</button>
+            {t.scheidsrechters.length > 0 && gepland > 0 && <ScheidsKnop t={t} wijzig={wijzig} />}
+          </div>
         )}
       </div>
 
-      <div className="kaart" style={{padding:"6px 14px"}}>
-        {zichtbaar.length === 0 && <p style={{fontSize:13,color:"var(--grijs-donker)"}}>Niets te zien met dit filter.</p>}
-        {zichtbaar.map(function (r) {
-          var w = opNummer[r.nummer];
-          var kop = !w.dagId ? "Nog niet ingepland" : (r.dag ? formateerDatumKort(r.dag) : "Dag " + (t.dagen.map(function (d) { return d.id; }).indexOf(w.dagId) + 1));
-          /* Een kopje alleen als er iets te onderscheiden valt. */
-          var toonKop = (t.dagen.length > 1 || regels.some(function (x) { return !opNummer[x.nummer].dagId; })) && kop !== dagKop;
-          dagKop = kop;
-          var fout = perWedstrijd[w.id];
-          return (
-            <div key={w.id}>
-              {toonKop && <div className="review-label" style={{margin:"10px 0 4px"}}>{kop}</div>}
-              <button onClick={function () { setOpen(open === w.id ? null : w.id); }} aria-expanded={open === w.id}
-                style={{display:"flex",width:"100%",gap:10,alignItems:"center",background:"none",border:0,borderBottom:"1px solid var(--grijs)",padding:"8px 0",cursor:"pointer",color:"inherit",textAlign:"left"}}>
-                <span style={{width:48,flexShrink:0,fontWeight:700,fontSize:14,color:w.start ? "inherit" : "var(--grijs-donker)"}}>{w.start || "—"}</span>
-                <span style={{flex:1,minWidth:0}}>
-                  <span style={{display:"block",fontSize:14,lineHeight:1.35}}>{r.thuis}</span>
-                  <span style={{display:"block",fontSize:14,lineHeight:1.35}}>{r.uit}</span>
-                  <span style={{display:"block",fontSize:11,color:"var(--grijs-donker)",marginTop:2}}>
-                    {["#" + r.nummer, r.veld && (t.locaties.length > 1 ? r.locatie + " · " : "") + r.veld, t.categorieen.length > 1 && r.categorie, r.ronde, r.scheids && "Scheids: " + r.scheids].filter(Boolean).join(" · ")}
-                  </span>
-                </span>
-                {fout && <i className="fa-solid fa-triangle-exclamation" style={{color:"var(--gevaar)"}} title={fout.join("\n")} aria-label="Conflict"/>}
-                {w.uitslag && <span style={{fontWeight:700,fontSize:13}}>{w.uitslag.thuis + "–" + w.uitslag.uit}</span>}
-              </button>
-              {open === w.id && <PlanVenster t={t} w={w} mag={mag} fouten={fout || []} wijzig={wijzig} onKlaar={function () { setOpen(null); }} />}
-            </div>
-          );
+      <div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:10}}>
+        {weergaven.map(function (f) {
+          return <button key={f[0]} className="filter-chip" style={chipStijl(weergave === f[0])} onClick={function () { setWeergave(f[0]); setOpen(null); }}>{f[1]}</button>;
         })}
       </div>
 
+      {weergave === "lijst" && <>
+        <div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:10,alignItems:"center"}}>
+          <span style={{fontSize:12,color:"var(--grijs-donker)"}}>Toon:</span>
+          {[["alles", "Alles"], ["ongepland", "Nog in te plannen"], ["conflicten", "Conflicten"]].map(function (f) {
+            return <button key={f[0]} className="filter-chip" style={chipStijl(filter === f[0])} onClick={function () { setFilter(f[0]); }}>{f[1]}</button>;
+          })}
+          {t.categorieen.length > 1 && (
+            <select className="formulier-input" style={{width:"auto",marginBottom:0,padding:"4px 8px",fontSize:12}} value={catFilter}
+              aria-label="Categorie" onChange={function (e) { setCatFilter(e.target.value); }}>
+              <option value="">Alle categorieën</option>
+              {t.categorieen.map(function (c) { return <option key={c.id} value={c.id}>{c.naam}</option>; })}
+            </select>
+          )}
+        </div>
+        <div className="kaart" style={{padding:"6px 14px"}}>
+          {zichtbaar.length === 0 && <p style={{fontSize:13,color:"var(--grijs-donker)"}}>Niets te zien met dit filter.</p>}
+          {zichtbaar.map(function (r) {
+            var w = opNummer[r.nummer];
+            var kop = !w.dagId ? "Nog niet ingepland" : (r.dag ? formateerDatumKort(r.dag) : "Dag " + (t.dagen.map(function (d) { return d.id; }).indexOf(w.dagId) + 1));
+            /* Een kopje alleen als er iets te onderscheiden valt. */
+            var toonKop = (t.dagen.length > 1 || regels.some(function (x) { return !opNummer[x.nummer].dagId; })) && kop !== dagKop;
+            dagKop = kop;
+            return rij(r, toonKop ? <div className="review-label" style={{margin:"10px 0 4px"}}>{kop}</div> : null);
+          })}
+        </div>
+      </>}
+      {weergave === "veld" && <TijdlijnPerVeld t={t} perWedstrijd={perWedstrijd} opKies={function (id) { setOpen(id); setWeergave("lijst"); setFilter("alles"); setCatFilter(""); }} />}
+      {weergave === "team" && <OverzichtPer t={t} soort="team" regels={regels} opNummer={opNummer} rij={rij} />}
+      {weergave === "scheids" && <OverzichtPer t={t} soort="scheids" regels={regels} opNummer={opNummer} rij={rij} />}
+
       <ToernooiDownloads t={t} />
+      {planner && <PlannerVenster t={t} wijzig={wijzig} onSluiten={function () { setPlanner(false); }} />}
+    </div>
+  );
+}
+
+/* Automatisch plannen: eerst laten zien wat er gebeurt, dan pas toepassen. */
+function PlannerVenster({ t, wijzig, onSluiten }) {
+  const [alleenNieuw, setAlleenNieuw] = useState(t.wedstrijden.some(function (w) { return w.start; }));
+  var r = planAutomatisch(t, { alleenOngepland: alleenNieuw });
+  var blijft = t.wedstrijden.filter(function (w) { return w.start && (w.vastgezet || w.status === "gespeeld" || alleenNieuw); }).length;
+  var verschuift = t.wedstrijden.filter(function (w) {
+    var n = r.toernooi.wedstrijden.filter(function (x) { return x.id === w.id; })[0];
+    return w.start && (n.start !== w.start || n.veldId !== w.veldId || n.dagId !== w.dagId);
+  }).length;
+  return (
+    <div className="bevestig-overlay" onClick={function (e) { if (e.target === e.currentTarget) onSluiten(); }}>
+      <div className="bevestig-kaart" style={{textAlign:"left",maxHeight:"85vh",overflowY:"auto"}}>
+        <h3>Automatisch plannen</h3>
+        <p style={{fontSize:13}}>Elke wedstrijd krijgt het vroegste veld en tijdstip waarop beide teams genoeg rust hebben en het veld vrij is.
+          Een vervolgronde komt pas na de ronde waar hij op wacht.</p>
+        <label style={{display:"flex",gap:8,alignItems:"flex-start",fontSize:13,margin:"8px 0"}}>
+          <input type="radio" checked={alleenNieuw} onChange={function () { setAlleenNieuw(true); }} />
+          <span><b>Alleen wat nog geen plek heeft</b><br/>Wat al gepland is, blijft staan.</span>
+        </label>
+        <label style={{display:"flex",gap:8,alignItems:"flex-start",fontSize:13,margin:"8px 0 12px"}}>
+          <input type="radio" checked={!alleenNieuw} onChange={function () { setAlleenNieuw(false); }} />
+          <span><b>Alles opnieuw</b><br/>Alleen vastgezette <i className="fa-solid fa-thumbtack"/> en gespeelde wedstrijden blijven staan.</span>
+        </label>
+        <div className="melding"><i className="fa-solid fa-circle-info"/>
+          <div>
+            {aantalTekst(r.gepland, "wedstrijd krijgt", "wedstrijden krijgen") + " een plek" + (blijft ? ", " + blijft + " blijven staan" : "") +
+             (verschuift ? ", " + verschuift + " schuiven naar een andere plek" : "") + "."}
+            {r.ongepland.length > 0 && <div style={{color:"var(--gevaar)"}}>{aantalTekst(r.ongepland.length, "wedstrijd past", "wedstrijden passen") + " nergens."}</div>}
+          </div>
+        </div>
+        {r.ongepland.slice(0, 8).map(function (o) {
+          return (
+            <div key={o.wedstrijdId} style={{fontSize:12,borderTop:"1px solid var(--grijs)",padding:"6px 0"}}>
+              <b>{"Wedstrijd " + o.nummer + ": "}</b>{o.reden}
+              <div style={{color:"var(--blauw)"}}><i className="fa-solid fa-lightbulb"/> {o.voorstel}</div>
+            </div>
+          );
+        })}
+        {r.ongepland.length > 8 && <p style={{fontSize:12}}>{"… en nog " + (r.ongepland.length - 8)}</p>}
+        <div className="bevestig-knoppen">
+          <button className="knop lijn" onClick={onSluiten}>Annuleren</button>
+          <button className="knop" disabled={!r.gepland && !verschuift} onClick={function () {
+            if (wijzig(function (x) { return planAutomatisch(x, { alleenOngepland: alleenNieuw }).toernooi; })) {
+              meldGoed(aantalTekst(r.gepland, "wedstrijd", "wedstrijden") + " ingepland");
+              onSluiten();
+            }
+          }}>Toepassen</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ScheidsKnop({ t, wijzig }) {
+  const [vraag, setVraag] = useState(false);
+  var zonder = t.wedstrijden.filter(function (w) { return w.start && !w.scheidsId; }).length;
+  function doe(opnieuw) {
+    var r = deelScheidsrechtersIn(t, { opnieuw: opnieuw });
+    if (wijzig(function (x) { return deelScheidsrechtersIn(x, { opnieuw: opnieuw }).toernooi; })) {
+      if (r.zonder.length) meldFout(aantalTekst(r.toegewezen, "wedstrijd", "wedstrijden") + " ingedeeld; voor " + r.zonder.length + " was niemand vrij.");
+      else meldGoed(aantalTekst(r.toegewezen, "wedstrijd", "wedstrijden") + " ingedeeld");
+    }
+    setVraag(false);
+  }
+  return (
+    <>
+      <button className="knop lijn klein" onClick={function () { setVraag(true); }}><i className="fa-solid fa-flag"/> Scheidsrechters indelen</button>
+      {vraag && (
+        <div className="bevestig-overlay" onClick={function (e) { if (e.target === e.currentTarget) setVraag(false); }}>
+          <div className="bevestig-kaart">
+            <h3>Scheidsrechters indelen</h3>
+            <p>{"Per wedstrijd een scheidsrechter die dan vrij en beschikbaar is; wie de minste wedstrijden heeft gaat voor. " +
+                (zonder ? zonder + " geplande wedstrijden hebben nog niemand." : "Alle geplande wedstrijden hebben al iemand.")}</p>
+            <div className="bevestig-knoppen" style={{flexWrap:"wrap"}}>
+              <button className="knop lijn" onClick={function () { setVraag(false); }}>Annuleren</button>
+              <button className="knop lijn" onClick={function () { doe(true); }}>Alles opnieuw</button>
+              <button className="knop" disabled={!zonder} onClick={function () { doe(false); }}>Alleen lege</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
+
+/* Tijdlijn per veld: kolommen = velden, van boven naar beneden de tijd.
+   Schuift binnen de kaart horizontaal als er meer velden zijn dan er op
+   het scherm passen; de pagina zelf schuift nooit opzij. */
+function TijdlijnPerVeld({ t, perWedstrijd, opKies }) {
+  const [dagId, setDagId] = useState(t.dagen[0].id);
+  var dag = t.dagen.filter(function (d) { return d.id === dagId; })[0] || t.dagen[0];
+  var velden = [];
+  t.locaties.forEach(function (l) { l.velden.forEach(function (v) { velden.push({ id: v.id, naam: v.naam, loc: l.naam }); }); });
+  var ws = t.wedstrijden.filter(function (w) { return w.dagId === dag.id && w.start; });
+  var begin = minVan(dag.start), eind = minVan(dag.eind);
+  ws.forEach(function (w) { var c = categorieVan(t, w.categorieId); begin = Math.min(begin, minVan(w.start)); eind = Math.max(eind, minVan(w.start) + c.wedstrijdduur); });
+  var pxMin = 2.2;
+  var hoogte = Math.max(60, (eind - begin) * pxMin);
+  var uren = [];
+  for (var u = Math.ceil(begin / 60) * 60; u <= eind; u += 60) uren.push(u);
+  var evs = (t.evenementen || []).filter(function (e) { return e.dagId === dag.id; });
+  return (
+    <div className="kaart" style={{padding:"10px 12px"}}>
+      {t.dagen.length > 1 && (
+        <div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:10}}>
+          {t.dagen.map(function (d, k) { return <button key={d.id} className="filter-chip" style={chipStijl(d.id === dag.id)} onClick={function () { setDagId(d.id); }}>{d.datum ? formateerDatumKort(d.datum) : "Dag " + (k + 1)}</button>; })}
+        </div>
+      )}
+      <div style={{overflowX:"auto"}}>
+        <div style={{display:"flex",minWidth:44 + velden.length * 120}}>
+          <div style={{width:44,flexShrink:0,position:"relative",height:hoogte + 24}}>
+            {uren.map(function (m) { return <div key={m} style={{position:"absolute",top:24 + (m - begin) * pxMin - 6,fontSize:10,color:"var(--grijs-donker)"}}>{tijdVanMin(m)}</div>; })}
+          </div>
+          {velden.map(function (v) {
+            return (
+              <div key={v.id} style={{flex:1,minWidth:120,position:"relative",height:hoogte + 24,borderLeft:"1px solid var(--grijs)"}}>
+                <div style={{height:24,fontSize:11,fontWeight:700,textAlign:"center",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",padding:"0 4px"}}
+                  title={v.loc + " · " + v.naam}>{v.naam}</div>
+                {evs.filter(function (e) { return !e.locatieId || velden.some(function (x) { return x.id === v.id; }) && t.locaties.some(function (l) { return l.id === e.locatieId && l.velden.some(function (x) { return x.id === v.id; }); }); }).map(function (e) {
+                  return <div key={e.id} style={{position:"absolute",left:2,right:2,top:24 + (minVan(e.start) - begin) * pxMin,height:Math.max(14, e.duur * pxMin),
+                    background:"repeating-linear-gradient(45deg,var(--grijs-licht),var(--grijs-licht) 4px,var(--grijs) 4px,var(--grijs) 8px)",borderRadius:6,fontSize:10,padding:"2px 4px",overflow:"hidden"}}>{e.naam}</div>;
+                })}
+                {ws.filter(function (w) { return w.veldId === v.id; }).map(function (w) {
+                  var c = categorieVan(t, w.categorieId);
+                  var fout = perWedstrijd[w.id];
+                  return (
+                    <button key={w.id} onClick={function () { opKies(w.id); }} title={kantNaam(t, w, "thuis") + " – " + kantNaam(t, w, "uit")}
+                      style={{position:"absolute",left:3,right:3,top:24 + (minVan(w.start) - begin) * pxMin,height:Math.max(18, c.wedstrijdduur * pxMin - 2),
+                        background:fout ? "var(--vlak-gevaar, #fdecec)" : "var(--vlak-info)",border:"1px solid " + (fout ? "var(--gevaar)" : "var(--blauw)"),
+                        borderRadius:6,fontSize:10,lineHeight:1.25,padding:"2px 4px",textAlign:"left",overflow:"hidden",cursor:"pointer",color:"inherit"}}>
+                      <b>{w.start + " #" + w.nummer}</b>
+                      <div style={{whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{kantNaam(t, w, "thuis")}</div>
+                      <div style={{whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{kantNaam(t, w, "uit")}</div>
+                    </button>
+                  );
+                })}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+      <p style={{fontSize:11,color:"var(--grijs-donker)",margin:"8px 0 0"}}>Tik op een wedstrijd om hem te verplaatsen.</p>
+    </div>
+  );
+}
+
+/* Overzicht voor één team of één scheidsrechter: de wedstrijden op
+   volgorde, met de rust ertussen. */
+function OverzichtPer({ t, soort, regels, opNummer, rij }) {
+  var keuzes = soort === "team"
+    ? t.deelnemers.map(function (d) { return { id: d.id, naam: d.naam + (t.categorieen.length > 1 ? " (" + categorieVan(t, d.categorieId).naam + ")" : "") }; })
+    : t.scheidsrechters.map(function (s) { return { id: s.id, naam: s.naam }; });
+  const [id, setId] = useState(keuzes[0] ? keuzes[0].id : "");
+  var eigen = regels.filter(function (r) {
+    var w = opNummer[r.nummer];
+    if (soort === "scheids") return w.scheidsId === id;
+    var d = deelnemersVan(t, w);
+    return d.thuis === id || d.uit === id;
+  });
+  var vorige = null;
+  return (
+    <div className="kaart" style={{padding:"10px 14px"}}>
+      <select className="formulier-input" value={id} aria-label={soort === "team" ? "Team" : "Scheidsrechter"} onChange={function (e) { setId(e.target.value); }}>
+        {keuzes.map(function (k) { return <option key={k.id} value={k.id}>{k.naam}</option>; })}
+      </select>
+      {eigen.length === 0 && <p style={{fontSize:13,color:"var(--grijs-donker)"}}>{soort === "team" ? "Nog geen wedstrijden bekend voor dit team (een knock-out volgt pas na de groepsfase)." : "Nog geen wedstrijden voor deze scheidsrechter."}</p>}
+      {eigen.map(function (r) {
+        var w = opNummer[r.nummer];
+        var rust = null;
+        if (vorige && w.start && vorige.start && vorige.dagId === w.dagId) {
+          rust = minVan(w.start) - minVan(vorige.start) - categorieVan(t, vorige.categorieId).wedstrijdduur;
+        }
+        vorige = w;
+        return rij(r, rust !== null ? <div style={{fontSize:11,color:rust < categorieVan(t, w.categorieId).minRust ? "var(--gevaar)" : "var(--grijs-donker)",padding:"4px 0 0 58px"}}>
+          <i className="fa-solid fa-mug-hot"/>{" " + rust + " min rust"}</div> : null);
+      })}
     </div>
   );
 }
@@ -1067,9 +1388,17 @@ function PlanVenster({ t, w, mag, fouten, wijzig, onKlaar }) {
   const [veldId, setVeldId] = useState(startVeld);
   const [start, setStart] = useState(w.start || eersteVrijeTijd(t, w, startDag, startVeld));
   const [scheids, setScheids] = useState(w.scheidsId || "");
+  const [slots, setSlots] = useState(false);
   function kiesPlek(d, v) {
     setDagId(d); setVeldId(v);
     if (!w.start) setStart(eersteVrijeTijd(t, w, d, v));
+  }
+  function bewaar(plek) {
+    var ok = wijzig(function (x) {
+      var nt = planWedstrijd(x, w.id, plek);
+      return Object.assign({}, nt, { wedstrijden: nt.wedstrijden.map(function (y) { return y.id === w.id ? Object.assign({}, y, { scheidsId: scheids || null }) : y; }) });
+    });
+    if (ok) onKlaar();
   }
   return (
     <div style={{background:"var(--grijs-licht)",borderRadius:12,padding:"10px 12px",margin:"6px 0 10px"}}>
@@ -1094,20 +1423,59 @@ function PlanVenster({ t, w, mag, fouten, wijzig, onKlaar }) {
           </select></div>
       </div>
       {mag && (
+        <label style={{display:"flex",gap:8,alignItems:"center",fontSize:13,marginBottom:10}}>
+          <input type="checkbox" checked={!!w.vastgezet} onChange={function (e) {
+            var aan = e.target.checked;
+            wijzig(function (x) { return Object.assign({}, x, { wedstrijden: x.wedstrijden.map(function (y) { return y.id === w.id ? Object.assign({}, y, { vastgezet: aan }) : y; }) }); });
+          }} />
+          <span><i className="fa-solid fa-thumbtack"/> Vastzetten — automatisch plannen laat deze wedstrijd staan</span>
+        </label>
+      )}
+      {mag && (
         <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
-          <button className="knop klein" onClick={function () {
-            var ok = wijzig(function (x) {
-              var nt = planWedstrijd(x, w.id, { dagId: dagId, veldId: veldId, start: start });
-              return Object.assign({}, nt, { wedstrijden: nt.wedstrijden.map(function (y) { return y.id === w.id ? Object.assign({}, y, { scheidsId: scheids || null }) : y; }) });
-            });
-            if (ok) onKlaar();
-          }}><i className="fa-solid fa-check"/> Opslaan</button>
-          {w.start && <button className="knop lijn klein" onClick={function () {
-            if (wijzig(function (x) { return planWedstrijd(x, w.id, null); })) onKlaar();
-          }}>Losmaken</button>}
+          <button className="knop klein" onClick={function () { bewaar({ dagId: dagId, veldId: veldId, start: start }); }}><i className="fa-solid fa-check"/> Opslaan</button>
+          <button className="knop lijn klein" onClick={function () { setSlots(!slots); }}><i className="fa-solid fa-arrows-up-down-left-right"/> Verplaatsen</button>
+          {w.start && <button className="knop lijn klein" onClick={function () { bewaar(null); }}>Losmaken</button>}
           <button className="knop lijn klein" onClick={onKlaar}>Sluiten</button>
         </div>
       )}
+      {mag && slots && <VrijeSlots t={t} w={w} opKies={function (s) { bewaar({ dagId: s.dagId, veldId: s.veldId, start: s.start }); }} />}
+    </div>
+  );
+}
+
+/* Verplaatsen zonder slepen: een lijst tijdvakken, elk met een groen
+   vinkje of de reden waarom het botst. */
+function VrijeSlots({ t, w, opKies }) {
+  const [alles, setAlles] = useState(false);
+  var lijst = vrijeSlots(t, w.id);
+  var vrij = lijst.filter(function (s) { return !s.problemen.length; });
+  var toon = (alles ? lijst : vrij).slice(0, alles ? 60 : 24);
+  /** @param {string} id */
+  function veldNaam(id) { var n = ""; t.locaties.forEach(function (l) { l.velden.forEach(function (v) { if (v.id === id) n = (t.locaties.length > 1 ? l.naam + " · " : "") + v.naam; }); }); return n; }
+  function dagNaam(id) { var k = t.dagen.map(function (d) { return d.id; }).indexOf(id); var d = t.dagen[k]; return d && d.datum ? formateerDatumKort(d.datum) : "Dag " + (k + 1); }
+  return (
+    <div style={{marginTop:10}}>
+      <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
+        <span style={{flex:1,fontSize:12,fontWeight:700}}>{aantalTekst(vrij.length, "vrij tijdvak", "vrije tijdvakken")}</span>
+        <label style={{fontSize:12,display:"flex",gap:4,alignItems:"center"}}>
+          <input type="checkbox" checked={alles} onChange={function (e) { setAlles(e.target.checked); }} /> ook bezette
+        </label>
+      </div>
+      {toon.map(function (s, k) {
+        var goed = !s.problemen.length;
+        return (
+          <button key={k} onClick={function () { opKies(s); }}
+            style={{display:"flex",width:"100%",gap:8,alignItems:"flex-start",textAlign:"left",background:"var(--wit)",border:"1px solid var(--grijs)",borderRadius:8,padding:"7px 9px",marginBottom:4,cursor:"pointer",color:"inherit",fontSize:13}}>
+            <i className={goed ? "fa-solid fa-circle-check" : "fa-solid fa-circle-xmark"} style={{color:goed ? "var(--succes)" : "var(--gevaar)",marginTop:2}}/>
+            <span style={{flex:1,minWidth:0}}>
+              <b>{(t.dagen.length > 1 ? dagNaam(s.dagId) + " · " : "") + s.start}</b>{" · " + veldNaam(s.veldId)}
+              {!goed && <span style={{display:"block",fontSize:11,color:"var(--grijs-donker)"}}>{s.problemen.join("; ")}</span>}
+            </span>
+          </button>
+        );
+      })}
+      {vrij.length === 0 && !alles && <p style={{fontSize:12,color:"var(--grijs-donker)"}}>Geen enkel tijdvak is helemaal vrij. Zet "ook bezette" aan om te zien wat er botst.</p>}
     </div>
   );
 }
