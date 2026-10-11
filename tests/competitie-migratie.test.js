@@ -170,6 +170,20 @@ ok("de invoer is niet aangepast", s1.some((x) => x.persoonId), false);
 const nogEens = geefPersoonIds(met, maakId);
 ok("opnieuw toepassen verandert niets", JSON.stringify(nogEens), JSON.stringify(met));
 
+groep("M3: persoonVan — zonder iets in de spelers te schrijven");
+ok("zelfde team, zelfde speler-id: in elk seizoen hetzelfde kenmerk",
+   persoonVan({ id: "s01" }, "tgoud") === persoonVan({ id: "s01" }, "tgoud"), true);
+ok("ander team, zelfde speler-id: ander kenmerk",
+   persoonVan({ id: "s01" }, "jo17") === persoonVan({ id: "s01" }, "jo19"), false);
+ok("een gekoppelde speler gebruikt zijn persoonId", persoonVan({ id: "s01", persoonId: "daan" }, "jo19"), "daan");
+const zonder = koppelPersonen({ jo17: [{ id: 1 }], jo19: [{ id: 11 }] }, { teamId: "jo17", spelerId: 1 }, { teamId: "jo19", spelerId: 11 });
+ok("koppelen kan ook als nog niemand een persoonId had",
+   [zonder.jo17[0].persoonId, zonder.jo19[0].persoonId], ["p-jo17-1", "p-jo17-1"]);
+ok("doelpunten van een ongekoppelde speler tellen per team apart",
+   doelpuntenPerPersoon([{ teamId: "jo17", seizoen: "s", wedstrijd: { scorers: [{ spelerId: 5, eigenTeam: true }] } },
+                         { teamId: "jo19", seizoen: "s", wedstrijd: { scorers: [{ spelerId: 5, eigenTeam: true }] } }], {}),
+   { "p-jo17-5": 1, "p-jo19-5": 1 });
+
 groep("M3: koppelvoorstellen over teams heen");
 const teamA = { teamId: "jo17", spelers: [
   { id: 1, naam: "Daan de Vries", geboortedatum: "2009-03-14" },

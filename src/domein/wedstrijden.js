@@ -110,7 +110,8 @@
  * aanwezigheid) is genuine optioneel.
  * @typedef {Object} Wedstrijd
  * @property {any} id
- * @property {"gepland"|"gespeeld"} status
+ * @property {"gepland"|"gespeeld"|"uitgesteld"|"afgelast"} status
+ * @property {{competitieId:string, faseId:string, compWedstrijdId:string}} [competitie]  zie src/domein/competitie.js
  * @property {string} datum        ISO-datum
  * @property {string} tegenstander
  * @property {boolean} thuis
@@ -209,6 +210,38 @@ function wedstrijdTelt(w) { return wedstrijdSoort(w).telt; }
  */
 function tellendeWedstrijden(lijst) {
   return (lijst||[]).filter(function(w){ return w.status==="gespeeld" && wedstrijdTelt(w); });
+}
+
+/* ═══════════════════════════════════════════════════════════
+   STATUS
+   Tot release 1 (docs/updateplan-competitie-toernooi-ai.md) kende een
+   wedstrijd alleen gepland en gespeeld. Daar komen uitgesteld en
+   afgelast bij. Overal waar de app "wat komt er nog" vroeg met
+   status==="gepland", zou een uitgestelde wedstrijd dan stilletjes uit
+   beeld raken — vandaar één vraag op één plek: nogTeSpelen().
+
+   Alleen "gespeeld" is een definitieve uitslag. Uitgesteld en afgelast
+   tellen nergens mee, net als gepland.
+═══════════════════════════════════════════════════════════ */
+const WEDSTRIJD_STATUSSEN = [
+  {id:"gepland",    label:"Gepland"},
+  {id:"uitgesteld", label:"Uitgesteld"},
+  {id:"afgelast",   label:"Afgelast"},
+  {id:"gespeeld",   label:"Gespeeld"}
+];
+/**
+ * Moet deze wedstrijd nog gespeeld worden? Gepland of uitgesteld.
+ * @param {Wedstrijd} w
+ * @returns {boolean}
+ */
+function nogTeSpelen(w) { return !!w && (w.status==="gepland" || w.status==="uitgesteld"); }
+/**
+ * @param {Wedstrijd} w
+ * @returns {string}
+ */
+function statusLabel(w) {
+  var s = WEDSTRIJD_STATUSSEN.filter(function(x){ return x.id===(w && w.status); })[0];
+  return s ? s.label : "Gepland";
 }
 
 /* ═══════════════════════════════════════════════════════════

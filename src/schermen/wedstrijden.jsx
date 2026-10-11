@@ -2594,6 +2594,35 @@ function WedstrijdFormulier({ wedstrijd, spelers, onOpslaan, onSluiten }) {
             ))}
           </div>
         </div>
+        {/* ── Gaat hij door? ──
+            Alleen voor een wedstrijd zonder uitslag: gespeeld wordt hij
+            via "Uitslag invoeren", niet hier. Uitgesteld houdt de
+            wedstrijd in zijn eigen competitiefase, ook als de nieuwe
+            datum later valt — dat bepaalt waar hij staat, niet de datum. */}
+        {!gespeeldeWedstrijd && (
+          <div className="formulier-groep">
+            <label className="formulier-label">Status</label>
+            <div style={{display:"flex",gap:8}}>
+              {WEDSTRIJD_STATUSSEN.filter(function(s){ return s.id!=="gespeeld"; }).map(function(s){
+                var aan = (form.status||"gepland")===s.id;
+                return (
+                  <button key={s.id} type="button" onClick={function(){ set("status", s.id); }}
+                    style={{flex:1,minWidth:0,minHeight:44,padding:"10px",borderRadius:10,border:"2px solid",
+                      borderColor:aan?"var(--blauw)":"var(--grijs)",background:aan?"var(--blauw)":"var(--wit)",
+                      color:aan?"var(--wit)":"var(--grijs-donker)",cursor:"pointer",fontWeight:700,fontSize:14,
+                      fontFamily:"'Helvetica Neue',Arial,sans-serif"}}>
+                    {s.label}
+                  </button>
+                );
+              })}
+            </div>
+            {form.status==="uitgesteld" && (
+              <p style={{fontSize:11,color:"var(--grijs-donker)",fontWeight:400,margin:"7px 0 0",lineHeight:1.5}}>
+                Zet hierboven de nieuwe datum, als die bekend is. De wedstrijd blijft bij zijn eigen competitiefase horen.
+              </p>
+            )}
+          </div>
+        )}
         {/* ── Wie fluit er? ──
             Twee namen, meer niet. Ze horen bij de wedstrijd en niet bij
             je selectie, want vaker wel dan niet staat er iemand die daar
@@ -5560,6 +5589,8 @@ function WedstrijdDetail({ wedstrijd, spelers: vasteSelectie, onTerug, onBewerke
           <div className="w-kop-meta">
             {gespeeld && <span className={"w-kop-uitslag " + res}>
               {{winst:"Gewonnen", verlies:"Verloren", gelijk:"Gelijk"}[res]}</span>}
+            {(wedstrijd.status==="uitgesteld" || wedstrijd.status==="afgelast") &&
+              <span className="w-kop-uitslag">{statusLabel(wedstrijd)}</span>}
             {wedstrijd.datum && <span>{formateerDatumKort(wedstrijd.datum)}</span>}
             {wedstrijd.tijd && <span>{wedstrijd.tijd}</span>}
             <span>{wedstrijd.thuis ? "Thuis" : "Uit"}</span>
@@ -6241,11 +6272,15 @@ function WedstrijdenModule() {
       return (a.tijd||"") < (b.tijd||"") ? (oplopend?-1:1) : (oplopend?1:-1);
     });
   };
-  const geplandLijst  = opDatum(wedstrijden.filter(function(w){ return w.status==="gepland"; }), true);
+  /* Uitgesteld hoort bij "nog te spelen" (nogTeSpelen in
+     src/domein/wedstrijden.js). Afgelast is geen uitslag: die staat
+     alleen onder "Alle", in een eigen groep. */
+  const geplandLijst  = opDatum(wedstrijden.filter(nogTeSpelen), true);
   const gespeeldLijst = opDatum(wedstrijden.filter(function(w){ return w.status==="gespeeld"; }), false);
   const opStatus = filter==="gepland" ? geplandLijst
     : filter==="gespeeld" ? gespeeldLijst
-    : geplandLijst.concat(gespeeldLijst);
+    : geplandLijst.concat(gespeeldLijst,
+        opDatum(wedstrijden.filter(function(w){ return w.status==="afgelast"; }), false));
   const opZoek = opStatus.filter(function(w){
     const q = zoek.trim().toLowerCase();
     if (!q) return true;
@@ -6259,7 +6294,7 @@ function WedstrijdenModule() {
   const vanEerder = [];
   const gefilterd = opZoek;
 
-  const aankomend = wedstrijden.filter(w=>w.status==="gepland").sort((a,b)=>new Date(a.datum)-new Date(b.datum));
+  const aankomend = wedstrijden.filter(nogTeSpelen).sort((a,b)=>new Date(a.datum)-new Date(b.datum));
 
   if(gekozen) return (
     <>
@@ -6356,9 +6391,13 @@ function WedstrijdenModule() {
       ):(
         <div>
           {[{id:"gepland", titel:"Nog te spelen", icoon:"fa-solid fa-calendar-days", kleur:"var(--blauw)"},
-            {id:"gespeeld", titel:"Gespeeld", icoon:"fa-solid fa-clock-rotate-left", kleur:"var(--grijs-donker)"}]
+            {id:"gespeeld", titel:"Gespeeld", icoon:"fa-solid fa-clock-rotate-left", kleur:"var(--grijs-donker)"},
+            {id:"afgelast", titel:"Afgelast", icoon:"fa-solid fa-ban", kleur:"var(--grijs-donker)"}]
             .map(function(groep){
-              var inGroep = gefilterd.filter(function(w){ return w.status===groep.id; });
+              /* Op dezelfde indeling als de filterknoppen: uitgesteld hoort
+                 bij nog te spelen, afgelast bij wat voorbij is. Groeperen op
+                 w.status liet die twee uit allebei de groepen vallen. */
+              var inGroep = gefilterd.filter(function(w){ return groep.id==="gepland" ? nogTeSpelen(w) : w.status===groep.id; });
               if (inGroep.length===0) return null;
               return (
                 <div key={groep.id} className="linie-groep">
@@ -6372,7 +6411,7 @@ function WedstrijdenModule() {
                   <div className="kaart lijst-raster">
                     {inGroep.map(function(w){
                       var res = resultaat(w);
-                      var teller = w.status==="gepland" ? dagenTot(w.datum) : "";
+                      var teller = nogTeSpelen(w) ? dagenTot(w.datum) : "";
                       return (
                         <div key={w.id} className="w-item" onClick={function(){setGekozen(w);}}>
                           <div className={"w-status-dot "+res}/>
@@ -6394,7 +6433,7 @@ function WedstrijdenModule() {
                             </div>
                           </div>
                           <div className={"w-score-badge "+res}>
-                            {w.status==="gespeeld" ? w.score.fch+" – "+w.score.teg : "Gepland"}
+                            {w.status==="gespeeld" ? w.score.fch+" – "+w.score.teg : statusLabel(w)}
                           </div>
                         </div>
                       );

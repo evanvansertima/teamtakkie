@@ -410,7 +410,7 @@ function doelpuntenPerPersoon(verzameling, spelersPerTeam) {
     (item.wedstrijd.scorers || []).forEach(function (/** @type {any} */ s) {
       if (!s.eigenTeam || s.spelerId === null || s.spelerId === undefined) return;
       var sp = spelers.filter(function (x) { return x.id === s.spelerId; })[0];
-      var persoon = sp && sp.persoonId ? sp.persoonId : (item.teamId + ":" + s.spelerId);
+      var persoon = persoonVan(sp || { id: s.spelerId }, item.teamId);
       tel[persoon] = (tel[persoon] || 0) + 1;
     });
   });
@@ -604,6 +604,20 @@ function controleMigratie(voor, c, na) {
    niet per se dezelfde Daan. Daar alleen een voorstel, bij gelijke
    naam én geboortedatum, dat de gebruiker bevestigt. */
 
+/* Het kenmerk van een speler zolang hij niet is gekoppeld: afgeleid uit
+   team en speler-id. Daardoor hoeft er bij de overstap naar persoonId
+   NIETS in de bestaande spelersgegevens te worden geschreven: binnen één
+   team is het over seizoenen vanzelf gelijk (de id blijft gelijk bij het
+   kopiëren naar een nieuw seizoen), tussen teams altijd verschillend.
+   Pas bij koppelen komt er een echte persoonId op de speler te staan. */
+/**
+ * @param {{id:any, persoonId?:string}} speler
+ * @param {string} teamId
+ * @returns {string}
+ */
+function persoonVan(speler, teamId) {
+  return speler && speler.persoonId ? speler.persoonId : ("p-" + teamId + "-" + (speler ? speler.id : ""));
+}
 /** @returns {string} */
 function nieuwPersoonId() {
   try { if (typeof crypto !== "undefined" && crypto.randomUUID) return crypto.randomUUID(); } catch (e) {}
@@ -658,7 +672,8 @@ function koppelPersonen(spelersPerTeam, a, b) {
   var kopie = JSON.parse(JSON.stringify(spelersPerTeam || {}));
   var sa = (kopie[a.teamId] || []).filter(function (/** @type {any} */ x) { return x.id === a.spelerId; })[0];
   var sb = (kopie[b.teamId] || []).filter(function (/** @type {any} */ x) { return x.id === b.spelerId; })[0];
-  if (!sa || !sb || !sa.persoonId) throw new Error("Speler om te koppelen niet gevonden");
+  if (!sa || !sb) throw new Error("Speler om te koppelen niet gevonden");
+  sa.persoonId = persoonVan(sa, a.teamId);
   sb.persoonId = sa.persoonId;
   return kopie;
 }

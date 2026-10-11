@@ -54,6 +54,13 @@ function knip(regels, naam) {
   return regels.slice(a, e + 1).join("\n");
 }
 eval(knip(wedstrijdenBron, "maakPouleSchema"));
+eval(knip(wedstrijdenBron, "nogTeSpelen"));
+eval(knip(wedstrijdenBron, "statusLabel"));
+{ /* De statuslijst zelf, uit dezelfde bron (meerdere regels). */
+  const bron = wedstrijdenBron.join("\n");
+  const a = bron.indexOf("const WEDSTRIJD_STATUSSEN = [");
+  eval(bron.slice(a, bron.indexOf("];", a) + 2).replace(/^const /, "var "));
+}
 /* De hele module, met const → var zodat de namen buiten de eval
    zichtbaar zijn (zelfde reden als in tests/overstappen.test.js). */
 eval(fs.readFileSync(MODULE, "utf8").replace(/^const /gm, "var "));
@@ -94,6 +101,14 @@ const eigenW = (id, thuis, fch, teg, status) => ({
 });
 
 (function draai() {
+
+/* ══ status: uitgesteld en afgelast (stap 4) ══ */
+groep("status van een eigen wedstrijd");
+ok("gepland en uitgesteld moeten nog gespeeld worden",
+   [nogTeSpelen({ status: "gepland" }), nogTeSpelen({ status: "uitgesteld" })], [true, true]);
+ok("afgelast en gespeeld niet", [nogTeSpelen({ status: "afgelast" }), nogTeSpelen({ status: "gespeeld" })], [false, false]);
+ok("labels", ["gepland", "uitgesteld", "afgelast", "gespeeld"].map((s) => statusLabel({ status: s })),
+   ["Gepland", "Uitgesteld", "Afgelast", "Gespeeld"]);
 
 /* ══ teamnamen samenvoegen ══ */
 groep("teamnamen");

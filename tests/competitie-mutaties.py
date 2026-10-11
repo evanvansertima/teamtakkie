@@ -114,6 +114,10 @@ MUTATIES = [
      "  return (wedstrijden || []).filter(isEigenCompetitie).map(function (w) {\n    var al",
      "  return (wedstrijden || []).map(function (w) {\n    var al"),
 
+    ("M10 het afgeleide spelerskenmerk vergeet het team",
+     "  return speler && speler.persoonId ? speler.persoonId : (\"p-\" + teamId + \"-\" + (speler ? speler.id : \"\"));",
+     "  return speler && speler.persoonId ? speler.persoonId : (\"p-\" + (speler ? speler.id : \"\"));"),
+
     ("M9  bevestigen past de competitie van vóór het bevestigen aan",
      "  var nieuw = JSON.parse(JSON.stringify(c));\n  var eigen",
      "  var nieuw = c;\n  var eigen"),

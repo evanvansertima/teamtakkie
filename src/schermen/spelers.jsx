@@ -2174,7 +2174,7 @@ function Dashboard({ navigeer }) {
   const punten   = rij.winst*3 + rij.gelijk;
   const saldo    = rij.doelVoor - rij.doelTegen;
 
-  const volgende = wedstrijden.filter(function(w){ return w.status==="gepland"; })
+  const volgende = wedstrijden.filter(nogTeSpelen)
     .sort(function(a,b){ return new Date(a.datum)-new Date(b.datum); })[0] || null;
   const laatste = gespeeld.slice()
     .sort(function(a,b){ return new Date(b.datum)-new Date(a.datum); })[0] || null;
@@ -2190,7 +2190,7 @@ function Dashboard({ navigeer }) {
   }
   var komt = [];
   wedstrijden.forEach(function(w){
-    if (w.status==="gepland" && binnenkort(w.datum))
+    if (nogTeSpelen(w) && binnenkort(w.datum))
       komt.push({soort:"wedstrijd", datum:w.datum, tijd:w.tijd, titel:"vs. "+w.tegenstander,
                  sub:(w.thuis?"Thuis":"Uit")+(w.locatie?" · "+w.locatie:""),
                  icoon:"fa-solid fa-futbol", kleur:"var(--blauw)", pagina:"wedstrijden"});
