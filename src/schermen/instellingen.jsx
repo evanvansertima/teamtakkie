@@ -2137,20 +2137,6 @@ function InstellingenSheet({ onSluiten, onGewisseld, onTeams }) {
         </div>
 
         {beheerderNu() && <div className="inst-groep">Beheer</div>}
-        {/* De nieuwe competitie, eerst als proef (release 1 van
-            docs/updateplan-competitie-toernooi-ai.md). Per apparaat. */}
-        {beheerderNu() && (
-          <div className="kaart">
-            <div className="kaart-titel"><i className="fa-solid fa-flask"/> Proef: nieuwe competitie</div>
-            <p style={{fontSize:12,color:"var(--grijs-donker)",fontWeight:400,lineHeight:1.5,margin:"0 0 10px"}}>
-              Zet het tabblad Competitie aan bij Wedstrijden, alleen op dit apparaat.
-            </p>
-            <button className="knop lijn" style={{width:"100%",justifyContent:"center"}}
-              onClick={function(){ var aan = !proefCompetitie(); zetProefCompetitie(aan); setMelding(aan ? "Competitie staat aan bij Wedstrijden" : "Competitie staat uit"); }}>
-              <i className={proefCompetitie() ? "fa-solid fa-toggle-on" : "fa-solid fa-toggle-off"}/> {proefCompetitie() ? "Staat aan — uitzetten" : "Aanzetten"}
-            </button>
-          </div>
-        )}
         {beheerderNu() && (
           <div className="kaart">
             <div className="kaart-titel"><i className="fa-solid fa-database"/> Jouw gegevens</div>

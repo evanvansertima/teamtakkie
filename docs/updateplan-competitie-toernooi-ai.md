@@ -8,6 +8,22 @@ aangepast.
 
 ---
 
+## Stand van uitvoering
+
+**Release 1 (competitie) is af — 11 oktober 2026.** Stap 1–8 gebouwd,
+getest en voor iedereen aan. Afwijkingen van het plan, op verzoek van Evan
+of uit de praktijk:
+- Competitie heeft de tabbladen Stand | Wedstrijden | Deelnemers; onder
+  Wedstrijden speelrondes met de hand, zelf koppelen wie tegen wie, uitslag
+  ter plekke invullen (thuis en uit onder elkaar), notitie per wedstrijd,
+  en "Schema maken" (halve/hele competitie).
+- Het koppelscherm voor spelers staat bij Statistieken (filter "alle
+  teams"), niet bij Selectie.
+- Het dashboard houdt "seizoen in cijfers" en krijgt daarboven een blok
+  met de plek in de actieve fase.
+
+Volgende: release 2 (toernooi).
+
 ## 0. Besluiten van Evan (9 oktober 2026) en wat ze veranderen
 
 | # | Vraag | Besluit | Gevolg voor het plan |

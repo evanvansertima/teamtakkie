@@ -2173,6 +2173,10 @@ function Dashboard({ navigeer }) {
   const rij      = eigenStandRij(wedstrijden);
   const punten   = rij.winst*3 + rij.gelijk;
   const saldo    = rij.doelVoor - rij.doelTegen;
+  /* De plek in de actieve competitiefase (src/schermen/competitie.jsx),
+     of null zolang er geen competitie is. Los van "seizoen in cijfers"
+     hieronder: dat zijn de totalen van het hele seizoen. */
+  const faseRij  = actieveFaseRij(wedstrijden);
 
   const volgende = wedstrijden.filter(nogTeSpelen)
     .sort(function(a,b){ return new Date(a.datum)-new Date(b.datum); })[0] || null;
@@ -2400,6 +2404,23 @@ function Dashboard({ navigeer }) {
             {" "+slotZin("trainingen")}
           </div>
         </div>
+      )}
+
+      {faseRij && (
+        <button className="kaart" onClick={openCompetitie}
+          style={{display:"flex",alignItems:"center",gap:14,width:"100%",textAlign:"left",cursor:"pointer",border:"none",font:"inherit"}}>
+          <div style={{fontSize:30,fontWeight:800,color:"var(--blauw)",minWidth:54,textAlign:"center"}}>
+            {faseRij.plek}{faseRij.gedeeld ? "=" : ""}<span style={{fontSize:13,fontWeight:600}}>e</span>
+          </div>
+          <div style={{flex:1}}>
+            <div style={{fontSize:11,fontWeight:700,letterSpacing:".08em",textTransform:"uppercase",color:"var(--grijs-donker)"}}>Competitie · {faseRij.fase}</div>
+            <div style={{fontSize:14,fontWeight:600}}>
+              {"Plek " + faseRij.plek + " van " + faseRij.aantal + " · " + faseRij.rij.punten + " punt" + (faseRij.rij.punten === 1 ? "" : "en") +
+               " uit " + faseRij.rij.gespeeld + (faseRij.rij.gespeeld === 1 ? " wedstrijd" : " wedstrijden")}
+            </div>
+          </div>
+          <i className="fa-solid fa-chevron-right" style={{color:"var(--grijs-donker)"}}/>
+        </button>
       )}
 
       {/* ── Seizoen in cijfers ── */}

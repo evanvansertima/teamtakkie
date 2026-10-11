@@ -103,6 +103,12 @@
           <button class="tab-knop">
             <i class="fa-solid fa-circle" style="color: inherit; font-size: 9px;">
             "Live"
+        <div class="kaart" style="padding: 10px 14px;">
+          <button class="knop lijn klein" style="width: 100%; justify-content: space-between;">
+            <span>
+              <i class="fa-solid fa-filter">
+              "Dit seizoen · Competitie, Beker"
+            <i class="fa-solid fa-chevron-down">
         <div>
           <div class="kaart" style="margin-bottom: 10px;">
             <div class="kaart-titel">

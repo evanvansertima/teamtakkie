@@ -1168,151 +1168,17 @@ function LiveAnalyse() {
   );
 }
 // ── STATISTIEKEN MODULE ────────────────────────────────────
-function StandTab() {
-  const [teams, setTeams] = useState(laadStand);
-  const [bewerken, setBewerken] = useState(false);
-  const [nieuwNaam, setNieuwNaam] = useState("");
-
-  useEffect(function(){ slaJson(STAND_KEY, teams); },[teams]);
-
-  const wedstrijden = laadWedstrijden();
-  const eigen = eigenStandRij(wedstrijden);
-  const stand = standMetPunten([eigen].concat(teams));
-  const eigenPositie = stand.findIndex(function(r){return r.eigen;}) + 1;
-
-  function voegToe() {
-    const naam = nieuwNaam.trim();
-    if (!naam) return;
-    setTeams(function(l){
-      return l.concat([{id:Date.now(),naam:naam,gespeeld:0,winst:0,gelijk:0,verlies:0,doelVoor:0,doelTegen:0}]);
-    });
-    setNieuwNaam("");
-  }
-  function wijzig(id, veld, waarde) {
-    setTeams(function(l){
-      return l.map(function(t){
-        return t.id===id ? Object.assign({},t,{[veld]: veld==="naam" ? waarde : Math.max(0,Number(waarde)||0)}) : t;
-      });
-    });
-  }
-  function verwijder(id) { setTeams(function(l){ return l.filter(function(t){return t.id!==id;}); }); }
-
-  return (
-    <div>
-      {teams.length>0 && (
-        <div className="kaart">
-          <div className="stat-raster" style={{marginBottom:0}}>
-            <div className="stat-kaart primair">
-              <div className="stat-getal">{eigenPositie}<span style={{fontSize:15}}>e</span></div>
-              <div className="stat-label">Onze positie</div>
-            </div>
-            <div className="stat-kaart accent">
-              <div className="stat-getal">{eigen.winst*3+eigen.gelijk}</div>
-              <div className="stat-label">Punten uit {eigen.gespeeld} duels</div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      <div className="kaart">
-        <div className="kaart-titel" style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
-          <span><i className="fa-solid fa-ranking-star"/> Competitiestand</span>
-          <button className="knop lijn klein" style={{padding:"4px 10px",fontSize:11}}
-            onClick={function(){setBewerken(!bewerken);}}>
-            {bewerken ? "Klaar" : "Bewerken"}
-          </button>
-        </div>
-
-        {teams.length===0 && !bewerken && (
-          <div style={{textAlign:"center",padding:"18px 8px"}}>
-            <p style={{fontSize:13,color:"var(--grijs-donker)",fontWeight:400,lineHeight:1.6,marginBottom:14}}>
-              Voeg de andere teams uit je poule toe om de stand bij te houden.
-              Onze eigen rij wordt automatisch berekend uit de gespeelde wedstrijden.
-            </p>
-            <button className="knop" onClick={function(){setBewerken(true);}}>+ Teams toevoegen</button>
-          </div>
-        )}
-
-        {(teams.length>0) && (
-          <div style={{overflowX:"auto"}}>
-            <table className="stand-tabel">
-              <thead>
-                <tr>
-                  <th style={{width:26}}>#</th>
-                  <th className="links">Team</th>
-                  <th>G</th><th>W</th><th>G</th><th>V</th><th>DS</th><th>P</th>
-                </tr>
-              </thead>
-              <tbody>
-                {stand.map(function(r,i){
-                  return (
-                    <tr key={r.id} className={r.eigen?"eigen":""}>
-                      <td><span className="stand-pos">{i+1}</span></td>
-                      <td className="links naam">{r.naam}</td>
-                      <td>{r.gespeeld}</td>
-                      <td>{r.winst}</td>
-                      <td>{r.gelijk}</td>
-                      <td>{r.verlies}</td>
-                      <td style={{color:r.saldo>0?"var(--succes)":r.saldo<0?"var(--gevaar)":"inherit"}}>{(r.saldo>0?"+":"")+r.saldo}</td>
-                      <td style={{fontSize:15}}>{r.punten}</td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
-
-      {bewerken && (
-        <div className="kaart">
-          <div className="kaart-titel"><i className="fa-solid fa-pen"/> Teams beheren</div>
-          <div style={{display:"flex",gap:8,marginBottom:14}}>
-            <input className="formulier-input" style={{flex:1}} value={nieuwNaam}
-              placeholder="Naam tegenstander"
-              onChange={function(e){setNieuwNaam(e.target.value);}}
-              onKeyDown={function(e){ if(e.key==="Enter") voegToe(); }} />
-            <button className="knop klein" onClick={voegToe}>+ Toevoegen</button>
-          </div>
-          <p style={{fontSize:12,color:"var(--grijs-donker)",fontWeight:400,lineHeight:1.5,marginBottom:10}}>
-            Vul per team in: gespeeld, winst, gelijk, verlies, doelpunten voor en tegen.
-          </p>
-          {teams.map(function(t){
-            return (
-              <div key={t.id} style={{borderBottom:"1px solid var(--grijs)",paddingBottom:10,marginBottom:10}}>
-                <div style={{display:"flex",gap:8,alignItems:"center",marginBottom:7}}>
-                  <input className="formulier-input" style={{flex:1,marginBottom:0}} value={t.naam}
-                    onChange={function(e){wijzig(t.id,"naam",e.target.value);}} />
-                  <button className="knop gevaar klein" style={{padding:"6px 9px"}}
-                    onClick={function(){verwijder(t.id);}}><i className="fa-solid fa-trash"/></button>
-                </div>
-                <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
-                  {[["gespeeld","G"],["winst","W"],["gelijk","GL"],["verlies","V"],["doelVoor","DV"],["doelTegen","DT"]].map(function(v){
-                    return (
-                      <div key={v[0]} style={{textAlign:"center"}}>
-                        <div style={{fontSize:9,color:"var(--grijs-donker)",fontWeight:700,marginBottom:2}}>{v[1]}</div>
-                        <GetalVeld className="stand-mini-invoer" min={0} leeg={0} waarde={t[v[0]]}
-                          opWaarde={function(n){wijzig(t.id,v[0],n);}} />
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
-    </div>
-  );
-}
-
+/* Het tabblad Stand toont sinds 11 oktober 2026 de stand van de actieve
+   competitiefase (StandVerwijzing in src/schermen/competitie.jsx). De oude
+   StandTab, waarin je de stand van andere teams met de hand bijhield, is
+   weg; zijn gegevens (fch_stand_v1) blijven bewaard en zijn daar te lezen. */
 function StatistiekenModule({defaultTab}) {
   const [tab, setTab] = useState(defaultTab||"team");
   /* Filter over fases, seizoenen en teams (src/schermen/competitie.jsx).
      Met de standaardkeuze staan de schermen hieronder er gewoon; anders
-     het gefilterde overzicht. Voorlopig alleen met de proefschakelaar. */
+     het gefilterde overzicht. */
   const [statFilter, setStatFilter] = useState(STANDAARD_STATFILTER);
-  const gefilterd = proefCompetitie() && !statFilterStandaard(statFilter);
+  const gefilterd = !statFilterStandaard(statFilter);
   return (
     <div>
       <div className="pagina-header" style={{marginBottom:14}}>
@@ -1328,11 +1194,11 @@ function StatistiekenModule({defaultTab}) {
         <button className={"tab-knop"+(tab==="stand"?" actief":"")} onClick={function(){setTab("stand");}}><i className="fa-solid fa-ranking-star"/> Stand</button>
         <button className={"tab-knop"+(tab==="live"?" actief":"")} onClick={function(){setTab("live");}}><i className="fa-solid fa-circle" style={{color:tab==="live"?"var(--gevaar)":"inherit",fontSize:9}}/> Live</button>
       </div>
-      {proefCompetitie() && (tab==="team" || tab==="individu") && <StatFilterBalk filter={statFilter} opFilter={setStatFilter} />}
+      {(tab==="team" || tab==="individu") && <StatFilterBalk filter={statFilter} opFilter={setStatFilter} />}
       {(tab==="team" || tab==="individu") && gefilterd && <GefilterdOverzicht filter={statFilter} />}
       {tab==="team" && !gefilterd && <TeamStatistieken />}
       {tab==="individu" && !gefilterd && <IndividuStatistieken />}
-      {tab==="stand" && <StandTab />}
+      {tab==="stand" && <StandVerwijzing />}
       {tab==="live" && <LiveAnalyse />}
     </div>
   );

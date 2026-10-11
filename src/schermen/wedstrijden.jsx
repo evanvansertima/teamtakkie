@@ -6222,7 +6222,10 @@ function WedstrijdenModule() {
   const [bewerkW,setBewerkW]=useState(null);
   const [filter,setFilter]=useState("alle");
   const [zoek,setZoek]=useState("");
-  const [hoofdTab,setHoofdTab]=useState("wedstrijden");
+  const [hoofdTab,setHoofdTab]=useState(function(){
+    if (_openCompetitieTab) { _openCompetitieTab = false; return "competitie"; }
+    return "wedstrijden";
+  });
   const [alleSeizoenen,setAlleSeizoenen]=useState(false);
   const [importOpen,setImportOpen]=useState(false);
 
@@ -6309,14 +6312,11 @@ function WedstrijdenModule() {
     </>
   );
 
-  /* De tabbladen bovenaan. Competitie staat er voorlopig alleen met de
-     proefschakelaar (src/schermen/competitie.jsx). */
+  /* De tabbladen bovenaan. Competitie: src/schermen/competitie.jsx. */
   const hoofdTabs = (
     <div className="tabs">
       <button className={"tab-knop"+(hoofdTab==="wedstrijden"?" actief":"")} onClick={function(){setHoofdTab("wedstrijden");}}><i className="fa-solid fa-futbol"/> Wedstrijden</button>
-      {proefCompetitie() && (
-        <button className={"tab-knop"+(hoofdTab==="competitie"?" actief":"")} onClick={function(){setHoofdTab("competitie");}}><i className="fa-solid fa-ranking-star"/> Competitie</button>
-      )}
+      <button className={"tab-knop"+(hoofdTab==="competitie"?" actief":"")} onClick={function(){setHoofdTab("competitie");}}><i className="fa-solid fa-ranking-star"/> Competitie</button>
       <button className={"tab-knop"+(hoofdTab==="toernooien"?" actief":"")} onClick={function(){setHoofdTab("toernooien");}}><i className="fa-solid fa-trophy"/> Toernooien</button>
     </div>
   );
@@ -6328,7 +6328,7 @@ function WedstrijdenModule() {
     </div>
   );
 
-  if (hoofdTab==="competitie" && proefCompetitie()) return (
+  if (hoofdTab==="competitie") return (
     <div>
       {hoofdTabs}
       <CompetitieTab wedstrijden={wedstrijden} opWedstrijden={setWedstrijden} />

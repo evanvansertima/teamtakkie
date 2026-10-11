@@ -87,6 +87,9 @@
             <i class="fa-solid fa-futbol">
             "Wedstrijden"
           <button class="tab-knop">
+            <i class="fa-solid fa-ranking-star">
+            "Competitie"
+          <button class="tab-knop">
             <i class="fa-solid fa-trophy">
             "Toernooien"
         <div class="pagina-header">

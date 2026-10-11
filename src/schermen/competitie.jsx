@@ -5,9 +5,8 @@
    rekenwerk staat in src/domein/competitie.js; dit bestand tekent en
    bewaart alleen.
 
-   Voorlopig alleen zichtbaar met de proefschakelaar (proefCompetitie()
-   hieronder, aan te zetten door een beheerder in Instellingen). Zo kan
-   Evan het met zijn eigen team uitproberen voordat testers het zien.
+   Tot 11 oktober 2026 alleen zichtbaar met een proefschakelaar; sinds
+   stap 8 voor iedereen.
 
    Wat er in deze stap staat: de stand per fase, de deelnemers, de
    fasekiezer, "Nieuwe fase", fase afsluiten, en het indelen van
@@ -19,15 +18,13 @@
    dat CompetitieTab gebruikt.
    ══════════════════════════════════════════════════════════════ */
 
-/* ── De proefschakelaar ──
-   Per apparaat, met opzet: het is een proef, geen instelling van het
-   team. Weg zodra stap 8 de competitie voor iedereen aanzet. */
-const PROEF_COMPETITIE_KEY = "tt_proef_competitie_v1";
-function proefCompetitie() {
-  try { return localStorage.getItem(PROEF_COMPETITIE_KEY) === "aan"; } catch (e) { return false; }
-}
-function zetProefCompetitie(aan) {
-  try { if (aan) localStorage.setItem(PROEF_COMPETITIE_KEY, "aan"); else localStorage.removeItem(PROEF_COMPETITIE_KEY); } catch (e) {}
+/* Bij het openen van Wedstrijden meteen het tabblad Competitie tonen
+   (vanuit Statistieken › Stand of het dashboard). Eén keer gelezen door
+   WedstrijdenModule en dan teruggezet. */
+var _openCompetitieTab = false;
+function openCompetitie() {
+  _openCompetitieTab = true;
+  if (_paginaWisselaar) _paginaWisselaar("wedstrijden");
 }
 
 const VORM_LABEL = { half: "Halve competitie", heel: "Hele competitie", handmatig: "Handmatig schema" };
@@ -987,5 +984,85 @@ function KoppelScherm({ onSluiten }) {
         </div>
       )}
     </div>
+  );
+}
+
+/* ══ STAP 8: STAND ELDERS IN DE APP ═══════════════════════════ */
+
+/* De rij van het eigen team in de actieve fase, of null als er nog geen
+   competitie is. Voor het dashboard. */
+function actieveFaseRij(wedstrijden) {
+  var c = (laadCompetities() || [])[0];
+  if (!c) return null;
+  var f = c.fases.filter(function (x) { return x.id === c.actieveFaseId; })[0];
+  if (!f) return null;
+  var stand = standVanFase(c, f.id, wedstrijden);
+  var eigen = stand.filter(function (r) { return r.eigen; })[0];
+  return eigen ? { fase: f.naam, plek: eigen.plek, gedeeld: eigen.gedeeld, aantal: stand.length, rij: eigen } : null;
+}
+
+/* Statistieken › Stand: de stand van de actieve fase (alleen-lezen) en
+   de weg naar de competitie. De oude, met de hand ingevulde stand is hier
+   alleen nog te lezen; bijhouden gebeurt in de competitie. */
+function StandVerwijzing() {
+  const wedstrijden = laadWedstrijden();
+  const c = (laadCompetities() || [])[0] || null;
+  const oud = laadStand();
+  if (!c) {
+    return (
+      <div>
+        <div className="kaart" style={{textAlign:"center",padding:"22px 16px"}}>
+          <div className="leeg-icoon"><i className="fa-solid fa-ranking-star"/></div>
+          <h3 style={{margin:"10px 0 6px"}}>De stand staat nu bij Competitie</h3>
+          <p style={{fontSize:13,color:"var(--grijs-donker)",lineHeight:1.6,marginBottom:14}}>
+            Maak bij Wedstrijden › Competitie een competitie met alle teams uit je poule. De stand
+            rekent zich dan uit met alle uitslagen, per fase.
+          </p>
+          <button className="knop" onClick={openCompetitie}>Naar Competitie</button>
+        </div>
+        {oud.length > 0 && <OudeStandLezen oud={oud} />}
+      </div>
+    );
+  }
+  const f = c.fases.filter(function (x) { return x.id === c.actieveFaseId; })[0];
+  const stand = standVanFase(c, f.id, wedstrijden);
+  return (
+    <div>
+      <div className="kaart">
+        <div className="kaart-titel" style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+          <span><i className="fa-solid fa-ranking-star"/> {f.naam}</span>
+          <button className="knop lijn klein" onClick={openCompetitie}>Naar Competitie</button>
+        </div>
+        <div style={{overflowX:"auto"}}>
+          <table className="stand-tabel">
+            <thead><tr><th style={{width:30}}>#</th><th className="links">Team</th><th>G</th><th>W</th><th>GL</th><th>V</th><th>DS</th><th>P</th></tr></thead>
+            <tbody>
+              {stand.map(function (r) {
+                return (
+                  <tr key={r.teamId} className={r.eigen ? "eigen" : ""}>
+                    <td><span className="stand-pos">{r.plek}{r.gedeeld ? "=" : ""}</span></td>
+                    <td className="links naam">{r.naam}</td>
+                    <td>{r.gespeeld}</td><td>{r.winst}</td><td>{r.gelijk}</td><td>{r.verlies}</td>
+                    <td>{(r.saldo > 0 ? "+" : "") + r.saldo}</td><td style={{fontSize:15}}>{r.punten}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      {oud.length > 0 && <OudeStandLezen oud={oud} />}
+    </div>
+  );
+}
+function OudeStandLezen({ oud }) {
+  return (
+    <details className="kaart" style={{fontSize:13}}>
+      <summary style={{cursor:"pointer",fontWeight:700}}>Oude stand (met de hand ingevuld)</summary>
+      <p style={{fontSize:12,color:"var(--grijs-donker)"}}>Bewaard zoals hij was. Niet meer te bewerken; telt niet mee in de competitie.</p>
+      {oud.map(function (t) {
+        return <div key={t.id} style={{padding:"4px 0"}}>{t.naam}: {t.gespeeld} gespeeld, {(t.winst || 0) * 3 + (t.gelijk || 0)} punten</div>;
+      })}
+    </details>
   );
 }

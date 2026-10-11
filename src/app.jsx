@@ -173,6 +173,10 @@ function slotZin(module) {
    gebeurt er niets — dat is beter dan een fout in een scherm waar
    iemand middenin een wedstrijd op staat. */
 var _pakkettenOpener = null;
+/* Zelfde truc voor naar een andere pagina gaan vanuit een scherm dat de
+   paginastand niet kent (bijv. "Naar Competitie" in Statistieken).
+   Loopt via gaNaar, dus via magPagina: geen tweede plek die "ja" zegt. */
+var _paginaWisselaar = null;
 /* Wat er gebeurt bij een tik op iets dat vergrendeld is: géén
    navigatie, géén venster dat vanzelf opengaat, géén vraag om te
    bevestigen. Alleen een melding die vanzelf weer weggaat. Een
@@ -1880,7 +1884,8 @@ function App() {
      luisteraar aanmelden. */
   useEffect(function(){
     _pakkettenOpener = function(id){ setSlotPakket(id || "-"); };
-    return function(){ _pakkettenOpener = null; };
+    _paginaWisselaar = gaNaar;
+    return function(){ _pakkettenOpener = null; _paginaWisselaar = null; };
   }, []);
 
   /* De enige plek in de app die "nee" zegt tegen een scherm. Elke
