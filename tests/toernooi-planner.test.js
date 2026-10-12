@@ -211,6 +211,54 @@ groep("scheidsrechters indelen");
   ok("met opnieuw: weer netjes verdeeld", conflicten(deelScheidsrechtersIn(handmatig, { opnieuw: true }).toernooi).filter((c) => c.soort === "scheids"), []);
 }
 
+groep("reistijd tussen locaties");
+{
+  /* Twee locaties, één veld elk, 20 minuten fietsen. 4 teams, rust 10. */
+  let t = opzet({ teams: 4, velden: 1, rust: 10, wissel: 0 });
+  t = Object.assign({}, t, { locaties: [
+    { id: "l1", naam: "Noord", velden: [{ id: "v1", naam: "Veld 1" }], reistijdNaar: { l2: 20 } },
+    { id: "l2", naam: "Zuid", velden: [{ id: "v2", naam: "Veld 2" }] } ] });
+  const r = planAutomatisch(t);
+  ok("alles gepland, nul conflicten (ook volgens de handmatige controle)", [r.ongepland.length, conflicten(r.toernooi)], [0, []]);
+  const w = r.toernooi.wedstrijden;
+  let kleinste = 999;
+  w.forEach((a) => w.forEach((b) => {
+    if (a === b || a.veldId === b.veldId) return;
+    const samen = [a.thuis.deelnemerId, a.uit.deelnemerId].some((id) => id === b.thuis.deelnemerId || id === b.uit.deelnemerId);
+    if (samen && tijd(b) >= tijd(a)) kleinste = Math.min(kleinste, tijd(b) - tijd(a) - 20);
+  }));
+  ok("een team dat van locatie wisselt heeft minstens rust + reistijd (10 + 20 = 30 min)", kleinste >= 30, true);
+  ok("reistijd geldt in beide richtingen (alleen Noord→Zuid ingevuld)", [reistijdTussen(t, "v1", "v2"), reistijdTussen(t, "v2", "v1"), reistijdTussen(t, "v1", "v1")], [20, 20, 0]);
+  /* Met de hand te krap: op Zuid 25 minuten na afloop op Noord. */
+  let h = planWedstrijd(t, t.wedstrijden[0].id, { dagId: "d1", veldId: "v1", start: "09:00" });
+  const tweede = t.wedstrijden.filter((x) => x.id !== t.wedstrijden[0].id && [x.thuis.deelnemerId, x.uit.deelnemerId].indexOf(t.wedstrijden[0].thuis.deelnemerId) >= 0)[0];
+  h = planWedstrijd(h, tweede.id, { dagId: "d1", veldId: "v2", start: "09:45" });
+  const c = conflicten(h).filter((x) => x.soort === "rust");
+  ok("handmatig te krap: conflict met de reistijd erin", [c.length, /reizen 20 min/.test(c[0] && c[0].tekst)], [1, true]);
+  ok("op dezelfde locatie was 25 minuten wel genoeg", conflicten(planWedstrijd(h, tweede.id, { dagId: "d1", veldId: "v1", start: "09:45" })).filter((x) => x.soort === "rust").length, 0);
+}
+
+groep("velden per spelvorm");
+{
+  /* Twee categorieën; veld 2 heeft kleine doeltjes en is alleen voor 6x6. */
+  let t = opzet({ teams: 4, velden: 2 });
+  t = Object.assign({}, t, {
+    categorieen: t.categorieen.map((c) => Object.assign({}, c, { spelvorm: "8x8" })),
+    locaties: [{ id: "l1", naam: "Park", velden: [{ id: "v1", naam: "Veld 1" }, { id: "v2", naam: "Veld 2", spelvormen: ["6x6"] }] }] });
+  const r = planAutomatisch(t);
+  ok("8x8 komt nooit op het 6x6-veld", r.toernooi.wedstrijden.filter((w) => w.veldId === "v2").length, 0);
+  ok("alles gepland op veld 1, zonder conflicten", [r.ongepland.length, conflicten(r.toernooi).length], [0, 0]);
+  const fout = planWedstrijd(t, t.wedstrijden[0].id, { dagId: "d1", veldId: "v2", start: "09:00" });
+  ok("met de hand op het verkeerde veld: conflict", conflicten(fout).map((c) => c.soort), ["veldsoort"]);
+  const slots = vrijeSlots(t, t.wedstrijden[0].id);
+  ok("bij verplaatsen zegt het verkeerde veld waarom", slots.filter((x) => x.veldId === "v2")[0].problemen, ["veld niet geschikt voor 8x8"]);
+  const geen = Object.assign({}, t, { locaties: [{ id: "l1", naam: "Park", velden: [{ id: "v2", naam: "Veld 2", spelvormen: ["6x6"] }] }] });
+  const rg = planAutomatisch(geen);
+  ok("geen enkel geschikt veld: reden en voorstel", [rg.gepland, rg.ongepland[0].reden, rg.ongepland[0].voorstel],
+     [0, "Geen enkel veld is ingesteld voor 8x8.", "Zet bij Instellingen een veld ook op 8x8."]);
+  ok("leeg spelvormenlijstje = geschikt voor alles", veldGeschikt(Object.assign({}, t, { locaties: [{ id: "l", velden: [{ id: "v9", spelvormen: [] }] }] }), "v9", "11x11"), true);
+}
+
 groep("laadproef: 4 dagen, 12 velden, 200+ wedstrijden");
 {
   let t = maakToernooi({ id: "groot", naam: "Groot" });

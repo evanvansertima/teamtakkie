@@ -60,9 +60,10 @@ SQL Editor van Supabase draaien (pas dan werkt publiceren).
   Momentopname via een lijst toegestane velden; de server weigert ook nog
   elke inhoud met "email" of "telefoon" (`tests/toernooi-publiek.test.sql`,
   12 scenario's, drie opzettelijke lekken gevangen).
-- Afwijking: velden krijgen (nog) geen spelvorm per dag, en reistijd tussen
-  locaties telt niet mee in de planner. Gebruik bij twee locaties zo nodig
-  een ruimere minimale rust.
+- Sinds 12 oktober 2026: reistijd tussen locaties telt mee (planner, controle
+  en vrije tijdvakken), en een veld kan beperkt worden tot bepaalde
+  spelvormen. Afwijking van 5f: die beperking geldt voor het hele toernooi,
+  niet per dag.
 
 Wens van Evan (11 oktober 2026), voor later: een mooiere lay-out voor de
 tv-stand van de presentatie. Voor nu is de huidige goed.

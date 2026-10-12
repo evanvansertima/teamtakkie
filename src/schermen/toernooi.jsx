@@ -280,6 +280,7 @@ function ToernooiScherm({ t, mag, wijzig, onTerug, onWeg }) {
 
 /* ═══ Stap 1: Instellingen ═══ */
 function StapInstellingen({ t, mag, wijzig, onWeg }) {
+  var spelvormen = SPELVORMEN.filter(function (sv) { return t.categorieen.some(function (c) { return c.spelvorm === sv; }); });
   const [vraag, setVraag] = useState(null);   // { titel, tekst, knop, doe }
   function zet(veld, waarde) { wijzig(function (x) { var o = {}; o[veld] = waarde; return Object.assign({}, x, o); }); }
   function zetIn(lijstNaam, id, wijzigingen) {
@@ -374,8 +375,11 @@ function StapInstellingen({ t, mag, wijzig, onWeg }) {
               <TVeld waarde={l.adres} disabled={!mag} style={{marginBottom:6}} opKlaar={function (v) { zetIn("locaties", l.id, { adres: v.trim() }); }} />
               <label className="formulier-label">Velden</label>
               {l.velden.map(function (v) {
+                function zetVeld(w) { zetIn("locaties", l.id, { velden: l.velden.map(function (y) { return y.id === v.id ? Object.assign({}, y, w) : y; }) }); }
+                var gekozen = v.spelvormen || [];
                 return (
-                  <div key={v.id} style={{display:"flex",gap:8,marginBottom:6}}>
+                  <div key={v.id} style={{marginBottom:8}}>
+                  <div style={{display:"flex",gap:8,marginBottom:4}}>
                     <TVeld waarde={v.naam} disabled={!mag} style={{flex:1,marginBottom:0}} aria-label="Naam van het veld"
                       opKlaar={function (n) {
                         if (!n.trim()) return;
@@ -392,12 +396,51 @@ function StapInstellingen({ t, mag, wijzig, onWeg }) {
                       }}><i className="fa-solid fa-xmark"/></button>
                     )}
                   </div>
+                  {/* Alleen zinvol als er meer dan één spelvorm meedoet. Niets
+                      gekozen = geschikt voor alles (veldGeschikt in src/domein/toernooi.js). */}
+                  {spelvormen.length > 1 && (
+                    <div style={{display:"flex",flexWrap:"wrap",gap:4,alignItems:"center"}}>
+                      <span style={{fontSize:11,color:"var(--grijs-donker)",marginRight:2}}>Geschikt voor:</span>
+                      <button className="filter-chip" style={Object.assign({padding:"2px 9px",fontSize:11}, chipStijl(!gekozen.length))} disabled={!mag}
+                        onClick={function () { zetVeld({ spelvormen: [] }); }}>alles</button>
+                      {spelvormen.map(function (sv) {
+                        var aan = gekozen.indexOf(sv) >= 0;
+                        return <button key={sv} className="filter-chip" style={Object.assign({padding:"2px 9px",fontSize:11}, chipStijl(aan))} disabled={!mag}
+                          onClick={function () { zetVeld({ spelvormen: aan ? gekozen.filter(function (x) { return x !== sv; }) : gekozen.concat([sv]) }); }}>{sv}</button>;
+                      })}
+                    </div>
+                  )}
+                  </div>
                 );
               })}
               {mag && <button className="knop lijn klein" onClick={function () {
                 var nr = t.locaties.reduce(function (n, y) { return n + y.velden.length; }, 0) + 1;
                 zetIn("locaties", l.id, { velden: l.velden.concat([{ id: tId("v"), naam: "Veld " + nr }]) });
               }}>+ Veld</button>}
+              {/* Reistijd naar de locaties die verderop in de lijst staan: zo
+                  wordt elk paar maar één keer gevraagd (reistijdTussen kijkt
+                  in beide richtingen). */}
+              {t.locaties.slice(t.locaties.indexOf(l) + 1).map(function (ander) {
+                var waarde = (l.reistijdNaar || {})[ander.id];
+                if (waarde == null) waarde = (ander.reistijdNaar || {})[l.id];
+                return (
+                  <div key={ander.id} style={{display:"flex",gap:8,alignItems:"center",marginTop:8,fontSize:13}}>
+                    <span style={{flex:1,minWidth:0}}><i className="fa-solid fa-bicycle"/>{" Reistijd naar " + ander.naam}</span>
+                    <TVeld type="number" inputMode="numeric" min={0} waarde={waarde == null ? "" : waarde} disabled={!mag}
+                      style={{width:70,marginBottom:0}} aria-label={"Reistijd naar " + ander.naam + " in minuten"} placeholder="0"
+                      opKlaar={function (v) {
+                        var n = Math.max(0, Math.floor(Number(v)) || 0);
+                        /* Eén waarde per paar: een oude waarde aan de andere kant gaat weg. */
+                        wijzig(function (x) { return Object.assign({}, x, { locaties: x.locaties.map(function (y) {
+                          var r = Object.assign({}, y.reistijdNaar || {});
+                          if (y.id === l.id) r[ander.id] = n; else if (y.id === ander.id) delete r[l.id]; else return y;
+                          return Object.assign({}, y, { reistijdNaar: r });
+                        }) }); });
+                      }} />
+                    <span>min</span>
+                  </div>
+                );
+              })}
             </div>
           );
         })}

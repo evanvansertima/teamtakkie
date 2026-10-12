@@ -528,6 +528,32 @@ function planWedstrijd(t, wId, plek) {
   return Object.assign({}, t, { wedstrijden: t.wedstrijden.map(function (/** @type {any} */ x) { return x.id === wId ? n : x; }) });
 }
 
+/* ── Reistijd en veldsoort (hoofdstuk 5f) ─────────────────────
+   Een team dat op een andere locatie verder speelt, heeft naast de
+   rust ook reistijd nodig (Locatie.reistijdNaar: {locatieId: minuten},
+   één kant invullen is genoeg). En een veld kan beperkt zijn tot
+   bepaalde spelvormen (Veld.spelvormen; leeg = alles): op een veld met
+   kleine doeltjes hoort geen 11x11. */
+/** @param {any} t @param {string} veldId @returns {any} */
+function locatieVanVeld(t, veldId) {
+  return t.locaties.filter(function (/** @type {any} */ l) { return l.velden.some(function (/** @type {any} */ v) { return v.id === veldId; }); })[0] || null;
+}
+/** @param {any} t @param {string} veldA @param {string} veldB @returns {number} minuten */
+function reistijdTussen(t, veldA, veldB) {
+  var la = locatieVanVeld(t, veldA), lb = locatieVanVeld(t, veldB);
+  if (!la || !lb || la.id === lb.id) return 0;
+  var r = (la.reistijdNaar || {})[lb.id];
+  if (r == null) r = (lb.reistijdNaar || {})[la.id];
+  return Math.max(0, Number(r) || 0);
+}
+/** @param {any} t @param {string} veldId @param {string} spelvorm @returns {boolean} */
+function veldGeschikt(t, veldId, spelvorm) {
+  var l = locatieVanVeld(t, veldId);
+  var v = l && l.velden.filter(function (/** @type {any} */ x) { return x.id === veldId; })[0];
+  var sv = v && v.spelvormen;
+  return !sv || !sv.length || sv.indexOf(spelvorm) >= 0;
+}
+
 /* Alle conflicten in het schema. Niets wordt tegengehouden — de
    organisator beslist — maar alles wordt getoond:
      veld   — twee wedstrijden tegelijk op hetzelfde veld (incl. wisseltijd)
@@ -535,6 +561,8 @@ function planWedstrijd(t, wId, plek) {
      rust   — te weinig rust tussen twee wedstrijden van een team
      tijd   — buiten de begin- en eindtijd van de dag
      scheids — dezelfde scheidsrechter bij twee wedstrijden tegelijk
+     veldsoort — een wedstrijd op een veld dat niet geschikt is voor die spelvorm
+   (bij "rust" telt de reistijd naar een andere locatie mee)
      volgorde — een vervolgwedstrijd begint voordat zijn bron klaar is */
 /** @param {any} t @returns {{soort:string, wedstrijden:string[], tekst:string}[]} */
 function conflicten(t) {
@@ -556,6 +584,10 @@ function conflicten(t) {
     if (dag && (x.b < minVan(dag.start) || x.e > minVan(dag.eind))) {
       uit.push({ soort: "tijd", wedstrijden: [x.w.id], tekst: "Wedstrijd " + x.w.nummer + " valt buiten " + dag.start + "–" + dag.eind + "." });
     }
+    var sv = categorieVan(t, x.w.categorieId).spelvorm;
+    if (!veldGeschikt(t, x.w.veldId, sv)) {
+      uit.push({ soort: "veldsoort", wedstrijden: [x.w.id], tekst: "Wedstrijd " + x.w.nummer + " (" + sv + ") staat op een veld dat daar niet voor is ingesteld." });
+    }
   });
   for (var i = 0; i < gepland.length; i++) for (var j = i + 1; j < gepland.length; j++) {
     var a = gepland[i], b = gepland[j];
@@ -573,9 +605,11 @@ function conflicten(t) {
     } else {
       var eerst = a.b <= b.b ? a : b, later = eerst === a ? b : a;
       var rust = later.b - eerst.e;
-      if (rust < Math.max(eerst.rust, later.rust)) {
+      var reis = reistijdTussen(t, eerst.w.veldId, later.w.veldId);
+      if (rust < Math.max(eerst.rust, later.rust) + reis) {
         uit.push({ soort: "rust", wedstrijden: [eerst.w.id, later.w.id],
-                   tekst: "Te weinig rust tussen wedstrijd " + eerst.w.nummer + " en " + later.w.nummer + " (" + rust + " min)." });
+                   tekst: "Te weinig rust tussen wedstrijd " + eerst.w.nummer + " en " + later.w.nummer + " (" + rust + " min" +
+                          (reis ? ", terwijl alleen al het reizen " + reis + " min kost" : "") + ")." });
       }
     }
   }
@@ -739,6 +773,8 @@ function slotProblemen(t, ctx, geplaatst, w, dagId, veldId, s, o) {
   var me = planRegel(t, ctx, w, dagId, veldId, s);
   var rust = o.geenRust ? 0 : me.rust;
   if (s < minVan(dag.start) || me.e > minVan(dag.eind) + (o.eindPlus || 0)) uit.push("buiten " + dag.start + "–" + dag.eind);
+  var sv = (ctx.cats[w.categorieId] || {}).spelvorm;
+  if (!veldGeschikt(t, veldId, sv)) uit.push("veld niet geschikt voor " + sv);
   (t.evenementen || []).forEach(function (/** @type {any} */ ev) {
     if (ev.dagId !== dagId || (ev.locatieId && ev.locatieId !== ctx.veldLoc[veldId])) return;
     var eb = minVan(ev.start), ee = eb + (Number(ev.duur) || 0);
@@ -749,7 +785,8 @@ function slotProblemen(t, ctx, geplaatst, w, dagId, veldId, s, o) {
     if (x.veldId === veldId && s < x.bezet && x.b < me.bezet) uit.push("veld bezet door wedstrijd " + x.nummer);
     var samen = me.teams.filter(function (/** @type {string} */ id) { return x.teams.indexOf(id) >= 0; });
     if (!samen.length) return;
-    var r = o.geenRust ? 0 : Math.max(rust, x.rust);
+    /* Reistijd telt ook mee als de rust wordt losgelaten: reizen is geen keuze. */
+    var r = (o.geenRust ? 0 : Math.max(rust, x.rust)) + reistijdTussen(t, x.veldId, veldId);
     if (s < x.e && x.b < me.e) uit.push("team speelt al wedstrijd " + x.nummer);
     else if ((s >= x.e && s - x.e < r) || (x.b >= me.e && x.b - me.e < r)) uit.push("te weinig rust rond wedstrijd " + x.nummer);
   });
@@ -758,7 +795,7 @@ function slotProblemen(t, ctx, geplaatst, w, dagId, veldId, s, o) {
     var nr = ctx.opId[id] ? ctx.opId[id].nummer : "?";
     if (!x) { uit.push("wacht op wedstrijd " + nr + " (nog niet ingepland)"); return; }
     var dx = ctx.dagIndex[x.dagId], dy = ctx.dagIndex[dagId];
-    if (dx > dy || (dx === dy && s < x.e + rust)) uit.push("wedstrijd " + nr + " is dan nog niet klaar");
+    if (dx > dy || (dx === dy && s < x.e + rust + reistijdTussen(t, x.veldId, veldId))) uit.push("wedstrijd " + nr + " is dan nog niet klaar");
   });
   return uit;
 }
@@ -775,11 +812,13 @@ function vroegsteSlot(t, ctx, geplaatst, w, o) {
     /** @type {any} */ var beste = null;
     for (var vi = 0; vi < ctx.velden.length; vi++) {
       var veld = ctx.velden[vi];
+      if (!veldGeschikt(t, veld.id, c.spelvorm)) continue;
       var kand = [minVan(dag.start)];
       vandaag.forEach(function (x) {
+        var reis = reistijdTussen(t, x.veldId, veld.id);
         if (x.veldId === veld.id) kand.push(x.bezet);
-        if (x.teams.some(function (/** @type {string} */ id) { return me0.teams.indexOf(id) >= 0; })) kand.push(x.e + (o && o.geenRust ? 0 : Math.max(c.minRust || 0, x.rust)));
-        if (wacht.indexOf(x.id) >= 0) kand.push(x.e + (o && o.geenRust ? 0 : (c.minRust || 0)));
+        if (x.teams.some(function (/** @type {string} */ id) { return me0.teams.indexOf(id) >= 0; })) kand.push(x.e + reis + (o && o.geenRust ? 0 : Math.max(c.minRust || 0, x.rust)));
+        if (wacht.indexOf(x.id) >= 0) kand.push(x.e + reis + (o && o.geenRust ? 0 : (c.minRust || 0)));
       });
       (t.evenementen || []).forEach(function (/** @type {any} */ ev) { if (ev.dagId === dag.id) kand.push(minVan(ev.start) + (Number(ev.duur) || 0)); });
       kand = kand.filter(function (k, i) { return kand.indexOf(k) === i; }).sort(function (a, b) { return a - b; });
@@ -826,7 +865,10 @@ function planAutomatisch(t, o) {
     var cat = ctx.cats[w.categorieId];
     var wacht = wachtOp(t, w).filter(function (id) { return !geplaatst.some(function (x) { return x.id === id; }); });
     var reden, voorstel;
-    if (wacht.length) {
+    if (!ctx.velden.some(function (/** @type {any} */ v) { return veldGeschikt(t, v.id, cat.spelvorm); })) {
+      reden = "Geen enkel veld is ingesteld voor " + cat.spelvorm + ".";
+      voorstel = "Zet bij Instellingen een veld ook op " + cat.spelvorm + ".";
+    } else if (wacht.length) {
       reden = "Wacht op wedstrijd " + ctx.opId[wacht[0]].nummer + ", die zelf nergens past.";
       voorstel = "Los eerst die wedstrijd op.";
     } else {

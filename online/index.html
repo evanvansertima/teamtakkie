@@ -3006,7 +3006,7 @@ window.addEventListener("error", function(e){
 });
 </script>
 <script>
-const APP_VERSIE = "c437886";
+const APP_VERSIE = "e143855";
 const TEAMS_KEY = "tt_teams_v1";
 const ACTIEF_KEY = "tt_actief_v1";
 const VOORKEUR_KEY = "tt_voorkeuren_v1";
@@ -7238,6 +7238,28 @@ function planWedstrijd(t2, wId, plek) {
     return x.id === wId ? n : x;
   }) });
 }
+function locatieVanVeld(t2, veldId) {
+  return t2.locaties.filter(function(l) {
+    return l.velden.some(function(v) {
+      return v.id === veldId;
+    });
+  })[0] || null;
+}
+function reistijdTussen(t2, veldA, veldB) {
+  var la = locatieVanVeld(t2, veldA), lb = locatieVanVeld(t2, veldB);
+  if (!la || !lb || la.id === lb.id) return 0;
+  var r = (la.reistijdNaar || {})[lb.id];
+  if (r == null) r = (lb.reistijdNaar || {})[la.id];
+  return Math.max(0, Number(r) || 0);
+}
+function veldGeschikt(t2, veldId, spelvorm) {
+  var l = locatieVanVeld(t2, veldId);
+  var v = l && l.velden.filter(function(x) {
+    return x.id === veldId;
+  })[0];
+  var sv = v && v.spelvormen;
+  return !sv || !sv.length || sv.indexOf(spelvorm) >= 0;
+}
 function conflicten(t2) {
   var gepland = t2.wedstrijden.filter(function(w) {
     return w.dagId && w.veldId && w.start;
@@ -7266,6 +7288,10 @@ function conflicten(t2) {
     if (dag && (x.b < minVan(dag.start) || x.e > minVan(dag.eind))) {
       uit.push({ soort: "tijd", wedstrijden: [x.w.id], tekst: "Wedstrijd " + x.w.nummer + " valt buiten " + dag.start + "\u2013" + dag.eind + "." });
     }
+    var sv = categorieVan(t2, x.w.categorieId).spelvorm;
+    if (!veldGeschikt(t2, x.w.veldId, sv)) {
+      uit.push({ soort: "veldsoort", wedstrijden: [x.w.id], tekst: "Wedstrijd " + x.w.nummer + " (" + sv + ") staat op een veld dat daar niet voor is ingesteld." });
+    }
   });
   for (var i = 0; i < gepland.length; i++) for (var j = i + 1; j < gepland.length; j++) {
     var a = gepland[i], b = gepland[j];
@@ -7285,11 +7311,12 @@ function conflicten(t2) {
     } else {
       var eerst = a.b <= b.b ? a : b, later = eerst === a ? b : a;
       var rust = later.b - eerst.e;
-      if (rust < Math.max(eerst.rust, later.rust)) {
+      var reis = reistijdTussen(t2, eerst.w.veldId, later.w.veldId);
+      if (rust < Math.max(eerst.rust, later.rust) + reis) {
         uit.push({
           soort: "rust",
           wedstrijden: [eerst.w.id, later.w.id],
-          tekst: "Te weinig rust tussen wedstrijd " + eerst.w.nummer + " en " + later.w.nummer + " (" + rust + " min)."
+          tekst: "Te weinig rust tussen wedstrijd " + eerst.w.nummer + " en " + later.w.nummer + " (" + rust + " min" + (reis ? ", terwijl alleen al het reizen " + reis + " min kost" : "") + ")."
         });
       }
     }
@@ -7488,6 +7515,8 @@ function slotProblemen(t2, ctx, geplaatst, w, dagId, veldId, s, o) {
   var me = planRegel(t2, ctx, w, dagId, veldId, s);
   var rust = o.geenRust ? 0 : me.rust;
   if (s < minVan(dag.start) || me.e > minVan(dag.eind) + (o.eindPlus || 0)) uit.push("buiten " + dag.start + "\u2013" + dag.eind);
+  var sv = (ctx.cats[w.categorieId] || {}).spelvorm;
+  if (!veldGeschikt(t2, veldId, sv)) uit.push("veld niet geschikt voor " + sv);
   (t2.evenementen || []).forEach(function(ev) {
     if (ev.dagId !== dagId || ev.locatieId && ev.locatieId !== ctx.veldLoc[veldId]) return;
     var eb = minVan(ev.start), ee = eb + (Number(ev.duur) || 0);
@@ -7500,7 +7529,7 @@ function slotProblemen(t2, ctx, geplaatst, w, dagId, veldId, s, o) {
       return x.teams.indexOf(id) >= 0;
     });
     if (!samen.length) return;
-    var r = o.geenRust ? 0 : Math.max(rust, x.rust);
+    var r = (o.geenRust ? 0 : Math.max(rust, x.rust)) + reistijdTussen(t2, x.veldId, veldId);
     if (s < x.e && x.b < me.e) uit.push("team speelt al wedstrijd " + x.nummer);
     else if (s >= x.e && s - x.e < r || x.b >= me.e && x.b - me.e < r) uit.push("te weinig rust rond wedstrijd " + x.nummer);
   });
@@ -7514,7 +7543,7 @@ function slotProblemen(t2, ctx, geplaatst, w, dagId, veldId, s, o) {
       return;
     }
     var dx = ctx.dagIndex[x.dagId], dy = ctx.dagIndex[dagId];
-    if (dx > dy || dx === dy && s < x.e + rust) uit.push("wedstrijd " + nr + " is dan nog niet klaar");
+    if (dx > dy || dx === dy && s < x.e + rust + reistijdTussen(t2, x.veldId, veldId)) uit.push("wedstrijd " + nr + " is dan nog niet klaar");
   });
   return uit;
 }
@@ -7530,13 +7559,15 @@ function vroegsteSlot(t2, ctx, geplaatst, w, o) {
     var beste = null;
     for (var vi = 0; vi < ctx.velden.length; vi++) {
       var veld = ctx.velden[vi];
+      if (!veldGeschikt(t2, veld.id, c.spelvorm)) continue;
       var kand = [minVan(dag.start)];
       vandaag.forEach(function(x) {
+        var reis = reistijdTussen(t2, x.veldId, veld.id);
         if (x.veldId === veld.id) kand.push(x.bezet);
         if (x.teams.some(function(id) {
           return me0.teams.indexOf(id) >= 0;
-        })) kand.push(x.e + (o && o.geenRust ? 0 : Math.max(c.minRust || 0, x.rust)));
-        if (wacht.indexOf(x.id) >= 0) kand.push(x.e + (o && o.geenRust ? 0 : c.minRust || 0));
+        })) kand.push(x.e + reis + (o && o.geenRust ? 0 : Math.max(c.minRust || 0, x.rust)));
+        if (wacht.indexOf(x.id) >= 0) kand.push(x.e + reis + (o && o.geenRust ? 0 : c.minRust || 0));
       });
       (t2.evenementen || []).forEach(function(ev) {
         if (ev.dagId === dag.id) kand.push(minVan(ev.start) + (Number(ev.duur) || 0));
@@ -7594,7 +7625,12 @@ function planAutomatisch(t2, o) {
       });
     });
     var reden, voorstel;
-    if (wacht.length) {
+    if (!ctx.velden.some(function(v) {
+      return veldGeschikt(t2, v.id, cat.spelvorm);
+    })) {
+      reden = "Geen enkel veld is ingesteld voor " + cat.spelvorm + ".";
+      voorstel = "Zet bij Instellingen een veld ook op " + cat.spelvorm + ".";
+    } else if (wacht.length) {
       reden = "Wacht op wedstrijd " + ctx.opId[wacht[0]].nummer + ", die zelf nergens past.";
       voorstel = "Los eerst die wedstrijd op.";
     } else {
@@ -32024,6 +32060,11 @@ function ToernooiScherm({ t: t2, mag, wijzig, onTerug, onWeg }) {
   )), !mag && /* @__PURE__ */ React.createElement("div", { className: "melding" }, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-eye" }), " Je kijkt mee. Een trainer of eigenaar kan het toernooi aanpassen."), stap === "instellingen" && /* @__PURE__ */ React.createElement(StapInstellingen, { ...props, onWeg }), stap === "deelnemers" && /* @__PURE__ */ React.createElement(StapDeelnemers, { ...props }), stap === "indeling" && /* @__PURE__ */ React.createElement(StapIndeling, { ...props }), stap === "schema" && /* @__PURE__ */ React.createElement(StapSchema, { ...props }), stap === "resultaten" && /* @__PURE__ */ React.createElement(StapResultaten, { ...props }), stap === "presentatie" && /* @__PURE__ */ React.createElement(StapPresentatie, { ...props }));
 }
 function StapInstellingen({ t: t2, mag, wijzig, onWeg }) {
+  var spelvormen = SPELVORMEN.filter(function(sv) {
+    return t2.categorieen.some(function(c) {
+      return c.spelvorm === sv;
+    });
+  });
   const [vraag, setVraag] = useState(null);
   function zet(veld, waarde) {
     wijzig(function(x) {
@@ -32145,7 +32186,13 @@ function StapInstellingen({ t: t2, mag, wijzig, onWeg }) {
     } }, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-trash" }))), /* @__PURE__ */ React.createElement("label", { className: "formulier-label", style: { marginTop: 8 } }, "Adres (optioneel)"), /* @__PURE__ */ React.createElement(TVeld, { waarde: l.adres, disabled: !mag, style: { marginBottom: 6 }, opKlaar: function(v) {
       zetIn("locaties", l.id, { adres: v.trim() });
     } }), /* @__PURE__ */ React.createElement("label", { className: "formulier-label" }, "Velden"), l.velden.map(function(v) {
-      return /* @__PURE__ */ React.createElement("div", { key: v.id, style: { display: "flex", gap: 8, marginBottom: 6 } }, /* @__PURE__ */ React.createElement(
+      function zetVeld(w) {
+        zetIn("locaties", l.id, { velden: l.velden.map(function(y) {
+          return y.id === v.id ? Object.assign({}, y, w) : y;
+        }) });
+      }
+      var gekozen = v.spelvormen || [];
+      return /* @__PURE__ */ React.createElement("div", { key: v.id, style: { marginBottom: 8 } }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 8, marginBottom: 4 } }, /* @__PURE__ */ React.createElement(
         TVeld,
         {
           waarde: v.naam,
@@ -32172,13 +32219,69 @@ function StapInstellingen({ t: t2, mag, wijzig, onWeg }) {
             }) }) : y;
           }) });
         });
-      } }, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-xmark" })));
+      } }, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-xmark" }))), spelvormen.length > 1 && /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexWrap: "wrap", gap: 4, alignItems: "center" } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 11, color: "var(--grijs-donker)", marginRight: 2 } }, "Geschikt voor:"), /* @__PURE__ */ React.createElement(
+        "button",
+        {
+          className: "filter-chip",
+          style: Object.assign({ padding: "2px 9px", fontSize: 11 }, chipStijl(!gekozen.length)),
+          disabled: !mag,
+          onClick: function() {
+            zetVeld({ spelvormen: [] });
+          }
+        },
+        "alles"
+      ), spelvormen.map(function(sv) {
+        var aan = gekozen.indexOf(sv) >= 0;
+        return /* @__PURE__ */ React.createElement(
+          "button",
+          {
+            key: sv,
+            className: "filter-chip",
+            style: Object.assign({ padding: "2px 9px", fontSize: 11 }, chipStijl(aan)),
+            disabled: !mag,
+            onClick: function() {
+              zetVeld({ spelvormen: aan ? gekozen.filter(function(x) {
+                return x !== sv;
+              }) : gekozen.concat([sv]) });
+            }
+          },
+          sv
+        );
+      })));
     }), mag && /* @__PURE__ */ React.createElement("button", { className: "knop lijn klein", onClick: function() {
       var nr = t2.locaties.reduce(function(n, y) {
         return n + y.velden.length;
       }, 0) + 1;
       zetIn("locaties", l.id, { velden: l.velden.concat([{ id: tId("v"), naam: "Veld " + nr }]) });
-    } }, "+ Veld"));
+    } }, "+ Veld"), t2.locaties.slice(t2.locaties.indexOf(l) + 1).map(function(ander) {
+      var waarde = (l.reistijdNaar || {})[ander.id];
+      if (waarde == null) waarde = (ander.reistijdNaar || {})[l.id];
+      return /* @__PURE__ */ React.createElement("div", { key: ander.id, style: { display: "flex", gap: 8, alignItems: "center", marginTop: 8, fontSize: 13 } }, /* @__PURE__ */ React.createElement("span", { style: { flex: 1, minWidth: 0 } }, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-bicycle" }), " Reistijd naar " + ander.naam), /* @__PURE__ */ React.createElement(
+        TVeld,
+        {
+          type: "number",
+          inputMode: "numeric",
+          min: 0,
+          waarde: waarde == null ? "" : waarde,
+          disabled: !mag,
+          style: { width: 70, marginBottom: 0 },
+          "aria-label": "Reistijd naar " + ander.naam + " in minuten",
+          placeholder: "0",
+          opKlaar: function(v) {
+            var n = Math.max(0, Math.floor(Number(v)) || 0);
+            wijzig(function(x) {
+              return Object.assign({}, x, { locaties: x.locaties.map(function(y) {
+                var r = Object.assign({}, y.reistijdNaar || {});
+                if (y.id === l.id) r[ander.id] = n;
+                else if (y.id === ander.id) delete r[l.id];
+                else return y;
+                return Object.assign({}, y, { reistijdNaar: r });
+              }) });
+            });
+          }
+        }
+      ), /* @__PURE__ */ React.createElement("span", null, "min"));
+    }));
   }), mag && /* @__PURE__ */ React.createElement("button", { className: "knop lijn klein", onClick: function() {
     wijzig(function(x) {
       var nr = x.locaties.reduce(function(n, y) {
