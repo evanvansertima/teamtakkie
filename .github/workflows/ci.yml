@@ -121,6 +121,8 @@ jobs:
         run: node tests/ander-account.test.js
       - name: node tests/bibliotheek.test.js
         run: node tests/bibliotheek.test.js
+      - name: node tests/presentatie.test.js
+        run: node tests/presentatie.test.js
 
       # vulling.test.js controleert de vaste vulling van het gouden
       # origineel tegen wat de app werkelijk schrijft. Dat klinkt als een

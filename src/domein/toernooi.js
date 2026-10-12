@@ -996,7 +996,11 @@ function publiekeMomentopname(t, o) {
                         "dagId", "veldId", "start", "scheidsId", "status", "uitslag", "strafschoppen"]);
     }),
     evenementen: (t.evenementen || []).map(function (/** @type {any} */ e) { return alleen(e, ["id", "naam", "dagId", "start", "duur", "locatieId"]); }),
-    presentatie: { kleur: p.kleur || "", mededeling: p.mededeling || "", logo: o.logo || "" },
+    /* De dia's, sponsors, kleedkamers en verwijzingen naar media: zie
+       publiekePresentatie in src/domein/presentatie.js (ook een lijst met
+       toegestane velden). De pixels van afbeeldingen gaan apart. */
+    presentatie: Object.assign(typeof publiekePresentatie === "function" ? publiekePresentatie(p) : { kleur: p.kleur || "", mededeling: p.mededeling || "" },
+                               { logo: o.logo || "" }),
     logboek: []
   };
 }
