@@ -3006,7 +3006,7 @@ window.addEventListener("error", function(e){
 });
 </script>
 <script>
-const APP_VERSIE = "4c726ec";
+const APP_VERSIE = "5cca0c9";
 const TEAMS_KEY = "tt_teams_v1";
 const ACTIEF_KEY = "tt_actief_v1";
 const VOORKEUR_KEY = "tt_voorkeuren_v1";
@@ -8061,7 +8061,7 @@ function videoBron(url) {
   if (m) return { soort: "youtube", id: m[1] };
   m = u.match(/^https:\/\/(?:www\.|player\.)?vimeo\.com\/(?:video\/)?(\d{5,12})/);
   if (m) return { soort: "vimeo", id: m[1] };
-  if (/^https:\/\/[^\s"'<>]+\.(mp4|webm)(\?[^\s"'<>]*)?$/i.test(u)) return { soort: "bestand", url: u };
+  if (/^https:\/\/[^\s\x22\x27<>]+\.(mp4|webm)(\?[^\s\x22\x27<>]*)?$/i.test(u)) return { soort: "bestand", url: u };
   return null;
 }
 function publiekePresentatie(p) {
