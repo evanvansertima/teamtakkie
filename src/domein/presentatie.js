@@ -237,7 +237,7 @@ function videoBron(url) {
   if (m) return { soort: "youtube", id: m[1] };
   m = u.match(/^https:\/\/(?:www\.|player\.)?vimeo\.com\/(?:video\/)?(\d{5,12})/);
   if (m) return { soort: "vimeo", id: m[1] };
-  if (/^https:\/\/[^\s\x22\x27<>]+\.(mp4|webm)(\?[^\s\x22\x27<>]*)?$/i.test(u)) return { soort: "bestand", url: u };
+  if (/^https:\/\/[^\s\x22\x27\x3c\x3e]+\.(mp4|webm)(\?[^\s\x22\x27\x3c\x3e]*)?$/i.test(u)) return { soort: "bestand", url: u };
   return null;
 }
 
