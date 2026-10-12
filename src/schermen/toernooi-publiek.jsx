@@ -34,7 +34,31 @@ function publiceerToernooi(t) {
       if (/function .* does not exist|Could not find the function|PGRST202/i.test(tekst)) tekst = "De server kent publiceren nog niet. Draai eerst server/23-toernooi-publiek.sql in Supabase.";
       return { ok: false, tekst: tekst };
     })
+    .then(function (res) { return res.ok ? publiceerMedia(t).then(function (m) { return Object.assign(res, m); }) : res; })
     .catch(function () { return { ok: false, tekst: "Geen verbinding met de server." }; });
+}
+/* De afbeeldingen van de dia's (sponsorlogo's en afbeeldingen) apart
+   naar de server (server/25-toernooi-media.sql). Alleen als ze anders
+   zijn dan de vorige keer, en NOOIT als er hier een ontbreekt: dan staan
+   ze op een ander apparaat, en zou dit apparaat ze op de server wissen. */
+var _mediaGestuurd = {};
+function publiceerMedia(t) {
+  var ids = nodigeMedia(t.presentatie || {});
+  return mediaLees(ids).then(function (m) {
+    var ontbreekt = ids.filter(function (id) { return !m[id]; });
+    if (ontbreekt.length) return { mediaWaarschuwing: aantalTekst(ontbreekt.length, "afbeelding staat", "afbeeldingen staan") + " op een ander apparaat. Publiceer vanaf dat apparaat om ze op de tv-link te krijgen." };
+    var hash = ids.map(function (id) { return id + ":" + m[id].length; }).join("|");
+    var vorige = _mediaGestuurd[t.id] != null ? _mediaGestuurd[t.id] : ((t.publiek || {}).mediaHash || "");
+    if (hash === vorige) return { mediaHash: hash };
+    return serverVraag("/rest/v1/rpc/toernooi_media_publiceren", { methode: "POST", lichaam: { p_team: _actiefTeam, p_toernooi: t.id, p_media: m } })
+      .then(function (r) {
+        if (r.ok) { _mediaGestuurd[t.id] = hash; return { mediaHash: hash }; }
+        var tekst = (r.fout && r.fout.tekst) || "";
+        return { mediaWaarschuwing: /does not exist|Could not find the function|PGRST202/i.test(tekst)
+          ? "Afbeeldingen gaan nog niet mee naar de tv-link: draai eerst server/25-toernooi-media.sql in Supabase."
+          : "De afbeeldingen konden niet mee naar de tv-link (" + tekst.slice(0, 80) + ")." };
+      });
+  }).catch(function () { return { mediaWaarschuwing: "De afbeeldingen konden niet mee naar de tv-link." }; });
 }
 function trekToernooiIn(t) {
   if (!serverAan() || !ingelogd()) return Promise.resolve({ ok: false, tekst: "Log in om de link in te trekken." });
@@ -58,8 +82,10 @@ function publiceerLater(t) {
 /* ═══ Stap 6: Presentatie ═══ */
 function StapPresentatie({ t, mag, wijzig }) {
   const [bezig, setBezig] = useState(false);
+  const [speelt, setSpeelt] = useState(false);
   var pub = t.publiek || null;
   var p = t.presentatie || {};
+  const [media, zetMedia] = useToernooiMedia(p);
   function zetPresentatie(w) { wijzig(function (x) { return Object.assign({}, x, { presentatie: Object.assign({}, x.presentatie || {}, w) }); }); }
   function publiceer() {
     setBezig(true);
@@ -67,9 +93,11 @@ function StapPresentatie({ t, mag, wijzig }) {
       setBezig(false);
       if (!r.ok) { meldFout(r.tekst); return; }
       wijzig(function (x) {
-        return Object.assign({}, x, { publiek: { slug: r.slug, gepubliceerdOp: new Date().toISOString(), automatisch: x.publiek ? x.publiek.automatisch !== false : true } });
+        return Object.assign({}, x, { publiek: { slug: r.slug, gepubliceerdOp: new Date().toISOString(), automatisch: x.publiek ? x.publiek.automatisch !== false : true,
+                                                  mediaHash: r.mediaHash != null ? r.mediaHash : ((x.publiek || {}).mediaHash || "") } });
       });
-      meldGoed(pub ? "Bijgewerkt" : "Het toernooi is openbaar");
+      if (r.mediaWaarschuwing) toon(r.mediaWaarschuwing, { soort: "info" });
+      else meldGoed(pub ? "Bijgewerkt" : "Het toernooi is openbaar");
     });
   }
   function kopieer(tekst) {
@@ -83,6 +111,9 @@ function StapPresentatie({ t, mag, wijzig }) {
   var heeftLogo = !!(inst().logo);
   return (
     <div>
+      <DiasKaart t={t} mag={mag} wijzig={wijzig} media={media} onStart={function () { setSpeelt(true); }} />
+      <MateriaalKaart t={t} mag={mag} wijzig={wijzig} media={media} zetMedia={zetMedia} />
+      {speelt && <LokalePresentatie toernooiId={t.id} onSluiten={function () { setSpeelt(false); }} />}
       <div className="kaart">
         <div className="kaart-titel"><i className="fa-solid fa-tv"/> Openbaar maken</div>
         <p style={{fontSize:13,color:"var(--grijs-donker)",lineHeight:1.6,margin:"0 0 10px"}}>
@@ -128,6 +159,13 @@ function StapPresentatie({ t, mag, wijzig }) {
 
       <div className="kaart">
         <div className="kaart-titel"><i className="fa-solid fa-palette"/> Uiterlijk</div>
+        <label className="formulier-label">Stijl van de presentatie</label>
+        <div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:12}}>
+          {PRESENTATIE_THEMAS.map(function (th) {
+            return <button key={th.id} className="filter-chip" disabled={!mag} style={chipStijl((p.thema || "nacht") === th.id)}
+              onClick={function () { zetPresentatie({ thema: th.id }); }}>{th.naam}</button>;
+          })}
+        </div>
         <label className="formulier-label">Kleur</label>
         <div style={{display:"flex",gap:8,alignItems:"center",marginBottom:12}}>
           <input type="color" aria-label="Kleur van de openbare pagina" value={p.kleur || "#004aad"} disabled={!mag}
@@ -142,14 +180,14 @@ function StapPresentatie({ t, mag, wijzig }) {
         <label className="formulier-label">Mededeling</label>
         <TVeld waarde={p.mededeling || ""} disabled={!mag} placeholder="Bijv. Prijsuitreiking om 16:30 bij het clubhuis"
           opKlaar={function (v) { zetPresentatie({ mededeling: v.trim().slice(0, 200) }); }} />
-        <p style={{fontSize:11,color:"var(--grijs-donker)",margin:0}}>Bovenaan de openbare pagina, en op een groot scherm als eigen paneel.
+        <p style={{fontSize:11,color:"var(--grijs-donker)",margin:0}}>Bovenaan de openbare pagina, en onderin de presentatie als lopende tekst.
           {pub && " Kleur, logo en mededeling verschijnen na het bijwerken."}</p>
       </div>
 
       <div className="kaart">
         <div className="kaart-titel"><i className="fa-solid fa-circle-question"/> Op een tv in de kantine</div>
         <ul style={{fontSize:13,lineHeight:1.7,margin:0,paddingLeft:18}}>
-          <li>Een laptop aan de tv: open de tv-link en klik op <b>Volledig scherm</b>.</li>
+          <li>Een laptop aan de tv: tik hierboven op <b>Start presentatie op dit apparaat</b>, of open de tv-link en klik op <b>Volledig scherm</b>.</li>
           <li>Chromecast: open de tv-link in Chrome op een laptop, kies ⋮ → <b>Casten</b> → <b>Tabblad casten</b>.</li>
           <li>Apple TV: open de tv-link op een Mac of iPad en kies <b>Scherm synchroniseren</b>.</li>
         </ul>
@@ -204,11 +242,25 @@ function nuBezig(t, w) {
   return n >= b && n < b + (c.wedstrijdduur || 0);
 }
 
+function haalPubliekeMedia(slug) {
+  return _haalOp("/rest/v1/rpc/toernooi_publiek_media", { methode: "POST", lichaam: { p_slug: slug } })
+    .then(function (r) { var rij = r.ok && Array.isArray(r.gegevens) ? r.gegevens[0] : null; return rij ? { media: rij.media || {}, versie: rij.media_bijgewerkt_op } : null; })
+    .catch(function () { return null; });
+}
 function PubliekToernooi({ slug, groot }) {
   const [stand, setStand] = useState({ laden: true });
+  const [media, setMedia] = useState({});
   const versieRef = useRef(null);
+  const mediaVersieRef = useRef(undefined);
   useEffect(function () {
     var weg = false;
+    /* Alleen de tv-stand heeft de afbeeldingen nodig; opnieuw ophalen
+       alleen als het media-tijdstip veranderde (server/25-toernooi-media.sql). */
+    function laadMedia() {
+      if (!groot) return;
+      haalPubliekeMedia(slug).then(function (m) { if (!weg && m) { mediaVersieRef.current = m.versie; setMedia(m.media); } });
+    }
+    laadMedia();
     function laad() {
       haalPubliek(slug, false).then(function (r) {
         if (weg) return;
@@ -225,6 +277,10 @@ function PubliekToernooi({ slug, groot }) {
         if (!r.versie) { setStand({ fout: "weg" }); return; }
         if (r.versie !== versieRef.current) laad();
       });
+      if (groot) _haalOp("/rest/v1/rpc/toernooi_publiek_versies", { methode: "POST", lichaam: { p_slug: slug } }).then(function (r) {
+        var rij = r.ok && Array.isArray(r.gegevens) ? r.gegevens[0] : null;
+        if (rij && rij.media !== mediaVersieRef.current) laadMedia();
+      }).catch(function () {});
     }, 20000);
     return function () { weg = true; clearInterval(klok); };
   }, [slug]);
@@ -243,7 +299,9 @@ function PubliekToernooi({ slug, groot }) {
       </PubliekKader>
     );
   }
-  return groot ? <GrootScherm t={stand.t} /> : <PubliekPagina t={stand.t} />;
+  return groot
+    ? <div style={{position:"fixed",inset:0,background:"#000"}}><PresentatieScherm t={stand.t} media={media} /><VolledigSchermKnop /></div>
+    : <PubliekPagina t={stand.t} />;
 }
 
 function PubliekKader({ children, kleur }) {
@@ -437,89 +495,23 @@ function PubliekKnockout({ t, catId, groot }) {
   );
 }
 
-/* De tv-stand: grote letters, wisselende panelen. Geen geluid; wie
-   "minder beweging" heeft ingesteld krijgt geen overgangen. */
-function GrootScherm({ t }) {
-  const [i, setI] = useState(0);
-  const [, setTik] = useState(0);
-  const [vol, setVol] = useState(false);
-  var p = t.presentatie || {};
-  var kleur = p.kleur || "#004aad";
-  var opNummer = {};
-  t.wedstrijden.forEach(function (w) { opNummer[w.nummer] = w; });
-  var regels = schemaRegels(t);
-  var vandaag = vandaagIso(), nu = nuMinuten();
-  var dagVan = {};
-  t.dagen.forEach(function (d) { dagVan[d.id] = d.datum; });
-  /* Aankomend: nog niet gespeeld, vanaf nu (vandaag) of de eerstvolgende. */
-  var aankomend = regels.filter(function (r) {
-    var w = opNummer[r.nummer];
-    if (w.uitslag || !w.start) return false;
-    var dd = dagVan[w.dagId] || "";
-    return dd > vandaag || (dd === vandaag && minVan(w.start) + 30 >= nu) || !dd || dd < vandaag;
-  }).slice(0, 8);
-  var uitslagen = regels.filter(function (r) { return opNummer[r.nummer].uitslag; }).slice(-8).reverse();
-  var panelen = [];
-  if (p.mededeling) panelen.push({ id: "mededeling", titel: "Mededeling" });
-  if (aankomend.length) panelen.push({ id: "aankomend", titel: "Volgende wedstrijden" });
-  if (uitslagen.length) panelen.push({ id: "uitslagen", titel: "Laatste uitslagen" });
-  t.stadia.forEach(function (s) {
-    var cat = categorieVan(t, s.categorieId);
-    if (s.soort === "poule") s.poules.forEach(function (pl) { panelen.push({ id: "poule-" + pl.id, titel: "Stand " + (t.categorieen.length > 1 ? cat.naam + " · " : "") + (s.poules.length > 1 ? pl.naam : s.naam), s: s, p: pl }); });
-    else panelen.push({ id: "ko-" + s.id, titel: (t.categorieen.length > 1 ? cat.naam + " · " : "") + "Knock-out", ko: s });
-  });
-  if (!panelen.length) panelen.push({ id: "leeg", titel: t.naam });
-  var paneel = panelen[i % panelen.length];
+/* De tv-stand staat sinds 12 oktober 2026 in src/schermen/presentatie.jsx
+   (PresentatieScherm, met zelf gemaakte dia's). Hier alleen de knop om
+   schermvullend te gaan: een browser staat dat pas toe na een klik. */
+function VolledigSchermKnop() {
+  const [vol, setVol] = useState(!!document.fullscreenElement);
+  const [zichtbaar, setZichtbaar] = useState(true);
   useEffect(function () {
-    var a = setInterval(function () { setI(function (x) { return x + 1; }); }, 12000);
-    var b = setInterval(function () { setTik(function (x) { return x + 1; }); }, 30000);
     function fs() { setVol(!!document.fullscreenElement); }
-    document.addEventListener("fullscreenchange", fs);
-    return function () { clearInterval(a); clearInterval(b); document.removeEventListener("fullscreenchange", fs); };
+    var h = setTimeout(function () { setZichtbaar(false); }, 6000);
+    function beweeg() { setZichtbaar(true); clearTimeout(h); h = setTimeout(function () { setZichtbaar(false); }, 4000); }
+    document.addEventListener("fullscreenchange", fs); window.addEventListener("mousemove", beweeg);
+    return function () { clearTimeout(h); document.removeEventListener("fullscreenchange", fs); window.removeEventListener("mousemove", beweeg); };
   }, []);
-  var rustig = false;
-  try { rustig = window.matchMedia("(prefers-reduced-motion: reduce)").matches; } catch (e) {}
-  function lijst(rs, metUitslag) {
-    return rs.map(function (r) {
-      var w = opNummer[r.nummer];
-      var bezig = nuBezig(t, w);
-      return (
-        <div key={w.id} style={{display:"flex",gap:24,alignItems:"center",padding:"14px 0",borderBottom:"1px solid rgba(255,255,255,.15)",fontSize:"2.4vw"}}>
-          <span style={{width:"9vw",fontWeight:700}}>{w.start}</span>
-          <span style={{flex:1,minWidth:0,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{r.thuis + "  –  " + r.uit}</span>
-          {metUitslag ? <span style={{fontWeight:800}}>{w.uitslag.thuis + " – " + w.uitslag.uit}</span>
-            : <span style={{opacity:.75,fontSize:"1.8vw"}}>{bezig ? "● bezig · " : ""}{r.veld}</span>}
-        </div>
-      );
-    });
-  }
+  if (vol || !document.fullscreenEnabled) return null;
   return (
-    <div style={{minHeight:"100vh",background:"#0b1424",color:"#fff",display:"flex",flexDirection:"column",fontFamily:"'Helvetica Neue',Arial,sans-serif"}}>
-      <div style={{background:kleur,padding:"1.6vw 3vw",display:"flex",alignItems:"center",gap:"2vw"}}>
-        {p.logo && <img src={p.logo} alt="" style={{height:"5vw",background:"#fff",borderRadius:12,padding:6}} />}
-        <div style={{flex:1,minWidth:0}}>
-          <div style={{fontSize:"3vw",fontWeight:800,lineHeight:1.1}}>{t.naam}</div>
-          <div style={{fontSize:"1.6vw",opacity:.85}}>{paneel.titel}</div>
-        </div>
-        <div style={{fontSize:"3vw",fontWeight:700}}>{new Date().toLocaleTimeString("nl-NL", { hour: "2-digit", minute: "2-digit" })}</div>
-        {!vol && document.fullscreenEnabled && (
-          <button onClick={function () { document.documentElement.requestFullscreen().catch(function () {}); }}
-            style={{background:"rgba(255,255,255,.2)",color:"#fff",border:0,borderRadius:10,padding:"10px 16px",fontSize:16,cursor:"pointer"}}>
-            <i className="fa-solid fa-expand"/> Volledig scherm</button>
-        )}
-      </div>
-      <div key={paneel.id + (i % panelen.length)} style={{flex:1,padding:"2vw 3vw",animation:rustig ? "none" : "ttFade .6s ease"}}>
-        {paneel.id === "mededeling" && <div style={{fontSize:"5vw",fontWeight:800,lineHeight:1.2,marginTop:"8vh",textAlign:"center"}}><i className="fa-solid fa-bullhorn"/><div>{p.mededeling}</div></div>}
-        {paneel.id === "aankomend" && lijst(aankomend, false)}
-        {paneel.id === "uitslagen" && lijst(uitslagen, true)}
-        {paneel.s && <div style={{background:"#fff",color:"#111",borderRadius:16,padding:"1vw 2vw",fontSize:"2vw"}}><PouleTabel t={t} s={paneel.s} p={paneel.p} groot /></div>}
-        {paneel.ko && <div style={{background:"#fff",color:"#111",borderRadius:16,padding:"1vw 2vw"}}><PubliekKnockout t={t} catId={paneel.ko.categorieId} groot /></div>}
-        {paneel.id === "leeg" && <div style={{fontSize:"3vw",textAlign:"center",marginTop:"10vh"}}>Het schema volgt.</div>}
-      </div>
-      <div style={{display:"flex",justifyContent:"center",gap:8,padding:"1vw"}}>
-        {panelen.map(function (x, k) { return <span key={x.id} style={{width:10,height:10,borderRadius:5,background:k === i % panelen.length ? "#fff" : "rgba(255,255,255,.3)"}}/>; })}
-      </div>
-      <style>{"@keyframes ttFade{from{opacity:0}to{opacity:1}}"}</style>
-    </div>
+    <button onClick={function () { document.documentElement.requestFullscreen().catch(function () {}); }}
+      style={{position:"fixed",right:24,bottom:90,zIndex:5,opacity:zichtbaar ? 1 : 0,transition:"opacity .4s",background:"rgba(0,0,0,0.65)",color:"#fff",border:0,borderRadius:12,padding:"12px 18px",fontSize:16,cursor:"pointer"}}>
+      <i className="fa-solid fa-expand"/> Volledig scherm</button>
   );
 }

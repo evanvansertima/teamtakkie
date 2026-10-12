@@ -65,8 +65,17 @@ SQL Editor van Supabase draaien (pas dan werkt publiceren).
   spelvormen. Afwijking van 5f: die beperking geldt voor het hele toernooi,
   niet per dag.
 
-Wens van Evan (11 oktober 2026), voor later: een mooiere lay-out voor de
-tv-stand van de presentatie. Voor nu is de huidige goed.
+**Presentatie met dia's (12 oktober 2026, wens van Evan).** Nieuwe tv-weergave
+(vast vlak van 1920 x 1080, passend geschaald; thema's avond, daglicht en
+clubkleur; voortgangsbalk; lopende mededeling) en zelf dia's maken in stap 6:
+per dia 1–4 blokken (alle wedstrijden, programma, stand, laatst gespeeld,
+knock-out, sponsors, grote tekst, kleedkamers, afbeelding, video), duur in
+seconden (standaard 8), aanvinken wat meedoet. Materiaal (sponsors met logo,
+kleedkamerindeling, afbeeldingen, videolinks) vooraf invullen. "Start
+presentatie op dit apparaat" of de openbare tv-link. Afbeeldingen staan in
+IndexedDB (niet in localStorage) en gaan bij publiceren apart naar de server
+(server/25-toernooi-media.sql). Video alleen via een link (YouTube, Vimeo,
+.mp4): geen opslagkosten.
 
 **Release 4 (AI-trainer) vervalt — besluit van Evan, 11 oktober 2026.** Hij
 is gebouwd (commits 8115696, e904084, beaa1b1) en dezelfde dag weer

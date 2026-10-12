@@ -217,7 +217,7 @@ const DOMEIN_VOLGORDE = ["boetepot.js", "wedstrijden.js", "competitie.js", "toer
    OpstellingVeld/TenueStrook/VeldZoomKnoppen/TrainingTekenBord
    (opstellingen.jsx) en SpelerStatusRaster (trainingen.jsx) aan, zoals
    die bestanden al vanuit hun kant meldden. */
-const SCHERM_VOLGORDE = ["gedeeld.jsx", "onboarding.jsx", "instellingen.jsx", "statistieken.jsx", "trainingen.jsx", "spelers.jsx", "clubhuis.jsx", "opstellingen.jsx", "competitie.jsx", "toernooi.jsx", "toernooi-publiek.jsx", "wedstrijden.jsx"];
+const SCHERM_VOLGORDE = ["gedeeld.jsx", "onboarding.jsx", "instellingen.jsx", "statistieken.jsx", "trainingen.jsx", "spelers.jsx", "clubhuis.jsx", "opstellingen.jsx", "competitie.jsx", "toernooi.jsx", "toernooi-publiek.jsx", "presentatie.jsx", "wedstrijden.jsx"];
 
 /* Het korte git-commitnummer van dit moment, voor de foutrapportage
    (src/kern/foutmeldingen.js, sinds P6). Geen los bestand in src/: er

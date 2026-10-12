@@ -38,9 +38,9 @@ const PRESENTATIE_THEMAS = [
    bepaalt welke keuzes het scherm laat zien. */
 const BLOK_SOORTEN = [
   { id: "wedstrijden", naam: "Alle wedstrijden", icoon: "fa-solid fa-list-ol", velden: ["categorie", "dag", "aantal"], standaard: { aantal: 10 } },
-  { id: "programma", naam: "Programma (volgende)", icoon: "fa-solid fa-clock", velden: ["categorie", "aantal"], standaard: { aantal: 6 } },
+  { id: "programma", naam: "Programma (volgende)", icoon: "fa-solid fa-clock", velden: ["categorie", "aantal"], standaard: { aantal: 8 } },
   { id: "stand", naam: "Stand", icoon: "fa-solid fa-ranking-star", velden: ["categorie", "poule"], standaard: {} },
-  { id: "uitslagen", naam: "Laatst gespeeld", icoon: "fa-solid fa-flag-checkered", velden: ["categorie", "aantal"], standaard: { aantal: 6 } },
+  { id: "uitslagen", naam: "Laatst gespeeld", icoon: "fa-solid fa-flag-checkered", velden: ["categorie", "aantal"], standaard: { aantal: 8 } },
   { id: "knockout", naam: "Knock-out", icoon: "fa-solid fa-sitemap", velden: ["categorie"], standaard: {} },
   { id: "sponsors", naam: "Sponsors", icoon: "fa-solid fa-handshake", velden: ["sponsors"], standaard: {} },
   { id: "tekst", naam: "Grote tekst", icoon: "fa-solid fa-font", velden: ["tekst", "ondertekst"], standaard: { tekst: "WELKOM", ondertekst: "" } },

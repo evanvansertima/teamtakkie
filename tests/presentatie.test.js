@@ -52,7 +52,7 @@ groep("dia's maken");
 {
   const d = nieuweDia("Programma", ["programma", "uitslagen"]);
   ok("nieuwe dia: aan, 8 seconden, twee blokken", [d.aan, d.duur, d.blokken.map((b) => b.soort)], [true, 8, ["programma", "uitslagen"]]);
-  ok("blok krijgt zijn beginwaarden", [nieuwBlok("programma").aantal, nieuwBlok("tekst").tekst], [6, "WELKOM"]);
+  ok("blok krijgt zijn beginwaarden", [nieuwBlok("programma").aantal, nieuwBlok("tekst").tekst], [8, "WELKOM"]);
   ok("onbekend blok wordt geweigerd", (() => { try { nieuwBlok("raket"); return "geen fout"; } catch (e) { return "fout"; } })(), "fout");
   ok("duur: leeg of onzin = 8, te kort = 3, te lang = 300", [diaDuur(""), diaDuur("x"), diaDuur(1), diaDuur(999), diaDuur(12.4)], [8, 8, 3, 300, 12]);
   ok("alle blokken van Evans lijst bestaan", ["wedstrijden", "programma", "stand", "uitslagen", "sponsors", "tekst", "kleedkamers", "video", "afbeelding"].every((s) => BLOK_SOORTEN.some((b) => b.id === s)), true);
