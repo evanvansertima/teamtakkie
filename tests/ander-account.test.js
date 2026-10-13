@@ -53,6 +53,7 @@ function _haalOp() { return Promise.resolve(antwoord); }
 eval(knip(path.join(WORTEL, "src", "kern", "sleutels.js"), "wisAllesLokaal"));
 eval(knip(SERVER, "wisselAccount"));
 eval(knip(SERVER, "serverAanmelden"));
+eval(knip(SERVER, "_terugNaBevestiging"));
 eval(knip(SERVER, "serverRegistreren"));
 
 let goed = 0, fout = 0;

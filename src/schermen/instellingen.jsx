@@ -1452,8 +1452,6 @@ function AccountSheet({ onSluiten, onGewisseld }) {
   const s = gebruikSessie();
   const [adres, setAdres] = useState(function(){ return serverInst().url; });
   const [sleutel, setSleutel] = useState(function(){ return serverInst().sleutel; });
-  const [email, setEmail] = useState("");
-  const [wachtwoord, setWachtwoord] = useState("");
   const [nieuw, setNieuw] = useState(false);
   const [bezig, setBezig] = useState(false);
   const [fout, setFout] = useState(null);
@@ -1482,21 +1480,6 @@ function AccountSheet({ onSluiten, onGewisseld }) {
     setBezig(false);
     setMelding(null);
     setFout(r.fout ? r.fout.tekst : "Er ging iets mis.");
-  }
-  function aanmelden() {
-    setBezig(true); setFout(null); setMelding(null);
-    var doe = nieuw ? serverRegistreren : serverAanmelden;
-    doe(email, wachtwoord).then(function (r) {
-      setWachtwoord("");
-      if (!r.ok) return meldFoutUit(r);
-      setBezig(false);
-      if (r.bevestigen) {
-        setMelding("Bijna klaar: open de e-mail die we hebben gestuurd en klik op de link. Log daarna hier in.");
-        return;
-      }
-      setMelding("Ingelogd. Even geduld, ik haal je gegevens op\u2026");
-      nuSynchroniseren();
-    });
   }
   function nuSynchroniseren() {
     setBezig(true); setFout(null); setUitslag(null);
@@ -1566,19 +1549,11 @@ function AccountSheet({ onSluiten, onGewisseld }) {
             <div className="kaart-titel">
               <i className="fa-solid fa-right-to-bracket"/> {nieuw ? "Account aanmaken" : "Inloggen"}
             </div>
-            <label className="formulier-label">E-mailadres</label>
-            <input type="email" autoComplete="email" value={email}
-              onChange={function(e){ setEmail(e.target.value); }}/>
-            <label className="formulier-label">Wachtwoord</label>
-            <input type="password" value={wachtwoord}
-              autoComplete={nieuw ? "new-password" : "current-password"}
-              onChange={function(e){ setWachtwoord(e.target.value); }}
-              onKeyDown={function(e){ if(e.key==="Enter") aanmelden(); }}/>
-            <button className="knop" disabled={bezig || !email || !wachtwoord}
-              style={{width:"100%",justifyContent:"center",marginTop:8}} onClick={aanmelden}>
-              <i className={bezig ? "fa-solid fa-hourglass-half" : "fa-solid fa-right-to-bracket"}/>
-              {nieuw ? " Account aanmaken" : " Inloggen"}
-            </button>
+            {/* Hetzelfde formulier als bij de eerste keer openen (AanmeldFormulier
+                in src/schermen/onboarding.jsx): dezelfde eisen aan e-mailadres,
+                wachtwoord en akkoord, op één plek. */}
+            <AanmeldFormulier nieuw={nieuw} setNieuw={setNieuw}
+              opKlaar={function(){ setMelding("Ingelogd. Even geduld, ik haal je gegevens op\u2026"); nuSynchroniseren(); }} />
             <button className="knop lijn klein" style={{width:"100%",justifyContent:"center",marginTop:8}}
               onClick={function(){ setNieuw(!nieuw); setFout(null); }}>
               {nieuw ? "Ik heb al een account" : "Nog geen account? Maak er een aan"}

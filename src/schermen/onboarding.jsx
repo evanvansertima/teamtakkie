@@ -91,59 +91,174 @@ function ServerScherm({ opKlaar }) {
 }
 
 /* ── 2. Inloggen of een account aanmaken ─────────────────────── */
+/* Sinds 13 oktober 2026 (besluit van Evan): een geldig e-mailadres, een
+   sterk wachtwoord en verplicht akkoord op de voorwaarden — de regels
+   staan in src/domein/registratie.js. Daarna een bevestigingsmail;
+   wie op de link klikt, komt hier terug en is meteen ingelogd
+   (serverBevestigingUitLink in src/kern/server.js).
+
+   ?account=nieuw in de adresbalk opent meteen "Account aanmaken": daar
+   linkt de knop op teamtakkie.nl naartoe. */
 function AanmeldScherm({ opKlaar }) {
-  const [nieuw, setNieuw] = useState(false);
+  const [nieuw, setNieuw] = useState(function () {
+    try { return new URLSearchParams(window.location.search).get("account") === "nieuw"; } catch (e) { return false; }
+  });
+  const [linkFout, setLinkFout] = useState(null);
+  useEffect(function () {
+    /* De parameter uit de adresbalk: na registreren hoort hij er niet te blijven staan. */
+    try {
+      var u = new URL(window.location.href);
+      if (u.searchParams.has("account")) { u.searchParams.delete("account"); window.history.replaceState(null, "", u.pathname + (u.search || "") + (u.hash || "")); }
+    } catch (e) {}
+    /* Terug van de bevestigingslink? */
+    serverBevestigingUitLink().then(function (r) {
+      if (r.soort === "ingelogd") { meldGoed("Je e-mailadres is bevestigd. Welkom!"); opKlaar(); }
+      else if (r.soort === "fout") { setLinkFout(r.tekst); setNieuw(false); }
+    });
+  }, []);
+  return (
+    <OnboardingSchil titel={nieuw ? "Account aanmaken" : "Inloggen"}
+      onder={
+        <button className="onboard-wissel" onClick={function(){ setNieuw(!nieuw); }}>
+          {nieuw ? "Ik heb al een account \u2014 inloggen"
+                 : "Nog geen account? Maak er een aan"}
+        </button>
+      }
+      kinderen={<AanmeldFormulier nieuw={nieuw} setNieuw={setNieuw} opKlaar={opKlaar} beginFout={linkFout} />}/>
+  );
+}
+
+/* Het formulier zelf: hier in de onboarding, en in het Account-venster
+   bij Instellingen (src/schermen/instellingen.jsx). Op één plek, zodat
+   de controles nooit op de ene plek strenger zijn dan op de andere. */
+function AanmeldFormulier({ nieuw, setNieuw, opKlaar, beginFout }) {
   const [email, setEmail] = useState("");
+  const [emailGezien, setEmailGezien] = useState(false);
   const [wachtwoord, setWachtwoord] = useState("");
+  const [toon, setToon] = useState(false);
+  const [akkoord, setAkkoord] = useState(false);
   const [bezig, setBezig] = useState(false);
   const [fout, setFout] = useState(null);
   const [melding, setMelding] = useState(null);
+  const [opnieuwKan, setOpnieuwKan] = useState(false);   // knop "stuur de mail opnieuw" tonen
+  const [wacht, setWacht] = useState(0);                  // seconden tot opnieuw sturen weer mag
+
+  useEffect(function () { if (beginFout) { setFout(beginFout); setOpnieuwKan(true); } }, [beginFout]);
+  /* Wie zelf wisselt tussen inloggen en aanmaken, krijgt een schoon
+     formulier. Maar na registreren schakelt het formulier zelf naar
+     inloggen, en dan moet "kijk in je mail" juist blijven staan. */
+  const zelfGewisseld = useRef(false);
+  useEffect(function () {
+    if (zelfGewisseld.current) { zelfGewisseld.current = false; return; }
+    setFout(null); setMelding(null);
+  }, [nieuw]);
+  useEffect(function () {
+    if (wacht <= 0) return;
+    var h = setTimeout(function () { setWacht(wacht - 1); }, 1000);
+    return function () { clearTimeout(h); };
+  }, [wacht]);
+
+  var controle = registratieControle({ email: email, wachtwoord: wachtwoord, akkoord: akkoord });
+  var eisen = wachtwoordEisen(wachtwoord);
+  var sterkte = wachtwoordSterkte(wachtwoord);
 
   function doe() {
-    if (!email.trim() || !wachtwoord) { setFout("Vul je e-mailadres en wachtwoord in."); return; }
-    if (nieuw && wachtwoord.length < 8) {
-      setFout("Kies een wachtwoord van minstens acht tekens."); return;
-    }
-    setBezig(true); setFout(null); setMelding(null);
-    (nieuw ? serverRegistreren : serverAanmelden)(email, wachtwoord).then(function (r) {
+    setFout(null); setMelding(null);
+    if (nieuw) {
+      if (!controle.mag) { setEmailGezien(true); setFout(controle.reden); return; }
+    } else if (!email.trim() || !wachtwoord) { setFout("Vul je e-mailadres en wachtwoord in."); return; }
+    setBezig(true);
+    var adres = emailNetjes(email);
+    (nieuw ? serverRegistreren(adres, wachtwoord, akkoordGegevens()) : serverAanmelden(adres, wachtwoord)).then(function (r) {
       setBezig(false);
+      if (!r.ok) {
+        var tekst = r.fout ? r.fout.tekst : "Er ging iets mis.";
+        setFout(tekst);
+        /* Nog niet bevestigd: dan meteen de knop voor een nieuwe mail. */
+        if (/nog niet bevestigd/i.test(tekst)) setOpnieuwKan(true);
+        return;
+      }
       setWachtwoord("");
-      if (!r.ok) { setFout(r.fout ? r.fout.tekst : "Er ging iets mis."); return; }
       if (r.bevestigen) {
-        setMelding("Bijna klaar. Open de e-mail die we hebben gestuurd, klik op de link, en log daarna hier in.");
-        setNieuw(false);
+        setMelding("Bijna klaar! We hebben een mail gestuurd naar " + adres + ". Klik op de link in die mail; daarna ben je meteen ingelogd. "
+          + "Geen mail gezien? Kijk ook in de map ongewenst.");
+        zelfGewisseld.current = true; setNieuw(false); setOpnieuwKan(true); setWacht(60);
         return;
       }
       opKlaar();
     });
   }
+  function opnieuw() {
+    if (!emailGeldig(email)) { setFout("Vul eerst je e-mailadres in."); return; }
+    setBezig(true);
+    serverBevestigingOpnieuw(emailNetjes(email)).then(function (r) {
+      setBezig(false);
+      if (!r.ok) { setFout(r.fout ? r.fout.tekst : "Versturen lukte niet."); return; }
+      setFout(null);
+      setMelding("We hebben een nieuwe bevestigingsmail gestuurd naar " + emailNetjes(email) + ".");
+      setWacht(60);
+    });
+  }
+
+  var emailFout = nieuw && emailGezien && email && !emailGeldig(email);
+  var balkKleur = ["var(--grijs)", "var(--gevaar)", "var(--oranje)", "var(--succes)", "var(--succes)"][sterkte];
+  var balkTekst = ["", "Zwak", "Kan beter", "Goed", "Sterk"][sterkte];
 
   return (
-    <OnboardingSchil titel={nieuw ? "Account aanmaken" : "Inloggen"}
-      onder={
-        <button className="onboard-wissel" onClick={function(){ setNieuw(!nieuw); setFout(null); }}>
-          {nieuw ? "Ik heb al een account \u2014 inloggen"
-                 : "Nog geen account? Maak er een aan"}
-        </button>
-      }
-      kinderen={
         <React.Fragment>
           {fout && <div className="melding fout"><i className="fa-solid fa-triangle-exclamation"/> {fout}</div>}
-          {melding && <div className="melding"><i className="fa-solid fa-circle-info"/> {melding}</div>}
+          {melding && <div className="melding"><i className="fa-solid fa-envelope-circle-check"/> {melding}</div>}
+          {opnieuwKan && (
+            <button className="knop lijn klein" style={{marginBottom:12}} disabled={bezig || wacht > 0} onClick={opnieuw}>
+              <i className="fa-solid fa-paper-plane"/>{wacht > 0 ? " Opnieuw sturen kan over " + wacht + " s" : " Stuur de bevestigingsmail opnieuw"}
+            </button>
+          )}
           <label className="formulier-label">E-mailadres</label>
-          <input type="email" autoComplete="email" value={email}
-            onChange={function(e){ setEmail(e.target.value); }}/>
+          <input type="email" autoComplete="email" value={email} inputMode="email"
+            aria-invalid={emailFout ? "true" : "false"}
+            style={emailFout ? {borderColor:"var(--gevaar)"} : undefined}
+            onChange={function(e){ setEmail(e.target.value); }}
+            onBlur={function(){ setEmailGezien(true); }}/>
+          {emailFout && <div style={{fontSize:12,color:"var(--gevaar)",margin:"6px 0 12px",lineHeight:1.4}}>Dit is geen geldig e-mailadres. Voorbeeld: naam@voorbeeld.nl</div>}
           <label className="formulier-label">Wachtwoord</label>
-          <input type="password" value={wachtwoord}
-            autoComplete={nieuw ? "new-password" : "current-password"}
-            onChange={function(e){ setWachtwoord(e.target.value); }}
-            onKeyDown={function(e){ if(e.key==="Enter") doe(); }}/>
-          <button className="knop onboard-knop" disabled={bezig} onClick={doe}>
+          <div style={{position:"relative"}}>
+            <input type={toon ? "text" : "password"} value={wachtwoord} style={{paddingRight:44}}
+              autoComplete={nieuw ? "new-password" : "current-password"}
+              onChange={function(e){ setWachtwoord(e.target.value); }}
+              onKeyDown={function(e){ if(e.key==="Enter") doe(); }}/>
+            <button type="button" aria-label={toon ? "Wachtwoord verbergen" : "Wachtwoord tonen"} onClick={function(){ setToon(!toon); }}
+              style={{position:"absolute",right:6,top:"50%",transform:"translateY(-50%)",marginTop:-6,background:"none",border:0,padding:8,cursor:"pointer",color:"var(--grijs-donker)"}}>
+              <i className={toon ? "fa-solid fa-eye-slash" : "fa-solid fa-eye"}/>
+            </button>
+          </div>
+          {nieuw && (
+            <div style={{margin:"8px 0 12px"}}>
+              <div style={{display:"flex",gap:4,margin:"0 0 6px"}} aria-hidden="true">
+                {[1, 2, 3, 4].map(function (n) { return <span key={n} style={{flex:1,height:5,borderRadius:3,background:n <= sterkte ? balkKleur : "var(--grijs)"}}/>; })}
+              </div>
+              {balkTekst && <div style={{fontSize:12,fontWeight:700,color:balkKleur,marginBottom:4}}>{balkTekst}</div>}
+              <ul style={{listStyle:"none",padding:0,margin:0,fontSize:12.5,lineHeight:1.7}}>
+                {eisen.map(function (e) {
+                  return <li key={e.id} style={{color:e.ok ? "var(--succes)" : "var(--grijs-donker)"}}>
+                    <i className={e.ok ? "fa-solid fa-circle-check" : "fa-regular fa-circle"} style={{width:18}}/>{" " + e.tekst}</li>;
+                })}
+              </ul>
+            </div>
+          )}
+          {nieuw && (
+            <label style={{display:"flex",gap:10,alignItems:"flex-start",fontSize:13,lineHeight:1.5,margin:"4px 0 14px",textAlign:"left"}}>
+              <input type="checkbox" checked={akkoord} onChange={function(e){ setAkkoord(e.target.checked); }} style={{marginTop:3,width:18,height:18,flexShrink:0}}/>
+              <span>Ik ga akkoord met de <a href={VOORWAARDEN_URL} target="_blank" rel="noopener">algemene voorwaarden</a> en
+                het <a href={PRIVACY_URL} target="_blank" rel="noopener">privacybeleid</a>.</span>
+            </label>
+          )}
+          <button className="knop onboard-knop" disabled={bezig || (nieuw && !controle.mag)} onClick={doe}
+            style={bezig || (nieuw && !controle.mag) ? {opacity:0.45,cursor:"not-allowed"} : undefined}>
             <i className={bezig ? "fa-solid fa-hourglass-half" : "fa-solid fa-right-to-bracket"}/>
             {bezig ? " Bezig\u2026" : (nieuw ? " Account aanmaken" : " Inloggen")}
           </button>
+          {nieuw && !controle.mag && (email || wachtwoord) && <div style={{fontSize:12,color:"var(--grijs-donker)",marginTop:8}}>{controle.reden}</div>}
         </React.Fragment>
-      }/>
   );
 }
 

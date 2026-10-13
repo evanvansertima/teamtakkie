@@ -406,6 +406,10 @@ const SERVER_TAAL = [
    "Er bestaat al een account met dit e-mailadres. Log in plaats daarvan in."],
   [/password should be at least (\d+)/i,
    "Je wachtwoord moet minstens $1 tekens lang zijn."],
+  [/password should contain at least one character of each/i,
+   "Je wachtwoord moet een hoofdletter, een kleine letter, een cijfer en een symbool bevatten."],
+  [/known to be weak|pwned|leaked|weak_password/i,
+   "Dit wachtwoord komt voor in lijsten van gelekte wachtwoorden. Kies een ander."],
   [/email not confirmed/i,
    "Je hebt je e-mailadres nog niet bevestigd. Kijk in je mail — ook in de map ongewenst."],
   [/unable to validate email address|invalid format/i,
@@ -475,11 +479,22 @@ function serverAanmelden(email, wachtwoord) {
     })
     .catch(verbindingsFout);
 }
-/** @param {string} email @param {string} wachtwoord @returns {Promise<ServerUitkomst>} */
-function serverRegistreren(email, wachtwoord) {
+/* Waar de bevestigingslink naartoe gaat: dezelfde app waar iemand zich
+   aanmeldt (app.teamtakkie.nl, of een testadres). Supabase stuurt
+   alleen naar adressen die bij Authentication → URL Configuration
+   staan; een ander adres valt terug op de Site URL. */
+function _terugNaBevestiging() {
+  try { return "?redirect_to=" + encodeURIComponent(window.location.origin + window.location.pathname); } catch(e) { return ""; }
+}
+/**
+ * @param {string} email @param {string} wachtwoord
+ * @param {Object<string,string>} [extra]  bewaard bij het account (user_metadata), bijv. het akkoord op de voorwaarden
+ * @returns {Promise<ServerUitkomst>}
+ */
+function serverRegistreren(email, wachtwoord, extra) {
   if (!serverAan()) return Promise.resolve(serverFout("geen-server", "Er is nog geen server ingesteld."));
-  return _haalOp("/auth/v1/signup",
-                 {methode:"POST", lichaam:{email:(email||"").trim(), password:wachtwoord||""}})
+  return _haalOp("/auth/v1/signup" + _terugNaBevestiging(),
+                 {methode:"POST", lichaam:{email:(email||"").trim(), password:wachtwoord||"", data: extra || {}}})
     .then(function (r) {
       if (!r.ok) return serverFout("aanmelding", serverBoodschap(r));
       var s = sessieUit(r.gegevens);
@@ -489,6 +504,45 @@ function serverRegistreren(email, wachtwoord) {
       return {ok:true, gegevens:null, bevestigen:true};
     })
     .catch(verbindingsFout);
+}
+/* Een nieuwe bevestigingsmail, als de eerste niet aankwam of de link
+   verlopen is. Supabase zegt niet of het adres bestaat (dat zou
+   verraden wie er een account heeft); het antwoord is dus altijd
+   "verstuurd", behalve bij te vaak proberen. */
+/** @param {string} email @returns {Promise<ServerUitkomst>} */
+function serverBevestigingOpnieuw(email) {
+  if (!serverAan()) return Promise.resolve(serverFout("geen-server", "Er is nog geen server ingesteld."));
+  return _haalOp("/auth/v1/resend" + _terugNaBevestiging(), {methode:"POST", lichaam:{type:"signup", email:(email||"").trim()}})
+    .then(function (r) { return r.ok ? {ok:true, gegevens:null} : serverFout("aanmelding", serverBoodschap(r)); })
+    .catch(verbindingsFout);
+}
+/* Terug van de bevestigingslink. Supabase zet het resultaat achter het
+   hekje in de adresbalk: bij succes de tokens (dan is iemand meteen
+   ingelogd), bij een fout een foutcode (bijv. een verlopen link). De
+   adresbalk wordt daarna meteen schoongemaakt: tokens horen daar niet
+   te blijven staan, ook niet in de geschiedenis. */
+/** @returns {Promise<{soort:string, tekst?:string}>} soort: "geen" | "ingelogd" | "fout" */
+function serverBevestigingUitLink() {
+  var h = "";
+  try { h = window.location.hash || ""; } catch(e) {}
+  if (h.indexOf("access_token=") < 0 && h.indexOf("error") < 0) return Promise.resolve({soort:"geen"});
+  var p = new URLSearchParams(h.replace(/^#/, ""));
+  try { window.history.replaceState(null, "", window.location.pathname + window.location.search); } catch(e) {}
+  if (p.get("error") || p.get("error_code")) {
+    var code = p.get("error_code") || p.get("error") || "";
+    return Promise.resolve({soort:"fout", tekst: /expired|otp/i.test(code)
+      ? "Deze bevestigingslink is verlopen of al gebruikt. Log in; lukt dat niet, vraag dan hieronder een nieuwe link aan."
+      : "De bevestiging lukte niet. Probeer in te loggen, of vraag hieronder een nieuwe link aan."});
+  }
+  var token = p.get("access_token");
+  return _haalOp("/auth/v1/user", {token: token || undefined}).then(function (r) {
+    if (!r.ok || !r.gegevens) return {soort:"fout", tekst:"De bevestiging lukte, maar inloggen niet. Log hieronder in."};
+    var s = sessieUit({access_token: token, refresh_token: p.get("refresh_token"), expires_in: p.get("expires_in"), user: r.gegevens});
+    if (!s) return {soort:"fout", tekst:"De bevestiging lukte, maar inloggen niet. Log hieronder in."};
+    wisselAccount(s);
+    zetSessie(s);
+    return {soort:"ingelogd"};
+  }).catch(function () { return {soort:"fout", tekst:"Geen verbinding. Log hieronder in zodra je weer bereik hebt."}; });
 }
 /** @returns {Promise<{ok:boolean}>} */
 function serverAfmelden() {
