@@ -29,9 +29,9 @@ datum van downloaden in de bestandsnaam.
 | Partij | Rol | Wat zij zien | Waar | Afspraak | Opgeborgen |
 |---|---|---|---|---|---|
 | **Supabase** (Supabase Pte. Ltd.) | Verwerker | Alle app-gegevens: spelers (veelal minderjarig), wedstrijden, aanwezigheid, afwezigheid/blessures, accounts (e-mail), betaalverwijzingen | Database in **Frankfurt, eu-central-1** (gecontroleerd in dashboard, 13-10-2026). Pro-plan. | DPA versie 1 (1 augustus 2026) is onderdeel van de Terms of Service; SCC's voor doorgifte buiten de EU (art. 12) | ✅ 13-10-2026: DPA (PDF) + subverwerkerslijst "As of October 12, 2026" (PDF) |
-| **Netlify** (Netlify, Inc., VS) | Verwerker | IP-adressen van bezoekers van app.teamtakkie.nl (serverlogs). Geen spelersgegevens. | VS / wereldwijd CDN | DPA is via de Self-Serve Subscription Agreement automatisch van toepassing | ⬜ PDF downloaden: netlify.com/pdf/netlify-dpa.pdf |
-| **Brevo** (Sendinblue SAS, Frankrijk) | Verwerker | E-mailadressen van wie een account aanmaakt of een mail krijgt (bevestigingsmail via SMTP) | EU | DPA (art. 28 AVG) is onderdeel van de General Conditions of Use — vermeld in Brevo → Settings → Profile → Legal Documents | ⬜ Pagina "Legal Documents" + General Conditions of Use als PDF |
-| **Mollie** (Mollie B.V., Amsterdam) | Waarschijnlijk **zelfstandig verantwoordelijk** voor betaalgegevens (betaalinstelling onder toezicht DNB, Wwft) | Naam, e-mail, IBAN, IP-adres van de betaler (clubeigenaar). Geen spelersgegevens. | NL / EU | Nog na te kijken in Mollie-voorwaarden en privacyverklaring | ⬜ Voorwaarden + privacyverklaring als PDF |
+| **Netlify** (Netlify, Inc., VS) | Verwerker | IP-adressen van bezoekers van app.teamtakkie.nl (serverlogs). Geen spelersgegevens. | VS / wereldwijd CDN | DPA is via de Self-Serve Subscription Agreement automatisch van toepassing | ✅ 13-10-2026: DPA (PDF) |
+| **Brevo** (Sendinblue SAS, Frankrijk) | Verwerker | E-mailadressen van wie een account aanmaakt of een mail krijgt (bevestigingsmail via SMTP) | EU | DPA (art. 28 AVG) is onderdeel van de General Conditions of Use — vermeld in Brevo → Settings → Profile → Legal Documents | ✅ 13-10-2026: "Legal Documents"-pagina + General Conditions of Use (PDF) |
+| **Mollie** (Mollie B.V., Amsterdam) | Waarschijnlijk **zelfstandig verantwoordelijk** voor betaalgegevens (betaalinstelling onder toezicht DNB, Wwft) | Naam, e-mail, IBAN, IP-adres van de betaler (clubeigenaar). Geen spelersgegevens. | NL / EU | Voorwaarden en privacyverklaring nagekeken; rol nog te bevestigen door jurist (vraag 4) | ✅ 13-10-2026: voorwaarden (PDF) |
 | **Cloudflare** (cdnjs) | Ontvanger van IP-adres | IP-adres van elke bezoeker bij het laden van bibliotheken | VS / CDN | Geen afspraak — zie open vraag 5 | — |
 | **Google** (Fonts) | Ontvanger van IP-adres | IP-adres van elke bezoeker bij het laden van het lettertype | VS | Geen afspraak — zie open vraag 5 | — |
 | **Apple** (iCloud Drive) | Onbedoelde opslag | Handmatige back-ups met spelersgegevens, omdat de map Documenten met iCloud synchroniseert | VS / EU | Geen afspraak | ⬜ Map `Back-ups/` uit iCloud halen (zie §4) |
@@ -48,9 +48,9 @@ meldt wijzigingen in die lijst; kijk hem eens per jaar opnieuw na.
 - [x] Supabase: DPA gedownload (13-10-2026)
 - [x] Supabase: subverwerkerslijst gedownload (13-10-2026)
 - [x] Supabase: regio gecontroleerd — Frankfurt, eu-central-1 (13-10-2026)
-- [ ] Netlify: DPA-PDF gedownload
-- [ ] Brevo: "Legal Documents"-pagina en voorwaarden als PDF opgeslagen
-- [ ] Mollie: nagekeken of Mollie zichzelf "verwerkingsverantwoordelijke" noemt; voorwaarden opgeslagen
+- [x] Netlify: DPA-PDF gedownload (13-10-2026)
+- [x] Brevo: "Legal Documents"-pagina en voorwaarden als PDF opgeslagen (13-10-2026)
+- [x] Mollie: voorwaarden nagekeken en opgeslagen (13-10-2026) — rol laten bevestigen door jurist
 - [ ] Back-upmap uit iCloud gehaald
 - [ ] Privacybeleid op teamtakkie.nl noemt alle partijen uit §2
 - [ ] Jaarlijks: subverwerkerslijsten opnieuw nakijken (eerstvolgende: oktober 2027)
