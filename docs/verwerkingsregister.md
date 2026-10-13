@@ -34,7 +34,7 @@ datum van downloaden in de bestandsnaam.
 | **Mollie** (Mollie B.V., Amsterdam) | Waarschijnlijk **zelfstandig verantwoordelijk** voor betaalgegevens (betaalinstelling onder toezicht DNB, Wwft) | Naam, e-mail, IBAN, IP-adres van de betaler (clubeigenaar). Geen spelersgegevens. | NL / EU | Voorwaarden en privacyverklaring nagekeken; rol nog te bevestigen door jurist (vraag 4) | ✅ 13-10-2026: voorwaarden (PDF) |
 | **Cloudflare** (cdnjs) | Ontvanger van IP-adres | IP-adres van elke bezoeker bij het laden van bibliotheken | VS / CDN | Geen afspraak — zie open vraag 5 | — |
 | **Google** (Fonts) | Ontvanger van IP-adres | IP-adres van elke bezoeker bij het laden van het lettertype | VS | Geen afspraak — zie open vraag 5 | — |
-| **Apple** (iCloud Drive) | Onbedoelde opslag | Handmatige back-ups met spelersgegevens, omdat de map Documenten met iCloud synchroniseert | VS / EU | Geen afspraak | ⬜ Map `Back-ups/` uit iCloud halen (zie §4) |
+| **Apple** (iCloud Drive) | Onbedoelde opslag | Handmatige back-ups met spelersgegevens, omdat de map Documenten met iCloud synchroniseert | VS / EU | Geen afspraak | ✅ 13-10-2026: back-ups verplaatst naar `~/TeamTakkie-backups/` (buiten iCloud) |
 | **Sportlink / Voetbal.nl** | Alleen ophalen | Alleen als een gebruiker zelf een kalenderlink plakt; er gaan geen spelersgegevens heen | NL | Niet nodig | — |
 
 Subverwerkers van Supabase (o.a. Amazon Web Services, Cloudflare, Google,
@@ -51,7 +51,7 @@ meldt wijzigingen in die lijst; kijk hem eens per jaar opnieuw na.
 - [x] Netlify: DPA-PDF gedownload (13-10-2026)
 - [x] Brevo: "Legal Documents"-pagina en voorwaarden als PDF opgeslagen (13-10-2026)
 - [x] Mollie: voorwaarden nagekeken en opgeslagen (13-10-2026) — rol laten bevestigen door jurist
-- [ ] Back-upmap uit iCloud gehaald
+- [x] Back-upmap uit iCloud gehaald — nu `~/TeamTakkie-backups/` (13-10-2026)
 - [ ] Privacybeleid op teamtakkie.nl noemt alle partijen uit §2
 - [ ] Jaarlijks: subverwerkerslijsten opnieuw nakijken (eerstvolgende: oktober 2027)
 
