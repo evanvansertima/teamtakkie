@@ -502,3 +502,46 @@ Deno.test("kan Mollie niet zeggen of de klant bestaat, dan géén nieuwe klant (
   gelijk(antwoord.status, 502);
   gelijk(op.mollieAanroepen.some((a) => a.methode === "POST" && a.url === "/v2/customers"), false);
 });
+
+// ── Een e-mailadres dat Mollie weigert (13 oktober 2026) ─────
+//  Een testaccount zonder geldig e-mailadres kon nooit afrekenen: Mollie
+//  weigerde de klant (422) en de club zag alleen "niet gelukt".
+
+/* Een Mollie die een klant MET e-mail weigert en zonder e-mail aanneemt. */
+function weigertEmail(geweigerd = 422) {
+  const verstuurd: Record<string, unknown>[] = [];
+  const fetchFn = ((invoer: string | URL | Request, opties?: RequestInit) => {
+    const url = String(invoer);
+    const body = typeof opties?.body === "string" ? JSON.parse(opties.body) : null;
+    if (url.endsWith("/v2/customers") && (opties?.method ?? "GET") === "POST") {
+      verstuurd.push(body);
+      return Promise.resolve(body && body.email
+        ? new Response(JSON.stringify({ status: geweigerd, detail: "The email address 'x' is invalid" }), { status: geweigerd })
+        : new Response(JSON.stringify({ id: "cst_zonderMail1" }), { status: 201 }));
+    }
+    if (url.endsWith("/v2/payments")) return Promise.resolve(new Response(JSON.stringify(MOLLIE_OK["POST /v2/payments"].body), { status: 201 }));
+    return Promise.resolve(new Response("{}", { status: 404 }));
+  }) as typeof fetch;
+  return { verstuurd, mollie: () => maakMollie("test_geheim", fetchFn) };
+}
+
+Deno.test("geweigerd e-mailadres: klant opnieuw aangemaakt zonder e-mail, betaling gaat door", async () => {
+  const op = opstelling({ klantId: null });
+  const nep = weigertEmail();
+  op.deps.mollie = nep.mollie;
+  const antwoord = await behandelStart(verzoek({ club_id: CLUB, pakket: "coach", termijn: "maand" }), op.deps);
+  gelijk(antwoord.status, 200);
+  gelijk(nep.verstuurd.map((b) => "email" in b), [true, false]);
+  // Het nieuwe klantnummer wordt bewaard, zodat de volgende keer niet opnieuw.
+  gelijk(op.serviceAanroepen.some((a) => a.soort === "bijwerken" && a.tabel === "abonnementen" &&
+    (a.velden as Record<string, unknown>).mollie_klant_id === "cst_zonderMail1"), true);
+});
+
+Deno.test("een andere weigering (bijv. 401, verkeerde sleutel) wordt NIET opnieuw geprobeerd", async () => {
+  const op = opstelling({ klantId: null });
+  const nep = weigertEmail(401);
+  op.deps.mollie = nep.mollie;
+  const antwoord = await behandelStart(verzoek({ club_id: CLUB, pakket: "coach", termijn: "maand" }), op.deps);
+  gelijk(antwoord.status, 502);
+  gelijk(nep.verstuurd.length, 1);
+});

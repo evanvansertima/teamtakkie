@@ -254,10 +254,18 @@ export async function behandelStart(
     }
 
     if (!klantId) {
-      const klant = await mollie.maakKlant({
-        naam: clubNaam ?? undefined,
-        email: ik.email,
-      });
+      /* Weigert Mollie het e-mailadres (422: geen geldig adres, zoals bij
+         een testaccount "jan@test"), dan opnieuw zonder. Een klant zonder
+         e-mail mag bij Mollie; zonder deze tweede poging kon zo'n account
+         nooit afrekenen (gevonden door Evan, 13 oktober 2026). */
+      let klant;
+      try {
+        klant = await mollie.maakKlant({ naam: clubNaam ?? undefined, email: ik.email });
+      } catch (f) {
+        if (!(f instanceof MollieFout) || f.message.indexOf("status 422") < 0 || !ik.email) throw f;
+        deps.log("e-mailadres geweigerd door Mollie — klant zonder e-mail", { club_id: clubId });
+        klant = await mollie.maakKlant({ naam: clubNaam ?? undefined });
+      }
       klantId = klant.id;
       // Bestaat er al een rij, dan alleen het klantnummer erbij; een
       // upsert zou hier het pakket kunnen terugzetten naar de
