@@ -343,11 +343,21 @@ export async function behandelStart(
       // 503: dit is tijdelijk en ligt niet aan de gebruiker.
       return fout(GEEN_SLEUTEL_TEKST, 503);
     }
+    /* Wát er misging, in de melding én in het logboek. Op 13 oktober
+       2026 kreeg Evan alleen "Betaling starten is niet gelukt", en stond
+       er in het logboek alleen "MollieFout" — niet te achterhalen of
+       Mollie de klant, de betaling of iets anders weigerde. De tekst van
+       een MollieFout bevat alleen een statuscode en een pad; nummers
+       (cst_, tr_, sub_) halen we er voor de zekerheid uit. */
+    const detail = f instanceof MollieFout
+      ? " (" + f.message.replace(/\/(cst|tr|sub|mdt)_[A-Za-z0-9]+/g, "/…") + ")"
+      : "";
     deps.log("betaling starten mislukt", {
       club_id: clubId,
       soort: f instanceof Error ? f.name : "onbekend",
+      detail: detail.trim(),
     });
-    return fout("Betaling starten is niet gelukt", 502);
+    return fout("Betaling starten is niet gelukt" + detail, 502);
   }
 }
 

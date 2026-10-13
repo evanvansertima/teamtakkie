@@ -445,7 +445,10 @@ Deno.test("een storing bij Mollie lekt niets naar de browser", async () => {
   );
   gelijk(antwoord.status, 502);
   const tekst = await antwoord.text();
-  gelijk(tekst, JSON.stringify({ fout: "Betaling starten is niet gelukt" }));
+  // Sinds 13 oktober 2026 staat erbij wát Mollie antwoordde: alleen de
+  // statuscode en het pad, nooit het antwoord zelf of een klantnummer.
+  gelijk(JSON.parse(tekst).fout.startsWith("Betaling starten is niet gelukt (Mollie antwoordde met status "), true);
+  gelijk(/cst_|tr_|sub_/.test(tekst), false);
   gelijk(tekst.includes("live_abc123"), false);
   gelijk(tekst.includes("NL53INGB"), false);
   // Ook in het logboek geen sleutel en geen rekeningnummer.
