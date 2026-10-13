@@ -141,8 +141,8 @@ Deno.test("de melding zelf wordt niet geloofd: het bedrag komt van Mollie", asyn
 
 // ── 3. Niet-betaalde statussen ───────────────────────────────
 
-Deno.test("elke status behalve 'paid' levert 200 op en raakt de database niet", async () => {
-  for (const status of ["open", "canceled", "expired", "failed", "pending", "authorized"]) {
+Deno.test("een status die nog onderweg is levert 200 op en raakt de database niet", async () => {
+  for (const status of ["open", "pending", "authorized"]) {
     const op = opstelling({
       mollieAntwoorden: {
         ["GET /v2/payments/" + BETALING]: { body: nepBetaling({ status }) },
@@ -154,6 +154,34 @@ Deno.test("elke status behalve 'paid' levert 200 op en raakt de database niet", 
     // reden om een pakket toe te kennen.
     gelijk(op.dbAanroepen.length, 0, "bij status " + status);
   }
+});
+
+Deno.test("geannuleerd, verlopen of mislukt: alleen de status van een OPEN rij wordt bijgewerkt", async () => {
+  // Zodat de app na het annuleren niet blijft wachten (13 oktober 2026).
+  for (const status of ["canceled", "expired", "failed"]) {
+    const op = opstelling({
+      mollieAntwoorden: {
+        ["GET /v2/payments/" + BETALING]: { body: nepBetaling({ status }) },
+      },
+    });
+    const antwoord = await behandelMelding(melding(BETALING), op.deps);
+    gelijk(antwoord.status, 200, "bij status " + status);
+    gelijk(op.dbAanroepen, [{
+      soort: "bijwerken",
+      tabel: "betalingen",
+      vraag: { mollie_betaling_id: "eq." + BETALING, status: "eq.open" },
+      velden: { status },
+    }], "bij status " + status);
+  }
+});
+
+Deno.test("de status komt van Mollie, niet uit de melding: 'paid' bij Mollie wordt nooit 'canceled'", async () => {
+  // Een melding bevat alleen een nummer; wat er gebeurt hangt af van
+  // wat Mollie zelf over dat nummer zegt. Betaald is betaald.
+  const op = opstelling();
+  await behandelMelding(melding(BETALING), op.deps);
+  gelijk(op.dbAanroepen.some((a) => a.soort === "bijwerken" && a.tabel === "betalingen" &&
+    JSON.stringify(a.velden ?? {}).indexOf("canceled") >= 0), false);
 });
 
 // ── 4. De geslaagde betaling ─────────────────────────────────
@@ -958,7 +986,8 @@ Deno.test("een AL afgeronde claim wordt door een mislukte melding niet nog eens 
   });
   const antwoord = await behandelMelding(melding(BETALING), op.deps);
   gelijk(antwoord.status, 200);
-  gelijk(op.dbAanroepen.filter((a) => a.soort === "bijwerken").length, 0);
+  // De claim blijft ongemoeid; alleen de statusregel op betalingen (3c).
+  gelijk(op.dbAanroepen.filter((a) => a.soort === "bijwerken" && a.tabel !== "betalingen").length, 0);
 });
 
 Deno.test("'open' en 'pending' laten de claim met opzet staan", async () => {
@@ -980,7 +1009,7 @@ Deno.test("'open' en 'pending' laten de claim met opzet staan", async () => {
 
 // ── 9j. De strengere garantie voor het gewone geval ──────────
 
-Deno.test("zonder wisselmetadata raakt een mislukte melding de database niet", async () => {
+Deno.test("zonder wisselmetadata raakt een mislukte melding de wisselclaims niet", async () => {
   // Dit adres staat open voor de hele wereld. Zonder deze voorfilter
   // kan iedereen met onzinmeldingen databasewerk uitlokken. De metadata
   // is hier géén bewijs — ze bepaalt alleen of het de moeite waard is
@@ -1003,7 +1032,8 @@ Deno.test("zonder wisselmetadata raakt een mislukte melding de database niet", a
       const antwoord = await behandelMelding(melding(BETALING), op.deps);
       const waar = status + " met metadata " + JSON.stringify(meta);
       gelijk(antwoord.status, 200, waar);
-      gelijk(op.dbAanroepen.length, 0, waar);
+      // Alleen de statusregel op betalingen (3c), nooit iets met claims.
+      gelijk(op.dbAanroepen.filter((a) => a.tabel !== "betalingen").length, 0, waar);
     }
   }
 });

@@ -399,7 +399,10 @@ const UPGRADE_BRIEFJE_MAX_MS = 24 * 60 * 60 * 1000;
    zegt. Mollie's melding is er meestal binnen een paar seconden, maar
    een bank kan er langer over doen — en dan hoort er geen molentje te
    blijven draaien waar niemand iets aan heeft. */
-const UPGRADE_GEDULD_MS = 30000;
+/* 10 seconden sinds 13 oktober 2026 (was 30): wie bij de bank op
+   "annuleren" drukte, keek anders een halve minuut naar een draaiend
+   rondje voor een betaling die er nooit kwam. */
+const UPGRADE_GEDULD_MS = 10000;
 const UPGRADE_POLL_MS = 3000;
 
 /** @returns {{pakket:string, termijn:string, vanaf:string, op:number}|null} */
@@ -655,6 +658,10 @@ function UpgradeTerugScherm() {
     return upgradeTerugInUrl() ? upgradeBriefje() : null;
   });
   const [geduld, setGeduld] = useState(false);
+  /* 'canceled' | 'expired' | 'failed' als de server zegt dat het niet
+     doorgaat (betaling-melding zet die status, laatste_betaalpoging in
+     server/26-betaalstatus.sql laat hem zien). */
+  const [mislukt, setMislukt] = useState(null);
 
   useEffect(function () {
     if (!briefje) return;
@@ -671,9 +678,26 @@ function UpgradeTerugScherm() {
          magPagina() vraagt het pakket op het moment van klikken. */
       meldGoed("Welkom bij " + naam + "!");
     }
+    function nietGelukt(status) {
+      stop();
+      wisUpgradeBriefje();
+      upgradeUrlOpruimen();
+      setMislukt(status);
+      setBriefje(null);
+    }
     function kijk() {
       var clubId = clubIdNu();
       if (!clubId) return;
+      /* Is de betaling afgebroken? Alleen pogingen van ná het vertrek
+         naar de bank (twee minuten speling voor een scheve klok). Kent
+         de server deze functie nog niet, dan faalt dit stil en valt het
+         scherm terug op de uitleg na tien seconden. */
+      serverVraag("/rest/v1/rpc/laatste_betaalpoging", {methode:"POST",
+        lichaam:{p_club: clubId, p_sinds: new Date(briefje.op - 120000).toISOString()}}).then(function (r) {
+        if (gestopt || !r || !r.ok || !Array.isArray(r.gegevens) || !r.gegevens[0]) return;
+        var st = r.gegevens[0].status;
+        if (st === "canceled" || st === "expired" || st === "failed") nietGelukt(st);
+      }).catch(function () {});
       syncPakket(clubId).then(function (r) {
         if (gestopt || !r || !r.ok) return;
         /* Precies het pakket waarvoor betaald is, en niet "iets anders
@@ -689,6 +713,26 @@ function UpgradeTerugScherm() {
     return stop;
   }, [briefje]);
 
+  if (mislukt) {
+    var nu = pakketNu();
+    var zin = mislukt === "canceled" ? "Je hebt de betaling geannuleerd."
+            : mislukt === "expired" ? "De betaling is verlopen: hij is niet op tijd afgerond."
+            : "De betaling is niet gelukt.";
+    return (
+      <div className="onboard" style={{position:"fixed",inset:0,zIndex:500,background:"var(--grijs-licht)"}}>
+        <div className="onboard-kaart onboard-wacht">
+          <i className="fa-solid fa-circle-xmark" style={{color:"var(--grijs-donker)"}}/>
+          <p><b>Betaling niet afgerond</b></p>
+          <p>{zin + " Er is niets afgeschreven en je pakket blijft " + nu.naam + "."}</p>
+          <button className="knop onboard-knop" onClick={function(){ setMislukt(null); }}>Terug naar de app</button>
+          <button className="knop lijn onboard-knop" style={{marginTop:8}}
+            onClick={function(){ setMislukt(null); if (_pakkettenOpener) _pakkettenOpener(null); }}>
+            Opnieuw een pakket kiezen
+          </button>
+        </div>
+      </div>
+    );
+  }
   if (!briefje) return null;
   var pakket = PAKKETTEN.filter(function (p) { return p.id === briefje.pakket; })[0];
   /* .onboard is het opstartscherm: een volle pagina met één kaart in
@@ -721,11 +765,16 @@ function UpgradeTerugScherm() {
         {geduld ? (
           <React.Fragment>
             <i className="fa-solid fa-clock"/>
+            <p><b>We hebben nog geen bevestiging van je betaling.</b></p>
             <p>
-              Dit kan nog even duren — je kunt gewoon verdergaan, we laten
-              het weten zodra {pakket ? pakket.naam : "je pakket"} klaarstaat.
+              Heb je de betaling geannuleerd of afgebroken? Dan is er niets
+              afgeschreven en blijft alles zoals het was.
             </p>
-            <button className="knop lijn onboard-knop"
+            <p>
+              Heb je wél betaald? Dan komt {pakket ? pakket.naam : "je pakket"} vanzelf
+              binnen, soms na een paar minuten. Je hoeft niets te doen.
+            </p>
+            <button className="knop onboard-knop"
               onClick={function(){ upgradeUrlOpruimen(); setBriefje(null); }}>
               Verder in de app
             </button>

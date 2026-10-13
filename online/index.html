@@ -3006,7 +3006,7 @@ window.addEventListener("error", function(e){
 });
 </script>
 <script>
-const APP_VERSIE = "c95053a";
+const APP_VERSIE = "831aa1c";
 const TEAMS_KEY = "tt_teams_v1";
 const ACTIEF_KEY = "tt_actief_v1";
 const VOORKEUR_KEY = "tt_voorkeuren_v1";
@@ -11917,7 +11917,7 @@ function NieuwSeizoenKaart({ van, naar, onNaar, onAnnuleer, onKlaar }) {
 const UPGRADE_KEY = "tt_upgrade_onderweg_v1";
 const UPGRADE_PARAM = "upgrade";
 const UPGRADE_BRIEFJE_MAX_MS = 24 * 60 * 60 * 1e3;
-const UPGRADE_GEDULD_MS = 3e4;
+const UPGRADE_GEDULD_MS = 1e4;
 const UPGRADE_POLL_MS = 3e3;
 function upgradeBriefje() {
   try {
@@ -12085,6 +12085,7 @@ function UpgradeTerugScherm() {
     return upgradeTerugInUrl() ? upgradeBriefje() : null;
   });
   const [geduld, setGeduld] = useState(false);
+  const [mislukt, setMislukt] = useState(null);
   useEffect(function() {
     if (!briefje) return;
     var gestopt = false;
@@ -12101,9 +12102,25 @@ function UpgradeTerugScherm() {
       setBriefje(null);
       meldGoed("Welkom bij " + naam + "!");
     }
+    function nietGelukt(status) {
+      stop();
+      wisUpgradeBriefje();
+      upgradeUrlOpruimen();
+      setMislukt(status);
+      setBriefje(null);
+    }
     function kijk() {
       var clubId = clubIdNu();
       if (!clubId) return;
+      serverVraag("/rest/v1/rpc/laatste_betaalpoging", {
+        methode: "POST",
+        lichaam: { p_club: clubId, p_sinds: new Date(briefje.op - 12e4).toISOString() }
+      }).then(function(r) {
+        if (gestopt || !r || !r.ok || !Array.isArray(r.gegevens) || !r.gegevens[0]) return;
+        var st = r.gegevens[0].status;
+        if (st === "canceled" || st === "expired" || st === "failed") nietGelukt(st);
+      }).catch(function() {
+      });
       syncPakket(clubId).then(function(r) {
         if (gestopt || !r || !r.ok) return;
         if (pakketNu().id === briefje.pakket) klaar();
@@ -12116,6 +12133,24 @@ function UpgradeTerugScherm() {
     kijk();
     return stop;
   }, [briefje]);
+  if (mislukt) {
+    var nu = pakketNu();
+    var zin = mislukt === "canceled" ? "Je hebt de betaling geannuleerd." : mislukt === "expired" ? "De betaling is verlopen: hij is niet op tijd afgerond." : "De betaling is niet gelukt.";
+    return /* @__PURE__ */ React.createElement("div", { className: "onboard", style: { position: "fixed", inset: 0, zIndex: 500, background: "var(--grijs-licht)" } }, /* @__PURE__ */ React.createElement("div", { className: "onboard-kaart onboard-wacht" }, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-circle-xmark", style: { color: "var(--grijs-donker)" } }), /* @__PURE__ */ React.createElement("p", null, /* @__PURE__ */ React.createElement("b", null, "Betaling niet afgerond")), /* @__PURE__ */ React.createElement("p", null, zin + " Er is niets afgeschreven en je pakket blijft " + nu.naam + "."), /* @__PURE__ */ React.createElement("button", { className: "knop onboard-knop", onClick: function() {
+      setMislukt(null);
+    } }, "Terug naar de app"), /* @__PURE__ */ React.createElement(
+      "button",
+      {
+        className: "knop lijn onboard-knop",
+        style: { marginTop: 8 },
+        onClick: function() {
+          setMislukt(null);
+          if (_pakkettenOpener) _pakkettenOpener(null);
+        }
+      },
+      "Opnieuw een pakket kiezen"
+    )));
+  }
   if (!briefje) return null;
   var pakket = PAKKETTEN.filter(function(p) {
     return p.id === briefje.pakket;
@@ -12126,10 +12161,10 @@ function UpgradeTerugScherm() {
       className: "onboard",
       style: { position: "fixed", inset: 0, zIndex: 500, background: "var(--grijs-licht)" }
     },
-    /* @__PURE__ */ React.createElement("div", { className: "onboard-kaart onboard-wacht" }, geduld ? /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-clock" }), /* @__PURE__ */ React.createElement("p", null, "Dit kan nog even duren \u2014 je kunt gewoon verdergaan, we laten het weten zodra ", pakket ? pakket.naam : "je pakket", " klaarstaat."), /* @__PURE__ */ React.createElement(
+    /* @__PURE__ */ React.createElement("div", { className: "onboard-kaart onboard-wacht" }, geduld ? /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-clock" }), /* @__PURE__ */ React.createElement("p", null, /* @__PURE__ */ React.createElement("b", null, "We hebben nog geen bevestiging van je betaling.")), /* @__PURE__ */ React.createElement("p", null, "Heb je de betaling geannuleerd of afgebroken? Dan is er niets afgeschreven en blijft alles zoals het was."), /* @__PURE__ */ React.createElement("p", null, "Heb je w\xE9l betaald? Dan komt ", pakket ? pakket.naam : "je pakket", " vanzelf binnen, soms na een paar minuten. Je hoeft niets te doen."), /* @__PURE__ */ React.createElement(
       "button",
       {
-        className: "knop lijn onboard-knop",
+        className: "knop onboard-knop",
         onClick: function() {
           upgradeUrlOpruimen();
           setBriefje(null);

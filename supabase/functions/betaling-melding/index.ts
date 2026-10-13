@@ -173,6 +173,22 @@ export async function behandelMelding(
         }
       }
 
+      // ── 3c. EEN DEFINITIEF NIET-BETAALDE BETALING VASTLEGGEN ──
+      //  Sinds 13 oktober 2026. Aanleiding: Evan annuleerde een betaling
+      //  en bleef in de app hangen op "Je betaling wordt verwerkt…" —
+      //  de app wachtte op een pakket dat nooit zou komen. Nu legt deze
+      //  melding vast dát het niet doorgaat, en kan de app dat via
+      //  laatste_betaalpoging() (server/26-betaalstatus.sql) zien.
+      //
+      //  Bewust zo klein mogelijk: alleen bij een DEFINITIEF einde, met
+      //  de status zoals Mollie hem net zelf gaf (niet uit de melding),
+      //  en alleen op een rij die nog op 'open' staat. Een betaalde of
+      //  al verwerkte rij wordt dus nooit overschreven, en een melding
+      //  over een betaling die hier niet bestaat verandert niets.
+      if (betaling.status === "failed" || betaling.status === "canceled" || betaling.status === "expired") {
+        await db.bijwerken("betalingen", { mollie_betaling_id: "eq." + id, status: "eq.open" }, { status: betaling.status });
+      }
+
       deps.log("melding zonder betaling", {
         betaling: id,
         status: betaling.status,
