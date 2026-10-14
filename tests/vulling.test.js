@@ -186,8 +186,12 @@ ok("en die naam hoort bij die speler",
      const s = SPELERS.filter((p) => p.id === a.spelerId)[0];
      return !s || s.naam !== a.naam;
    }).length, 0);
-ok("de app tekent die naam ook echt (a.naam in de presentielijst)",
-   /\{a\.naam\}/.test(bronTrainingenScherm), true);
+/* Sinds 14 oktober 2026 tekent het trainingsscherm de namen uit de
+   selectie (AanwezigheidKaart), maar het WhatsApp-bericht van een
+   training en de presentielijst van een activiteit lezen a.naam nog
+   rechtstreeks uit de lijst. */
+ok("de app gebruikt die naam ook echt (a.naam uit de presentielijst)",
+   /push\(a\.naam\)/.test(bronTrainingenScherm) && /naam:a\.naam/.test(bronTrainingenScherm), true);
 
 /* ══════════════════════════════════════════════════════════════
    4. EEN OPEN VRAAG, VASTGELEGD ALS TEST

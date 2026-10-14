@@ -192,7 +192,7 @@ function OnderdeelFormulier({ onderdeel, onOpslaan, onSluiten }) {
    koptekst "COMPACTE SPELERSTATUS (opgave & aanwezigheid)" in
    src/app.jsx, samen met exporteerPresentiePDF/hexNaarRgb (die daar
    zijn gebleven, zie bestandskop hierboven). */
-function SpelerStatusRaster({ spelers, statussen, opties, standaard, onWissel, onAlles }) {
+function SpelerStatusRaster({ spelers, statussen, opties, standaard, onWissel, onAlles, snelLabel }) {
   /* Bij meer dan vier keuzes is doorklikken te omslachtig; dan kiezen we
      uit een lijstje. De standaardwaarde geven we expliciet mee, want de
      laatste optie is niet altijd de neutrale. */
@@ -216,6 +216,9 @@ function SpelerStatusRaster({ spelers, statussen, opties, standaard, onWissel, o
       <div className="sp-samenvatting">
         {opties.map(function(o){
           var aantal = spelers.filter(function(s){ return (statussen[s.id]||standaardId)===o.id; }).length;
+          /* Negen vakjes naast elkaar passen niet op een telefoon. Bij
+             een lange lijst alleen de statussen die iemand heeft. */
+          if (opties.length > 5 && !aantal) return null;
           return (
             <div key={o.id} className="sp-sam-blok" title={o.label}>
               <div className="sp-sam-getal" style={{color:o.kleur||"var(--grijs-donker)"}}>{aantal}</div>
@@ -230,7 +233,7 @@ function SpelerStatusRaster({ spelers, statussen, opties, standaard, onWissel, o
             return (
               <button key={o.id} className="knop lijn klein" style={{flex:1,justifyContent:"center",borderColor:o.kleur,color:o.kleur}}
                 onClick={function(){ onAlles(o.id); }}>
-                {"Iedereen "+o.label.toLowerCase()}
+                {snelLabel ? snelLabel(o) : "Iedereen "+o.label.toLowerCase()}
               </button>
             );
           })}
@@ -266,7 +269,7 @@ function SpelerStatusRaster({ spelers, statussen, opties, standaard, onWissel, o
         <div className="bevestig-overlay" onClick={function(e){ if(e.target===e.currentTarget) setOpen(null); }}>
           <div className="bevestig-kaart" style={{maxWidth:340}}>
             <h3 style={{marginBottom:4}}>{open.naam}</h3>
-            <p style={{marginBottom:14}}>Wat was zijn status?</p>
+            <p style={{marginBottom:14}}>Kies de status</p>
             <div className="status-keuze">
               {opties.map(function(o){
                 var aan = (statussen[open.id]||standaardId)===o.id;
@@ -308,6 +311,52 @@ const OPGAVE_KEUZES = [
   {id:"uitgeleend",label:"Uitgeleend",kort:"Uitgel.",   kleur:"#7c3aed",       vlak:"#f3e8ff",            icoon:"fa-solid fa-right-left"},
   {id:"onbekend",  label:"Onbekend",  kort:"Geen",      kleur:null,            vlak:null,                 icoon:"fa-regular fa-circle"}
 ];
+
+/* ═══════════════════════════════════════════════════════════
+   AANWEZIGHEID — één kaart voor training, wedstrijd en activiteit
+   (besluit van Evan, 14 oktober 2026; de rekenregels staan in
+   src/domein/opkomst.js bij AANWEZIGHEID INVULLEN). Elke tik wordt
+   meteen bewaard via onWijzig, net als de opgave hiervoor deed.
+═══════════════════════════════════════════════════════════ */
+function AanwezigheidKaart({ item, spelers, terugval, onWijzig, uitleg }) {
+  const opties = AANWEZIG_KEUZES.concat([AANWEZIG_OPEN]);
+  const statussen = aanwezigheidStatussen(item, spelers, terugval);
+  const ingevuld = spelers.filter(function(s){ return statussen[s.id]!=="open"; });
+  const erbij = ingevuld.filter(function(s){ return teltAlsAanwezig(statussen[s.id]); }).length;
+  const open = spelers.length - ingevuld.length;
+  return (
+    <div className="kaart detail-sectie">
+      <div className="kaart-titel" style={{justifyContent:"space-between",flexWrap:"wrap",gap:8}}>
+        <span><i className="fa-solid fa-clipboard-check"/> Aanwezigheid</span>
+        <span style={{fontWeight:400,textTransform:"none",letterSpacing:0,fontSize:12,color:"var(--grijs-donker)"}}>
+          {ingevuld.length ? erbij+" van "+ingevuld.length+" aanwezig" + (open ? " · "+open+" open" : "") : "Nog niets ingevuld"}
+        </span>
+      </div>
+      {uitleg && <p style={{fontSize:12,color:"var(--grijs-donker)",fontWeight:400,lineHeight:1.5,margin:"0 0 10px"}}>{uitleg}</p>}
+      <AfwezigheidHint datum={item.datum}
+        lijst={spelers.map(function(s){
+          var st = statussen[s.id];
+          return {spelerId:s.id, naam:s.naam, status: st==="open" ? undefined : st};
+        })}
+        onOvernemen={function(wijzigingen){
+          var tussen = Object.assign({}, item);
+          wijzigingen.forEach(function(w){
+            tussen = Object.assign({}, tussen, {aanwezigheid: zetAanwezigheid(tussen, spelers, [w.spelerId], w.status, terugval)});
+          });
+          onWijzig(tussen.aanwezigheid);
+          meldGoed(wijzigingen.length+" status"+(wijzigingen.length===1?"":"sen")+" overgenomen");
+        }} />
+      <SpelerStatusRaster
+        spelers={spelers}
+        statussen={statussen}
+        opties={opties}
+        standaard="open"
+        snelLabel={function(o){ return (ingevuld.length ? "Rest " : "Iedereen ")+o.label.toLowerCase(); }}
+        onWissel={function(speler, status){ onWijzig(zetAanwezigheid(item, spelers, [speler.id], status, terugval)); }}
+        onAlles={open ? function(status){ onWijzig(vulOpenAan(item, spelers, status, terugval)); } : null} />
+    </div>
+  );
+}
 
 /* ═══════════════════════════════════════════════════════════
    OEFENINGENBIBLIOTHEEK
@@ -1137,7 +1186,11 @@ function TrainingFormulier({ training, onOpslaan, onSluiten }) {
       const vooraf = voorstel
         ? {datum: voorstel.datum, tijd: voorstel.tijd, duur: voorstel.duur, locatie: voorstel.locatie || inst().locatie || ""}
         : {locatie: inst().locatie || ""};
-      return {...base, ...vooraf, aanwezigheid: spelers.map(s=>({spelerId:s.id,naam:s.naam,foto:s.foto,status:"aanwezig"}))};
+      /* Aanwezigheid vul je in ná het aanmaken, op de training zelf
+         (besluit van Evan, 14 oktober 2026) — niet hier al iedereen
+         op aanwezig, want dan telde een training van volgende week
+         alvast als 100% opkomst. */
+      return {...base, ...vooraf, aanwezigheid: []};
     }
     return {...base,...training};
   });
@@ -1151,10 +1204,6 @@ function TrainingFormulier({ training, onOpslaan, onSluiten }) {
   function zetDatum(datum) {
     var m = tijdZelf.current ? null : trainingsmomentOp(vasteTijden, datum);
     setForm(function(f){ return m ? {...f, datum: datum, tijd: m.tijd, duur: m.duur} : {...f, datum: datum}; });
-  }
-
-  function toggleAanwezigheid(spelerId, status) {
-    setForm(f=>({...f, aanwezigheid: f.aanwezigheid.map(a=>a.spelerId===spelerId?{...a,status}:a)}));
   }
 
   function voegUitBibliotheekToe(oef) {
@@ -1264,37 +1313,6 @@ function TrainingFormulier({ training, onOpslaan, onSluiten }) {
           </button>
         </div>
 
-        <div className="formulier-sectie-titel"><i className="fa-solid fa-users"/> Aanwezigheid</div>
-        {form.aanwezigheid.length===0 ? (
-          <p style={{fontSize:13,color:"var(--grijs-donker)",fontWeight:400,marginBottom:8}}>Voeg eerst spelers toe via Selectie.</p>
-        ) : (
-          <React.Fragment>
-          <AfwezigheidHint datum={form.datum} lijst={form.aanwezigheid}
-            onOvernemen={function(wijzigingen){
-              setForm(function(f){
-                return Object.assign({}, f, {aanwezigheid: f.aanwezigheid.map(function(a){
-                  var w = wijzigingen.filter(function(x){ return x.spelerId===a.spelerId; })[0];
-                  return w ? Object.assign({}, a, {status:w.status}) : a;
-                })});
-              });
-              meldGoed(wijzigingen.length+" status"+(wijzigingen.length===1?"":"sen")+" overgenomen");
-            }} />
-          <SpelerStatusRaster
-            spelers={form.aanwezigheid.map(function(a){ return {id:a.spelerId, naam:a.naam, foto:a.foto}; })}
-            statussen={form.aanwezigheid.reduce(function(o,a){ o[a.spelerId]=a.status||"aanwezig"; return o; },{})}
-            opties={AANWEZIG_KEUZES}
-            standaard="aanwezig"
-            onWissel={function(speler,status){ toggleAanwezigheid(speler.id, status); }}
-            onAlles={function(status){
-              setForm(function(f){
-                return Object.assign({}, f, {aanwezigheid: f.aanwezigheid.map(function(a){
-                  return Object.assign({}, a, {status:status});
-                })});
-              });
-            }} />
-          </React.Fragment>
-        )}
-
         <div className="modal-voet">
           <button className="knop lijn" style={{flex:1,justifyContent:"center"}} onClick={onSluiten}>Annuleren</button>
           <button className="knop" style={{flex:2,justifyContent:"center"}} onClick={opslaan}>
@@ -1357,26 +1375,10 @@ function TrainingDetail({ training, spelers, onTerug, onBewerken, onVerwijderen,
     onTerug();
   }
   const [deelOpen, setDeelOpen] = useState(false);
-  const [opgave, setOpgaveLijst] = useState(training.opgave||[]);
-
   const selectie = spelers || [];
-  const trainingDatum = parseerDatum(training.datum);
-  const vandaag = new Date(); vandaag.setHours(0,0,0,0);
-  const isToekomst = trainingDatum ? trainingDatum >= vandaag : false;
-
-  function wijzigOpgave(speler, status) {
-    var huidig = opgaveVanSpeler(opgave, speler.id);
-    var nieuw = zetOpgave(opgave, speler, huidig===status ? "onbekend" : status);
-    setOpgaveLijst(nieuw);
-    if (onOpslaan) onOpslaan(Object.assign({}, training, {opgave:nieuw}));
-  }
 
   const typeKleurClass = {Oefening:"","Warming-up":"type-warmup",Positiespel:"type-positie",Wedstrijdvorm:"type-wedstrijd",Conditie:"type-conditie",Afkoelen:"type-afkoelen"};
 
-  /* Per status gegroepeerd, zodat elke categorie zijn eigen lijstje krijgt */
-  const perAanwStatus = AANWEZIG_KEUZES.map(function(k){
-    return {keuze:k, spelers:(training.aanwezigheid||[]).filter(function(a){ return a.status===k.id; })};
-  }).filter(function(g){ return g.spelers.length>0; });
   const totaalDuur  = (training.onderdelen||[]).reduce((s,o)=>s+o.duur,0);
 
   function toggleOnderdeel(id) {
@@ -1392,9 +1394,9 @@ function TrainingDetail({ training, spelers, onTerug, onBewerken, onVerwijderen,
         <div style={{fontSize:11,opacity:.75,textTransform:"uppercase",letterSpacing:.7,fontFamily:"'Helvetica Neue',Arial",fontWeight:700}}><i className="fa-solid fa-person-running"/> {trainingTitel(training)}</div>
         <div style={{fontSize:22,fontWeight:700,fontFamily:"'Helvetica Neue',Arial",margin:"6px 0 4px"}}>{training.datum?formateerDatum(training.datum):"Geen datum"}</div>
         <div style={{fontSize:13,opacity:.87}}>
-          {training.tijd&&<span style={{marginRight:12}}>⏰ {training.tijd}</span>}
-          {training.locatie&&<span style={{marginRight:12}}>📍 {training.locatie}</span>}
-          {training.duur&&<span>⏱ {training.duur} min</span>}
+          {training.tijd&&<span className="meta-stuk"><i className="fa-regular fa-clock"/> {training.tijd}</span>}
+          {training.locatie&&<span className="meta-stuk"><i className="fa-solid fa-location-dot"/> {training.locatie}</span>}
+          {training.duur&&<span className="meta-stuk"><i className="fa-solid fa-stopwatch"/> {training.duur} min</span>}
         </div>
         {totaalDuur>0&&<div style={{fontSize:12,opacity:.75,marginTop:4}}><i className="fa-solid fa-list-ul"/> {training.onderdelen.length} onderdelen · {totaalDuur}{"'"} gepland</div>}
       </div>
@@ -1443,7 +1445,7 @@ function TrainingDetail({ training, spelers, onTerug, onBewerken, onVerwijderen,
                     <div style={{width:22,height:22,borderRadius:6,background:"var(--blauw)",color:"var(--op-kleur)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:700,fontFamily:"'Helvetica Neue',Arial",flexShrink:0}}>{i+1}</div>
                     <div style={{flex:1}}>
                       <div className="onderdeel-naam-tekst">{od.naam}</div>
-                      <div className="onderdeel-meta">{od.type} · ⏱ {od.duur}{"'"} · 👥 {od.aantalSpelers} spelers</div>
+                      <div className="onderdeel-meta">{od.type} · <span className="meta-stuk"><i className="fa-solid fa-stopwatch"/> {od.duur}{"'"}</span><span className="meta-stuk"><i className="fa-solid fa-users"/> {od.aantalSpelers} spelers</span></div>
                     </div>
                   </div>
                   <span className={"onderdeel-chevron"+(isOpen?" open":"")}>▾</span>
@@ -1451,7 +1453,7 @@ function TrainingDetail({ training, spelers, onTerug, onBewerken, onVerwijderen,
                 {isOpen&&(
                   <div style={{marginTop:12}}>
                     {od.beschrijving&&<p style={{fontSize:13,fontWeight:400,lineHeight:1.6,marginBottom:12,color:"var(--tekst)"}}>{od.beschrijving}</p>}
-                    <div style={{fontSize:11,fontWeight:700,color:"var(--grijs-donker)",textTransform:"uppercase",letterSpacing:.5,marginBottom:8,fontFamily:"'Helvetica Neue',Arial"}}>🖊 Tekentool</div>
+                    <div style={{fontSize:11,fontWeight:700,color:"var(--grijs-donker)",textTransform:"uppercase",letterSpacing:.5,marginBottom:8,fontFamily:"'Helvetica Neue',Arial"}}><i className="fa-solid fa-pen"/> Tekentool</div>
                     <TrainingTekenBord
                       value={tekenData[od.id]||od.tekening}
                       onChange={function(d){ setTekenData(function(p){ var n=Object.assign({},p); n[od.id]=d; return n; }); }}
@@ -1480,84 +1482,13 @@ function TrainingDetail({ training, spelers, onTerug, onBewerken, onVerwijderen,
         </div>
       )}
 
-      {/* Opgave vooraf */}
-      {isToekomst && selectie.length>0 && (
-        <div className="kaart detail-sectie">
-          <div className="kaart-titel"><i className="fa-solid fa-clipboard-check"/> Wie komt er trainen?</div>
-          <SpelerStatusRaster
-            spelers={selectie}
-            statussen={selectie.reduce(function(o,s){ o[s.id]=opgaveVanSpeler(opgave,s.id); return o; },{})}
-            opties={OPGAVE_KEUZES}
-            standaard="onbekend"
-            onWissel={function(speler,status){
-              var nieuw = zetOpgave(opgave, speler, status);
-              setOpgaveLijst(nieuw);
-              if (onOpslaan) onOpslaan(Object.assign({}, training, {opgave:nieuw}));
-            }}
-            onAlles={function(status){
-              var nieuw = opgave;
-              selectie.forEach(function(s){ nieuw = zetOpgave(nieuw, s, status); });
-              setOpgaveLijst(nieuw);
-              if (onOpslaan) onOpslaan(Object.assign({}, training, {opgave:nieuw}));
-            }} />
-        </div>
-      )}
-
-      {/* Aanwezigheid */}
-      {!isToekomst && training.aanwezigheid && training.aanwezigheid.length>0 && (
-        <div className="kaart detail-sectie">
-          {(function(){
-            var o = opkomstVan(training, laadAfwezigheden());
-            return (
-              <div className="kaart-titel" style={{justifyContent:"space-between",flexWrap:"wrap",gap:8}}>
-                <span><i className="fa-solid fa-users"/> Aanwezigheid</span>
-                <span style={{fontWeight:400,textTransform:"none",letterSpacing:0,fontSize:12,color:"var(--grijs-donker)"}}>
-                  {o ? o.aanwezig+" van "+o.totaal+" · "+o.pct+"%" : ""}
-                </span>
-              </div>
-            );
-          })()}
-
-          {/* Balk met de verdeling over alle statussen */}
-          <div className="opk-balk">
-            {perAanwStatus.map(function(g){
-              return (
-                <span key={g.keuze.id} title={g.keuze.label+": "+g.spelers.length}
-                  style={{flex:g.spelers.length, background:g.keuze.kleur}}/>
-              );
-            })}
-          </div>
-          <div className="opk-legenda">
-            {perAanwStatus.map(function(g){
-              return (
-                <span key={g.keuze.id} className="opk-legenda-item">
-                  <span className="opk-stip" style={{background:g.keuze.kleur}}/>
-                  {g.keuze.label+" "+g.spelers.length}
-                </span>
-              );
-            })}
-          </div>
-
-          {perAanwStatus.map(function(g){
-            return (
-              <div key={g.keuze.id}>
-                <div className="opk-kop" style={{color:g.keuze.kleur}}>
-                  <span className="opk-letter" style={{background:g.keuze.kleur,color:g.keuze.op}}>{g.keuze.letter}</span>
-                  <i className={g.keuze.icoon}/> {g.keuze.label} ({g.spelers.length})
-                </div>
-                {g.spelers.map(function(a){
-                  return (
-                    <div key={a.spelerId} className="opp-rij" style={{opacity: g.keuze.telt ? 1 : .72}}>
-                      <div className="opp-avatar" style={{width:32,height:32,fontSize:11}}><SpelerBeeld speler={a}/></div>
-                      <div className="opp-naam" style={{fontSize:13}}>{a.naam}</div>
-                      <span style={{fontSize:15,color:g.keuze.kleur}}><i className={g.keuze.icoon}/></span>
-                    </div>
-                  );
-                })}
-              </div>
-            );
-          })}
-        </div>
+      {/* Aanwezigheid: vooraf (wie meldt zich af) én achteraf (wie was er),
+          in één lijst. Vervangt "Wie komt er trainen?" en de losse
+          presentielijst van na de training. */}
+      {selectie.length>0 && (
+        <AanwezigheidKaart item={training} spelers={selectie}
+          uitleg={nogNietGeweest(training.datum) ? "Telt mee in de opkomst zodra de training geweest is." : null}
+          onWijzig={function(lijst){ if (onOpslaan) onOpslaan(Object.assign({}, training, {aanwezigheid:lijst})); }} />
       )}
 
       {training.notities&&<div className="kaart"><div className="kaart-titel"><i className="fa-solid fa-note-sticky"/> Notities</div><p style={{fontSize:14,fontWeight:400,lineHeight:1.5}}>{training.notities}</p></div>}
@@ -1708,11 +1639,14 @@ function TrainingenModule() {
                 <div className="tr-info">
                   <div className="tr-naam">{trainingTitel(t)}</div>
                   <div className="tr-sub">
-                    {t.locatie&&<span style={{marginRight:8}}><i className="fa-solid fa-location-dot"/> {t.locatie}</span>}
-                    {t.tijd&&<span style={{marginRight:8}}>⏰ {t.tijd}</span>}
-                    {t.duur&&<span style={{marginRight:8}}>⏱ {t.duur}{"'"}</span>}
-                    {t.onderdelen&&t.onderdelen.length>0&&<span style={{marginRight:8}}><i className="fa-solid fa-list-ul"/> {t.onderdelen.length} onderdelen</span>}
-                    {totaal>0&&<span>👥 {aanwezig}/{totaal}</span>}
+                    {/* Eigen icoontjes in plaats van emoji (verzoek van Evan,
+                        14 oktober 2026), en elk stukje blijft bij elkaar op
+                        een smal scherm. */}
+                    {t.locatie&&<span className="meta-stuk"><i className="fa-solid fa-location-dot"/> {t.locatie}</span>}
+                    {t.tijd&&<span className="meta-stuk"><i className="fa-regular fa-clock"/> {t.tijd}</span>}
+                    {t.duur&&<span className="meta-stuk"><i className="fa-solid fa-stopwatch"/> {t.duur}{"'"}</span>}
+                    {t.onderdelen&&t.onderdelen.length>0&&<span className="meta-stuk"><i className="fa-solid fa-list-ul"/> {t.onderdelen.length+(t.onderdelen.length===1?" onderdeel":" onderdelen")}</span>}
+                    {totaal>0&&<span className="meta-stuk"><i className="fa-solid fa-user-check"/> {aanwezig}/{totaal}</span>}
                   </div>
                 </div>
                 <div className="tr-badge">{t.onderdelen&&t.onderdelen.length>0?t.onderdelen[0].type:"Training"}</div>

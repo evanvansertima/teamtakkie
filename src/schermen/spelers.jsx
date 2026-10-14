@@ -292,12 +292,12 @@ function SpelerFormulier({ speler, onOpslaan, onSluiten }) {
           Alleen invullen voor wat al gebeurd is v&oacute;&oacute;r je deze app ging gebruiken. Alles daarna wordt automatisch bij wedstrijden opgeteld.
         </p>
         <div className="stats-invoer-raster">
-          <StatInvoer icoon="⚽" label="Doelpunten"  waarde={form.stats.doelpunten}   onChange={v=>setStat("doelpunten",v)} />
-          <StatInvoer icoon="🎯" label="Assists"     waarde={form.stats.assists}      onChange={v=>setStat("assists",v)} />
-          <StatInvoer icoon="🟨" label="Geel"        waarde={form.stats.geelKaarten}  onChange={v=>setStat("geelKaarten",v)} />
-          <StatInvoer icoon="🟥" label="Rood"        waarde={form.stats.roodKaarten}  onChange={v=>setStat("roodKaarten",v)} />
-          <StatInvoer icoon="⏱" label="Minuten"     waarde={form.stats.speelMinuten} onChange={v=>setStat("speelMinuten",v)} />
-          <StatInvoer icoon="🏟" label="Wedstrijden" waarde={form.stats.wedstrijden}  onChange={v=>setStat("wedstrijden",v)} />
+          <StatInvoer icoon={<i className="fa-solid fa-futbol"/>} label="Doelpunten"  waarde={form.stats.doelpunten}   onChange={v=>setStat("doelpunten",v)} />
+          <StatInvoer icoon={<i className="fa-solid fa-hands-holding-circle"/>} label="Assists"     waarde={form.stats.assists}      onChange={v=>setStat("assists",v)} />
+          <StatInvoer icoon={<span className="kaartje geel"/>} label="Geel"        waarde={form.stats.geelKaarten}  onChange={v=>setStat("geelKaarten",v)} />
+          <StatInvoer icoon={<span className="kaartje rood"/>} label="Rood"        waarde={form.stats.roodKaarten}  onChange={v=>setStat("roodKaarten",v)} />
+          <StatInvoer icoon={<i className="fa-solid fa-stopwatch"/>} label="Minuten"     waarde={form.stats.speelMinuten} onChange={v=>setStat("speelMinuten",v)} />
+          <StatInvoer icoon={<i className="fa-solid fa-flag-checkered"/>} label="Wedstrijden" waarde={form.stats.wedstrijden}  onChange={v=>setStat("wedstrijden",v)} />
         </div>
         <div style={{display:"flex",gap:10,marginTop:24}}>
           <button className="knop lijn" style={{flex:1,justifyContent:"center"}} onClick={onSluiten}>Annuleren</button>

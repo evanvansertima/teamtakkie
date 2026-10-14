@@ -32,7 +32,10 @@ const bib = bibliotheekOefeningen();
 const TYPES = JSON.parse(app.match(/const TRAINING_TYPES = (\[[^\]]+\])/)[1]);
 const DOELEN = JSON.parse(app.match(/const OEFENING_DOELEN = (\[[^\]]+\])/)[1]);
 const LEEFTIJDEN = JSON.parse(app.match(/const OEFENING_LEEFTIJDEN = (\[[^\]]+\])/)[1]);
-const BEKEND = new Set((opst.match(/el\.type==="([a-z-]+)"/g) || []).map((x) => x.slice(11, -1)).concat(["zone-vierkant"]));
+/* Spelers staan sinds 14 oktober 2026 in TEKEN_TEAMS ({type:"speler-…"}), niet meer als el.type==="…". */
+const BEKEND = new Set((opst.match(/el\.type==="([a-z-]+)"/g) || []).map((x) => x.slice(11, -1))
+  .concat((opst.match(/\{type:"(speler[a-z-]*)"/g) || []).map((x) => x.slice(7, -1)))
+  .concat(["zone-vierkant"]));
 
 groep("gelijk aan de app");
 {

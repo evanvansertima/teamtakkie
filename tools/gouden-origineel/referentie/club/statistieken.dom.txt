@@ -446,6 +446,26 @@
                 <span class="pres-teller">
                   "3"
               <button class="pres-filter-knop">
+                <i class="fa-solid fa-trophy">
+                "Competitie"
+                <span class="pres-teller">
+                  "3"
+              <button class="pres-filter-knop">
+                <i class="fa-solid fa-award">
+                "Beker"
+                <span class="pres-teller">
+                  "0"
+              <button class="pres-filter-knop">
+                <i class="fa-solid fa-dumbbell">
+                "Oefen"
+                <span class="pres-teller">
+                  "0"
+              <button class="pres-filter-knop">
+                <i class="fa-solid fa-medal">
+                "Toernooi"
+                <span class="pres-teller">
+                  "0"
+              <button class="pres-filter-knop">
                 <i class="fa-solid fa-calendar-day">
                 "Activiteiten"
                 <span class="pres-teller">
@@ -550,7 +570,7 @@
                           <span class="opk-speler-naam">
                             "1 Joep Bramsloot"
                       <td>
-                        <span class="opk-cel leeg" title="Niet in de selectie">
+                        <span class="opk-cel leeg" title="Niets ingevuld">
                           "·"
                       <td>
                         <span class="opk-cel" style="background: rgb(22, 163, 74); color: rgb(11, 47, 22);" title="Aanwezig">
@@ -559,13 +579,13 @@
                         <span class="opk-cel" style="background: rgb(22, 163, 74); color: rgb(11, 47, 22);" title="Aanwezig">
                           "P"
                       <td>
-                        <span class="opk-cel leeg" title="Niet in de selectie">
+                        <span class="opk-cel leeg" title="Niets ingevuld">
                           "·"
                       <td>
                         <span class="opk-cel" style="background: rgb(22, 163, 74); color: rgb(11, 47, 22);" title="Aanwezig">
                           "P"
                       <td>
-                        <span class="opk-cel leeg" title="Niet in de selectie">
+                        <span class="opk-cel leeg" title="Niets ingevuld">
                           "·"
                       <td class="opk-pct-kol">
                         <span class="opk-pct" style="color: var(--succes);">
@@ -599,7 +619,7 @@
                           <span class="opk-speler-naam">
                             "2 Ravi Kwartelaar"
                       <td>
-                        <span class="opk-cel leeg" title="Niet in de selectie">
+                        <span class="opk-cel leeg" title="Niets ingevuld">
                           "·"
                       <td>
                         <span class="opk-cel" style="background: rgb(22, 163, 74); color: rgb(11, 47, 22);" title="Aanwezig">
@@ -608,13 +628,13 @@
                         <span class="opk-cel" style="background: rgb(22, 163, 74); color: rgb(11, 47, 22);" title="Aanwezig">
                           "P"
                       <td>
-                        <span class="opk-cel leeg" title="Niet in de selectie">
+                        <span class="opk-cel leeg" title="Niets ingevuld">
                           "·"
                       <td>
                         <span class="opk-cel" style="background: rgb(22, 163, 74); color: rgb(11, 47, 22);" title="Aanwezig">
                           "P"
                       <td>
-                        <span class="opk-cel leeg" title="Niet in de selectie">
+                        <span class="opk-cel leeg" title="Niets ingevuld">
                           "·"
                       <td class="opk-pct-kol">
                         <span class="opk-pct" style="color: var(--succes);">
@@ -642,7 +662,7 @@
                           <span class="opk-speler-naam">
                             "3 Timo Veldwachter"
                       <td>
-                        <span class="opk-cel leeg" title="Niet in de selectie">
+                        <span class="opk-cel leeg" title="Niets ingevuld">
                           "·"
                       <td>
                         <span class="opk-cel" style="background: rgb(22, 163, 74); color: rgb(11, 47, 22);" title="Aanwezig">
@@ -651,13 +671,13 @@
                         <span class="opk-cel" style="background: rgb(132, 204, 22); color: rgb(31, 48, 7);" title="Te laat">
                           "TL"
                       <td>
-                        <span class="opk-cel leeg" title="Niet in de selectie">
+                        <span class="opk-cel leeg" title="Niets ingevuld">
                           "·"
                       <td>
                         <span class="opk-cel" style="background: rgb(22, 163, 74); color: rgb(11, 47, 22);" title="Aanwezig">
                           "P"
                       <td>
-                        <span class="opk-cel leeg" title="Niet in de selectie">
+                        <span class="opk-cel leeg" title="Niets ingevuld">
                           "·"
                       <td class="opk-pct-kol">
                         <span class="opk-pct" style="color: var(--succes);">
@@ -689,7 +709,7 @@
                           <span class="opk-speler-naam">
                             "4 Bas Kolderhorst"
                       <td>
-                        <span class="opk-cel leeg" title="Niet in de selectie">
+                        <span class="opk-cel leeg" title="Niets ingevuld">
                           "·"
                       <td>
                         <span class="opk-cel" style="background: rgb(132, 204, 22); color: rgb(31, 48, 7);" title="Te laat">
@@ -698,13 +718,13 @@
                         <span class="opk-cel" style="background: rgb(22, 163, 74); color: rgb(11, 47, 22);" title="Aanwezig">
                           "P"
                       <td>
-                        <span class="opk-cel leeg" title="Niet in de selectie">
+                        <span class="opk-cel leeg" title="Niets ingevuld">
                           "·"
                       <td>
                         <span class="opk-cel" style="background: rgb(22, 163, 74); color: rgb(11, 47, 22);" title="Aanwezig">
                           "P"
                       <td>
-                        <span class="opk-cel leeg" title="Niet in de selectie">
+                        <span class="opk-cel leeg" title="Niets ingevuld">
                           "·"
                       <td class="opk-pct-kol">
                         <span class="opk-pct" style="color: var(--succes);">
@@ -736,7 +756,7 @@
                           <span class="opk-speler-naam">
                             "6 Sil Draaiboom"
                       <td>
-                        <span class="opk-cel leeg" title="Niet in de selectie">
+                        <span class="opk-cel leeg" title="Niets ingevuld">
                           "·"
                       <td>
                         <span class="opk-cel" style="background: rgb(22, 163, 74); color: rgb(11, 47, 22);" title="Aanwezig">
@@ -745,13 +765,13 @@
                         <span class="opk-cel" style="background: rgb(22, 163, 74); color: rgb(11, 47, 22);" title="Aanwezig">
                           "P"
                       <td>
-                        <span class="opk-cel leeg" title="Niet in de selectie">
+                        <span class="opk-cel leeg" title="Niets ingevuld">
                           "·"
                       <td>
                         <span class="opk-cel" style="background: rgb(22, 163, 74); color: rgb(11, 47, 22);" title="Aanwezig">
                           "P"
                       <td>
-                        <span class="opk-cel leeg" title="Niet in de selectie">
+                        <span class="opk-cel leeg" title="Niets ingevuld">
                           "·"
                       <td class="opk-pct-kol">
                         <span class="opk-pct" style="color: var(--succes);">
@@ -779,7 +799,7 @@
                           <span class="opk-speler-naam">
                             "8 Daan Steltkruid"
                       <td>
-                        <span class="opk-cel leeg" title="Niet in de selectie">
+                        <span class="opk-cel leeg" title="Niets ingevuld">
                           "·"
                       <td>
                         <span class="opk-cel" style="background: rgb(22, 163, 74); color: rgb(11, 47, 22);" title="Aanwezig">
@@ -788,13 +808,13 @@
                         <span class="opk-cel" style="background: rgb(22, 163, 74); color: rgb(11, 47, 22);" title="Aanwezig">
                           "P"
                       <td>
-                        <span class="opk-cel leeg" title="Niet in de selectie">
+                        <span class="opk-cel leeg" title="Niets ingevuld">
                           "·"
                       <td>
                         <span class="opk-cel" style="background: rgb(22, 163, 74); color: rgb(11, 47, 22);" title="Aanwezig">
                           "P"
                       <td>
-                        <span class="opk-cel leeg" title="Niet in de selectie">
+                        <span class="opk-cel leeg" title="Niets ingevuld">
                           "·"
                       <td class="opk-pct-kol">
                         <span class="opk-pct" style="color: var(--succes);">
@@ -819,7 +839,7 @@
                           <span class="opk-speler-naam">
                             "10 Stijn Ravelijn"
                       <td>
-                        <span class="opk-cel leeg" title="Niet in de selectie">
+                        <span class="opk-cel leeg" title="Niets ingevuld">
                           "·"
                       <td>
                         <span class="opk-cel" style="background: rgb(22, 163, 74); color: rgb(11, 47, 22);" title="Aanwezig">
@@ -828,13 +848,13 @@
                         <span class="opk-cel" style="background: rgb(22, 163, 74); color: rgb(11, 47, 22);" title="Aanwezig">
                           "P"
                       <td>
-                        <span class="opk-cel leeg" title="Niet in de selectie">
+                        <span class="opk-cel leeg" title="Niets ingevuld">
                           "·"
                       <td>
                         <span class="opk-cel" style="background: rgb(22, 163, 74); color: rgb(11, 47, 22);" title="Aanwezig">
                           "P"
                       <td>
-                        <span class="opk-cel leeg" title="Niet in de selectie">
+                        <span class="opk-cel leeg" title="Niets ingevuld">
                           "·"
                       <td class="opk-pct-kol">
                         <span class="opk-pct" style="color: var(--succes);">
@@ -862,7 +882,7 @@
                           <span class="opk-speler-naam">
                             "16 Roan Zandhorst"
                       <td>
-                        <span class="opk-cel leeg" title="Niet in de selectie">
+                        <span class="opk-cel leeg" title="Niets ingevuld">
                           "·"
                       <td>
                         <span class="opk-cel" style="background: rgb(153, 27, 27); color: rgb(255, 255, 255);" title="Niet afgemeld">
@@ -871,13 +891,13 @@
                         <span class="opk-cel" style="background: rgb(22, 163, 74); color: rgb(11, 47, 22);" title="Aanwezig">
                           "P"
                       <td>
-                        <span class="opk-cel leeg" title="Niet in de selectie">
+                        <span class="opk-cel leeg" title="Niets ingevuld">
                           "·"
                       <td>
                         <span class="opk-cel" style="background: rgb(22, 163, 74); color: rgb(11, 47, 22);" title="Aanwezig">
                           "P"
                       <td>
-                        <span class="opk-cel leeg" title="Niet in de selectie">
+                        <span class="opk-cel leeg" title="Niets ingevuld">
                           "·"
                       <td class="opk-pct-kol">
                         <span class="opk-pct" style="color: var(--gevaar);">
@@ -905,7 +925,7 @@
                           <span class="opk-speler-naam">
                             "5 Niels Wierbaken"
                       <td>
-                        <span class="opk-cel leeg" title="Niet in de selectie">
+                        <span class="opk-cel leeg" title="Niets ingevuld">
                           "·"
                       <td>
                         <span class="opk-cel" style="background: rgb(22, 163, 74); color: rgb(11, 47, 22);" title="Aanwezig">
@@ -914,13 +934,13 @@
                         <span class="opk-cel" style="background: rgb(22, 163, 74); color: rgb(11, 47, 22);" title="Aanwezig">
                           "P"
                       <td>
-                        <span class="opk-cel leeg" title="Niet in de selectie">
+                        <span class="opk-cel leeg" title="Niets ingevuld">
                           "·"
                       <td>
                         <span class="opk-cel" style="background: rgb(37, 99, 235); color: rgb(255, 255, 255);" title="Werk">
                           "W"
                       <td>
-                        <span class="opk-cel leeg" title="Niet in de selectie">
+                        <span class="opk-cel leeg" title="Niets ingevuld">
                           "·"
                       <td class="opk-pct-kol">
                         <span class="opk-pct" style="color: var(--gevaar);">
@@ -948,7 +968,7 @@
                           <span class="opk-speler-naam">
                             "13 Tygo Meerkolder"
                       <td>
-                        <span class="opk-cel leeg" title="Niet in de selectie">
+                        <span class="opk-cel leeg" title="Niets ingevuld">
                           "·"
                       <td>
                         <span class="opk-cel" style="background: rgb(22, 163, 74); color: rgb(11, 47, 22);" title="Aanwezig">
@@ -957,13 +977,13 @@
                         <span class="opk-cel" style="background: rgb(153, 27, 27); color: rgb(255, 255, 255);" title="Niet afgemeld">
                           "A−"
                       <td>
-                        <span class="opk-cel leeg" title="Niet in de selectie">
+                        <span class="opk-cel leeg" title="Niets ingevuld">
                           "·"
                       <td>
                         <span class="opk-cel" style="background: rgb(22, 163, 74); color: rgb(11, 47, 22);" title="Aanwezig">
                           "P"
                       <td>
-                        <span class="opk-cel leeg" title="Niet in de selectie">
+                        <span class="opk-cel leeg" title="Niets ingevuld">
                           "·"
                       <td class="opk-pct-kol">
                         <span class="opk-pct" style="color: var(--gevaar);">
@@ -991,7 +1011,7 @@
                           <span class="opk-speler-naam">
                             "7 Mees Halfweegs"
                       <td>
-                        <span class="opk-cel leeg" title="Niet in de selectie">
+                        <span class="opk-cel leeg" title="Niets ingevuld">
                           "·"
                       <td>
                         <span class="opk-cel" style="background: rgb(224, 138, 11); color: rgb(61, 36, 2);" title="Afgemeld">
@@ -1000,13 +1020,13 @@
                         <span class="opk-cel" style="background: rgb(22, 163, 74); color: rgb(11, 47, 22);" title="Aanwezig">
                           "P"
                       <td>
-                        <span class="opk-cel leeg" title="Niet in de selectie">
+                        <span class="opk-cel leeg" title="Niets ingevuld">
                           "·"
                       <td>
                         <span class="opk-cel" style="background: rgb(22, 163, 74); color: rgb(11, 47, 22);" title="Aanwezig">
                           "P"
                       <td>
-                        <span class="opk-cel leeg" title="Niet in de selectie">
+                        <span class="opk-cel leeg" title="Niets ingevuld">
                           "·"
                       <td class="opk-pct-kol">
                         <span class="opk-pct" style="color: var(--gevaar);">
@@ -1034,7 +1054,7 @@
                           <span class="opk-speler-naam">
                             "9 Luuk Grasmaaijer"
                       <td>
-                        <span class="opk-cel leeg" title="Niet in de selectie">
+                        <span class="opk-cel leeg" title="Niets ingevuld">
                           "·"
                       <td>
                         <span class="opk-cel" style="background: rgb(22, 163, 74); color: rgb(11, 47, 22);" title="Aanwezig">
@@ -1043,13 +1063,13 @@
                         <span class="opk-cel" style="background: rgb(234, 179, 8); color: rgb(59, 44, 5);" title="Ziek">
                           "Z"
                       <td>
-                        <span class="opk-cel leeg" title="Niet in de selectie">
+                        <span class="opk-cel leeg" title="Niets ingevuld">
                           "·"
                       <td>
                         <span class="opk-cel" style="background: rgb(132, 204, 22); color: rgb(31, 48, 7);" title="Te laat">
                           "TL"
                       <td>
-                        <span class="opk-cel leeg" title="Niet in de selectie">
+                        <span class="opk-cel leeg" title="Niets ingevuld">
                           "·"
                       <td class="opk-pct-kol">
                         <span class="opk-pct" style="color: var(--gevaar);">
@@ -1080,7 +1100,7 @@
                           <span class="opk-speler-naam">
                             "11 Jesse Pluimgaard"
                       <td>
-                        <span class="opk-cel leeg" title="Niet in de selectie">
+                        <span class="opk-cel leeg" title="Niets ingevuld">
                           "·"
                       <td>
                         <span class="opk-cel" style="background: rgb(107, 114, 128); color: rgb(255, 255, 255);" title="Blessure">
@@ -1089,13 +1109,13 @@
                         <span class="opk-cel" style="background: rgb(22, 163, 74); color: rgb(11, 47, 22);" title="Aanwezig">
                           "P"
                       <td>
-                        <span class="opk-cel leeg" title="Niet in de selectie">
+                        <span class="opk-cel leeg" title="Niets ingevuld">
                           "·"
                       <td>
                         <span class="opk-cel" style="background: rgb(22, 163, 74); color: rgb(11, 47, 22);" title="Aanwezig">
                           "P"
                       <td>
-                        <span class="opk-cel leeg" title="Niet in de selectie">
+                        <span class="opk-cel leeg" title="Niets ingevuld">
                           "·"
                       <td class="opk-pct-kol">
                         <span class="opk-pct" style="color: var(--gevaar);">
@@ -1123,7 +1143,7 @@
                           <span class="opk-speler-naam">
                             "12 Finn Oosterwoud"
                       <td>
-                        <span class="opk-cel leeg" title="Niet in de selectie">
+                        <span class="opk-cel leeg" title="Niets ingevuld">
                           "·"
                       <td>
                         <span class="opk-cel" style="background: rgb(22, 163, 74); color: rgb(11, 47, 22);" title="Aanwezig">
@@ -1132,13 +1152,13 @@
                         <span class="opk-cel" style="background: rgb(107, 114, 128); color: rgb(255, 255, 255);" title="Blessure">
                           <i class="fa-solid fa-hospital-symbol">
                       <td>
-                        <span class="opk-cel leeg" title="Niet in de selectie">
+                        <span class="opk-cel leeg" title="Niets ingevuld">
                           "·"
                       <td>
                         <span class="opk-cel" style="background: rgb(107, 114, 128); color: rgb(255, 255, 255);" title="Blessure">
                           <i class="fa-solid fa-hospital-symbol">
                       <td>
-                        <span class="opk-cel leeg" title="Niet in de selectie">
+                        <span class="opk-cel leeg" title="Niets ingevuld">
                           "·"
                       <td class="opk-pct-kol">
                         <span class="opk-pct" style="color: var(--gevaar);">
@@ -1171,7 +1191,7 @@
                           "81%"
               <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-top: 10px;">
                 <p style="font-size: 11px; color: var(--grijs-donker); font-weight: 400; line-height: 1.6; flex: 1 1 0%; min-width: 200px; margin: 0px;">
-                  "Te laat komen telt mee als aanwezig. Een punt betekent dat de speler er toen niet bij hoorde. Bij wedstrijden komt de presentie uit de opstelling."
+                  "Aanwezig, te laat en uitgeleend tellen als aanwezig. Een punt betekent dat er voor die speler niets is ingevuld. Bij wedstrijden telt wat je bij Aanwezigheid invult; wie daar open staat, komt uit de opstelling. Wat nog moet komen telt niet mee."
           <div class="kaart">
             <div class="kaart-titel">
               <i class="fa-solid fa-arrow-trend-up">

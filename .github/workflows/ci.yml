@@ -129,6 +129,10 @@ jobs:
         run: node tests/registratie.test.js
       - name: node tests/trainingstijden.test.js
         run: node tests/trainingstijden.test.js
+      - name: node tests/aanwezigheid.test.js
+        run: node tests/aanwezigheid.test.js
+      - name: node tests/opstelling-bewaren.test.js
+        run: node tests/opstelling-bewaren.test.js
 
       # vulling.test.js controleert de vaste vulling van het gouden
       # origineel tegen wat de app werkelijk schrijft. Dat klinkt als een

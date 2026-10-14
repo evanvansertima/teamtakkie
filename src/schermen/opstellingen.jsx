@@ -414,7 +414,7 @@ function OpstellingenTab({ spelers }) {
   return (
     <div>
       <button className="formatie-keuze-knop" onClick={function(){setFormatieMenuOpen(true);}}>
-        <span className="formatie-keuze-naam">{"⚽ "+actief}</span>
+        <span className="formatie-keuze-naam"><i className="fa-solid fa-futbol"/>{" "+actief}</span>
         <span className="formatie-keuze-hint">{"Wijzig ▼"}</span>
       </button>
 
@@ -1290,18 +1290,60 @@ function draaiAfstand(el, k) {
   return Math.max(34, 30*k + 22);
 }
 
+/* De teams op het tekenveld. Blauw en rood waren er altijd (met hun
+   oude type-namen, zodat bestaande tekeningen blijven kloppen); de
+   rest kwam erbij op verzoek van Evan (14 oktober 2026) — voor
+   oefeningen met drie of vier groepjes, of een vaste kaatser. */
+const TEKEN_TEAMS = [
+  {type:"speler",        label:"Blauw",  kleur:"#004aad", tekst:"#ffffff"},
+  {type:"speler-rood",   label:"Rood",   kleur:"#dc3545", tekst:"#ffffff"},
+  {type:"speler-grijs",  label:"Grijs",  kleur:"#6b7280", tekst:"#ffffff"},
+  {type:"speler-geel",   label:"Geel",   kleur:"#facc15", tekst:"#1f2937"},
+  {type:"speler-oranje", label:"Oranje", kleur:"#f97316", tekst:"#ffffff"},
+  {type:"speler-groen",  label:"Groen",  kleur:"#15803d", tekst:"#ffffff"},
+  {type:"speler-paars",  label:"Paars",  kleur:"#7c3aed", tekst:"#ffffff"}
+];
+function tekenTeamInfo(type) {
+  return TEKEN_TEAMS.filter(function(t){ return t.type===type; })[0] || null;
+}
+/* Alles wat een rugnummer en een naam kan dragen */
+function isSpelerElem(type) { return !!tekenTeamInfo(type); }
+
 function tekenelement(ctx, el, gekozen) {
   ctx.save();
   const x = el.x, y = el.y;
   const k = Math.max(0.4, Math.min(3, Number(el.schaal) || 1));   // schaalfactor
   ctx.setLineDash([]);
 
-  if (el.type==="speler" || el.type==="speler-rood") {
+  if (el.type==="trainer") {
+    /* Zwart met een gouden rand en een T: in één oogopslag geen speler. */
+    const r = 16*k;
+    ctx.fillStyle = "#111827";
+    ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2); ctx.fill();
+    ctx.strokeStyle="#fbbf24"; ctx.lineWidth=2.6*Math.sqrt(k); ctx.stroke();
+    ctx.fillStyle="#fbbf24";
+    ctx.font="900 "+(13*k).toFixed(1)+"px 'Helvetica Neue',Arial,sans-serif";
+    ctx.textAlign="center"; ctx.textBaseline="middle";
+    ctx.fillText("T",x,y+0.5*k);
+    if (el.naam) {
+      const fs = Math.max(8, 9.5*k);
+      ctx.font="bold "+fs.toFixed(1)+"px 'Helvetica Neue',Arial,sans-serif";
+      const woord = String(el.naam).split(" ")[0];
+      const bw = ctx.measureText(woord).width + 8, by = y + r + 3;
+      ctx.fillStyle="rgba(0,0,0,0.55)";
+      ctx.fillRect(x-bw/2, by, bw, fs+5);
+      ctx.fillStyle="#ffffff"; ctx.textBaseline="top";
+      ctx.fillText(woord, x, by+2.5);
+      ctx.textBaseline="middle";
+    }
+
+  } else if (isSpelerElem(el.type)) {
     const r = 15*k;
-    ctx.fillStyle = el.type==="speler-rood" ? "#dc3545" : "#004aad";
+    const team = tekenTeamInfo(el.type);
+    ctx.fillStyle = team.kleur;
     ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2); ctx.fill();
     ctx.strokeStyle="white"; ctx.lineWidth=2*Math.sqrt(k); ctx.stroke();
-    ctx.fillStyle="white";
+    ctx.fillStyle=team.tekst;
     ctx.font="bold "+(11*k).toFixed(1)+"px 'Helvetica Neue',Arial,sans-serif";
     ctx.textAlign="center"; ctx.textBaseline="middle";
     ctx.fillText(String(el.nr||""),x,y);
@@ -2447,7 +2489,9 @@ function TrainingTekenBord({ value, onChange, pdfNaam, pdfInfo }) {
     setGekozenElem(null);
   }
   const gekozenObject = elems.find(function(e){ return e.id===gekozenElem; }) || null;
-  const ELEM_NAMEN = {speler:"Speler", "speler-rood":"Speler", bal:"Bal", pion:"Pion", goal:"Doel",
+  const ELEM_NAMEN = {speler:"Speler", "speler-rood":"Speler", "speler-grijs":"Speler", "speler-geel":"Speler",
+                      "speler-oranje":"Speler", "speler-groen":"Speler", "speler-paars":"Speler", trainer:"Trainer",
+                      bal:"Bal", pion:"Pion", goal:"Doel",
                       cirkel:"Zone", notitie:"Coachpunt", "zone-cirkel":"Zone", "zone-vierkant":"Zone",
                       "zone-driehoek":"Zone", "zone-vak":"Zone",
                       dummy:"Pop", ladder:"Speedladder", hordje:"Hordje", stok:"Slalomstok",
@@ -2593,7 +2637,18 @@ function TrainingTekenBord({ value, onChange, pdfNaam, pdfInfo }) {
     return -1;
   }
 
+  /* Een tik op een iPad of telefoon geeft eerst een touch-gebeurtenis
+     en daarna nog een nagebootste muisklik. Allebei verwerken zette elk
+     object twee keer neer (gemeld door Evan, 14 oktober 2026). Na een
+     aanraking negeren we de muis daarom even. */
+  const laatsteTikRef = useRef(0);
+  function nepMuis(e) {
+    if (e && e.type && e.type.indexOf("touch")===0) { laatsteTikRef.current = Date.now(); return false; }
+    return Date.now() - laatsteTikRef.current < 800;
+  }
+
   function handleDown(e) {
+    if (nepMuis(e)) return;
     if (speelt || blik!=="plat") return;
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -2659,10 +2714,10 @@ function TrainingTekenBord({ value, onChange, pdfNaam, pdfInfo }) {
     if (LIJN_TOOLS.indexOf(tool) >= 0) {
       setBezig({x1:pos.x, y1:pos.y});
     } else {
-      var metNummer = (tool==="speler" || tool==="speler-rood");
+      var metNummer = isSpelerElem(tool);
       const el = {id:Date.now(), type:tool, x:pos.x, y:pos.y, schaal:nieuwFormaat};
       if (metNummer) el.nr = spelNr;
-      if (spelerNaamKeuze && (tool==="speler"||tool==="speler-rood")) el.naam = spelerNaamKeuze;
+      if (spelerNaamKeuze && metNummer) el.naam = spelerNaamKeuze;
       onthoud();
       zetElems(function(prev){ return prev.concat([el]); });
       setGekozenElem(el.id);
@@ -2670,6 +2725,7 @@ function TrainingTekenBord({ value, onChange, pdfNaam, pdfInfo }) {
   }
 
   function handleMove(e) {
+    if (nepMuis(e)) return;
     if (speelt || blik!=="plat") return;
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -2700,6 +2756,7 @@ function TrainingTekenBord({ value, onChange, pdfNaam, pdfInfo }) {
   }
 
   function handleUp(e) {
+    if (nepMuis(e)) return;
     if (speelt || blik!=="plat") return;
     if (draaienRef.current) { draaienRef.current = null; return; }
     if (zoneBezig) {
@@ -3050,13 +3107,12 @@ function TrainingTekenBord({ value, onChange, pdfNaam, pdfInfo }) {
                     onClick={function(){ setSpelerNaamKeuze(null); }}>Zonder naam</button>
                 </div>
               )}
-              <div className="bord-knoppen" style={{marginBottom:8}}>
-                {[{id:"speler",label:"Blauw",kleur:"var(--blauw)"},{id:"speler-rood",label:"Rood",kleur:"var(--gevaar)"}].map(function(t){
-                  var aan = spelerTeam===t.id;
+              <div className="team-kleuren" style={{marginBottom:8}}>
+                {TEKEN_TEAMS.map(function(t){
+                  var aan = spelerTeam===t.type;
                   return (
-                    <button key={t.id} className="knop lijn klein" style={{flex:1,justifyContent:"center",padding:"5px 8px",fontSize:11,
-                        borderColor:aan?t.kleur:"var(--grijs)",color:aan?t.kleur:"var(--grijs-donker)"}}
-                      onClick={function(){ setSpelerTeam(t.id); }}>{t.label}</button>
+                    <button key={t.type} className={"team-kleur"+(aan?" actief":"")} title={t.label} aria-label={t.label}
+                      style={{background:t.kleur}} onClick={function(){ setSpelerTeam(t.type); }}/>
                   );
                 })}
               </div>
@@ -3094,7 +3150,7 @@ function TrainingTekenBord({ value, onChange, pdfNaam, pdfInfo }) {
               <div className="bord-vak-kop" style={{color:"var(--blauw)"}}>
                 <i className="fa-solid fa-arrows-up-down-left-right"/>
                 {(ELEM_NAMEN[gekozenObject.type]||"Element")
-                  + ((gekozenObject.type==="speler"||gekozenObject.type==="speler-rood") && gekozenObject.nr
+                  + (isSpelerElem(gekozenObject.type) && gekozenObject.nr
                       ? " "+gekozenObject.nr : "")}
               </div>
               <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:8}}>
@@ -3199,10 +3255,29 @@ function TrainingTekenBord({ value, onChange, pdfNaam, pdfInfo }) {
           {/* Teams — hoort bij de categorie Spelers */}
           {paneel==="spelers" && (
           <div className="bord-vak">
-            <div className="bord-vak-kop"><i className="team-stip" style={{background:"var(--blauw)"}}/> Blauw team</div>
-            {teamRij("speler","var(--blauw)")}
-            <div className="bord-vak-kop" style={{marginTop:10}}><i className="team-stip" style={{background:"var(--gevaar)"}}/> Rood team</div>
-            {teamRij("speler-rood","var(--gevaar)")}
+            {/* Eerst de kleur, dan het nummer. Zeven rijen van dertien
+                knoppen paste niet; één rij die van kleur wisselt wel. */}
+            <div className="bord-vak-kop">Kleur</div>
+            <div className="team-kleuren">
+              {TEKEN_TEAMS.map(function(t){
+                var aan = spelerTeam===t.type;
+                return (
+                  <button key={t.type} className={"team-kleur"+(aan?" actief":"")} title={t.label} aria-label={t.label}
+                    style={{background:t.kleur}}
+                    onClick={function(){ setSpelerTeam(t.type); if (isSpelerElem(tool)) setTool(t.type); }}/>
+                );
+              })}
+            </div>
+            <div className="bord-vak-kop" style={{marginTop:10}}>
+              <i className="team-stip" style={{background:(tekenTeamInfo(spelerTeam)||TEKEN_TEAMS[0]).kleur}}/>
+              {" "+(tekenTeamInfo(spelerTeam)||TEKEN_TEAMS[0]).label+" team"}
+            </div>
+            {teamRij(spelerTeam,(tekenTeamInfo(spelerTeam)||TEKEN_TEAMS[0]).kleur)}
+            <div className="bord-vak-kop" style={{marginTop:10}}>Staf</div>
+            <button className={"nr-knop trainer-knop"+(tool==="trainer"?" actief":"")}
+              onClick={function(){ setTool("trainer"); setSpelerNaamKeuze(null); }}>
+              <span className="trainer-stip">T</span> Trainer
+            </button>
           </div>
           )}
 

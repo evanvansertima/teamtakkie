@@ -61,12 +61,59 @@
    basis stond of op de bank zat was er, wie op afwezig staat niet.
    Zo hoef je het niet twee keer bij te houden.
 ═══════════════════════════════════════════════════════════ */
+/* Competitie, beker, oefen en toernooi zijn geen eigen soort
+   gebeurtenis maar een uitsnede van de wedstrijden (verzoek van Evan,
+   14 oktober 2026): "wedSoort" zegt welke WEDSTRIJD_SOORTEN.id erbij
+   hoort. Zo blijft een gebeurtenis altijd één van drie soorten, en
+   kleurt de streep boven een kolom nog steeds als wedstrijd. */
 const PRESENTIE_SOORTEN = [
   {id:"alles",        label:"Alles",        icoon:"fa-solid fa-layer-group"},
   {id:"training",     label:"Trainingen",   icoon:"fa-solid fa-person-running", kleur:"var(--blauw-licht)"},
   {id:"wedstrijd",    label:"Wedstrijden",  icoon:"fa-solid fa-futbol",         kleur:"var(--blauw)"},
+  {id:"competitie",   label:"Competitie",   icoon:"fa-solid fa-trophy",         kleur:"var(--blauw)", wedSoort:"competitie"},
+  {id:"beker",        label:"Beker",        icoon:"fa-solid fa-award",          kleur:"var(--blauw)", wedSoort:"beker"},
+  {id:"oefen",        label:"Oefen",        icoon:"fa-solid fa-dumbbell",       kleur:"var(--blauw)", wedSoort:"oefen"},
+  {id:"toernooi",     label:"Toernooi",     icoon:"fa-solid fa-medal",          kleur:"var(--blauw)", wedSoort:"toernooi"},
   {id:"activiteit",   label:"Activiteiten", icoon:"fa-solid fa-calendar-day",   kleur:"#8b5cf6"}
 ];
+/**
+ * @param {string} id
+ * @returns {{id:string,label:string,icoon:string,kleur?:string,wedSoort?:string}}
+ */
+function presentieSoortInfo(id) {
+  return PRESENTIE_SOORTEN.filter(function(s){ return s.id===id; })[0] || PRESENTIE_SOORTEN[0];
+}
+/**
+ * Hoort deze gebeurtenis bij het gekozen filter?
+ * @param {{soort:string, wedSoort?:string}} g
+ * @param {string} filterId
+ * @returns {boolean}
+ */
+function presentiePast(g, filterId) {
+  if (!filterId || filterId==="alles") return true;
+  var f = presentieSoortInfo(filterId);
+  if (f.wedSoort) return g.soort==="wedstrijd" && g.wedSoort===f.wedSoort;
+  return g.soort===filterId;
+}
+/**
+ * Ligt deze datum ná vandaag? Wat nog moet gebeuren telt niet mee in
+ * de opkomst: een training van volgende week waar iedereen nog op
+ * "aanwezig" staat, zou het cijfer anders mooier maken dan het is.
+ * Vandaag zelf telt wel: de training van vanavond vul je vanavond in.
+ * @param {string} datum
+ * @param {Date} [nu]
+ * @returns {boolean}
+ */
+function nogNietGeweest(datum, nu) {
+  /* Zelf ontleed in plaats van parseerDatum: die staat in app.jsx en
+     dit bestand moet ook los te testen zijn. */
+  var m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(datum||""));
+  if (!m) return false;
+  var d = new Date(Number(m[1]), Number(m[2])-1, Number(m[3]));
+  var v = nu ? new Date(nu.getTime()) : new Date();
+  v.setHours(0,0,0,0);
+  return d.getTime() > v.getTime();
+}
 
 /**
  * Van een wedstrijdopstelling naar dezelfde vorm als een presentielijst
@@ -84,10 +131,27 @@ function presentieUitOpstelling(wedstrijd) {
   });
 }
 
+/**
+ * De presentie van één gespeelde wedstrijd. Wat de trainer bij
+ * Aanwezigheid invulde wint; wie daar open bleef, komt uit de
+ * opstelling (basis of bank = aanwezig). Voorheen was het of-of: één
+ * ingevulde naam en de hele opstelling deed niet meer mee.
+ * @param {Wedstrijd} wedstrijd
+ * @returns {any[]}
+ */
+function presentieVanWedstrijd(wedstrijd) {
+  var eigen = (wedstrijd.aanwezigheid||[]).filter(function(a){ return a && a.status && a.status!=="open"; });
+  var rest = presentieUitOpstelling(wedstrijd).filter(function(r){
+    return !eigen.some(function(a){ return String(a.spelerId)===String(r.spelerId); });
+  });
+  return eigen.concat(rest);
+}
+
 /** @typedef {Object} PresentieGebeurtenis  één training, wedstrijd of
  * activiteit met een presentielijst — de kolom in presentieTabel()
  * @property {string} id
  * @property {"training"|"wedstrijd"|"activiteit"} soort
+ * @property {string} [wedSoort]  alleen bij wedstrijd: competitie, beker, oefen of toernooi
  * @property {string} datum
  * @property {string} titel
  * @property {string} sub
@@ -99,27 +163,28 @@ function presentieUitOpstelling(wedstrijd) {
  * @param {Wedstrijd[]} wedstrijden
  * @param {any[]} [trainingen]
  * @param {any[]} [activiteiten]
+ * @param {Date} [nu]  alleen voor de tests; standaard vandaag
  * @returns {PresentieGebeurtenis[]}
  */
-function presentieGebeurtenissen(wedstrijden, trainingen, activiteiten) {
+function presentieGebeurtenissen(wedstrijden, trainingen, activiteiten, nu) {
   /** @type {PresentieGebeurtenis[]} */
   var uit = [];
   (trainingen||[]).forEach(function(t){
-    if (!(t.aanwezigheid||[]).length) return;
+    if (!(t.aanwezigheid||[]).length || nogNietGeweest(t.datum, nu)) return;
     uit.push({id:"t"+t.id, soort:"training", datum:t.datum,
               titel:trainingTitel(t), sub:t.locatie||"",
               lijst:t.aanwezigheid});
   });
   (wedstrijden||[]).forEach(function(w){
     if (w.status!=="gespeeld") return;
-    var lijst = (w.aanwezigheid && w.aanwezigheid.length) ? w.aanwezigheid : presentieUitOpstelling(w);
+    var lijst = presentieVanWedstrijd(w);
     if (!lijst.length) return;
-    uit.push({id:"w"+w.id, soort:"wedstrijd", datum:w.datum,
+    uit.push({id:"w"+w.id, soort:"wedstrijd", wedSoort:wedstrijdSoort(w).id, datum:w.datum,
               titel:"vs. "+(w.tegenstander||"tegenstander"),
               sub:(w.thuis?"Thuis":"Uit"), lijst:lijst, afgeleid:!(w.aanwezigheid||[]).length});
   });
   (activiteiten||[]).forEach(function(a){
-    if (!(a.aanwezigheid||[]).length) return;
+    if (!(a.aanwezigheid||[]).length || nogNietGeweest(a.datum, nu)) return;
     uit.push({id:"a"+a.id, soort:"activiteit", datum:a.datum,
               titel:a.titel, sub:activiteitSoort(a.soort).label,
               lijst:a.aanwezigheid});
@@ -250,6 +315,102 @@ function teltAlsAanwezig(status) {
   var k = AANWEZIG_KEUZES.filter(function(x){ return x.id===status; })[0];
   return !!(k && k.telt);
 }
+/* ═══════════════════════════════════════════════════════════
+   AANWEZIGHEID INVULLEN — training, wedstrijd en activiteit
+   Besluit van Evan (14 oktober 2026): niet meer "wie komt er?" met
+   ja/misschien/nee vooraf, en apart een presentielijst achteraf, maar
+   één lijst Aanwezigheid met de acht statussen hierboven — bij een
+   training, een wedstrijd én een activiteit. Wie nog niets heeft,
+   staat op "open": dat telt nergens mee, ook niet als afwezig.
+
+   Wat er al was ingevuld bij de oude opgave gaat niet verloren: ja
+   wordt aanwezig, nee wordt afgemeld, uitgeleend blijft uitgeleend.
+   Misschien en onbekend worden open — dat waren geen antwoorden.
+═══════════════════════════════════════════════════════════ */
+const AANWEZIG_OPEN = {id:"open", label:"Nog niet ingevuld", letter:"?", kort:"Open",
+  kleur:null, op:"#ffffff", vlak:null, icoon:"fa-regular fa-circle"};
+/**
+ * @param {string} status  ja, misschien, nee, uitgeleend of onbekend
+ * @returns {string|null}
+ */
+function opgaveAlsAanwezig(status) {
+  if (status==="ja") return "aanwezig";
+  if (status==="nee") return "afwezig";
+  if (status==="uitgeleend") return "uitgeleend";
+  return null;
+}
+/**
+ * De status per speler, zoals het scherm hem laat zien. Volgorde:
+ * wat bij Aanwezigheid staat, dan wat `terugval` zegt (bij een
+ * gespeelde wedstrijd: de opstelling), dan de oude opgave, dan open.
+ * @param {{aanwezigheid?:any[], opgave?:any[]}} item
+ * @param {{id:any}[]} spelers
+ * @param {(spelerId:any)=>string|null} [terugval]
+ * @returns {Object<string,string>}
+ */
+function aanwezigheidStatussen(item, spelers, terugval) {
+  /** @type {Object<string,string>} */
+  var uit = {};
+  var eigen = (item && item.aanwezigheid) || [];
+  var opgave = (item && item.opgave) || [];
+  (spelers||[]).forEach(function(s){
+    var r = eigen.filter(function(a){ return String(a.spelerId)===String(s.id); })[0];
+    if (r && r.status && r.status!=="open") { uit[s.id] = r.status; return; }
+    var t = terugval ? terugval(s.id) : null;
+    if (t) { uit[s.id] = t; return; }
+    var o = opgave.filter(function(a){ return String(a.spelerId)===String(s.id); })[0];
+    uit[s.id] = (o && opgaveAlsAanwezig(o.status)) || "open";
+  });
+  return uit;
+}
+/**
+ * Zet één of meer spelers op een status en geeft de nieuwe lijst
+ * terug. Alles wat het scherm liet zien wordt meteen vastgelegd, ook
+ * wat uit de opgave of de opstelling kwam — anders verschuift het
+ * beeld zodra de opstelling later verandert. "open" haalt de regel weg.
+ * Spelers die niet (meer) in de selectie staan, houden hun regel.
+ * @param {{aanwezigheid?:any[], opgave?:any[]}} item
+ * @param {{id:any, naam?:string, foto?:any}[]} spelers
+ * @param {any[]} ids
+ * @param {string} status
+ * @param {(spelerId:any)=>string|null} [terugval]
+ * @returns {any[]}
+ */
+function zetAanwezigheid(item, spelers, ids, status, terugval) {
+  var nu = aanwezigheidStatussen(item, spelers, terugval);
+  var sleutels = (ids||[]).map(String);
+  var binnen = (spelers||[]).map(function(s){ return String(s.id); });
+  /** @type {any[]} */
+  var lijst = [];
+  (spelers||[]).forEach(function(s){
+    var st = sleutels.indexOf(String(s.id))>=0 ? status : nu[s.id];
+    if (!st || st==="open") return;
+    /** @type {any} */
+    var r = {spelerId:s.id, naam:s.naam||"", status:st};
+    if (s.foto) r.foto = s.foto;
+    lijst.push(r);
+  });
+  ((item && item.aanwezigheid) || []).forEach(function(a){
+    if (binnen.indexOf(String(a.spelerId))<0) lijst.push(a);
+  });
+  return lijst;
+}
+/**
+ * "Rest aanwezig": wie nog open staat krijgt deze status; wie al iets
+ * heeft, houdt dat. Eerst twee afmeldingen aantikken en dan de rest
+ * in één keer — zonder dat die twee weer op aanwezig springen.
+ * @param {{aanwezigheid?:any[], opgave?:any[]}} item
+ * @param {{id:any, naam?:string, foto?:any}[]} spelers
+ * @param {string} status
+ * @param {(spelerId:any)=>string|null} [terugval]
+ * @returns {any[]}
+ */
+function vulOpenAan(item, spelers, status, terugval) {
+  var nu = aanwezigheidStatussen(item, spelers, terugval);
+  var open = (spelers||[]).filter(function(s){ return nu[s.id]==="open"; }).map(function(s){ return s.id; });
+  return zetAanwezigheid(item, spelers, open, status, terugval);
+}
+
 /** @typedef {Object} Opkomst
  * @property {number} aanwezig
  * @property {number} totaal
@@ -277,6 +438,10 @@ function opkomstVan(training, afwezigheden) {
   /** @type {any[]} */
   var lijst = (training && training.aanwezigheid) || [];
   if (!lijst.length) return null;
+  /* Toegevoegd 14 oktober 2026: een training die nog moet komen telt
+     niet mee. Raakt de rekenregel zelf niet, alleen welke trainingen
+     erin gaan — zie nogNietGeweest. */
+  if (nogNietGeweest(training.datum)) return null;
   var aanw = 0, tot = 0;
   lijst.forEach(function(a){
     var erbij = teltAlsAanwezig(a.status);

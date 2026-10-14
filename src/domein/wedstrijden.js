@@ -131,6 +131,8 @@
  * @property {any} [motm]             spelerId van de man of the match
  * @property {Object<string,number>} [beoordelingen]  per spelerId een cijfer
  * @property {any[]} [aanwezigheid]   handmatige presentielijst (anders afgeleid uit opstelling)
+ * @property {string} [tijd]          aanvangstijd, "HH:MM"
+ * @property {string} [formatie]      bijv. "4-3-3A", zie FORMATIES_DATA
  * @property {number} [speelduur]     minuten, standaard 90
  * @property {number} [helften]       standaard 2
  */
@@ -577,6 +579,18 @@ function zetUitleen(bron, spelerId, gegevens) {
   return alle;
 }
 /**
+ * Wat er bij Aanwezigheid voor deze speler staat, of null.
+ * @param {Wedstrijd} wedstrijd
+ * @param {any} spelerId
+ * @returns {string|null}
+ */
+function eigenAanwezigheid(wedstrijd, spelerId) {
+  var r = ((wedstrijd && wedstrijd.aanwezigheid) || []).filter(function (a) {
+    return a && String(a.spelerId) === String(spelerId);
+  })[0];
+  return (r && r.status && r.status !== "open") ? r.status : null;
+}
+/**
  * Was deze speler bij deze wedstrijd uitgeleend? Dat is de vraag die
  * elke telling moet stellen voordat hij een nul opschrijft.
  * @param {Wedstrijd} wedstrijd
@@ -585,6 +599,12 @@ function zetUitleen(bron, spelerId, gegevens) {
  */
 function isUitgeleend(wedstrijd, spelerId) {
   if (!wedstrijd) return false;
+  /* Sinds 14 oktober 2026 zet je uitgeleend bij Aanwezigheid, en wat
+     daar staat beslist: wie eerst uitgeleend was en toch bij ons
+     speelde, staat daar nu op aanwezig. Zonder regel daar geldt de
+     oude opgave en de uitleenregistratie, zoals voorheen. */
+  var eigen = eigenAanwezigheid(wedstrijd, spelerId);
+  if (eigen) return eigen === "uitgeleend";
   if (opgaveVanSpeler(wedstrijd.opgave || [], spelerId) === "uitgeleend") return true;
   return !!uitleenVan(wedstrijd, spelerId);
 }
@@ -600,10 +620,15 @@ function uitgeleendIn(wedstrijd) {
   ((wedstrijd.opgave) || []).forEach(function (o) {
     if (o && o.status === "uitgeleend") uit.push(o.spelerId);
   });
+  ((wedstrijd.aanwezigheid) || []).forEach(function (o) {
+    if (o && o.status === "uitgeleend" && uit.map(String).indexOf(String(o.spelerId)) < 0) uit.push(o.spelerId);
+  });
   Object.keys((wedstrijd.uitleen) || {}).forEach(function (k) {
     if (uit.map(String).indexOf(String(k)) < 0) uit.push(k);
   });
-  return uit;
+  /* Dezelfde voorrang als in isUitgeleend: staat er bij Aanwezigheid
+     iets anders, dan is hij niet (meer) uitgeleend. */
+  return uit.filter(function (id) { var e = eigenAanwezigheid(wedstrijd, id); return !e || e === "uitgeleend"; });
 }
 /**
  * Waar speelde hij dan? Voor op het scherm, en later voor de koppeling.
@@ -624,6 +649,114 @@ function uitleenNaar(wedstrijd, spelerId) {
  */
 function telOpgave(lijst, spelers, status) {
   return (spelers||[]).filter(function(s){ return opgaveVanSpeler(lijst, s.id)===status; }).length;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   BEWAARDE OPSTELLINGEN
+   Verzoek van Evan (14 oktober 2026): bij Wedstrijd → Opstelling tot
+   vijf opstellingen met een eigen naam bewaren, plus "Laatste
+   opstelling" — die van de vorige wedstrijd, zonder dat je hem eerst
+   hoeft te bewaren. Een opstelling is hier formatie, wie op welke
+   plek staat (positie-id → spelerId) en wie op de bank zit.
+═══════════════════════════════════════════════════════════ */
+const OPSTELLING_SJABLONEN_KEY = "fch_opstelling_sjablonen_v1";
+const OPSTELLING_SJABLONEN_MAX = 5;
+/** @typedef {Object} OpstellingSjabloon
+ * @property {any} id
+ * @property {string} naam
+ * @property {string} formatie
+ * @property {Object<string,any>} toewijzing  positie-id → spelerId
+ * @property {any[]} wisselIds
+ * @property {string} [bewaardOp]
+ * @property {{datum:string, tegenstander:string}} [bron]  alleen bij "Laatste opstelling"
+ */
+/**
+ * Bewaart een opstelling. Dezelfde naam (hoofdletters maken niet uit)
+ * overschrijft; anders mag er alleen bij zolang er nog geen vijf zijn.
+ * @param {OpstellingSjabloon[]} lijst
+ * @param {{naam:string, formatie:string, toewijzing:Object<string,any>, wisselIds?:any[]}} nieuw
+ * @param {Date} [nu]
+ * @returns {{lijst:OpstellingSjabloon[], fout:string|null, vervangen:boolean}}
+ */
+function bewaarOpstellingSjabloon(lijst, nieuw, nu) {
+  var oud = (lijst || []).slice();
+  var naam = String(nieuw.naam || "").trim().slice(0, 40);
+  if (!naam) return { lijst: oud, fout: "Geef de opstelling een naam.", vervangen: false };
+  /** @type {Object<string,any>} */
+  var toew = {};
+  Object.keys(nieuw.toewijzing || {}).forEach(function (k) { if (nieuw.toewijzing[k] != null) toew[k] = nieuw.toewijzing[k]; });
+  if (!Object.keys(toew).length) return { lijst: oud, fout: "Zet eerst spelers op het veld.", vervangen: false };
+  /** @type {OpstellingSjabloon} */
+  var sj = { id: Date.now(), naam: naam, formatie: nieuw.formatie, toewijzing: toew,
+             wisselIds: (nieuw.wisselIds || []).slice(), bewaardOp: (nu || new Date()).toISOString() };
+  var i = oud.findIndex(function (o) { return String(o.naam).trim().toLowerCase() === naam.toLowerCase(); });
+  if (i >= 0) {
+    sj.id = oud[i].id;
+    oud[i] = sj;
+    return { lijst: oud, fout: null, vervangen: true };
+  }
+  if (oud.length >= OPSTELLING_SJABLONEN_MAX) {
+    return { lijst: oud, fout: "Je kunt " + OPSTELLING_SJABLONEN_MAX + " opstellingen bewaren. Verwijder er eerst één, of gebruik dezelfde naam om er een te overschrijven.", vervangen: false };
+  }
+  return { lijst: oud.concat([sj]), fout: null, vervangen: false };
+}
+/**
+ * De opstelling van de vorige wedstrijd: de laatste ándere wedstrijd
+ * op of vóór deze datum met spelers op een plek. Zonder datum telt
+ * gewoon de meest recente.
+ * @param {Wedstrijd[]} wedstrijden
+ * @param {Wedstrijd} huidige
+ * @returns {OpstellingSjabloon|null}
+ */
+function laatsteOpstelling(wedstrijden, huidige) {
+  var grens = (huidige && huidige.datum) || "9999-12-31";
+  var kandidaten = (wedstrijden || []).filter(function (w) {
+    if (!w || (huidige && String(w.id) === String(huidige.id))) return false;
+    if (String(w.datum || "") > grens) return false;
+    return (w.opstelling || []).some(function (r) { return r.positieId && (r.spelStatus || "basis") === "basis"; });
+  }).sort(function (a, b) {
+    var d = String(b.datum || "").localeCompare(String(a.datum || ""));
+    return d || String(b.tijd || "").localeCompare(String(a.tijd || ""));
+  });
+  var w = kandidaten[0];
+  if (!w) return null;
+  /** @type {Object<string,any>} */
+  var toew = {};
+  (w.opstelling || []).forEach(function (r) {
+    if (r.positieId && (r.spelStatus || "basis") === "basis") toew[r.positieId] = r.spelerId;
+  });
+  return { id: "laatste", naam: "Laatste opstelling", formatie: w.formatie || "4-3-3A", toewijzing: toew,
+           wisselIds: (w.opstelling || []).filter(function (r) { return r.spelStatus === "wissel"; }).map(function (r) { return r.spelerId; }),
+           bron: { datum: w.datum, tegenstander: w.tegenstander } };
+}
+/**
+ * Zet een bewaarde opstelling op deze wedstrijd. Wie niet meer in de
+ * selectie staat, of bij Aanwezigheid op iets staat dat niet meetelt
+ * (afgemeld, ziek…), komt er niet in: die plek blijft leeg, zodat
+ * "Vul aan" hem kan vullen. Wie uitgeleend is, speelt elders en valt
+ * dus ook weg.
+ * @param {OpstellingSjabloon} sj
+ * @param {{id:any, naam?:string}[]} spelers
+ * @param {any[]} [weg]  spelerId's die er niet bij zijn
+ * @returns {{formatie:string, toewijzing:Object<string,any>, wisselIds:any[], overgeslagen:any[]}}
+ */
+function pasOpstellingToe(sj, spelers, weg) {
+  var binnen = (spelers || []).map(function (s) { return String(s.id); });
+  var nietErbij = (weg || []).map(String);
+  /** @type {any[]} */
+  var overgeslagen = [];
+  /** @param {any} id */
+  function mag(id) {
+    var ok = binnen.indexOf(String(id)) >= 0 && nietErbij.indexOf(String(id)) < 0;
+    if (!ok && overgeslagen.map(String).indexOf(String(id)) < 0) overgeslagen.push(id);
+    return ok;
+  }
+  /** @type {Object<string,any>} */
+  var toew = {};
+  Object.keys(sj.toewijzing || {}).forEach(function (k) { if (mag(sj.toewijzing[k])) toew[k] = sj.toewijzing[k]; });
+  var opVeld = Object.keys(toew).map(function (k) { return String(toew[k]); });
+  var wissels = (sj.wisselIds || []).filter(function (id) { return mag(id) && opVeld.indexOf(String(id)) < 0; });
+  return { formatie: sj.formatie || "4-3-3A", toewijzing: toew, wisselIds: wissels, overgeslagen: overgeslagen };
 }
 
 /* ═══════════════════════════════════════════════════════════

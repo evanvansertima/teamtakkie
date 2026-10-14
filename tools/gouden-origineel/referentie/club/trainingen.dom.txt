@@ -126,14 +126,14 @@
                   <div class="tr-naam">
                     "Training 20-10-2026"
                   <div class="tr-sub">
-                    <span style="margin-right: 8px;">
+                    <span class="meta-stuk">
                       <i class="fa-solid fa-location-dot">
                       "Sportpark De Verzonnen Kamp"
-                    <span style="margin-right: 8px;">
-                      "⏰"
+                    <span class="meta-stuk">
+                      <i class="fa-regular fa-clock">
                       "19:00"
-                    <span style="margin-right: 8px;">
-                      "⏱"
+                    <span class="meta-stuk">
+                      <i class="fa-solid fa-stopwatch">
                       "90"
                       "'"
                 <div class="tr-badge">
@@ -158,18 +158,18 @@
                   <div class="tr-naam">
                     "Training 06-10-2026"
                   <div class="tr-sub">
-                    <span style="margin-right: 8px;">
+                    <span class="meta-stuk">
                       <i class="fa-solid fa-location-dot">
                       "Sportpark De Verzonnen Kamp"
-                    <span style="margin-right: 8px;">
-                      "⏰"
+                    <span class="meta-stuk">
+                      <i class="fa-regular fa-clock">
                       "19:00"
-                    <span style="margin-right: 8px;">
-                      "⏱"
+                    <span class="meta-stuk">
+                      <i class="fa-solid fa-stopwatch">
                       "90"
                       "'"
-                    <span>
-                      "👥"
+                    <span class="meta-stuk">
+                      <i class="fa-solid fa-user-check">
                       "12"
                       "/"
                       "14"
@@ -195,18 +195,18 @@
                   <div class="tr-naam">
                     "Training 22-09-2026"
                   <div class="tr-sub">
-                    <span style="margin-right: 8px;">
+                    <span class="meta-stuk">
                       <i class="fa-solid fa-location-dot">
                       "Sportpark De Verzonnen Kamp"
-                    <span style="margin-right: 8px;">
-                      "⏰"
+                    <span class="meta-stuk">
+                      <i class="fa-regular fa-clock">
                       "19:00"
-                    <span style="margin-right: 8px;">
-                      "⏱"
+                    <span class="meta-stuk">
+                      <i class="fa-solid fa-stopwatch">
                       "90"
                       "'"
-                    <span>
-                      "👥"
+                    <span class="meta-stuk">
+                      <i class="fa-solid fa-user-check">
                       "11"
                       "/"
                       "14"
@@ -232,18 +232,18 @@
                   <div class="tr-naam">
                     "Training 15-09-2026"
                   <div class="tr-sub">
-                    <span style="margin-right: 8px;">
+                    <span class="meta-stuk">
                       <i class="fa-solid fa-location-dot">
                       "Sportpark De Verzonnen Kamp"
-                    <span style="margin-right: 8px;">
-                      "⏰"
+                    <span class="meta-stuk">
+                      <i class="fa-regular fa-clock">
                       "19:00"
-                    <span style="margin-right: 8px;">
-                      "⏱"
+                    <span class="meta-stuk">
+                      <i class="fa-solid fa-stopwatch">
                       "90"
                       "'"
-                    <span>
-                      "👥"
+                    <span class="meta-stuk">
+                      <i class="fa-solid fa-user-check">
                       "11"
                       "/"
                       "14"

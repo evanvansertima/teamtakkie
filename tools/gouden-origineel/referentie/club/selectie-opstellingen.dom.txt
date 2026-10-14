@@ -101,7 +101,8 @@
         <div>
           <button class="formatie-keuze-knop">
             <span class="formatie-keuze-naam">
-              "⚽ 4-3-3A"
+              <i class="fa-solid fa-futbol">
+              "4-3-3A"
             <span class="formatie-keuze-hint">
               "Wijzig ▼"
           <div style="margin-bottom: 8px; font-size: 13px; color: var(--grijs-donker); font-weight: 400; text-align: center;">

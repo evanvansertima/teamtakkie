@@ -432,8 +432,13 @@ function deelWedstrijdVooraf(w, spelers, uitgebreid) {
   }
 
   /* Wie heeft zich al afgemeld — geen vraag om op te geven */
+  /* Wie bij Aanwezigheid op iets staat dat niet meetelt (afgemeld,
+     ziek, blessure, werk…). De oude opgave "nee" rekent
+     aanwezigheidStatussen zelf om naar afgemeld. */
+  var statussenNu = aanwezigheidStatussen(w, spelers||[]);
   var afgemeld = (spelers||[]).filter(function(s){
-    return opgaveVanSpeler(w.opgave, s.id)==="nee";
+    var st = statussenNu[s.id];
+    return st!=="open" && !teltAlsAanwezig(st);
   }).map(function(s){ return s.naam; });
   if(afgemeld.length) regels = regels.concat(["", "❌ *Afgemeld:* "+afgemeld.join(", ")]);
   regels = regels.concat(["", "❗ Kun je niet? Meld je op tijd af."]);
@@ -2581,6 +2586,43 @@ function WedstrijdOpstelling({ wedstrijd, spelers, onOpslaan, onSluiten, inVenst
       .map(function(r){ return r.spelerId; });
   });
 
+  /* Bewaarde opstellingen (tot vijf) en die van de vorige wedstrijd */
+  const [sjablonen, setSjablonen] = useState(function(){ return laadJson(OPSTELLING_SJABLONEN_KEY); });
+  const [sjabloonNaam, setSjabloonNaam] = useState(null);   // null = invulveld dicht
+  const laatste = laatsteOpstelling(laadWedstrijden(), wedstrijd);
+  function bewaarSjablonen(lijst) { setSjablonen(lijst); slaJson(OPSTELLING_SJABLONEN_KEY, lijst); }
+  function sjabloonBewaren() {
+    var r = bewaarOpstellingSjabloon(sjablonen, {naam:sjabloonNaam||"", formatie:formatie, toewijzing:toewijzing, wisselIds:wisselIds});
+    if (r.fout) { meldFout(r.fout); return; }
+    bewaarSjablonen(r.lijst);
+    setSjabloonNaam(null);
+    meldGoed(r.vervangen ? "Opstelling overschreven" : "Opstelling bewaard");
+  }
+  function nietBeschikbaar() {
+    var st = aanwezigheidStatussen(wedstrijd, spelers);
+    return spelers.filter(function(s){ return st[s.id]!=="open" && (!teltAlsAanwezig(st[s.id]) || st[s.id]==="uitgeleend"); })
+                  .map(function(s){ return s.id; });
+  }
+  function sjabloonToepassen(sj) {
+    /* Wie bij Aanwezigheid afgemeld, ziek of uitgeleend is, komt er niet in. */
+    var r = pasOpstellingToe(sj, spelers, nietBeschikbaar());
+    var vorig = {formatie:formatie, toewijzing:toewijzing, wisselIds:wisselIds};
+    setFormatie(r.formatie); setToewijzing(r.toewijzing); setWisselIds(r.wisselIds);
+    var namen = r.overgeslagen.map(function(id){ var sp = spelers.find(function(x){ return String(x.id)===String(id); }); return sp ? sp.naam.split(" ")[0] : null; }).filter(Boolean);
+    toon("\u201c"+sj.naam+"\u201d staat klaar"
+      + (r.overgeslagen.length ? " · " + r.overgeslagen.length + " plek" + (r.overgeslagen.length===1?"":"ken") + " leeg" + (namen.length ? " (" + namen.join(", ") + " is er niet)" : "") : "")
+      + ". Vergeet niet op te slaan.", {
+      actieLabel: "Terug",
+      actie: function(){ setFormatie(vorig.formatie); setToewijzing(vorig.toewijzing); setWisselIds(vorig.wisselIds); }
+    });
+  }
+  function sjabloonWeg(sj) {
+    bewaarSjablonen(sjablonen.filter(function(x){ return x.id!==sj.id; }));
+    toon("\u201c"+sj.naam+"\u201d verwijderd", {
+      actie: function(){ bewaarSjablonen(laadJson(OPSTELLING_SJABLONEN_KEY).concat([sj])); }
+    });
+  }
+
   const posities = FORMATIES_DATA[formatie] || FORMATIES_DATA["4-3-3A"];
   function spelerVan(id) { return spelers.find(function(s){ return s.id===id; }) || null; }
   const opgesteldeIds = Object.keys(toewijzing).map(function(k){ return toewijzing[k]; }).filter(Boolean);
@@ -2714,8 +2756,11 @@ function WedstrijdOpstelling({ wedstrijd, spelers, onOpslaan, onSluiten, inVenst
             title="Vul de lege plekken met passende spelers"
             onClick={function(){
               var bezetIds = Object.keys(toewijzing).map(function(k){ return toewijzing[k]; }).filter(Boolean);
+              /* Wie bij Aanwezigheid afgemeld, ziek of uitgeleend is, zetten
+                 we niet op het veld. */
+              var weg = nietBeschikbaar();
               var vrij = spelers.filter(function(s){
-                return bezetIds.indexOf(s.id) < 0 && wisselIds.indexOf(s.id) < 0;
+                return bezetIds.indexOf(s.id) < 0 && wisselIds.indexOf(s.id) < 0 && weg.indexOf(s.id) < 0;
               });
               var lege = posities.filter(function(p){ return !toewijzing[p.id]; });
               if (lege.length === 0) { toon("Alle plekken zijn al bezet."); return; }
@@ -2731,6 +2776,61 @@ function WedstrijdOpstelling({ wedstrijd, spelers, onOpslaan, onSluiten, inVenst
           <GetalVeld className="formulier-input" style={{marginBottom:0}} min={20} max={120} leeg={90}
             waarde={speelduur} opWaarde={setSpeelduur} />
         </div>
+      </div>
+
+      {/* Bewaarde opstellingen — onder de formatie (verzoek van Evan) */}
+      <div className="kaart opst-sjablonen-kaart">
+        <div className="kaart-titel" style={{justifyContent:"space-between",gap:8,flexWrap:"wrap"}}>
+          <span><i className="fa-solid fa-bookmark"/> Bewaarde opstellingen</span>
+          <span style={{fontWeight:400,textTransform:"none",letterSpacing:0,fontSize:12,color:"var(--grijs-donker)"}}>
+            {sjablonen.length+" van "+OPSTELLING_SJABLONEN_MAX}
+          </span>
+        </div>
+        <div className="opst-sjablonen">
+          {laatste && (
+            <button className="opst-sjabloon laatste" onClick={function(){ sjabloonToepassen(laatste); }}
+              title={"De opstelling van "+(laatste.bron.tegenstander ? "vs. "+laatste.bron.tegenstander : "de vorige wedstrijd")}>
+              <i className="fa-solid fa-clock-rotate-left"/>
+              <span className="opst-sjabloon-tekst">
+                <b>Laatste opstelling</b>
+                <small>{laatste.formatie + (laatste.bron.tegenstander ? " · vs. "+laatste.bron.tegenstander : "")}</small>
+              </span>
+            </button>
+          )}
+          {sjablonen.map(function(sj){
+            return (
+              <span key={sj.id} className="opst-sjabloon">
+                <button className="opst-sjabloon-kies" onClick={function(){ sjabloonToepassen(sj); }}>
+                  <i className="fa-solid fa-bookmark"/>
+                  <span className="opst-sjabloon-tekst"><b>{sj.naam}</b><small>{sj.formatie}</small></span>
+                </button>
+                <button className="opst-sjabloon-weg" aria-label={"Verwijder "+sj.naam} title="Verwijderen"
+                  onClick={function(){ sjabloonWeg(sj); }}><i className="fa-solid fa-xmark"/></button>
+              </span>
+            );
+          })}
+          {!laatste && !sjablonen.length && (
+            <p style={{fontSize:12,color:"var(--grijs-donker)",fontWeight:400,margin:0}}>
+              Nog niets bewaard. Zet je opstelling neer en bewaar hem met een naam.
+            </p>
+          )}
+        </div>
+        {sjabloonNaam===null ? (
+          <button className="knop lijn klein" style={{marginTop:10}}
+            disabled={!opgesteldeIds.length}
+            onClick={function(){ setSjabloonNaam(""); }}>
+            <i className="fa-solid fa-floppy-disk"/> Deze opstelling bewaren
+          </button>
+        ) : (
+          <div className="opst-sjabloon-bewaar">
+            <input className="formulier-input" autoFocus maxLength={40} value={sjabloonNaam}
+              placeholder="Naam, bijv. Thuis 4-3-3"
+              onChange={function(e){ setSjabloonNaam(e.target.value); }}
+              onKeyDown={function(e){ if (e.key==="Enter") sjabloonBewaren(); if (e.key==="Escape") setSjabloonNaam(null); }} />
+            <button className="knop klein" onClick={sjabloonBewaren}><i className="fa-solid fa-check"/> Bewaar</button>
+            <button className="knop lijn klein" onClick={function(){ setSjabloonNaam(null); }}>Annuleer</button>
+          </div>
+        )}
       </div>
 
       <div className="md-raster">
@@ -4306,7 +4406,7 @@ function BewaarMelder({ teller }) {
    iemand weg. Ze staan naast elkaar omdat het dezelfde zaterdag is en
    dezelfde vraag: wie speelt er waar.
 
-   Deze kaart verschijnt vanzelf zodra je bij de opgave iemand op
+   Deze kaart verschijnt vanzelf zodra je bij Aanwezigheid iemand op
    uitgeleend zet. Je hoeft dus niet eerst hier te zijn geweest om te
    weten dat dit bestaat.
    ══════════════════════════════════════════════════════════ */
@@ -5049,7 +5149,6 @@ function WedstrijdDetail({ wedstrijd, spelers: vasteSelectie, onTerug, onBewerke
   const [resetOpen,setResetOpen]=useState(false);
   const [deelOpen,setDeelOpen]=useState(false);
   const [bevestig,setBevestig]=useState(false);
-  const [opgave,setOpgaveLijst]=useState(wedstrijd.opgave||[]);
   const res = resultaat(wedstrijd);
   const gespeeld = wedstrijd.status==="gespeeld";
   const wissels = wedstrijd.wissels||[];
@@ -5153,11 +5252,14 @@ function WedstrijdDetail({ wedstrijd, spelers: vasteSelectie, onTerug, onBewerke
     });
   }
 
-  function wijzigOpgave(speler, status) {
-    var huidig = opgaveVanSpeler(opgave, speler.id);
-    var nieuw = zetOpgave(opgave, speler, huidig===status ? "onbekend" : status);
-    setOpgaveLijst(nieuw);
-    onUitslagOpslaan(Object.assign({}, wedstrijd, {opgave:nieuw}));
+  /* Bij een gespeelde wedstrijd laat Aanwezigheid zien wat de opstelling
+     al zegt (basis of bank = aanwezig), zolang je daar niets anders
+     invult. Precies wat de opkomst ook doet, zie presentieVanWedstrijd. */
+  function aanwezigUitOpstelling(spelerId) {
+    if (!gespeeld) return null;
+    var r = (wedstrijd.opstelling||[]).filter(function(x){ return String(x.spelerId)===String(spelerId); })[0];
+    if (!r) return null;
+    return (r.spelStatus||"basis")==="afwezig" ? "afwezig" : "aanwezig";
   }
 
   const eigenDoelpunten = wedstrijd.scorers?.filter(s=>s.eigenTeam)||[];
@@ -5550,27 +5652,16 @@ function WedstrijdDetail({ wedstrijd, spelers: vasteSelectie, onTerug, onBewerke
                         </div>
                       )}
 
-                      {/* Opgave vooraf */}
-                      {!gespeeld && spelers.length>0 && (
-                        <div className="kaart detail-sectie">
-                          <div className="kaart-titel"><i className="fa-solid fa-clipboard-check"/> Wie kan er spelen?</div>
-                          <SpelerStatusRaster
-                            spelers={spelers}
-                            statussen={spelers.reduce(function(o,s){ o[s.id]=opgaveVanSpeler(opgave,s.id); return o; },{})}
-                            opties={OPGAVE_KEUZES}
-                            standaard="onbekend"
-                            onWissel={function(speler,status){
-                              var nieuw = zetOpgave(opgave, speler, status);
-                              setOpgaveLijst(nieuw);
-                              onUitslagOpslaan(Object.assign({}, wedstrijd, {opgave:nieuw}));
-                            }}
-                            onAlles={function(status){
-                              var nieuw = opgave;
-                              spelers.forEach(function(s){ nieuw = zetOpgave(nieuw, s, status); });
-                              setOpgaveLijst(nieuw);
-                              onUitslagOpslaan(Object.assign({}, wedstrijd, {opgave:nieuw}));
-                            }} />
-                        </div>
+                      {/* Aanwezigheid — vervangt "Wie kan er spelen?" met ja/misschien/nee
+                          (besluit van Evan, 14 oktober 2026). Zonder de gasten: die
+                          horen niet bij de selectie en tellen niet in de opkomst. */}
+                      {(vasteSelectie||[]).length>0 && (
+                        <AanwezigheidKaart item={wedstrijd} spelers={vasteSelectie}
+                          terugval={aanwezigUitOpstelling}
+                          uitleg={gespeeld && !(wedstrijd.aanwezigheid||[]).length
+                            ? "Overgenomen uit de opstelling. Pas aan als iemand bijvoorbeeld ziek of uitgeleend was."
+                            : null}
+                          onWijzig={function(lijst){ onUitslagOpslaan(Object.assign({}, wedstrijd, {aanwezigheid:lijst})); }} />
                       )}
 
                       {/* Hier stond een lege <div className="w-kolom">.

@@ -2474,6 +2474,33 @@
       -webkit-tap-highlight-color:transparent; transition:transform .08s; }
     .status-optie:active { transform:scale(.98); }
 
+    /* Een icoon met zijn tekst blijft bij elkaar, ook op een smal scherm */
+    .meta-stuk { display:inline-flex; align-items:center; gap:4px; white-space:nowrap; margin-right:10px; }
+    .meta-stuk i { opacity:.8; }
+    /* Gele en rode kaart als eigen icoon, in plaats van een emoji-vierkantje */
+    .kaartje { display:inline-block; width:9px; height:12px; border-radius:2px; vertical-align:-1px; box-shadow:0 0 0 1px rgba(0,0,0,.12); }
+    .kaartje.geel { background:#facc15; } .kaartje.rood { background:#dc2626; }
+    /* Tekenveld: teamkleuren en trainer */
+    .team-kleuren { display:flex; flex-wrap:wrap; gap:7px; }
+    .team-kleur { width:30px; height:30px; border-radius:50%; border:3px solid var(--wit); box-shadow:0 0 0 1.5px var(--grijs); cursor:pointer; padding:0; -webkit-tap-highlight-color:transparent; }
+    .team-kleur.actief { box-shadow:0 0 0 2.5px var(--tekst); transform:scale(1.08); }
+    .trainer-knop { display:inline-flex; align-items:center; gap:8px; width:100%; height:auto; justify-content:flex-start; padding:6px 10px; }
+    .trainer-knop.actief { border-color:#111827 !important; background:#111827 !important; color:#fbbf24 !important; }
+    .trainer-stip { display:inline-flex; align-items:center; justify-content:center; width:20px; height:20px; border-radius:50%; background:#111827; color:#fbbf24; border:2px solid #fbbf24; font-weight:900; font-size:11px; }
+    /* Bewaarde opstellingen (Wedstrijd → Opstelling) */
+    .opst-sjablonen { display:flex; flex-wrap:wrap; gap:8px; }
+    .opst-sjabloon { display:inline-flex; align-items:stretch; border:2px solid var(--grijs); border-radius:12px; background:var(--wit); overflow:hidden; max-width:100%; }
+    button.opst-sjabloon, .opst-sjabloon-kies { display:inline-flex; align-items:center; gap:9px; padding:8px 12px; background:none; border:none; cursor:pointer; color:var(--tekst); font-family:inherit; text-align:left; min-width:0; -webkit-tap-highlight-color:transparent; }
+    button.opst-sjabloon { border:2px solid var(--blauw-licht); background:var(--grijs-licht); }
+    .opst-sjabloon i { color:var(--blauw); }
+    .opst-sjabloon-tekst { display:flex; flex-direction:column; min-width:0; }
+    .opst-sjabloon-tekst b { font-size:13px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .opst-sjabloon-tekst small { font-size:11px; color:var(--grijs-donker); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .opst-sjabloon:hover, button.opst-sjabloon:hover { border-color:var(--blauw); }
+    .opst-sjabloon-weg { border:none; border-left:1px solid var(--grijs); background:none; padding:0 11px; cursor:pointer; color:var(--grijs-donker); }
+    .opst-sjabloon-weg:hover { color:var(--gevaar); }
+    .opst-sjabloon-bewaar { display:flex; gap:8px; margin-top:10px; flex-wrap:wrap; }
+    .opst-sjabloon-bewaar .formulier-input { flex:1 1 180px; margin-bottom:0; }
     .pres-filter { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:14px; }
     .pres-filter-knop { display:inline-flex; align-items:center; gap:7px; border:2px solid var(--grijs);
       background:var(--wit); color:var(--grijs-donker); border-radius:20px; padding:6px 13px;

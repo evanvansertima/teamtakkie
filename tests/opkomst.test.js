@@ -64,6 +64,8 @@ const regelsOpkomst = fs.readFileSync(OPKOMST, "utf8").split("\n");
 
 /* De vierde variant (spelerInzichten) zit sinds P3 stap 3 in
    src/domein/statistieken.js. */
+const WEDSTRIJDEN = path.join(__dirname, "..", "src", "domein", "wedstrijden.js");
+const regelsWedstrijden = fs.readFileSync(WEDSTRIJDEN, "utf8").split("\n");
 const STATISTIEKEN = path.join(__dirname, "..", "src", "domein", "statistieken.js");
 const regelsStatistieken = fs.readFileSync(STATISTIEKEN, "utf8").split("\n");
 
@@ -177,6 +179,10 @@ try {
     knipFunctieOpkomst("afwezigheidTeltMee") + "\n" +
     knipFunctieOpkomst("inAfwezigheid") + "\n" +
     knipFunctieOpkomst("afwezigheidOp") + "\n" +
+    knipConstUit(regelsWedstrijden, "src/domein/wedstrijden.js", "WEDSTRIJD_SOORTEN") + "\n" +
+    knipFunctieUit(regelsWedstrijden, "src/domein/wedstrijden.js", "wedstrijdSoort") + "\n" +
+    knipFunctieOpkomst("nogNietGeweest") + "\n" +
+    knipFunctieOpkomst("presentieVanWedstrijd") + "\n" +
     knipFunctieOpkomst("presentieUitOpstelling") + "\n" +
     knipFunctieOpkomst("presentieGebeurtenissen") + "\n" +
     knipFunctieOpkomst("presentieTabel") + "\n" +

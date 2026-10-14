@@ -86,7 +86,7 @@ function TeamStatistieken() {
     return w.score.fch>w.score.teg ? "W" : w.score.fch===w.score.teg ? "G" : "V";
   });
   const trainingenChrono = trainingen.slice().filter(function(t){
-    return t.aanwezigheid && t.aanwezigheid.length>0;
+    return t.aanwezigheid && t.aanwezigheid.length>0 && !nogNietGeweest(t.datum);
   }).sort(function(a,b){ return new Date(a.datum)-new Date(b.datum); }).slice(-10);
   const opkomstReeks = trainingenChrono.map(function(t){
     var o = opkomstVan(t, afwezigheden); return o ? o.pct : 0;
@@ -95,16 +95,13 @@ function TeamStatistieken() {
 
   /* Presentie over trainingen, wedstrijden en activiteiten samen */
   const alleGebeurtenissen = presentieGebeurtenissen(wedstrijden, trainingen, activiteiten);
-  const gefilterdeGeb = alleGebeurtenissen.filter(function(g){
-    return presFilter==="alles" || g.soort===presFilter;
-  });
+  const gefilterdeGeb = alleGebeurtenissen.filter(function(g){ return presentiePast(g, presFilter); });
   /* Standaard de laatste twaalf, want breder past niet op een scherm */
   const presGeb = alleKolommen ? gefilterdeGeb : gefilterdeGeb.slice(-12);
   const presTabel = presentieTabel(spelers, presGeb, afwezigheden);
-  const presFilterLabel = PRESENTIE_SOORTEN.filter(function(s){ return s.id===presFilter; })[0].label;
+  const presFilterLabel = presentieSoortInfo(presFilter).label;
   const aantalPerSoort = PRESENTIE_SOORTEN.reduce(function(o,s){
-    o[s.id] = s.id==="alles" ? alleGebeurtenissen.length
-      : alleGebeurtenissen.filter(function(g){ return g.soort===s.id; }).length;
+    o[s.id] = alleGebeurtenissen.filter(function(g){ return presentiePast(g, s.id); }).length;
     return o;
   }, {});
 
@@ -301,8 +298,8 @@ function TeamStatistieken() {
           <div style={{fontSize:13,color:"var(--grijs-donker)",padding:"10px 0",lineHeight:1.6}}>
             {presFilter==="activiteit"
               ? "Nog geen activiteiten met een presentielijst. Voeg er een toe bij het bewerken van een activiteit in de agenda."
-              : presFilter==="wedstrijd"
-                ? "Nog geen gespeelde wedstrijden met een opstelling."
+              : presFilter==="wedstrijd" || presentieSoortInfo(presFilter).wedSoort
+                ? "Nog geen gespeelde wedstrijden van deze soort met een opstelling of aanwezigheid."
                 : "Nog niets om te tonen."}
           </div>
         ) : (
@@ -359,7 +356,7 @@ function TeamStatistieken() {
                             + (pid && vorig   && vorig.periode   && vorig.periode.id===pid   ? " door-links"  : "")
                             + (pid && volgend && volgend.periode && volgend.periode.id===pid ? " door-rechts" : "")
                             + (c && c.meetelt===false ? " buiten-telling" : "");
-                          var tip = !c ? "Niet in de selectie"
+                          var tip = !c ? "Niets ingevuld"
                             : c.periode
                               ? c.label + " · " + afwezigheidPeriodeTekst(c.periode)
                                 + (c.periode.reden ? " · " + c.periode.reden : "")
@@ -372,7 +369,7 @@ function TeamStatistieken() {
                                     {c.id==="geblesseerd" || c.id==="blessure"
                                       ? <i className="fa-solid fa-hospital-symbol"/> : c.letter}
                                   </span>
-                                : <span className="opk-cel leeg" title="Niet in de selectie">·</span>}
+                                : <span className="opk-cel leeg" title="Niets ingevuld">·</span>}
                             </td>
                           );
                         })}
@@ -414,8 +411,9 @@ function TeamStatistieken() {
 
             <div style={{display:"flex",alignItems:"center",gap:12,flexWrap:"wrap",marginTop:10}}>
               <p style={{fontSize:11,color:"var(--grijs-donker)",fontWeight:400,lineHeight:1.6,flex:1,minWidth:200,margin:0}}>
-                Te laat komen telt mee als aanwezig. Een punt betekent dat de speler er toen niet bij hoorde.
-                Bij wedstrijden komt de presentie uit de opstelling.
+                Aanwezig, te laat en uitgeleend tellen als aanwezig. Een punt betekent dat er voor die speler niets is ingevuld.
+                Bij wedstrijden telt wat je bij Aanwezigheid invult; wie daar open staat, komt uit de opstelling.
+                Wat nog moet komen telt niet mee.
                 {presTabel.buiten>0 && " Een doorlopende balk is een vastgelegde periode; blessure, ziekte en schorsing tellen niet mee in het percentage."}
               </p>
               {gefilterdeGeb.length>12 && (
@@ -592,7 +590,7 @@ function IndividuStatistieken() {
       )}
       {subtab==="betrokkenheid" && (
         <div className="kaart">
-          <div className="kaart-titel">❤️ Betrokkenheid</div>
+          <div className="kaart-titel"><i className="fa-solid fa-heart"/> Betrokkenheid</div>
           <div className="stat-raster">
             <div className="stat-pill"><div className="stat-pill-getal">{trainAanw+"/"+trainMee}</div><div className="stat-pill-label">Trainingen aanwezig</div></div>
             <div className="stat-pill"><div className="stat-pill-getal">{trainPct}%</div><div className="stat-pill-label">Opkomst %</div></div>
@@ -778,7 +776,7 @@ function LiveAnalyse() {
       <div>
         <div className="pagina-header" style={{marginBottom:14}}>
           <div className="pagina-header-tekst">
-            <h2 style={{fontSize:20,color:"var(--blauw)"}}>🔴 Live Analyse</h2>
+            <h2 style={{fontSize:20,color:"var(--blauw)"}}><i className="fa-solid fa-circle" style={{color:"var(--gevaar)",fontSize:12,verticalAlign:"middle",marginRight:6}}/>Live Analyse</h2>
             <p style={{fontSize:12,color:"var(--grijs-donker)"}}>Kies een wedstrijd</p>
           </div>
         </div>
@@ -852,7 +850,7 @@ function LiveAnalyse() {
         <div className="live-timer-inline">
           <button style={{background:"none",border:"none",color:loopt?"#7dffb3":"rgba(255,255,255,.6)",fontSize:22,cursor:"pointer",padding:"0 4px"}} onClick={loopt?function(){setLoopt(false);}:startTimer}>{loopt?"⏸":"▶"}</button>
           <div className="live-timer-inline-getal" style={{color:loopt?"#7dffb3":"white"}}>{formatTijd(seconden)}</div>
-          <div className="live-timer-inline-min">{huidigMinuut()+"' "+(modus==="aftellen"?"⏲":"⏱")}</div>
+          <div className="live-timer-inline-min">{huidigMinuut()+"' "}<i className={modus==="aftellen"?"fa-solid fa-hourglass-half":"fa-solid fa-stopwatch"}/></div>
           <button style={{background:"none",border:"1px solid rgba(255,255,255,.3)",color:"rgba(255,255,255,.7)",fontSize:10,cursor:"pointer",padding:"3px 7px",borderRadius:6,fontFamily:"'Helvetica Neue',Arial",fontWeight:700}} onClick={resetTimer}>{"↺"}</button>
         </div>
         <div className="live-subtabs">
@@ -902,7 +900,7 @@ function LiveAnalyse() {
                 <button className="knop succes klein" onClick={logEvent}><i className="fa-solid fa-check"/> Log</button>
               </div>
 
-              <div style={{fontSize:11,fontWeight:700,color:"var(--grijs-donker)",marginBottom:6}}>📍 Veldzone (optioneel)</div>
+              <div style={{fontSize:11,fontWeight:700,color:"var(--grijs-donker)",marginBottom:6}}><i className="fa-solid fa-location-dot"/> Veldzone (optioneel)</div>
               <div className="zone-veld">
                 <div style={{background:"#0d1b2a",textAlign:"center",fontSize:10,color:"rgba(255,255,255,.55)",padding:"3px 0",fontWeight:700,letterSpacing:".5px"}}>{"▲ DOEL TEGENSTANDER"}</div>
                 <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr"}}>
@@ -923,7 +921,7 @@ function LiveAnalyse() {
 
               {spelers.length>0 && (
                 <div>
-                  <div style={{fontSize:11,fontWeight:700,color:"var(--grijs-donker)",margin:"10px 0 6px"}}>👤 Speler (optioneel)</div>
+                  <div style={{fontSize:11,fontWeight:700,color:"var(--grijs-donker)",margin:"10px 0 6px"}}><i className="fa-solid fa-user"/> Speler (optioneel)</div>
                   <div className="speler-keuze-grid">
                     {spelers.map(function(sp){
                       var gesP=gekozenSpeler===sp.id;
@@ -1002,13 +1000,13 @@ function LiveAnalyse() {
               </thead>
               <tbody>
                 {[
-                  {label:"⚽ Doelpunten",   fch:scoreFCH,     teg:scoreTeg},
-                  {label:"🎯 Schoten",     fch:fchSchoten,   teg:tegSchoten},
-                  {label:"🎯 Op doel",     fch:fchOpDoel,    teg:tegOpDoel},
-                  {label:"⛳ Corners",       fch:fchCorners,   teg:tegCorners},
-                  {label:"🟨 Gele krt",    fch:fchGeel,      teg:tegGeel},
-                  {label:"💪 Tackles",     fch:fchTackles,   teg:0},
-                  {label:"🥅 Reddingen",   fch:fchReddingen, teg:0},
+                  {label:"Doelpunten", icoon:"fa-solid fa-futbol",          fch:scoreFCH,     teg:scoreTeg},
+                  {label:"Schoten",    icoon:"fa-solid fa-bullseye",        fch:fchSchoten,   teg:tegSchoten},
+                  {label:"Op doel",    icoon:"fa-solid fa-crosshairs",      fch:fchOpDoel,    teg:tegOpDoel},
+                  {label:"Corners",    icoon:"fa-solid fa-flag",            fch:fchCorners,   teg:tegCorners},
+                  {label:"Gele krt",   kaartje:"geel",                      fch:fchGeel,      teg:tegGeel},
+                  {label:"Tackles",    icoon:"fa-solid fa-shoe-prints",     fch:fchTackles,   teg:0},
+                  {label:"Reddingen",  icoon:"fa-solid fa-hand",            fch:fchReddingen, teg:0},
                 ].map(function(row,i){
                   var tot=row.fch+row.teg||1;
                   var pF=Math.round(row.fch/tot*100);
@@ -1018,7 +1016,9 @@ function LiveAnalyse() {
                         <div style={{fontWeight:700,fontSize:18,fontFamily:"'Helvetica Neue',Arial",color:"var(--blauw)"}}>{row.fch}</div>
                       </td>
                       <td style={{textAlign:"center",paddingBottom:10}}>
-                        <div style={{fontSize:11,color:"var(--grijs-donker)",marginBottom:3}}>{row.label}</div>
+                        <div style={{fontSize:11,color:"var(--grijs-donker)",marginBottom:3}}>
+                          {row.kaartje ? <span className={"kaartje "+row.kaartje}/> : <i className={row.icoon}/>}{" "+row.label}
+                        </div>
                         <div style={{height:6,borderRadius:3,overflow:"hidden",display:"flex"}}>
                           <div style={{width:pF+"%",background:"var(--blauw)"}}/>
                           <div style={{flex:1,background:"var(--gevaar)"}}/>
@@ -1036,7 +1036,7 @@ function LiveAnalyse() {
 
           {BLOKKEN.length>0 && (
             <div className="kaart">
-              <div className="kaart-titel">📈 Momentum per 15 min</div>
+              <div className="kaart-titel"><i className="fa-solid fa-chart-line"/> Momentum per 15 min</div>
               {BLOKKEN.map(function(blok,i){
                 var tot=blok.fch+blok.teg||1;
                 var pF=Math.round(blok.fch/tot*100);
@@ -1086,8 +1086,8 @@ function LiveAnalyse() {
         <div className="kaart">
           <div className="kaart-titel"><i className="fa-solid fa-stopwatch"/> Timer instellingen</div>
           <div style={{display:"flex",gap:8,marginBottom:16,justifyContent:"center"}}>
-            <button className="filter-chip" style={{borderColor:modus==="stopwatch"?"var(--blauw)":"var(--grijs)",color:modus==="stopwatch"?"var(--blauw)":"var(--grijs-donker)"}} onClick={function(){wisselModus("stopwatch");}}>⏱ Stopwatch</button>
-            <button className="filter-chip" style={{borderColor:modus==="aftellen"?"var(--blauw)":"var(--grijs)",color:modus==="aftellen"?"var(--blauw)":"var(--grijs-donker)"}} onClick={function(){wisselModus("aftellen");}}>⏲ Aftellen</button>
+            <button className="filter-chip" style={{borderColor:modus==="stopwatch"?"var(--blauw)":"var(--grijs)",color:modus==="stopwatch"?"var(--blauw)":"var(--grijs-donker)"}} onClick={function(){wisselModus("stopwatch");}}><i className="fa-solid fa-stopwatch"/> Stopwatch</button>
+            <button className="filter-chip" style={{borderColor:modus==="aftellen"?"var(--blauw)":"var(--grijs)",color:modus==="aftellen"?"var(--blauw)":"var(--grijs-donker)"}} onClick={function(){wisselModus("aftellen");}}><i className="fa-solid fa-hourglass-half"/> Aftellen</button>
           </div>
           {modus==="aftellen" && (
             <div className="formulier-groep">
