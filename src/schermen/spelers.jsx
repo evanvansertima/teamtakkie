@@ -175,7 +175,13 @@ function SpelerFormulier({ speler, onOpslaan, onSluiten }) {
             var aan = form.beeldSoort===k.id;
             return (
               <button key={k.id} type="button" className={"beeld-keuze-knop"+(aan?" actief":"")}
-                onClick={function(){ set("beeldSoort", k.id); }}>
+                onClick={function(){
+                  setForm(function(f){
+                    var n = {...f, beeldSoort:k.id};
+                    if (k.id==="avatar" && !f.avatar && !speler) n.avatar = avatarUitAuto(f.naam);
+                    return n;
+                  });
+                }}>
                 <i className={k.icoon}/> {k.label}
               </button>
             );

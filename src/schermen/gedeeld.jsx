@@ -473,8 +473,11 @@ function popKeuze(lijst, i, terug) {
   return (Number.isInteger(n) && n >= 0 && n < lijst.length) ? n : terug;
 }
 
-function SpelerPop({ naam, shirt, vlak, grootte, tenueSet: tset, avatar }) {
+function SpelerPop({ naam, shirt, vlak, grootte, tenueSet: tset, avatar, uitsnede }) {
   const g = popGetal(naam);
+  /* Zelfgemaakt (sinds 14 oktober 2026): een volledige avatar met
+     geslacht, kapsel en gezicht, getekend door PopHoofd hieronder. */
+  const v2 = avatar ? avatarNetjes(avatar, naam) : null;
   /* Een zelfgemaakte avatar wint; wat er niet in staat komt uit de naam. */
   const auto = popAvatarVan(naam);
   const eigen = avatar || {};
@@ -486,7 +489,7 @@ function SpelerPop({ naam, shirt, vlak, grootte, tenueSet: tset, avatar }) {
   const baard = (typeof eigen.baard === "boolean" ? eigen.baard : auto.baard) && kapsel !== 5;
   /* Zelfgemaakt krijgt een eigen id (anders delen twee varianten in de
      kapselkiezer hun uitsnede); het automatische poppetje houdt het oude. */
-  const id = "pop"+(g % 1000000)+"-"+kapsel+(avatar ? "-"+POP_HUID.indexOf(huid)+POP_HAAR.indexOf(haar)+(baard?"b":"") : "");
+  const id = v2 ? "pa"+(avatarGetal(JSON.stringify(v2)+naam) % 10000000) : "pop"+(g % 1000000)+"-"+kapsel;
   const maat = grootte || "100%";
   /* De schouders krijgen hetzelfde patroon als het shirt. Het patroon
      wordt in het tenuevel van 120 breed gerekend; hier wordt het naar
@@ -498,12 +501,12 @@ function SpelerPop({ naam, shirt, vlak, grootte, tenueSet: tset, avatar }) {
   /* Geen achtergrond en geen ronde uitsnede: alleen hoofd en schouders,
      zodat het poppetje overal los op de ondergrond staat. */
   return (
-    <svg viewBox="0 0 64 64" width={maat} height={maat} aria-hidden="true"
+    <svg viewBox={uitsnede || "0 0 64 64"} width={maat} height={maat} aria-hidden="true"
       style={{display:"block",overflow:"visible"}}>
       <defs>
         {patroon.length > 0 && <clipPath id={id+"-t"}><path d={SCHOUDER}/></clipPath>}
-        {haarH>0 && <clipPath id={id+"-h"}><rect x="13" y="5" width="38" height={haarH+5}/></clipPath>}
-        {baard && <clipPath id={id+"-b"}><rect x="16" y="28" width="32" height="18"/></clipPath>}
+        {!v2 && haarH>0 && <clipPath id={id+"-h"}><rect x="13" y="5" width="38" height={haarH+5}/></clipPath>}
+        {!v2 && baard && <clipPath id={id+"-b"}><rect x="16" y="28" width="32" height="18"/></clipPath>}
       </defs>
       {/* schouders en shirt, onderaan afgesneden door de rand */}
       <path d={SCHOUDER} fill={trui}/>
@@ -523,6 +526,7 @@ function SpelerPop({ naam, shirt, vlak, grootte, tenueSet: tset, avatar }) {
         </g>
       )}
       <path d="M25.6 42.8L32 50.6l6.4-7.8-3-1.6h-6.8z" fill="#ffffff" opacity=".34"/>
+      {v2 ? <PopHoofd a={v2} id={id}/> : (<React.Fragment>
       {/* hals met schaduw */}
       <rect x="27.3" y="31" width="9.4" height="11" rx="4.7" fill={popDonker(huid)}/>
       {/* oren en hoofd */}
@@ -544,7 +548,106 @@ function SpelerPop({ naam, shirt, vlak, grootte, tenueSet: tset, avatar }) {
       {kapsel===4 && (<g fill={haar}>
         <circle cx="23.5" cy="13.5" r="4.6"/><circle cx="32" cy="10.8" r="5.1"/><circle cx="40.5" cy="13.5" r="4.6"/>
       </g>)}
+      </React.Fragment>)}
     </svg>
+  );
+}
+
+/* ══ PopHoofd — de zelfgemaakte avatar ══════════════════════════
+   Alles in hetzelfde vel van 64 bij 64 als SpelerPop: hoofd rond
+   (32,24) met straal 13, ogen op hoogte 23. Volgorde van tekenen:
+   haar achter het hoofd (lang, afro, staart), hals, oren, hoofd,
+   baard, gezicht, en dan het haar op het hoofd. De keuzes zelf staan
+   in src/domein/avatar.js. */
+const POP_HOOFD = {
+  rond:  "M19 24A13 13 0 1 1 45 24A13 13 0 1 1 19 24Z",
+  ovaal: "M19.8 24.6A12.2 13.6 0 1 1 44.2 24.6A12.2 13.6 0 1 1 19.8 24.6Z",
+  smal:  "M19 24A13 13 0 0 1 45 24C45 32.5 38.8 38.3 32 38.6C25.2 38.3 19 32.5 19 24Z",
+  breed: "M19 24A13 13 0 0 1 45 24V29.5Q45 37.2 36.5 37.4H27.5Q19 37.2 19 29.5Z"
+};
+function PopHoofd({ a, id }) {
+  const huid = POP_HUID[a.huid], haar = POP_HAAR[a.haar], donker = popDonker(huid);
+  const oog = "#2b2118", vrouw = a.geslacht === "v";
+  const hoofd = POP_HOOFD[a.kin] || POP_HOOFD.rond;
+  const smalHoofd = a.kin === "ovaal" || a.kin === "smal";
+  /* De haarkap: een cirkel over het hoofd, tot een bepaalde hoogte. */
+  function kap(hoogte, extra) {
+    return <circle cx="32" cy="24.5" r="13.6" fill={haar} clipPath={"url(#"+id+"-k"+hoogte+")"} {...(extra||{})}/>;
+  }
+  const kapHoogte = {buzz:9, kort:10, stekels:9, scheiding:12, kuif:10, krullen:11, afro:9, bob:11,
+                     lang:12, staart:12, knot:12, vlechten:12}[a.kapsel] || 0;
+  const achter = {
+    afro:     <circle cx="32" cy="19" r="17.5" fill={haar}/>,
+    bob:      <path d="M17.2 22C17.2 13 23.5 8.6 32 8.6S46.8 13 46.8 22V35.5Q46.8 38 44 38H20Q17.2 38 17.2 35.5Z" fill={haar}/>,
+    lang:     <path d="M17 22C17 12.5 23.5 8.4 32 8.4S47 12.5 47 22L48.2 45.5Q32 49 15.8 45.5Z" fill={haar}/>,
+    staart:   <path d="M42.5 17Q53.5 21 50.8 36Q49.8 41.5 46.4 39.6Q49.2 31 43.2 24Z" fill={haar}/>,
+    knot:     <circle cx="32" cy="8.6" r="5.2" fill={haar}/>,
+    vlechten: (<g fill={haar}>
+                <rect x="15.4" y="20" width="4.6" height="24" rx="2.3"/><rect x="44" y="20" width="4.6" height="24" rx="2.3"/>
+                <circle cx="17.7" cy="45" r="1.8" fill={donker}/><circle cx="46.3" cy="45" r="1.8" fill={donker}/>
+              </g>)
+  }[a.kapsel];
+  const voor = {
+    buzz:      kap(9, {opacity:.55}),
+    kort:      kap(10),
+    stekels:   <g>{kap(9)}<path d="M19.5 18.5L21 11.5L24.5 15L26.5 8.5L29.8 13L32 7L34.2 13L37.5 8.5L39.5 15L43 11.5L44.5 18.5Z" fill={haar}/></g>,
+    scheiding: <g>{kap(12)}<path d="M19.2 22C19.6 13.5 26 10.4 33 10.6C40.5 10.8 45 15 44.9 21.5C41 15.5 33.5 13.6 27 15.2C23 16.2 20.5 18.5 19.2 22Z" fill={haar}/></g>,
+    kuif:      <g>{kap(10)}<ellipse cx="30" cy="11.6" rx="9.5" ry="4.6" fill={haar}/><ellipse cx="36.5" cy="10.6" rx="5" ry="3.6" fill={haar}/></g>,
+    krullen:   (<g>{kap(11)}<g fill={haar}>
+                  <circle cx="23.5" cy="13.5" r="4.6"/><circle cx="32" cy="10.8" r="5.1"/><circle cx="40.5" cy="13.5" r="4.6"/>
+                  <circle cx="19.8" cy="18.5" r="3.4"/><circle cx="44.2" cy="18.5" r="3.4"/></g></g>),
+    afro:      kap(9),
+    bob:       kap(11),
+    lang:      <g>{kap(12)}<g fill={haar}><rect x="18.2" y="18" width="4.4" height="14" rx="2.2"/><rect x="41.4" y="18" width="4.4" height="14" rx="2.2"/></g></g>,
+    staart:    kap(12),
+    knot:      kap(12),
+    vlechten:  kap(12)
+  }[a.kapsel];
+
+  function paar(f) { return <g>{f(27.2)}{f(36.8)}</g>; }
+  const ogen = {
+    rond:    paar(function(x){ return <circle cx={x} cy="23" r="1.6" fill={oog}/>; }),
+    groot:   paar(function(x){ return <g><circle cx={x} cy="23" r="2.5" fill="#ffffff"/><circle cx={x} cy="23.3" r="1.5" fill={oog}/><circle cx={x+0.5} cy="22.6" r=".5" fill="#ffffff"/></g>; }),
+    ovaal:   paar(function(x){ return <ellipse cx={x} cy="23" rx="1.25" ry="2" fill={oog}/>; }),
+    smal:    paar(function(x){ return <ellipse cx={x} cy="23.2" rx="2" ry=".9" fill={oog}/>; }),
+    lachend: paar(function(x){ return <path d={"M"+(x-1.9)+" 23.6q1.9-2.2 3.8 0"} stroke={oog} strokeWidth="1.3" strokeLinecap="round" fill="none"/>; })
+  }[a.ogen];
+  /* Wimpers aan de buitenkant van elk oog */
+  const wimpers = vrouw && a.ogen !== "lachend" && (
+    <g stroke={oog} strokeWidth=".9" strokeLinecap="round">
+      <path d="M25.3 22.2l-1.1-.9"/><path d="M38.7 22.2l1.1-.9"/>
+    </g>);
+  const neus = {
+    klein: <path d="M30.9 27.3q1.1 .9 2.2 0" stroke={donker} strokeWidth="1.1" strokeLinecap="round" fill="none"/>,
+    rond:  <circle cx="32" cy="27" r="1.4" fill={donker} opacity=".6"/>,
+    spits: <path d="M32.4 23.6L30.9 27.6H32.9" stroke={donker} strokeWidth="1.1" strokeLinecap="round" strokeLinejoin="round" fill="none"/>,
+    breed: <g><path d="M29.6 27.2q2.4 1.6 4.8 0" stroke={donker} strokeWidth="1.1" strokeLinecap="round" fill="none"/><circle cx="30.6" cy="27" r=".5" fill={oog}/><circle cx="33.4" cy="27" r=".5" fill={oog}/></g>,
+    geen:  null
+  }[a.neus];
+  const lip = vrouw ? "#b4505a" : oog, lipD = vrouw ? 1 : .55;
+  const mond = {
+    glimlach: <path d="M28.6 30.4c2 1.7 4.8 1.7 6.8 0" stroke={lip} strokeOpacity={lipD} strokeWidth="1.4" strokeLinecap="round" fill="none"/>,
+    lach:     <g><path d="M28.3 29.4Q32 34.6 35.7 29.4Z" fill="#5b1f1f"/><path d="M28.9 29.6H35.1Q34.8 30.6 32 30.6Q29.2 30.6 28.9 29.6Z" fill="#ffffff"/></g>,
+    grijns:   <path d="M28.6 30.6Q32.4 32.6 35.6 29.4" stroke={lip} strokeOpacity={lipD} strokeWidth="1.4" strokeLinecap="round" fill="none"/>,
+    neutraal: <path d="M29.2 30.8H34.8" stroke={lip} strokeOpacity={lipD} strokeWidth="1.4" strokeLinecap="round"/>,
+    verbaasd: <ellipse cx="32" cy="30.9" rx="1.4" ry="1.8" fill="#5b1f1f"/>
+  }[a.mond];
+  const hoogtes = [9, 10, 11, 12];
+  return (
+    <g>
+      <defs>
+        {hoogtes.map(function(h){ return <clipPath key={h} id={id+"-k"+h}><rect x="13" y="5" width="38" height={h+5}/></clipPath>; })}
+        <clipPath id={id+"-b"}><path d={hoofd}/></clipPath>
+      </defs>
+      {achter}
+      <rect x="27.3" y="31" width="9.4" height="11" rx="4.7" fill={donker}/>
+      <circle cx={smalHoofd ? 19.8 : 19} cy="26" r="3.1" fill={huid}/>
+      <circle cx={smalHoofd ? 44.2 : 45} cy="26" r="3.1" fill={huid}/>
+      <path d={hoofd} fill={huid}/>
+      {a.baard && <rect x="16" y="28" width="32" height="18" fill={haar} opacity=".8" clipPath={"url(#"+id+"-b)"}/>}
+      {ogen}{wimpers}{neus}{mond}
+      {kapHoogte > 0 && voor}
+    </g>
   );
 }
 
@@ -785,25 +888,35 @@ function SpelerBeeld({ speler, shirt, vlak, tenueSet: tset }) {
   return <SpelerPop naam={(speler&&speler.naam)||"?"} shirt={shirt} vlak={vlak} tenueSet={tset}
     avatar={soort === "avatar" ? speler.avatar : null} />;
 }
-/* Hoofd en schouders zonder gezicht. Het shirt houdt de clubkleur, zodat
-   een silhouet op het veld nog steeds bij het team hoort. */
-function SpelerSilhouet({ shirt, grootte }) {
+/* Het standaardsilhouet (voorbeeld van Evan, 14 oktober 2026): een
+   donkere cirkel met een lichte figuur die tot de onderrand doorloopt. */
+function SpelerSilhouet({ grootte }) {
   const maat = grootte || "100%";
   return (
-    <svg viewBox="0 0 64 64" width={maat} height={maat} aria-hidden="true" style={{display:"block",overflow:"visible"}}>
-      <path d="M32 41c12 0 21 9 22 24H10c1-15 10-24 22-24z" fill={shirt || "#004aad"}/>
-      <rect x="27.3" y="31" width="9.4" height="11" rx="4.7" fill="#9aa5b4"/>
-      <circle cx="32" cy="24" r="13" fill="#b8c2cf"/>
+    <svg viewBox="0 0 64 64" width={maat} height={maat} aria-hidden="true" style={{display:"block"}}>
+      <defs><clipPath id="tt-silhouet-rand"><circle cx="32" cy="32" r="32"/></clipPath></defs>
+      <circle cx="32" cy="32" r="32" fill="#1f2630"/>
+      <path clipPath="url(#tt-silhouet-rand)" fill="#f4f6f8"
+        d="M32 12.5c-6 0-9.4 3.7-9.4 9.6v4.2c-.9.2-1.2 1-1 2.1.3 1.6 1 2.8 2.1 3.1.6 2.4 1.7 4.4 3 5.7v3.2c0 .9-.5 1.6-1.4 2l-9.6 3.4c-3 1-4.6 3-5.2 6.3L9 64h46l-1.5-11.9c-.6-3.3-2.2-5.3-5.2-6.3l-9.6-3.4c-.9-.4-1.4-1.1-1.4-2v-3.2c1.3-1.3 2.4-3.3 3-5.7 1.1-.3 1.8-1.5 2.1-3.1.2-1.1-.1-1.9-1-2.1v-4.2c0-5.9-3.4-9.6-9.4-9.6z"/>
     </svg>
   );
 }
 
-/* ── De avatarmaker ── huid, haarkleur, kapsel en baard, met meteen
-   het resultaat erboven. */
+/* ── De avatarmaker ── man of vrouw, huid, haarkleur, kapsel (kort,
+   normaal, lang), ogen, neus, mond, kin en baard. Elke keuze laat
+   zichzelf zien in een tegeltje, met het resultaat groot erboven. */
+const AVATAR_GEZICHT = "18 15 28 28";   // uitsnede rond het gezicht, voor de tegeltjes
+const AVATAR_HOOFD = "9 3 46 46";       // uitsnede met het haar erbij, voor de kapsels
+/* Het automatische poppetje van een naam, als zelfgemaakte avatar: zo
+   begint de maker met wat de speler al had, en niet met een vreemde. */
+function avatarUitAuto(naam) {
+  return avatarNetjes(Object.assign({}, popAvatarVan(naam || "?"),
+    {ogen:"rond", neus:"geen", mond:"glimlach", kin:"rond"}), naam || "?");
+}
 function AvatarMaker({ naam, waarde, opWaarde }) {
-  const a = Object.assign({}, popAvatarVan(naam || "?"), waarde || {});
-  function zet(k, v) { var n = Object.assign({}, a); n[k] = v; opWaarde(n); }
-  function rij(label, lijst, sleutel) {
+  const a = waarde ? avatarNetjes(waarde, naam || "?") : avatarUitAuto(naam);
+  function zet(k, v) { var n = Object.assign({}, a); n[k] = v; opWaarde(avatarNetjes(n, naam || "?")); }
+  function kleuren(label, lijst, sleutel) {
     return (
       <div className="avatar-rij">
         <span className="avatar-rij-label">{label}</span>
@@ -817,37 +930,57 @@ function AvatarMaker({ naam, waarde, opWaarde }) {
       </div>
     );
   }
-  return (
-    <div className="avatar-maker">
-      <div className="avatar-voorbeeld"><SpelerPop naam={naam || "?"} avatar={a}/></div>
-      {rij("Huid", POP_HUID, "huid")}
-      {rij("Haar", POP_HAAR, "haar")}
+  function tegels(label, lijst, sleutel, uitsnede) {
+    return (
       <div className="avatar-rij">
-        <span className="avatar-rij-label">Kapsel</span>
+        <span className="avatar-rij-label">{label}</span>
         <div className="avatar-stalen">
-          {POP_KAPSEL.map(function(_, i){
+          {lijst.map(function(o){
+            var v = Object.assign({}, a); v[sleutel] = o.id;
             return (
-              <button key={i} type="button" aria-label={"Kapsel "+(i+1)}
-                className={"avatar-kapsel"+(a.kapsel===i?" actief":"")}
-                onClick={function(){ zet("kapsel", i); }}>
-                <SpelerPop naam={naam || "?"} avatar={Object.assign({}, a, {kapsel:i, baard:false})}/>
+              <button key={o.id} type="button" title={o.label} aria-label={label+": "+o.label}
+                className={"avatar-tegel"+(a[sleutel]===o.id?" actief":"")}
+                onClick={function(){ zet(sleutel, o.id); }}>
+                <SpelerPop naam={naam || "?"} avatar={v} uitsnede={uitsnede}/>
               </button>
             );
           })}
         </div>
       </div>
+    );
+  }
+  return (
+    <div className="avatar-maker">
+      <div className="avatar-voorbeeld"><SpelerPop naam={naam || "?"} avatar={a}/></div>
       <div className="avatar-rij">
-        <span className="avatar-rij-label">Baard</span>
+        <span className="avatar-rij-label">Geslacht</span>
         <div className="avatar-stalen">
-          <button type="button" className={"filter-chip"+(a.baard?" actief":"")} style={chipStijl(!!a.baard)}
-            onClick={function(){ zet("baard", !a.baard); }}>{a.baard ? "Ja" : "Nee"}</button>
+          {[{id:"m",label:"Mannelijk"},{id:"v",label:"Vrouwelijk"}].map(function(g){
+            return <button key={g.id} type="button" className="filter-chip" style={chipStijl(a.geslacht===g.id)}
+              onClick={function(){ opWaarde(avatarMetGeslacht(a, g.id, naam || "?")); }}>{g.label}</button>;
+          })}
           <button type="button" className="filter-chip" style={{marginLeft:"auto"}}
-            onClick={function(){
-              opWaarde({huid:Math.floor(Math.random()*POP_HUID.length), haar:Math.floor(Math.random()*POP_HAAR.length),
-                        kapsel:Math.floor(Math.random()*POP_KAPSEL.length), baard:Math.random()<0.2});
-            }}><i className="fa-solid fa-shuffle"/> Verras me</button>
+            onClick={function(){ opWaarde(avatarWillekeurig(a.geslacht)); }}><i className="fa-solid fa-shuffle"/> Verras me</button>
         </div>
       </div>
+      {kleuren("Huid", POP_HUID, "huid")}
+      {kleuren("Haarkleur", POP_HAAR, "haar")}
+      {AVATAR_LENGTES.map(function(l){
+        return <React.Fragment key={l.id}>{tegels(l.label, AVATAR_KAPSELS.filter(function(k){ return k.lengte===l.id; }), "kapsel", AVATAR_HOOFD)}</React.Fragment>;
+      })}
+      {tegels("Ogen", AVATAR_OGEN, "ogen", AVATAR_GEZICHT)}
+      {tegels("Neus", AVATAR_NEUZEN, "neus", AVATAR_GEZICHT)}
+      {tegels("Mond", AVATAR_MONDEN, "mond", AVATAR_GEZICHT)}
+      {tegels("Kin", AVATAR_KINNEN, "kin", AVATAR_GEZICHT)}
+      {a.geslacht==="m" && a.kapsel!=="kaal" && (
+        <div className="avatar-rij">
+          <span className="avatar-rij-label">Baard</span>
+          <div className="avatar-stalen">
+            <button type="button" className="filter-chip" style={chipStijl(!a.baard)} onClick={function(){ zet("baard", false); }}>Nee</button>
+            <button type="button" className="filter-chip" style={chipStijl(!!a.baard)} onClick={function(){ zet("baard", true); }}>Ja</button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
