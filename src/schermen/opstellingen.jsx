@@ -377,7 +377,18 @@ function OpstellingenTab({ spelers }) {
   }
 
   function wijsSpelerToe(speler) {
-    setToewijzing(prev => ({...prev, [kiesPositie.id]: {...speler, spelerId: speler.id}}));
+    /* Eén speler, één plek: stond hij al ergens anders, dan verhuist hij.
+       Zonder dit stond Dirk er op 14 oktober twee keer in (gemeld door Evan). */
+    setToewijzing(prev => {
+      const n = {};
+      Object.keys(prev).forEach(function(k){
+        var sp = prev[k];
+        if (sp && (sp.id===speler.id || sp.spelerId===speler.id)) return;
+        n[k] = sp;
+      });
+      n[kiesPositie.id] = {...speler, spelerId: speler.id};
+      return n;
+    });
     setKiesPositie(null);
   }
 
@@ -390,7 +401,12 @@ function OpstellingenTab({ spelers }) {
   function bewaarFormatie() {
     const nm = bewaarNaam.trim() || (actief + " Opstelling");
     const nieuw = {id:Date.now(), naam:nm, formatie:actief, toewijzing};
-    setOpgeslagen(prev => [...prev, nieuw]);
+    /* Dezelfde naam overschrijft, in plaats van twee keer "4-3-3 XII". */
+    setOpgeslagen(prev => {
+      const i = prev.findIndex(function(f){ return String(f.naam||"").trim().toLowerCase()===nm.toLowerCase(); });
+      if (i < 0) return [...prev, nieuw];
+      const kopie = prev.slice(); kopie[i] = Object.assign({}, nieuw, {id: prev[i].id}); return kopie;
+    });
     setBewaarOpen(false);
     setBewaarNaam("");
   }
@@ -544,40 +560,30 @@ function OpstellingenTab({ spelers }) {
         </div>
       )}
 
-      {/* Speler kiezen modal */}
-      {kiesPositie&&(
-        <div className="modal-overlay" onClick={e=>{if(e.target===e.currentTarget)setKiesPositie(null);}}>
-          <div className="modal-sheet">
-            <div className="modal-greep"/>
-            <div className="modal-titel">Speler voor {kiesPositie.l}</div>
-            {toewijzing[kiesPositie.id]&&(
+      {/* Speler kiezen — dezelfde kiezer als bij een wedstrijd: wie vrij is en
+          het best past bovenaan, wie al op het veld staat lichtgrijs. */}
+      {kiesPositie&&(function(){
+        const labels = plekLabels(FORMATIES_DATA[actief] || FORMATIES_DATA["4-3-3A"]);
+        const bezet = {};
+        Object.keys(toewijzing).forEach(function(k){
+          var sp = toewijzing[k];
+          if (sp) bezet[sp.id||sp.spelerId] = labels[k] || k;
+        });
+        return (
+          <SpelerKeuzeModal titel={"Speler voor "+kiesPositie.l}
+            spelers={spelers}
+            plekLabel={labels[kiesPositie.id] || kiesPositie.l}
+            bezet={bezet}
+            bovenaan={toewijzing[kiesPositie.id] ? (
               <button className="knop gevaar klein" style={{width:"100%",justifyContent:"center",marginBottom:12}}
                 onClick={() => verwijderVanPositie(kiesPositie.id)}>
                 <i className="fa-solid fa-xmark"/> Speler van positie halen
               </button>
-            )}
-            {spelers.length===0&&<p style={{fontSize:13,color:"var(--grijs-donker)",textAlign:"center",padding:"20px 0"}}>Voeg eerst spelers toe via Spelers.</p>}
-            {spelers.map(s => {
-              const isGeselecteerd = toewijzing[kiesPositie.id]&&(toewijzing[kiesPositie.id].id===s.id||toewijzing[kiesPositie.id].spelerId===s.id);
-              const isElders = !isGeselecteerd && toegewezenIds.includes(s.id);
-              return (
-                <div key={s.id} className={"speler-keuze-rij"+(isGeselecteerd?" geselecteerd":"")} onClick={() => wijsSpelerToe(s)}>
-                  <div className="speler-avatar" style={{width:36,height:36,fontSize:13}}>
-                    {<SpelerBeeld speler={s}/>}
-                  </div>
-                  <div style={{flex:1}}>
-                    <div style={{fontWeight:700,fontFamily:"'Helvetica Neue',Arial",fontSize:14}}>{s.naam}</div>
-                    <div style={{fontSize:12,color:"var(--grijs-donker)"}}>{s.positie}{s.rugnummer?" · #"+s.rugnummer:""}</div>
-                  </div>
-                  {isGeselecteerd&&<span style={{fontSize:12,color:"var(--succes)",fontWeight:700}}><i className="fa-solid fa-check"/> Op veld</span>}
-                  {isElders&&<span style={{fontSize:11,color:"var(--grijs-donker)"}}>Elders</span>}
-                </div>
-              );
-            })}
-            <button className="knop lijn" style={{width:"100%",justifyContent:"center",marginTop:16}} onClick={() => setKiesPositie(null)}>Sluiten</button>
-          </div>
-        </div>
-      )}
+            ) : (spelers.length===0 ? <p style={{fontSize:13,color:"var(--grijs-donker)",textAlign:"center",padding:"20px 0"}}>Voeg eerst spelers toe via Spelers.</p> : null)}
+            onKies={wijsSpelerToe}
+            onSluiten={() => setKiesPositie(null)} />
+        );
+      })()}
 
       {/* Positie detail / instructies modal */}
       {detailPositie&&toewijzing[detailPositie.id]&&(()=>{

@@ -2473,6 +2473,21 @@
       -webkit-tap-highlight-color:transparent; transition:transform .08s; }
     .status-optie:active { transform:scale(.98); }
 
+    .positie-code { display:inline-block; margin-left:8px; padding:1px 6px; border-radius:6px; background:var(--grijs-licht); color:var(--blauw); font-size:11px; font-weight:800; vertical-align:2px; }
+    /* Profielbeeld: foto, avatar of silhouet */
+    .beeld-keuze { display:flex; gap:6px; justify-content:center; flex-wrap:wrap; margin-bottom:14px; }
+    .beeld-keuze-knop { display:inline-flex; align-items:center; gap:6px; padding:8px 12px; border-radius:10px; border:2px solid var(--grijs); background:var(--wit); color:var(--grijs-donker); font-weight:700; font-size:12px; cursor:pointer; font-family:inherit; }
+    .beeld-keuze-knop.actief { border-color:var(--blauw); background:var(--blauw); color:var(--op-kleur); }
+    .avatar-maker { max-width:420px; margin:0 auto 16px; }
+    .avatar-voorbeeld { width:96px; height:96px; border-radius:50%; background:var(--grijs-licht); overflow:hidden; margin:0 auto 12px; display:flex; align-items:flex-end; justify-content:center; }
+    .avatar-rij { display:flex; align-items:center; gap:10px; margin-bottom:9px; }
+    .avatar-rij-label { width:52px; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.4px; color:var(--grijs-donker); flex-shrink:0; }
+    .avatar-stalen { display:flex; flex-wrap:wrap; gap:6px; flex:1; align-items:center; }
+    .avatar-staal { width:28px; height:28px; border-radius:50%; border:3px solid var(--wit); box-shadow:0 0 0 1.5px var(--grijs); cursor:pointer; padding:0; }
+    .avatar-staal.actief, .avatar-kapsel.actief { box-shadow:0 0 0 2.5px var(--blauw); }
+    .avatar-kapsel { width:40px; height:40px; border-radius:10px; border:none; background:var(--grijs-licht); box-shadow:0 0 0 1.5px var(--grijs); padding:3px 3px 0; cursor:pointer; overflow:hidden; }
+    /* Spelerkiezer: wie al op het veld staat is lichtgrijs */
+    .speler-keuze-rij.al-opgesteld { opacity:.42; filter:grayscale(1); }
     /* Een icoon met zijn tekst blijft bij elkaar, ook op een smal scherm */
     .meta-stuk { display:inline-flex; align-items:center; gap:4px; white-space:nowrap; margin-right:10px; }
     .meta-stuk i { opacity:.8; }
@@ -3064,7 +3079,7 @@ window.addEventListener("error", function(e){
 });
 </script>
 <script>
-const APP_VERSIE = "28e7413";
+const APP_VERSIE = "f49a1fb";
 const TEAMS_KEY = "tt_teams_v1";
 const ACTIEF_KEY = "tt_actief_v1";
 const VOORKEUR_KEY = "tt_voorkeuren_v1";
@@ -8933,6 +8948,89 @@ function positiePassendheid(rolVanPlek, spelerPositie) {
   if (rolVanPlek === "Keeper" || spelerPositie === "Keeper") return 4;
   return Math.abs(a - b);
 }
+const SPELER_POSITIES = [
+  { code: "K", naam: "Keeper", groep: "Keeper" },
+  { code: "RVV", naam: "Rechter vleugelverdediger", groep: "Verdediger" },
+  { code: "RV", naam: "Rechtsback", groep: "Verdediger" },
+  { code: "CV", naam: "Centrale verdediger", groep: "Verdediger" },
+  { code: "LV", naam: "Linksback", groep: "Verdediger" },
+  { code: "LVV", naam: "Linker vleugelverdediger", groep: "Verdediger" },
+  { code: "RM", naam: "Rechter middenvelder", groep: "Middenvelder" },
+  { code: "RCM", naam: "Rechter centrale middenvelder", groep: "Middenvelder" },
+  { code: "CM", naam: "Centrale middenvelder", groep: "Middenvelder" },
+  { code: "CVM", naam: "Centrale verdedigende middenvelder", groep: "Middenvelder" },
+  { code: "CAM", naam: "Centrale aanvallende middenvelder", groep: "Middenvelder" },
+  { code: "LCM", naam: "Linker centrale middenvelder", groep: "Middenvelder" },
+  { code: "LM", naam: "Linker middenvelder", groep: "Middenvelder" },
+  { code: "RVA", naam: "Rechter vleugelaanvaller", groep: "Aanvaller" },
+  { code: "SP", naam: "Spits", groep: "Aanvaller" },
+  { code: "LVA", naam: "Linker vleugelaanvaller", groep: "Aanvaller" }
+];
+const POSITIE_VERWANT = {
+  K: [],
+  RVV: ["RV", "RM"],
+  RV: ["RVV", "CV"],
+  CV: ["RV", "LV", "CVM"],
+  LV: ["LVV", "CV"],
+  LVV: ["LV", "LM"],
+  RM: ["RCM", "RVA", "RVV"],
+  RCM: ["CM", "RM", "CVM"],
+  CM: ["RCM", "LCM", "CVM", "CAM"],
+  CVM: ["CM", "RCM", "LCM", "CV"],
+  CAM: ["CM", "SP", "RCM", "LCM"],
+  LCM: ["CM", "LM", "CVM"],
+  LM: ["LCM", "LVA", "LVV"],
+  RVA: ["RM", "SP"],
+  SP: ["CAM", "RVA", "LVA"],
+  LVA: ["LM", "SP"]
+};
+function positieInfo(code) {
+  return SPELER_POSITIES.filter(function(p) {
+    return p.code === code;
+  })[0] || null;
+}
+function plekAlsSpelerCode(label) {
+  var s = String(label || "");
+  var code = plekCode(s);
+  if (code === "DM") return "K";
+  if (code === "CM") {
+    var kant = s.slice(s.indexOf("-") + 1);
+    if (s.indexOf("-") > 0 && kant === "L") return "LCM";
+    if (s.indexOf("-") > 0 && kant === "R") return "RCM";
+  }
+  return code;
+}
+function spelerPastOpPlek(plekLabel, speler) {
+  var doel = plekAlsSpelerCode(plekLabel);
+  var info = positieInfo(doel);
+  var groep = info ? info.groep : "";
+  var c1 = speler && speler.positieCode, c2 = speler && speler.positieCode2;
+  if (c1 && c1 === doel) return 0;
+  if (c2 && c2 === doel) return 1;
+  var verwant = POSITIE_VERWANT[doel] || [];
+  if (c1 && verwant.indexOf(c1) >= 0 || c2 && verwant.indexOf(c2) >= 0) return 2;
+  var g1 = (positieInfo(c1 || "") || { groep: speler && speler.positie }).groep;
+  var g2 = (positieInfo(c2 || "") || { groep: speler && speler.positie2 }).groep;
+  var beste = Math.min(positiePassendheid(groep, g1), g2 ? positiePassendheid(groep, g2) + 0.5 : 9);
+  if (beste === 0) return 3;
+  if (beste <= 1.5) return 4;
+  return 6;
+}
+function spelerKeuzeVolgorde(spelers, plekLabel, bezet) {
+  var b = bezet || {};
+  return (spelers || []).map(function(s) {
+    return { speler: s, past: spelerPastOpPlek(plekLabel, s), bezet: b[s.id] || null };
+  }).sort(function(x, y) {
+    if (!!x.bezet !== !!y.bezet) return x.bezet ? 1 : -1;
+    if (x.past !== y.past) return x.past - y.past;
+    return (Number(x.speler.rugnummer) || 99) - (Number(y.speler.rugnummer) || 99);
+  });
+}
+function positieTekst(speler) {
+  if (!speler) return "";
+  var c = [speler.positieCode, speler.positieCode2].filter(Boolean).join("/");
+  return c ? c + " \xB7 " + (speler.positie || "") : speler.positie || "";
+}
 const POSITIE_VOLGORDE = [
   "DM",
   "LV",
@@ -11371,15 +11469,31 @@ function popDonker(hex) {
   }
   return "#" + d(r) + d(g) + d(b);
 }
-function SpelerPop({ naam, shirt, vlak, grootte, tenueSet: tset }) {
+function popAvatarVan(naam) {
   const g = popGetal(naam);
-  const huid = POP_HUID[g % POP_HUID.length];
-  const haar = POP_HAAR[(g >>> 3) % POP_HAAR.length];
-  const trui = shirt || "#004aad";
   const kapsel = (g >>> 9) % POP_KAPSEL.length;
+  return {
+    huid: g % POP_HUID.length,
+    haar: (g >>> 3) % POP_HAAR.length,
+    kapsel,
+    baard: (g >>> 13) % 5 === 0 && kapsel !== 5
+  };
+}
+function popKeuze(lijst, i, terug) {
+  var n = Number(i);
+  return Number.isInteger(n) && n >= 0 && n < lijst.length ? n : terug;
+}
+function SpelerPop({ naam, shirt, vlak, grootte, tenueSet: tset, avatar }) {
+  const g = popGetal(naam);
+  const auto = popAvatarVan(naam);
+  const eigen = avatar || {};
+  const huid = POP_HUID[popKeuze(POP_HUID, eigen.huid, auto.huid)];
+  const haar = POP_HAAR[popKeuze(POP_HAAR, eigen.haar, auto.haar)];
+  const trui = shirt || "#004aad";
+  const kapsel = popKeuze(POP_KAPSEL, eigen.kapsel, auto.kapsel);
   const haarH = POP_KAPSEL[kapsel];
-  const baard = (g >>> 13) % 5 === 0 && kapsel !== 5;
-  const id = "pop" + g % 1e6 + "-" + kapsel;
+  const baard = (typeof eigen.baard === "boolean" ? eigen.baard : auto.baard) && kapsel !== 5;
+  const id = "pop" + g % 1e6 + "-" + kapsel + (avatar ? "-" + POP_HUID.indexOf(huid) + POP_HAAR.indexOf(haar) + (baard ? "b" : "") : "");
   const maat = grootte || "100%";
   const patroon = tset ? tenuePatroonDelen(tset) : [];
   const opgelegd = tset ? tenueKleineLagen(tset) : [];
@@ -11712,7 +11826,8 @@ function TenueBeeld({ set, kant, nummer, naam, breed, schaduw, kader, kaderStuk,
   );
 }
 function SpelerBeeld({ speler, shirt, vlak, tenueSet: tset }) {
-  if (speler && speler.foto) {
+  const soort = speler && speler.beeldSoort;
+  if (speler && speler.foto && (!soort || soort === "foto")) {
     return /* @__PURE__ */ React.createElement(
       "img",
       {
@@ -11722,7 +11837,89 @@ function SpelerBeeld({ speler, shirt, vlak, tenueSet: tset }) {
       }
     );
   }
-  return /* @__PURE__ */ React.createElement(SpelerPop, { naam: speler && speler.naam || "?", shirt, vlak, tenueSet: tset });
+  if (soort === "silhouet") return /* @__PURE__ */ React.createElement(SpelerSilhouet, { shirt });
+  return /* @__PURE__ */ React.createElement(
+    SpelerPop,
+    {
+      naam: speler && speler.naam || "?",
+      shirt,
+      vlak,
+      tenueSet: tset,
+      avatar: soort === "avatar" ? speler.avatar : null
+    }
+  );
+}
+function SpelerSilhouet({ shirt, grootte }) {
+  const maat = grootte || "100%";
+  return /* @__PURE__ */ React.createElement("svg", { viewBox: "0 0 64 64", width: maat, height: maat, "aria-hidden": "true", style: { display: "block", overflow: "visible" } }, /* @__PURE__ */ React.createElement("path", { d: "M32 41c12 0 21 9 22 24H10c1-15 10-24 22-24z", fill: shirt || "#004aad" }), /* @__PURE__ */ React.createElement("rect", { x: "27.3", y: "31", width: "9.4", height: "11", rx: "4.7", fill: "#9aa5b4" }), /* @__PURE__ */ React.createElement("circle", { cx: "32", cy: "24", r: "13", fill: "#b8c2cf" }));
+}
+function AvatarMaker({ naam, waarde, opWaarde }) {
+  const a = Object.assign({}, popAvatarVan(naam || "?"), waarde || {});
+  function zet(k, v) {
+    var n = Object.assign({}, a);
+    n[k] = v;
+    opWaarde(n);
+  }
+  function rij(label, lijst, sleutel) {
+    return /* @__PURE__ */ React.createElement("div", { className: "avatar-rij" }, /* @__PURE__ */ React.createElement("span", { className: "avatar-rij-label" }, label), /* @__PURE__ */ React.createElement("div", { className: "avatar-stalen" }, lijst.map(function(kleur, i) {
+      return /* @__PURE__ */ React.createElement(
+        "button",
+        {
+          key: i,
+          type: "button",
+          "aria-label": label + " " + (i + 1),
+          className: "avatar-staal" + (a[sleutel] === i ? " actief" : ""),
+          style: { background: kleur },
+          onClick: function() {
+            zet(sleutel, i);
+          }
+        }
+      );
+    })));
+  }
+  return /* @__PURE__ */ React.createElement("div", { className: "avatar-maker" }, /* @__PURE__ */ React.createElement("div", { className: "avatar-voorbeeld" }, /* @__PURE__ */ React.createElement(SpelerPop, { naam: naam || "?", avatar: a })), rij("Huid", POP_HUID, "huid"), rij("Haar", POP_HAAR, "haar"), /* @__PURE__ */ React.createElement("div", { className: "avatar-rij" }, /* @__PURE__ */ React.createElement("span", { className: "avatar-rij-label" }, "Kapsel"), /* @__PURE__ */ React.createElement("div", { className: "avatar-stalen" }, POP_KAPSEL.map(function(_, i) {
+    return /* @__PURE__ */ React.createElement(
+      "button",
+      {
+        key: i,
+        type: "button",
+        "aria-label": "Kapsel " + (i + 1),
+        className: "avatar-kapsel" + (a.kapsel === i ? " actief" : ""),
+        onClick: function() {
+          zet("kapsel", i);
+        }
+      },
+      /* @__PURE__ */ React.createElement(SpelerPop, { naam: naam || "?", avatar: Object.assign({}, a, { kapsel: i, baard: false }) })
+    );
+  }))), /* @__PURE__ */ React.createElement("div", { className: "avatar-rij" }, /* @__PURE__ */ React.createElement("span", { className: "avatar-rij-label" }, "Baard"), /* @__PURE__ */ React.createElement("div", { className: "avatar-stalen" }, /* @__PURE__ */ React.createElement(
+    "button",
+    {
+      type: "button",
+      className: "filter-chip" + (a.baard ? " actief" : ""),
+      style: chipStijl(!!a.baard),
+      onClick: function() {
+        zet("baard", !a.baard);
+      }
+    },
+    a.baard ? "Ja" : "Nee"
+  ), /* @__PURE__ */ React.createElement(
+    "button",
+    {
+      type: "button",
+      className: "filter-chip",
+      style: { marginLeft: "auto" },
+      onClick: function() {
+        opWaarde({
+          huid: Math.floor(Math.random() * POP_HUID.length),
+          haar: Math.floor(Math.random() * POP_HAAR.length),
+          kapsel: Math.floor(Math.random() * POP_KAPSEL.length),
+          baard: Math.random() < 0.2
+        });
+      }
+    },
+    /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-shuffle" }),
+    " Verras me"
+  ))));
 }
 const STANDAARD_TENUE = { shirt: "#004aad", shirt2: "#ffffff", tekst: "#ffffff", patroon: "effen", keeper: "#28a745", keuze: "thuis" };
 const STANDAARD_SET = {
@@ -16936,8 +17133,27 @@ function deelICS(g) {
 function StatInvoer({ icoon, label, waarde, onChange }) {
   return /* @__PURE__ */ React.createElement("div", { className: "stat-invoer" }, /* @__PURE__ */ React.createElement("span", { className: "stat-invoer-icoon" }, icoon), /* @__PURE__ */ React.createElement("span", { className: "stat-invoer-label" }, label), /* @__PURE__ */ React.createElement("div", { className: "stat-invoer-getal" }, /* @__PURE__ */ React.createElement("button", { onClick: () => onChange(Math.max(0, waarde - 1)) }, "\u2212"), /* @__PURE__ */ React.createElement("span", null, waarde), /* @__PURE__ */ React.createElement("button", { onClick: () => onChange(waarde + 1) }, "+")));
 }
+function PositieKeuze({ code, groep, leeg, opKies, zonder }) {
+  const waarde = code ? code : groep ? "groep:" + groep : "";
+  return /* @__PURE__ */ React.createElement("select", { className: "formulier-input", value: waarde, onChange: function(e) {
+    var v = e.target.value;
+    if (!v) opKies("", "");
+    else if (v.indexOf("groep:") === 0) opKies("", v.slice(6));
+    else opKies(v, positieInfo(v).groep);
+  } }, /* @__PURE__ */ React.createElement("option", { value: "" }, leeg), ROL_VOLGORDE.map(function(rol) {
+    return /* @__PURE__ */ React.createElement("optgroup", { key: rol, label: rol === "Keeper" ? "Keeper" : rol + "s" }, SPELER_POSITIES.filter(function(p) {
+      return p.groep === rol && p.code !== zonder;
+    }).map(function(p) {
+      return /* @__PURE__ */ React.createElement("option", { key: p.code, value: p.code }, p.code + " \u2013 " + p.naam);
+    }), rol !== "Keeper" && /* @__PURE__ */ React.createElement("option", { value: "groep:" + rol }, rol + " (algemeen)"));
+  }));
+}
 function SpelerFormulier({ speler, onOpslaan, onSluiten }) {
-  const [form, setForm] = useState({ ...LEEG_SPELER, ...speler, stats: { ...LEEG_SPELER.stats, ...(speler == null ? void 0 : speler.stats) || {} } });
+  const [form, setForm] = useState(function() {
+    var f = { ...LEEG_SPELER, ...speler, stats: { ...LEEG_SPELER.stats, ...(speler == null ? void 0 : speler.stats) || {} } };
+    if (!f.beeldSoort) f.beeldSoort = !speler ? "silhouet" : f.foto ? "foto" : "avatar";
+    return f;
+  });
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
   const setStat = (k, v) => setForm((f) => ({ ...f, stats: { ...f.stats, [k]: v } }));
   function verwerkFoto(e) {
@@ -16961,23 +17177,55 @@ function SpelerFormulier({ speler, onOpslaan, onSluiten }) {
   }
   return /* @__PURE__ */ React.createElement("div", { className: "modal-overlay", onClick: (e) => {
     if (e.target === e.currentTarget) onSluiten();
-  } }, /* @__PURE__ */ React.createElement("div", { className: "modal-sheet" }, /* @__PURE__ */ React.createElement("div", { className: "modal-greep" }), /* @__PURE__ */ React.createElement("div", { className: "modal-titel" }, form.id ? "Speler bewerken" : "Speler toevoegen"), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", justifyContent: "center" } }, /* @__PURE__ */ React.createElement("div", { className: "foto-upload-gebied" }, form.foto ? /* @__PURE__ */ React.createElement("img", { src: form.foto, alt: "foto" }) : /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("div", { className: "foto-upload-icoon" }, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-camera" })), /* @__PURE__ */ React.createElement("div", { className: "foto-upload-tekst" }, "Foto")), /* @__PURE__ */ React.createElement("input", { type: "file", accept: "image/*", onChange: verwerkFoto }))), /* @__PURE__ */ React.createElement("div", { className: "formulier-sectie-titel" }, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-user" }), " Persoonlijke gegevens"), /* @__PURE__ */ React.createElement("div", { className: "formulier-groep" }, /* @__PURE__ */ React.createElement("label", { className: "formulier-label" }, "Volledige naam *"), /* @__PURE__ */ React.createElement("input", { className: "formulier-input", value: form.naam, onChange: (e) => set("naam", e.target.value), placeholder: "Voor- en achternaam" })), /* @__PURE__ */ React.createElement("div", { className: "formulier-rij" }, /* @__PURE__ */ React.createElement("div", { className: "formulier-groep" }, /* @__PURE__ */ React.createElement("label", { className: "formulier-label" }, "Rugnummer"), /* @__PURE__ */ React.createElement(GetalVeld, { className: "formulier-input", min: 1, max: 99, leeg: "", waarde: form.rugnummer, opWaarde: function(n) {
+  } }, /* @__PURE__ */ React.createElement("div", { className: "modal-sheet" }, /* @__PURE__ */ React.createElement("div", { className: "modal-greep" }), /* @__PURE__ */ React.createElement("div", { className: "modal-titel" }, form.id ? "Speler bewerken" : "Speler toevoegen"), /* @__PURE__ */ React.createElement("div", { className: "beeld-keuze" }, [
+    { id: "foto", label: "Foto", icoon: "fa-solid fa-camera" },
+    { id: "avatar", label: "Avatar maken", icoon: "fa-solid fa-face-smile" },
+    { id: "silhouet", label: "Silhouet", icoon: "fa-solid fa-user" }
+  ].map(function(k) {
+    var aan = form.beeldSoort === k.id;
+    return /* @__PURE__ */ React.createElement(
+      "button",
+      {
+        key: k.id,
+        type: "button",
+        className: "beeld-keuze-knop" + (aan ? " actief" : ""),
+        onClick: function() {
+          set("beeldSoort", k.id);
+        }
+      },
+      /* @__PURE__ */ React.createElement("i", { className: k.icoon }),
+      " ",
+      k.label
+    );
+  })), form.beeldSoort === "foto" && /* @__PURE__ */ React.createElement("div", { style: { display: "flex", justifyContent: "center" } }, /* @__PURE__ */ React.createElement("div", { className: "foto-upload-gebied" }, form.foto ? /* @__PURE__ */ React.createElement("img", { src: form.foto, alt: "foto" }) : /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("div", { className: "foto-upload-icoon" }, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-camera" })), /* @__PURE__ */ React.createElement("div", { className: "foto-upload-tekst" }, "Foto kiezen")), /* @__PURE__ */ React.createElement("input", { type: "file", accept: "image/*", onChange: verwerkFoto }))), form.beeldSoort === "avatar" && /* @__PURE__ */ React.createElement(AvatarMaker, { naam: form.naam, waarde: form.avatar, opWaarde: function(a) {
+    set("avatar", a);
+  } }), form.beeldSoort === "silhouet" && /* @__PURE__ */ React.createElement("div", { className: "avatar-voorbeeld", style: { margin: "0 auto 16px" } }, /* @__PURE__ */ React.createElement(SpelerSilhouet, null)), /* @__PURE__ */ React.createElement("div", { className: "formulier-sectie-titel" }, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-user" }), " Persoonlijke gegevens"), /* @__PURE__ */ React.createElement("div", { className: "formulier-groep" }, /* @__PURE__ */ React.createElement("label", { className: "formulier-label" }, "Volledige naam *"), /* @__PURE__ */ React.createElement("input", { className: "formulier-input", value: form.naam, onChange: (e) => set("naam", e.target.value), placeholder: "Voor- en achternaam" })), /* @__PURE__ */ React.createElement("div", { className: "formulier-rij" }, /* @__PURE__ */ React.createElement("div", { className: "formulier-groep" }, /* @__PURE__ */ React.createElement("label", { className: "formulier-label" }, "Rugnummer"), /* @__PURE__ */ React.createElement(GetalVeld, { className: "formulier-input", min: 1, max: 99, leeg: "", waarde: form.rugnummer, opWaarde: function(n) {
     set("rugnummer", n);
-  }, placeholder: "1\u201399" })), /* @__PURE__ */ React.createElement("div", { className: "formulier-groep" }, /* @__PURE__ */ React.createElement("label", { className: "formulier-label" }, "Positie"), /* @__PURE__ */ React.createElement("select", { className: "formulier-input", value: form.positie, onChange: (e) => set("positie", e.target.value) }, /* @__PURE__ */ React.createElement("option", { value: "" }, "Kies positie"), /* @__PURE__ */ React.createElement("option", null, "Keeper"), /* @__PURE__ */ React.createElement("option", null, "Verdediger"), /* @__PURE__ */ React.createElement("option", null, "Middenvelder"), /* @__PURE__ */ React.createElement("option", null, "Aanvaller")))), /* @__PURE__ */ React.createElement("div", { className: "formulier-rij" }, /* @__PURE__ */ React.createElement("div", { className: "formulier-groep" }, /* @__PURE__ */ React.createElement("label", { className: "formulier-label" }, "Geboortedatum"), /* @__PURE__ */ React.createElement("input", { className: "formulier-input", type: "date", value: form.geboortedatum, onChange: (e) => set("geboortedatum", e.target.value) })), /* @__PURE__ */ React.createElement("div", { className: "formulier-groep" }, /* @__PURE__ */ React.createElement("label", { className: "formulier-label" }, "Extra positie"), /* @__PURE__ */ React.createElement(
-    "select",
+  }, placeholder: "1\u201399" })), /* @__PURE__ */ React.createElement("div", { className: "formulier-groep" }, /* @__PURE__ */ React.createElement("label", { className: "formulier-label" }, "Positie"), /* @__PURE__ */ React.createElement(
+    PositieKeuze,
     {
-      className: "formulier-input",
-      value: form.positie2 || "",
-      onChange: function(e) {
-        set("positie2", e.target.value);
+      code: form.positieCode,
+      groep: form.positie,
+      leeg: "Kies positie",
+      opKies: function(code, groep) {
+        setForm(function(f) {
+          return { ...f, positieCode: code, positie: groep };
+        });
       }
-    },
-    /* @__PURE__ */ React.createElement("option", { value: "" }, "Geen"),
-    ROL_VOLGORDE.filter(function(p) {
-      return p !== form.positie;
-    }).map(function(p) {
-      return /* @__PURE__ */ React.createElement("option", { key: p, value: p }, p);
-    })
+    }
+  ))), /* @__PURE__ */ React.createElement("div", { className: "formulier-rij" }, /* @__PURE__ */ React.createElement("div", { className: "formulier-groep" }, /* @__PURE__ */ React.createElement("label", { className: "formulier-label" }, "Geboortedatum"), /* @__PURE__ */ React.createElement("input", { className: "formulier-input", type: "date", value: form.geboortedatum, onChange: (e) => set("geboortedatum", e.target.value) })), /* @__PURE__ */ React.createElement("div", { className: "formulier-groep" }, /* @__PURE__ */ React.createElement("label", { className: "formulier-label" }, "Extra positie"), /* @__PURE__ */ React.createElement(
+    PositieKeuze,
+    {
+      code: form.positieCode2,
+      groep: form.positie2,
+      leeg: "Geen",
+      zonder: form.positieCode,
+      opKies: function(code, groep) {
+        setForm(function(f) {
+          return { ...f, positieCode2: code, positie2: groep };
+        });
+      }
+    }
   )), /* @__PURE__ */ React.createElement("div", { className: "formulier-groep" }, /* @__PURE__ */ React.createElement("label", { className: "formulier-label" }, "Favoriet been"), /* @__PURE__ */ React.createElement("div", { className: "been-keuze" }, BENEN.map(function(b) {
     var aan = form.favorietBeen === b.id;
     return /* @__PURE__ */ React.createElement(
@@ -17768,7 +18016,14 @@ function SpelersLijst({ spelers, onSelecteer, onNieuw }) {
       var nietFit2 = s.beschikbaar && s.beschikbaar !== "fit";
       return /* @__PURE__ */ React.createElement("tr", { key: s.id, onClick: function() {
         onSelecteer(s);
-      } }, /* @__PURE__ */ React.createElement("td", { className: "k-nr" }, s.rugnummer ? "#" + s.rugnummer : "\u2013"), /* @__PURE__ */ React.createElement("td", { className: "k-naam" }, /* @__PURE__ */ React.createElement("span", { className: "k-speler" }, /* @__PURE__ */ React.createElement("span", { className: "k-buste" }, /* @__PURE__ */ React.createElement(SpelerBeeld, { speler: s })), /* @__PURE__ */ React.createElement("span", { style: { minWidth: 0 } }, /* @__PURE__ */ React.createElement("span", { className: "k-speler-naam" }, s.naam), nietFit2 && /* @__PURE__ */ React.createElement("span", { className: "k-status", style: { color: besch.kleur } }, /* @__PURE__ */ React.createElement("i", { className: besch.icoon }), " ", besch.label)))), /* @__PURE__ */ React.createElement("td", { className: "k-skill" }, /* @__PURE__ */ React.createElement("span", { className: "k-ovr", style: { color: ovr ? ovrKleur(ovr) : "var(--grijs-donker)" } }, ovr || "\u2013")), /* @__PURE__ */ React.createElement("td", { className: "k-been" }, b ? /* @__PURE__ */ React.createElement("span", { className: "k-voet", title: "Favoriet been: " + b.label }, b.kant === "beide" ? /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement(VoetIcoon, { kant: "links", grootte: 13 }), /* @__PURE__ */ React.createElement(VoetIcoon, { kant: "rechts", grootte: 13 })) : /* @__PURE__ */ React.createElement(VoetIcoon, { kant: b.kant, grootte: 14 })) : /* @__PURE__ */ React.createElement("span", { className: "k-leeg" }, "\u2013")), /* @__PURE__ */ React.createElement("td", { className: "k-getal" }, d.aantal || /* @__PURE__ */ React.createElement("span", { className: "k-leeg" }, "0")), /* @__PURE__ */ React.createElement("td", { className: "k-getal" }, d.minuten || /* @__PURE__ */ React.createElement("span", { className: "k-leeg" }, "0")), /* @__PURE__ */ React.createElement("td", { className: "k-getal" }, st.doelpunten || /* @__PURE__ */ React.createElement("span", { className: "k-leeg" }, "0")), /* @__PURE__ */ React.createElement("td", { className: "k-getal" }, st.assists || /* @__PURE__ */ React.createElement("span", { className: "k-leeg" }, "0")), /* @__PURE__ */ React.createElement("td", { className: "k-extra" }, s.positie2 ? /* @__PURE__ */ React.createElement("span", { className: "positie-badge " + positieKlasse(s.positie2) }, s.positie2) : /* @__PURE__ */ React.createElement("span", { className: "k-leeg" }, "\u2013")));
+      } }, /* @__PURE__ */ React.createElement("td", { className: "k-nr" }, s.rugnummer ? "#" + s.rugnummer : "\u2013"), /* @__PURE__ */ React.createElement("td", { className: "k-naam" }, /* @__PURE__ */ React.createElement("span", { className: "k-speler" }, /* @__PURE__ */ React.createElement("span", { className: "k-buste" }, /* @__PURE__ */ React.createElement(SpelerBeeld, { speler: s })), /* @__PURE__ */ React.createElement("span", { style: { minWidth: 0 } }, /* @__PURE__ */ React.createElement("span", { className: "k-speler-naam" }, s.naam, s.positieCode && /* @__PURE__ */ React.createElement("span", { className: "positie-code", title: (positieInfo(s.positieCode) || {}).naam }, s.positieCode)), nietFit2 && /* @__PURE__ */ React.createElement("span", { className: "k-status", style: { color: besch.kleur } }, /* @__PURE__ */ React.createElement("i", { className: besch.icoon }), " ", besch.label)))), /* @__PURE__ */ React.createElement("td", { className: "k-skill" }, /* @__PURE__ */ React.createElement("span", { className: "k-ovr", style: { color: ovr ? ovrKleur(ovr) : "var(--grijs-donker)" } }, ovr || "\u2013")), /* @__PURE__ */ React.createElement("td", { className: "k-been" }, b ? /* @__PURE__ */ React.createElement("span", { className: "k-voet", title: "Favoriet been: " + b.label }, b.kant === "beide" ? /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement(VoetIcoon, { kant: "links", grootte: 13 }), /* @__PURE__ */ React.createElement(VoetIcoon, { kant: "rechts", grootte: 13 })) : /* @__PURE__ */ React.createElement(VoetIcoon, { kant: b.kant, grootte: 14 })) : /* @__PURE__ */ React.createElement("span", { className: "k-leeg" }, "\u2013")), /* @__PURE__ */ React.createElement("td", { className: "k-getal" }, d.aantal || /* @__PURE__ */ React.createElement("span", { className: "k-leeg" }, "0")), /* @__PURE__ */ React.createElement("td", { className: "k-getal" }, d.minuten || /* @__PURE__ */ React.createElement("span", { className: "k-leeg" }, "0")), /* @__PURE__ */ React.createElement("td", { className: "k-getal" }, st.doelpunten || /* @__PURE__ */ React.createElement("span", { className: "k-leeg" }, "0")), /* @__PURE__ */ React.createElement("td", { className: "k-getal" }, st.assists || /* @__PURE__ */ React.createElement("span", { className: "k-leeg" }, "0")), /* @__PURE__ */ React.createElement("td", { className: "k-extra" }, s.positie2 ? /* @__PURE__ */ React.createElement(
+        "span",
+        {
+          className: "positie-badge " + positieKlasse(s.positie2),
+          title: s.positieCode2 ? (positieInfo(s.positieCode2) || {}).naam : ""
+        },
+        s.positieCode2 || s.positie2
+      ) : /* @__PURE__ */ React.createElement("span", { className: "k-leeg" }, "\u2013")));
     })))));
   })));
 }
@@ -27897,7 +28152,16 @@ function OpstellingenTab({ spelers }) {
     setDetailPositie(null);
   }
   function wijsSpelerToe(speler) {
-    setToewijzing((prev) => ({ ...prev, [kiesPositie.id]: { ...speler, spelerId: speler.id } }));
+    setToewijzing((prev) => {
+      const n = {};
+      Object.keys(prev).forEach(function(k) {
+        var sp = prev[k];
+        if (sp && (sp.id === speler.id || sp.spelerId === speler.id)) return;
+        n[k] = sp;
+      });
+      n[kiesPositie.id] = { ...speler, spelerId: speler.id };
+      return n;
+    });
     setKiesPositie(null);
   }
   function verwijderVanPositie(positieId) {
@@ -27912,7 +28176,15 @@ function OpstellingenTab({ spelers }) {
   function bewaarFormatie() {
     const nm = bewaarNaam.trim() || actief + " Opstelling";
     const nieuw = { id: Date.now(), naam: nm, formatie: actief, toewijzing };
-    setOpgeslagen((prev) => [...prev, nieuw]);
+    setOpgeslagen((prev) => {
+      const i = prev.findIndex(function(f) {
+        return String(f.naam || "").trim().toLowerCase() === nm.toLowerCase();
+      });
+      if (i < 0) return [...prev, nieuw];
+      const kopie = prev.slice();
+      kopie[i] = Object.assign({}, nieuw, { id: prev[i].id });
+      return kopie;
+    });
     setBewaarOpen(false);
     setBewaarNaam("");
   }
@@ -28043,22 +28315,35 @@ function OpstellingenTab({ spelers }) {
   } }, /* @__PURE__ */ React.createElement("div", { style: { textAlign: "center" } }, /* @__PURE__ */ React.createElement(TenueBeeld, { set: tenueVoor(tenue, tenue.keuze || "thuis", true), kant: "voor", breed: 62 }), /* @__PURE__ */ React.createElement("div", { className: "tenue-kant" }, "De keeper hierbij")))), /* @__PURE__ */ React.createElement("div", { style: { textAlign: "center", fontSize: 11, color: "var(--grijs-donker)", padding: "4px 12px 12px", lineHeight: 1.6 } }, "De kleuren zelf ontwerp je in het Clubhuis, bij de tenue-ontwerper. Wat je hier kiest zie je op het veld en in de gedeelde afbeelding."))), opgeslagen.length > 0 && /* @__PURE__ */ React.createElement("div", { className: "kaart", style: { marginTop: 14 } }, /* @__PURE__ */ React.createElement("div", { className: "kaart-titel" }, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-floppy-disk" }), " Opgeslagen opstellingen (", opgeslagen.length, ")"), opgeslagen.map((f) => {
     const aantalSpelers = Object.values(f.toewijzing || {}).filter(Boolean).length;
     return /* @__PURE__ */ React.createElement("div", { key: f.id, className: "opgeslagen-formatie" }, /* @__PURE__ */ React.createElement("div", { style: { width: 38, height: 38, borderRadius: 8, background: "var(--blauw)", color: "var(--op-kleur)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 700, fontFamily: "'Helvetica Neue',Arial", flexShrink: 0 } }, f.formatie), /* @__PURE__ */ React.createElement("div", { style: { flex: 1 }, onClick: () => laadFormatie(f) }, /* @__PURE__ */ React.createElement("div", { style: { fontWeight: 700, fontFamily: "'Helvetica Neue',Arial", fontSize: 14 } }, f.naam), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: "var(--grijs-donker)" } }, f.formatie, " \xB7 ", aantalSpelers, " spelers ingesteld")), /* @__PURE__ */ React.createElement("button", { className: "knop lijn klein", style: { padding: "5px 8px" }, onClick: () => laadFormatie(f) }, "Laden"), /* @__PURE__ */ React.createElement("button", { className: "knop gevaar klein", style: { padding: "5px 8px" }, onClick: () => verwijderFormatie(f.id) }, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-trash" })));
-  })), kiesPositie && /* @__PURE__ */ React.createElement("div", { className: "modal-overlay", onClick: (e) => {
-    if (e.target === e.currentTarget) setKiesPositie(null);
-  } }, /* @__PURE__ */ React.createElement("div", { className: "modal-sheet" }, /* @__PURE__ */ React.createElement("div", { className: "modal-greep" }), /* @__PURE__ */ React.createElement("div", { className: "modal-titel" }, "Speler voor ", kiesPositie.l), toewijzing[kiesPositie.id] && /* @__PURE__ */ React.createElement(
-    "button",
-    {
-      className: "knop gevaar klein",
-      style: { width: "100%", justifyContent: "center", marginBottom: 12 },
-      onClick: () => verwijderVanPositie(kiesPositie.id)
-    },
-    /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-xmark" }),
-    " Speler van positie halen"
-  ), spelers.length === 0 && /* @__PURE__ */ React.createElement("p", { style: { fontSize: 13, color: "var(--grijs-donker)", textAlign: "center", padding: "20px 0" } }, "Voeg eerst spelers toe via Spelers."), spelers.map((s) => {
-    const isGeselecteerd = toewijzing[kiesPositie.id] && (toewijzing[kiesPositie.id].id === s.id || toewijzing[kiesPositie.id].spelerId === s.id);
-    const isElders = !isGeselecteerd && toegewezenIds.includes(s.id);
-    return /* @__PURE__ */ React.createElement("div", { key: s.id, className: "speler-keuze-rij" + (isGeselecteerd ? " geselecteerd" : ""), onClick: () => wijsSpelerToe(s) }, /* @__PURE__ */ React.createElement("div", { className: "speler-avatar", style: { width: 36, height: 36, fontSize: 13 } }, /* @__PURE__ */ React.createElement(SpelerBeeld, { speler: s })), /* @__PURE__ */ React.createElement("div", { style: { flex: 1 } }, /* @__PURE__ */ React.createElement("div", { style: { fontWeight: 700, fontFamily: "'Helvetica Neue',Arial", fontSize: 14 } }, s.naam), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, color: "var(--grijs-donker)" } }, s.positie, s.rugnummer ? " \xB7 #" + s.rugnummer : "")), isGeselecteerd && /* @__PURE__ */ React.createElement("span", { style: { fontSize: 12, color: "var(--succes)", fontWeight: 700 } }, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-check" }), " Op veld"), isElders && /* @__PURE__ */ React.createElement("span", { style: { fontSize: 11, color: "var(--grijs-donker)" } }, "Elders"));
-  }), /* @__PURE__ */ React.createElement("button", { className: "knop lijn", style: { width: "100%", justifyContent: "center", marginTop: 16 }, onClick: () => setKiesPositie(null) }, "Sluiten"))), detailPositie && toewijzing[detailPositie.id] && (() => {
+  })), kiesPositie && (function() {
+    const labels = plekLabels(FORMATIES_DATA[actief] || FORMATIES_DATA["4-3-3A"]);
+    const bezet = {};
+    Object.keys(toewijzing).forEach(function(k) {
+      var sp = toewijzing[k];
+      if (sp) bezet[sp.id || sp.spelerId] = labels[k] || k;
+    });
+    return /* @__PURE__ */ React.createElement(
+      SpelerKeuzeModal,
+      {
+        titel: "Speler voor " + kiesPositie.l,
+        spelers,
+        plekLabel: labels[kiesPositie.id] || kiesPositie.l,
+        bezet,
+        bovenaan: toewijzing[kiesPositie.id] ? /* @__PURE__ */ React.createElement(
+          "button",
+          {
+            className: "knop gevaar klein",
+            style: { width: "100%", justifyContent: "center", marginBottom: 12 },
+            onClick: () => verwijderVanPositie(kiesPositie.id)
+          },
+          /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-xmark" }),
+          " Speler van positie halen"
+        ) : spelers.length === 0 ? /* @__PURE__ */ React.createElement("p", { style: { fontSize: 13, color: "var(--grijs-donker)", textAlign: "center", padding: "20px 0" } }, "Voeg eerst spelers toe via Spelers.") : null,
+        onKies: wijsSpelerToe,
+        onSluiten: () => setKiesPositie(null)
+      }
+    );
+  })(), detailPositie && toewijzing[detailPositie.id] && (() => {
     const sp = toewijzing[detailPositie.id];
     return /* @__PURE__ */ React.createElement("div", { className: "modal-overlay", onClick: (e) => {
       if (e.target === e.currentTarget) setDetailPositie(null);
@@ -37319,7 +37604,7 @@ function exporteerWedstrijdplanPDF(wedstrijd, spelers, deelIpvOpslaan, alleWedst
   doc.save(bestand + ".pdf");
   meldGoed("Wedstrijdplan opgeslagen als " + bestand + ".pdf");
 }
-function SpelerKeuzeModal({ titel, spelers, onKies, onSluiten, plekRol, bezet, rolLabels, uitleg }) {
+function SpelerKeuzeModal({ titel, spelers, onKies, onSluiten, plekRol, plekLabel, bezet, rolLabels, uitleg, bovenaan }) {
   const [zoek, setZoek] = useState("");
   const [alleen2, setAlleen] = useState(false);
   const bezetMap = bezet || {};
@@ -37327,7 +37612,16 @@ function SpelerKeuzeModal({ titel, spelers, onKies, onSluiten, plekRol, bezet, r
   let lijst = spelers.filter(function(s) {
     return s.naam.toLowerCase().indexOf(q) >= 0;
   });
-  if (plekRol) {
+  const pastMap = {};
+  if (plekLabel) {
+    lijst = spelerKeuzeVolgorde(lijst, plekLabel, bezetMap).map(function(x) {
+      pastMap[x.speler.id] = x.past;
+      return x.speler;
+    });
+    if (alleen2) lijst = lijst.filter(function(s) {
+      return pastMap[s.id] <= 2;
+    });
+  } else if (plekRol) {
     lijst = lijst.map(function(s) {
       return { s, p: positiePassendheid(plekRol, s.positie), vrij: bezetMap[s.id] ? 1 : 0 };
     }).sort(function(a, b) {
@@ -37341,12 +37635,16 @@ function SpelerKeuzeModal({ titel, spelers, onKies, onSluiten, plekRol, bezet, r
       return positiePassendheid(plekRol, s.positie) === 0;
     });
   }
-  const aantalPassend = plekRol ? spelers.filter(function(s) {
+  const aantalPassend = plekLabel ? spelers.filter(function(s) {
+    return !bezetMap[s.id] && spelerPastOpPlek(plekLabel, s) <= 2;
+  }).length : plekRol ? spelers.filter(function(s) {
     return positiePassendheid(plekRol, s.positie) === 0;
   }).length : 0;
+  const plekInfo = plekLabel ? positieInfo(plekAlsSpelerCode(plekLabel)) : null;
+  const plekWoord = plekInfo ? plekInfo.naam.toLowerCase() : (plekRol || "").toLowerCase();
   return /* @__PURE__ */ React.createElement("div", { className: "modal-overlay", onClick: function(e) {
     if (e.target === e.currentTarget) onSluiten();
-  } }, /* @__PURE__ */ React.createElement("div", { className: "modal-sheet" }, /* @__PURE__ */ React.createElement("div", { className: "modal-greep" }), /* @__PURE__ */ React.createElement("div", { className: "modal-titel" }, titel), uitleg && /* @__PURE__ */ React.createElement("p", { style: { textAlign: "center", fontSize: 12, color: "var(--grijs-donker)", fontWeight: 400, marginBottom: 10 } }, uitleg), plekRol && /* @__PURE__ */ React.createElement("p", { style: { textAlign: "center", fontSize: 12, color: "var(--grijs-donker)", fontWeight: 400, marginBottom: 10 } }, aantalPassend > 0 ? aantalPassend + " " + plekRol.toLowerCase() + (aantalPassend === 1 ? "" : "s") + " staan bovenaan" : "Geen " + plekRol.toLowerCase() + "s in de selectie"), /* @__PURE__ */ React.createElement(
+  } }, /* @__PURE__ */ React.createElement("div", { className: "modal-sheet" }, /* @__PURE__ */ React.createElement("div", { className: "modal-greep" }), /* @__PURE__ */ React.createElement("div", { className: "modal-titel" }, titel), uitleg && /* @__PURE__ */ React.createElement("p", { style: { textAlign: "center", fontSize: 12, color: "var(--grijs-donker)", fontWeight: 400, marginBottom: 10 } }, uitleg), bovenaan, plekLabel ? /* @__PURE__ */ React.createElement("p", { style: { textAlign: "center", fontSize: 12, color: "var(--grijs-donker)", fontWeight: 400, marginBottom: 10 } }, aantalPassend > 0 ? aantalPassend + " vrije speler" + (aantalPassend === 1 ? "" : "s") + " voor " + plekWoord + (aantalPassend === 1 ? " staat" : " staan") + " bovenaan" : "Geen vrije spelers met deze positie \u2014 de rest staat op volgorde van wie het best past") : plekRol && /* @__PURE__ */ React.createElement("p", { style: { textAlign: "center", fontSize: 12, color: "var(--grijs-donker)", fontWeight: 400, marginBottom: 10 } }, aantalPassend > 0 ? aantalPassend + " " + plekRol.toLowerCase() + (aantalPassend === 1 ? "" : "s") + " staan bovenaan" : "Geen " + plekRol.toLowerCase() + "s in de selectie"), /* @__PURE__ */ React.createElement(
     "input",
     {
       className: "zoekbalk",
@@ -37357,7 +37655,7 @@ function SpelerKeuzeModal({ titel, spelers, onKies, onSluiten, plekRol, bezet, r
       },
       style: { marginBottom: 8 }
     }
-  ), plekRol && aantalPassend > 0 && /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 6, marginBottom: 10, flexWrap: "wrap" } }, /* @__PURE__ */ React.createElement(
+  ), (plekRol || plekLabel) && aantalPassend > 0 && /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 6, marginBottom: 10, flexWrap: "wrap" } }, /* @__PURE__ */ React.createElement(
     "button",
     {
       className: "filter-chip",
@@ -37366,26 +37664,13 @@ function SpelerKeuzeModal({ titel, spelers, onKies, onSluiten, plekRol, bezet, r
         setAlleen(!alleen2);
       }
     },
-    "Alleen " + plekRol.toLowerCase() + "s"
+    plekLabel ? "Alleen wie past" : "Alleen " + plekRol.toLowerCase() + "s"
   )), lijst.map(function(s) {
     const staatOp = bezetMap[s.id];
-    const past = plekRol ? positiePassendheid(plekRol, s.positie) : null;
-    return /* @__PURE__ */ React.createElement(
-      "div",
-      {
-        key: s.id,
-        className: "speler-keuze-rij",
-        onClick: function() {
-          onKies(s);
-        },
-        style: { opacity: staatOp ? 0.45 : 1 }
-      },
-      /* @__PURE__ */ React.createElement("div", { className: "speler-avatar", style: { width: 36, height: 36, fontSize: 13 } }, /* @__PURE__ */ React.createElement(SpelerBeeld, { speler: s })),
-      /* @__PURE__ */ React.createElement("div", { style: { flex: 1, minWidth: 0 } }, /* @__PURE__ */ React.createElement("div", { style: { fontWeight: 700, fontFamily: "'Helvetica Neue',Arial,sans-serif", fontSize: 14 } }, s.naam), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, color: "var(--grijs-donker)" } }, s.positie || "Geen positie", s.rugnummer ? " \xB7 #" + s.rugnummer : "")),
-      rolLabels && rolLabels[s.id] && /* @__PURE__ */ React.createElement("span", { className: "oef-tag", style: { background: "var(--vlak-info)", color: "var(--blauw)" } }, rolLabels[s.id]),
-      past === 0 && !staatOp && /* @__PURE__ */ React.createElement("span", { className: "oef-tag", style: { background: "var(--vlak-succes)", color: "var(--op-succesvlak)" } }, "past"),
-      staatOp && /* @__PURE__ */ React.createElement("span", { className: "oef-tag", style: { background: "var(--grijs)", color: "var(--grijs-donker)" } }, staatOp === true ? "opgesteld" : "staat op " + staatOp)
-    );
+    const past = plekLabel ? pastMap[s.id] : plekRol ? positiePassendheid(plekRol, s.positie) : null;
+    return /* @__PURE__ */ React.createElement("div", { key: s.id, className: "speler-keuze-rij" + (staatOp ? " al-opgesteld" : ""), onClick: function() {
+      onKies(s);
+    } }, /* @__PURE__ */ React.createElement("div", { className: "speler-avatar", style: { width: 36, height: 36, fontSize: 13 } }, /* @__PURE__ */ React.createElement(SpelerBeeld, { speler: s })), /* @__PURE__ */ React.createElement("div", { style: { flex: 1, minWidth: 0 } }, /* @__PURE__ */ React.createElement("div", { style: { fontWeight: 700, fontFamily: "'Helvetica Neue',Arial,sans-serif", fontSize: 14 } }, s.naam), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, color: "var(--grijs-donker)" } }, positieTekst(s) || "Geen positie", s.rugnummer ? " \xB7 #" + s.rugnummer : "")), rolLabels && rolLabels[s.id] && /* @__PURE__ */ React.createElement("span", { className: "oef-tag", style: { background: "var(--vlak-info)", color: "var(--blauw)" } }, rolLabels[s.id]), past === 0 && !staatOp && /* @__PURE__ */ React.createElement("span", { className: "oef-tag", style: { background: "var(--vlak-succes)", color: "var(--op-succesvlak)" } }, "past"), plekLabel && (past === 1 || past === 2) && !staatOp && /* @__PURE__ */ React.createElement("span", { className: "oef-tag", style: { background: "var(--vlak-info)", color: "var(--blauw)" } }, "kan ook"), staatOp && /* @__PURE__ */ React.createElement("span", { className: "oef-tag", style: { background: "var(--grijs)", color: "var(--grijs-donker)" } }, staatOp === true ? "opgesteld" : "staat op " + staatOp));
   }), lijst.length === 0 && /* @__PURE__ */ React.createElement("div", { style: { textAlign: "center", padding: "20px", color: "var(--grijs-donker)", fontSize: 14 } }, "Geen spelers gevonden"), /* @__PURE__ */ React.createElement("button", { className: "knop lijn", style: { width: "100%", justifyContent: "center", marginTop: 16 }, onClick: onSluiten }, "Annuleren")));
 }
 function Kleedkamerbriefje({ waarde, opWaarde }) {
@@ -39083,7 +39368,7 @@ function WedstrijdOpstelling({ wedstrijd, spelers, onOpslaan, onSluiten, inVenst
     {
       titel: "Wie op " + kiesPositie.l + "?",
       spelers,
-      plekRol: POSITIECODE_NAAR_ROL[kiesPositie.l],
+      plekLabel: plekLabels(posities)[kiesPositie.id] || kiesPositie.l,
       bezet: bezetOverzicht,
       onKies: function(s) {
         zetOpPositie(kiesPositie.id, s);

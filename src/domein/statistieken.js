@@ -946,6 +946,122 @@ function positiePassendheid(rolVanPlek, spelerPositie) {
   return Math.abs(a - b);   // aangrenzende linie telt als bijna passend
 }
 
+/* ══ SPECIFIEKE POSITIES ═════════════════════════════════════
+   Verzoek van Evan (14 oktober 2026): bij een speler niet alleen
+   "Verdediger" maar precies welke plek — RVV, RV, CV, LV, LVV enzovoort.
+   Het oude veld positie (Keeper/Verdediger/Middenvelder/Aanvaller)
+   blijft bestaan en wordt vanzelf meegezet: de hele app groepeert en
+   telt daarop, en spelers van vóór vandaag hebben alleen dat.
+   positieCode en positieCode2 zijn de nieuwe, precieze velden.
+   De volgorde is die van Evan: van rechts naar links per linie. */
+const SPELER_POSITIES = [
+  {code:"K",   naam:"Keeper",                              groep:"Keeper"},
+  {code:"RVV", naam:"Rechter vleugelverdediger",           groep:"Verdediger"},
+  {code:"RV",  naam:"Rechtsback",                          groep:"Verdediger"},
+  {code:"CV",  naam:"Centrale verdediger",                 groep:"Verdediger"},
+  {code:"LV",  naam:"Linksback",                           groep:"Verdediger"},
+  {code:"LVV", naam:"Linker vleugelverdediger",            groep:"Verdediger"},
+  {code:"RM",  naam:"Rechter middenvelder",                groep:"Middenvelder"},
+  {code:"RCM", naam:"Rechter centrale middenvelder",       groep:"Middenvelder"},
+  {code:"CM",  naam:"Centrale middenvelder",               groep:"Middenvelder"},
+  {code:"CVM", naam:"Centrale verdedigende middenvelder",  groep:"Middenvelder"},
+  {code:"CAM", naam:"Centrale aanvallende middenvelder",   groep:"Middenvelder"},
+  {code:"LCM", naam:"Linker centrale middenvelder",        groep:"Middenvelder"},
+  {code:"LM",  naam:"Linker middenvelder",                 groep:"Middenvelder"},
+  {code:"RVA", naam:"Rechter vleugelaanvaller",            groep:"Aanvaller"},
+  {code:"SP",  naam:"Spits",                               groep:"Aanvaller"},
+  {code:"LVA", naam:"Linker vleugelaanvaller",             groep:"Aanvaller"}
+];
+/* Plekken die op elkaar lijken: wie hier staat, kan daar ook uit de
+   voeten. Bewust kort gehouden — liever een eerlijke "kan ook" dan een
+   lange lijst die alles goedkeurt. */
+/** @type {Object<string,string[]>} */
+const POSITIE_VERWANT = {
+  K:[], RVV:["RV","RM"], RV:["RVV","CV"], CV:["RV","LV","CVM"], LV:["LVV","CV"], LVV:["LV","LM"],
+  RM:["RCM","RVA","RVV"], RCM:["CM","RM","CVM"], CM:["RCM","LCM","CVM","CAM"],
+  CVM:["CM","RCM","LCM","CV"], CAM:["CM","SP","RCM","LCM"], LCM:["CM","LM","CVM"],
+  LM:["LCM","LVA","LVV"], RVA:["RM","SP"], SP:["CAM","RVA","LVA"], LVA:["LM","SP"]
+};
+/**
+ * @param {string} [code]
+ * @returns {{code:string,naam:string,groep:string}|null}
+ */
+function positieInfo(code) {
+  return SPELER_POSITIES.filter(function (p) { return p.code === code; })[0] || null;
+}
+/**
+ * Van een plek in de formatie ("CM-L", "CV-R", "DM") naar de code die
+ * je bij een speler kiest. Twee centrale middenvelders naast elkaar zijn
+ * een LCM en een RCM; de doelman is de keeper.
+ * @param {string} [label]
+ * @returns {string}
+ */
+function plekAlsSpelerCode(label) {
+  var s = String(label || "");
+  var code = plekCode(s);
+  if (code === "DM") return "K";
+  if (code === "CM") {
+    var kant = s.slice(s.indexOf("-") + 1);
+    if (s.indexOf("-") > 0 && kant === "L") return "LCM";
+    if (s.indexOf("-") > 0 && kant === "R") return "RCM";
+  }
+  return code;
+}
+/**
+ * Hoe goed past deze speler op deze plek? Lager is beter.
+ *   0 zijn eigen positie   1 zijn extra positie   2 een verwante plek
+ *   3 dezelfde linie       4 de linie ernaast     6 past niet
+ * Spelers zonder precieze positie vallen terug op de linie (3 of slechter).
+ * @param {string} plekLabel  label van de plek, bijv. "CV-L" of "CAM"
+ * @param {{positie?:string, positie2?:string, positieCode?:string, positieCode2?:string}} speler
+ * @returns {number}
+ */
+function spelerPastOpPlek(plekLabel, speler) {
+  var doel = plekAlsSpelerCode(plekLabel);
+  var info = positieInfo(doel);
+  var groep = info ? info.groep : "";   // elke formatiecode staat in SPELER_POSITIES
+  var c1 = speler && speler.positieCode, c2 = speler && speler.positieCode2;
+  if (c1 && c1 === doel) return 0;
+  if (c2 && c2 === doel) return 1;
+  var verwant = POSITIE_VERWANT[doel] || [];
+  if ((c1 && verwant.indexOf(c1) >= 0) || (c2 && verwant.indexOf(c2) >= 0)) return 2;
+  var g1 = (positieInfo(c1 || "") || {groep: speler && speler.positie}).groep;
+  var g2 = (positieInfo(c2 || "") || {groep: speler && speler.positie2}).groep;
+  var beste = Math.min(positiePassendheid(groep, g1), g2 ? positiePassendheid(groep, g2) + 0.5 : 9);
+  if (beste === 0) return 3;
+  if (beste <= 1.5) return 4;
+  return 6;
+}
+/**
+ * De volgorde in de spelerkiezer: wie nog vrij is eerst, dan wie het
+ * best past, dan op rugnummer. Wie al op het veld staat komt onderaan
+ * (en wordt in het scherm lichtgrijs).
+ * @param {any[]} spelers
+ * @param {string} plekLabel
+ * @param {Object<string,any>} [bezet]  per spelerId: waar hij al staat
+ * @returns {{speler:any, past:number, bezet:any}[]}
+ */
+function spelerKeuzeVolgorde(spelers, plekLabel, bezet) {
+  var b = bezet || {};
+  return (spelers || []).map(function (s) {
+    return {speler: s, past: spelerPastOpPlek(plekLabel, s), bezet: b[s.id] || null};
+  }).sort(function (x, y) {
+    if (!!x.bezet !== !!y.bezet) return x.bezet ? 1 : -1;
+    if (x.past !== y.past) return x.past - y.past;
+    return (Number(x.speler.rugnummer) || 99) - (Number(y.speler.rugnummer) || 99);
+  });
+}
+/**
+ * Wat er onder de naam staat: "CV · Verdediger" of alleen "Verdediger".
+ * @param {{positie?:string, positieCode?:string, positieCode2?:string}} speler
+ * @returns {string}
+ */
+function positieTekst(speler) {
+  if (!speler) return "";
+  var c = [speler.positieCode, speler.positieCode2].filter(Boolean).join("/");
+  return c ? c + " · " + (speler.positie || "") : (speler.positie || "");
+}
+
 /* ── Wie staat er op dit moment op het veld? ─────────────────
    Dit leek een vraag met een makkelijk antwoord: de basis, min wie er
    is uitgewisseld, plus wie erin kwam. Zo stond het er ook, en zo

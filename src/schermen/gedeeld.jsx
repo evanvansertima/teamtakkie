@@ -459,15 +459,34 @@ function popDonker(hex) {
   return "#"+d(r)+d(g)+d(b);
 }
 
-function SpelerPop({ naam, shirt, vlak, grootte, tenueSet: tset }) {
+/* Hoe het poppetje van een naam eruitziet zonder eigen keuze. Los
+   gezet (14 oktober 2026) zodat de avatarmaker met precies dit poppetje
+   kan beginnen: wie zijn avatar gaat aanpassen, ziet eerst wat er al was. */
+function popAvatarVan(naam) {
   const g = popGetal(naam);
-  const huid  = POP_HUID[g % POP_HUID.length];
-  const haar  = POP_HAAR[(g >>> 3) % POP_HAAR.length];
-  const trui  = shirt || "#004aad";
   const kapsel = (g >>> 9) % POP_KAPSEL.length;
+  return { huid: g % POP_HUID.length, haar: (g >>> 3) % POP_HAAR.length, kapsel: kapsel,
+           baard: ((g >>> 13) % 5) === 0 && kapsel !== 5 };
+}
+function popKeuze(lijst, i, terug) {
+  var n = Number(i);
+  return (Number.isInteger(n) && n >= 0 && n < lijst.length) ? n : terug;
+}
+
+function SpelerPop({ naam, shirt, vlak, grootte, tenueSet: tset, avatar }) {
+  const g = popGetal(naam);
+  /* Een zelfgemaakte avatar wint; wat er niet in staat komt uit de naam. */
+  const auto = popAvatarVan(naam);
+  const eigen = avatar || {};
+  const huid  = POP_HUID[popKeuze(POP_HUID, eigen.huid, auto.huid)];
+  const haar  = POP_HAAR[popKeuze(POP_HAAR, eigen.haar, auto.haar)];
+  const trui  = shirt || "#004aad";
+  const kapsel = popKeuze(POP_KAPSEL, eigen.kapsel, auto.kapsel);
   const haarH = POP_KAPSEL[kapsel];
-  const baard = ((g >>> 13) % 5) === 0 && kapsel !== 5;
-  const id = "pop"+(g % 1000000)+"-"+kapsel;
+  const baard = (typeof eigen.baard === "boolean" ? eigen.baard : auto.baard) && kapsel !== 5;
+  /* Zelfgemaakt krijgt een eigen id (anders delen twee varianten in de
+     kapselkiezer hun uitsnede); het automatische poppetje houdt het oude. */
+  const id = "pop"+(g % 1000000)+"-"+kapsel+(avatar ? "-"+POP_HUID.indexOf(huid)+POP_HAAR.indexOf(haar)+(baard?"b":"") : "");
   const maat = grootte || "100%";
   /* De schouders krijgen hetzelfde patroon als het shirt. Het patroon
      wordt in het tenuevel van 120 breed gerekend; hier wordt het naar
@@ -752,12 +771,85 @@ function TenueBeeld({ set, kant, nummer, naam, breed, schaduw, kader, kaderStuk,
 }
 
 /* Foto als die er is, anders een getekend poppetje */
+/* Drie soorten beeld (besluit van Evan, 14 oktober 2026): een foto, een
+   zelfgemaakte avatar, of een neutraal silhouet. Spelers van daarvoor
+   hebben geen beeldSoort; die houden wat ze hadden — hun foto, of het
+   poppetje dat uit hun naam volgt. */
 function SpelerBeeld({ speler, shirt, vlak, tenueSet: tset }) {
-  if (speler && speler.foto) {
+  const soort = speler && speler.beeldSoort;
+  if (speler && speler.foto && (!soort || soort === "foto")) {
     return <img src={speler.foto} alt={speler.naam||""}
       style={{width:"100%",height:"100%",objectFit:"cover",borderRadius:"50%",display:"block"}}/>;
   }
-  return <SpelerPop naam={(speler&&speler.naam)||"?"} shirt={shirt} vlak={vlak} tenueSet={tset} />;
+  if (soort === "silhouet") return <SpelerSilhouet shirt={shirt}/>;
+  return <SpelerPop naam={(speler&&speler.naam)||"?"} shirt={shirt} vlak={vlak} tenueSet={tset}
+    avatar={soort === "avatar" ? speler.avatar : null} />;
+}
+/* Hoofd en schouders zonder gezicht. Het shirt houdt de clubkleur, zodat
+   een silhouet op het veld nog steeds bij het team hoort. */
+function SpelerSilhouet({ shirt, grootte }) {
+  const maat = grootte || "100%";
+  return (
+    <svg viewBox="0 0 64 64" width={maat} height={maat} aria-hidden="true" style={{display:"block",overflow:"visible"}}>
+      <path d="M32 41c12 0 21 9 22 24H10c1-15 10-24 22-24z" fill={shirt || "#004aad"}/>
+      <rect x="27.3" y="31" width="9.4" height="11" rx="4.7" fill="#9aa5b4"/>
+      <circle cx="32" cy="24" r="13" fill="#b8c2cf"/>
+    </svg>
+  );
+}
+
+/* ── De avatarmaker ── huid, haarkleur, kapsel en baard, met meteen
+   het resultaat erboven. */
+function AvatarMaker({ naam, waarde, opWaarde }) {
+  const a = Object.assign({}, popAvatarVan(naam || "?"), waarde || {});
+  function zet(k, v) { var n = Object.assign({}, a); n[k] = v; opWaarde(n); }
+  function rij(label, lijst, sleutel) {
+    return (
+      <div className="avatar-rij">
+        <span className="avatar-rij-label">{label}</span>
+        <div className="avatar-stalen">
+          {lijst.map(function(kleur, i){
+            return <button key={i} type="button" aria-label={label+" "+(i+1)}
+              className={"avatar-staal"+(a[sleutel]===i?" actief":"")} style={{background:kleur}}
+              onClick={function(){ zet(sleutel, i); }}/>;
+          })}
+        </div>
+      </div>
+    );
+  }
+  return (
+    <div className="avatar-maker">
+      <div className="avatar-voorbeeld"><SpelerPop naam={naam || "?"} avatar={a}/></div>
+      {rij("Huid", POP_HUID, "huid")}
+      {rij("Haar", POP_HAAR, "haar")}
+      <div className="avatar-rij">
+        <span className="avatar-rij-label">Kapsel</span>
+        <div className="avatar-stalen">
+          {POP_KAPSEL.map(function(_, i){
+            return (
+              <button key={i} type="button" aria-label={"Kapsel "+(i+1)}
+                className={"avatar-kapsel"+(a.kapsel===i?" actief":"")}
+                onClick={function(){ zet("kapsel", i); }}>
+                <SpelerPop naam={naam || "?"} avatar={Object.assign({}, a, {kapsel:i, baard:false})}/>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+      <div className="avatar-rij">
+        <span className="avatar-rij-label">Baard</span>
+        <div className="avatar-stalen">
+          <button type="button" className={"filter-chip"+(a.baard?" actief":"")} style={chipStijl(!!a.baard)}
+            onClick={function(){ zet("baard", !a.baard); }}>{a.baard ? "Ja" : "Nee"}</button>
+          <button type="button" className="filter-chip" style={{marginLeft:"auto"}}
+            onClick={function(){
+              opWaarde({huid:Math.floor(Math.random()*POP_HUID.length), haar:Math.floor(Math.random()*POP_HAAR.length),
+                        kapsel:Math.floor(Math.random()*POP_KAPSEL.length), baard:Math.random()<0.2});
+            }}><i className="fa-solid fa-shuffle"/> Verras me</button>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 /* ═══════════════════════════════════════════════════════════

@@ -1099,7 +1099,7 @@ function exporteerWedstrijdplanPDF(wedstrijd, spelers, deelIpvOpslaan, alleWedst
 /* ═══════════════════════════════════════════════════════════
    SPELER SELECTIE MODAL (voor doelpunten / kaarten)
 ═══════════════════════════════════════════════════════════ */
-function SpelerKeuzeModal({ titel, spelers, onKies, onSluiten, plekRol, bezet, rolLabels, uitleg }) {
+function SpelerKeuzeModal({ titel, spelers, onKies, onSluiten, plekRol, plekLabel, bezet, rolLabels, uitleg, bovenaan }) {
   const [zoek, setZoek] = useState("");
   const [alleen, setAlleen] = useState(false);
 
@@ -1107,7 +1107,14 @@ function SpelerKeuzeModal({ titel, spelers, onKies, onSluiten, plekRol, bezet, r
   const q = zoek.toLowerCase();
   let lijst = spelers.filter(function(s){ return s.naam.toLowerCase().indexOf(q) >= 0; });
 
-  if (plekRol) {
+  /* Met een plek-label (sinds 14 oktober 2026) rekenen we op de precieze
+     positie: wie vrij is en het best past staat bovenaan, wie al op het
+     veld staat zakt naar onderen en wordt lichtgrijs. */
+  const pastMap = {};
+  if (plekLabel) {
+    lijst = spelerKeuzeVolgorde(lijst, plekLabel, bezetMap).map(function(x){ pastMap[x.speler.id] = x.past; return x.speler; });
+    if (alleen) lijst = lijst.filter(function(s){ return pastMap[s.id] <= 2; });
+  } else if (plekRol) {
     lijst = lijst.map(function(s){
       return {s:s, p:positiePassendheid(plekRol, s.positie), vrij: bezetMap[s.id] ? 1 : 0};
     }).sort(function(a,b){
@@ -1118,7 +1125,11 @@ function SpelerKeuzeModal({ titel, spelers, onKies, onSluiten, plekRol, bezet, r
     if (alleen) lijst = lijst.filter(function(s){ return positiePassendheid(plekRol, s.positie) === 0; });
   }
 
-  const aantalPassend = plekRol ? spelers.filter(function(s){ return positiePassendheid(plekRol, s.positie)===0; }).length : 0;
+  const aantalPassend = plekLabel
+    ? spelers.filter(function(s){ return !bezetMap[s.id] && spelerPastOpPlek(plekLabel, s) <= 2; }).length
+    : plekRol ? spelers.filter(function(s){ return positiePassendheid(plekRol, s.positie)===0; }).length : 0;
+  const plekInfo = plekLabel ? positieInfo(plekAlsSpelerCode(plekLabel)) : null;
+  const plekWoord = plekInfo ? plekInfo.naam.toLowerCase() : (plekRol || "").toLowerCase();
 
   return (
     <div className="modal-overlay" onClick={function(e){ if(e.target===e.currentTarget) onSluiten(); }}>
@@ -1130,7 +1141,14 @@ function SpelerKeuzeModal({ titel, spelers, onKies, onSluiten, plekRol, bezet, r
             {uitleg}
           </p>
         )}
-        {plekRol && (
+        {bovenaan}
+        {plekLabel ? (
+          <p style={{textAlign:"center",fontSize:12,color:"var(--grijs-donker)",fontWeight:400,marginBottom:10}}>
+            {aantalPassend>0
+              ? aantalPassend+" vrije speler"+(aantalPassend===1?"":"s")+" voor "+plekWoord+(aantalPassend===1?" staat":" staan")+" bovenaan"
+              : "Geen vrije spelers met deze positie — de rest staat op volgorde van wie het best past"}
+          </p>
+        ) : plekRol && (
           <p style={{textAlign:"center",fontSize:12,color:"var(--grijs-donker)",fontWeight:400,marginBottom:10}}>
             {aantalPassend>0
               ? aantalPassend+" "+plekRol.toLowerCase()+(aantalPassend===1?"":"s")+" staan bovenaan"
@@ -1139,28 +1157,27 @@ function SpelerKeuzeModal({ titel, spelers, onKies, onSluiten, plekRol, bezet, r
         )}
         <input className="zoekbalk" placeholder="Zoek speler…" value={zoek}
           onChange={function(e){ setZoek(e.target.value); }} style={{marginBottom:8}} />
-        {plekRol && aantalPassend>0 && (
+        {(plekRol || plekLabel) && aantalPassend>0 && (
           <div style={{display:"flex",gap:6,marginBottom:10,flexWrap:"wrap"}}>
             <button className="filter-chip"
               style={{borderColor:alleen?"var(--blauw)":"var(--grijs)",background:alleen?"var(--blauw)":"var(--wit)",color:alleen?"var(--op-kleur)":"var(--grijs-donker)"}}
               onClick={function(){ setAlleen(!alleen); }}>
-              {"Alleen "+plekRol.toLowerCase()+"s"}
+              {plekLabel ? "Alleen wie past" : "Alleen "+plekRol.toLowerCase()+"s"}
             </button>
           </div>
         )}
         {lijst.map(function(s){
           const staatOp = bezetMap[s.id];
-          const past = plekRol ? positiePassendheid(plekRol, s.positie) : null;
+          const past = plekLabel ? pastMap[s.id] : plekRol ? positiePassendheid(plekRol, s.positie) : null;
           return (
-            <div key={s.id} className="speler-keuze-rij" onClick={function(){ onKies(s); }}
-              style={{opacity: staatOp ? 0.45 : 1}}>
+            <div key={s.id} className={"speler-keuze-rij"+(staatOp ? " al-opgesteld" : "")} onClick={function(){ onKies(s); }}>
               <div className="speler-avatar" style={{width:36,height:36,fontSize:13}}>
                 {<SpelerBeeld speler={s}/>}
               </div>
               <div style={{flex:1,minWidth:0}}>
                 <div style={{fontWeight:700,fontFamily:"'Helvetica Neue',Arial,sans-serif",fontSize:14}}>{s.naam}</div>
                 <div style={{fontSize:12,color:"var(--grijs-donker)"}}>
-                  {(s.positie||"Geen positie")}{s.rugnummer ? " · #"+s.rugnummer : ""}
+                  {(positieTekst(s)||"Geen positie")}{s.rugnummer ? " · #"+s.rugnummer : ""}
                 </div>
               </div>
               {rolLabels && rolLabels[s.id] && (
@@ -1168,6 +1185,9 @@ function SpelerKeuzeModal({ titel, spelers, onKies, onSluiten, plekRol, bezet, r
               )}
               {past===0 && !staatOp && (
                 <span className="oef-tag" style={{background:"var(--vlak-succes)",color:"var(--op-succesvlak)"}}>past</span>
+              )}
+              {plekLabel && (past===1 || past===2) && !staatOp && (
+                <span className="oef-tag" style={{background:"var(--vlak-info)",color:"var(--blauw)"}}>kan ook</span>
               )}
               {staatOp && (
                 <span className="oef-tag" style={{background:"var(--grijs)",color:"var(--grijs-donker)"}}>
@@ -2963,7 +2983,7 @@ function WedstrijdOpstelling({ wedstrijd, spelers, onOpslaan, onSluiten, inVenst
       {kiesPositie && (
         <SpelerKeuzeModal titel={"Wie op "+kiesPositie.l+"?"}
           spelers={spelers}
-          plekRol={POSITIECODE_NAAR_ROL[kiesPositie.l]}
+          plekLabel={plekLabels(posities)[kiesPositie.id] || kiesPositie.l}
           bezet={bezetOverzicht}
           onKies={function(s){ zetOpPositie(kiesPositie.id, s); }}
           onSluiten={function(){ setKiesPositie(null); }} />

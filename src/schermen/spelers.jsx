@@ -105,8 +105,41 @@ function StatInvoer({ icoon, label, waarde, onChange }) {
   );
 }
 
+/* Eén keuzelijst met de precieze posities, per linie gegroepeerd.
+   Spelers van vóór 14 oktober 2026 hebben alleen een linie; die staat
+   er als "(algemeen)" bij, zodat er bij het openen niets verdwijnt. */
+function PositieKeuze({ code, groep, leeg, opKies, zonder }) {
+  const waarde = code ? code : (groep ? "groep:"+groep : "");
+  return (
+    <select className="formulier-input" value={waarde} onChange={function(e){
+      var v = e.target.value;
+      if (!v) opKies("", "");
+      else if (v.indexOf("groep:")===0) opKies("", v.slice(6));
+      else opKies(v, positieInfo(v).groep);
+    }}>
+      <option value="">{leeg}</option>
+      {ROL_VOLGORDE.map(function(rol){
+        return (
+          <optgroup key={rol} label={rol==="Keeper" ? "Keeper" : rol+"s"}>
+            {SPELER_POSITIES.filter(function(p){ return p.groep===rol && p.code!==zonder; }).map(function(p){
+              return <option key={p.code} value={p.code}>{p.code+" – "+p.naam}</option>;
+            })}
+            {rol!=="Keeper" && <option value={"groep:"+rol}>{rol+" (algemeen)"}</option>}
+          </optgroup>
+        );
+      })}
+    </select>
+  );
+}
+
 function SpelerFormulier({ speler, onOpslaan, onSluiten }) {
-  const [form,setForm]=useState({...LEEG_SPELER,...speler,stats:{...LEEG_SPELER.stats,...(speler?.stats||{})}});
+  const [form,setForm]=useState(function(){
+    var f = {...LEEG_SPELER,...speler,stats:{...LEEG_SPELER.stats,...(speler?.stats||{})}};
+    /* Een nieuwe speler begint als silhouet; een bestaande zonder keuze
+       houdt wat hij had (foto, of het poppetje uit zijn naam). */
+    if (!f.beeldSoort) f.beeldSoort = !speler ? "silhouet" : (f.foto ? "foto" : "avatar");
+    return f;
+  });
   const set = (k,v) => setForm(f=>({...f,[k]:v}));
   const setStat = (k,v) => setForm(f=>({...f,stats:{...f.stats,[k]:v}}));
 
@@ -134,28 +167,49 @@ function SpelerFormulier({ speler, onOpslaan, onSluiten }) {
       <div className="modal-sheet">
         <div className="modal-greep"/>
         <div className="modal-titel">{form.id?"Speler bewerken":"Speler toevoegen"}</div>
-        <div style={{display:"flex",justifyContent:"center"}}>
-          <div className="foto-upload-gebied">
-            {form.foto?<img src={form.foto} alt="foto"/>:<><div className="foto-upload-icoon"><i className="fa-solid fa-camera"/></div><div className="foto-upload-tekst">Foto</div></>}
-            <input type="file" accept="image/*" onChange={verwerkFoto} />
-          </div>
+        {/* Profielbeeld: foto, zelfgemaakte avatar of silhouet */}
+        <div className="beeld-keuze">
+          {[{id:"foto",label:"Foto",icoon:"fa-solid fa-camera"},
+            {id:"avatar",label:"Avatar maken",icoon:"fa-solid fa-face-smile"},
+            {id:"silhouet",label:"Silhouet",icoon:"fa-solid fa-user"}].map(function(k){
+            var aan = form.beeldSoort===k.id;
+            return (
+              <button key={k.id} type="button" className={"beeld-keuze-knop"+(aan?" actief":"")}
+                onClick={function(){ set("beeldSoort", k.id); }}>
+                <i className={k.icoon}/> {k.label}
+              </button>
+            );
+          })}
         </div>
+        {form.beeldSoort==="foto" && (
+          <div style={{display:"flex",justifyContent:"center"}}>
+            <div className="foto-upload-gebied">
+              {form.foto?<img src={form.foto} alt="foto"/>:<><div className="foto-upload-icoon"><i className="fa-solid fa-camera"/></div><div className="foto-upload-tekst">Foto kiezen</div></>}
+              <input type="file" accept="image/*" onChange={verwerkFoto} />
+            </div>
+          </div>
+        )}
+        {form.beeldSoort==="avatar" && (
+          <AvatarMaker naam={form.naam} waarde={form.avatar} opWaarde={function(a){ set("avatar", a); }}/>
+        )}
+        {form.beeldSoort==="silhouet" && (
+          <div className="avatar-voorbeeld" style={{margin:"0 auto 16px"}}><SpelerSilhouet/></div>
+        )}
         <div className="formulier-sectie-titel"><i className="fa-solid fa-user"/> Persoonlijke gegevens</div>
         <div className="formulier-groep"><label className="formulier-label">Volledige naam *</label><input className="formulier-input" value={form.naam} onChange={e=>set("naam",e.target.value)} placeholder="Voor- en achternaam" /></div>
         <div className="formulier-rij">
           <div className="formulier-groep"><label className="formulier-label">Rugnummer</label><GetalVeld className="formulier-input" min={1} max={99} leeg={""} waarde={form.rugnummer} opWaarde={function(n){set("rugnummer",n);}} placeholder="1–99" /></div>
-          <div className="formulier-groep"><label className="formulier-label">Positie</label><select className="formulier-input" value={form.positie} onChange={e=>set("positie",e.target.value)}><option value="">Kies positie</option><option>Keeper</option><option>Verdediger</option><option>Middenvelder</option><option>Aanvaller</option></select></div>
+          <div className="formulier-groep"><label className="formulier-label">Positie</label>
+            <PositieKeuze code={form.positieCode} groep={form.positie} leeg="Kies positie"
+              opKies={function(code, groep){ setForm(function(f){ return {...f, positieCode:code, positie:groep}; }); }} />
+          </div>
         </div>
         <div className="formulier-rij">
           <div className="formulier-groep"><label className="formulier-label">Geboortedatum</label><input className="formulier-input" type="date" value={form.geboortedatum} onChange={e=>set("geboortedatum",e.target.value)} /></div>
           <div className="formulier-groep">
             <label className="formulier-label">Extra positie</label>
-            <select className="formulier-input" value={form.positie2||""}
-              onChange={function(e){ set("positie2", e.target.value); }}>
-              <option value="">Geen</option>
-              {ROL_VOLGORDE.filter(function(p){ return p!==form.positie; })
-                .map(function(p){ return <option key={p} value={p}>{p}</option>; })}
-            </select>
+            <PositieKeuze code={form.positieCode2} groep={form.positie2} leeg="Geen" zonder={form.positieCode}
+              opKies={function(code, groep){ setForm(function(f){ return {...f, positieCode2:code, positie2:groep}; }); }} />
           </div>
           <div className="formulier-groep">
             <label className="formulier-label">Favoriet been</label>
@@ -1330,7 +1384,9 @@ function SpelersLijst({ spelers, onSelecteer, onNieuw }) {
                               <span className="k-speler">
                                 <span className="k-buste"><SpelerBeeld speler={s}/></span>
                                 <span style={{minWidth:0}}>
-                                  <span className="k-speler-naam">{s.naam}</span>
+                                  <span className="k-speler-naam">{s.naam}
+                                    {s.positieCode && <span className="positie-code" title={(positieInfo(s.positieCode)||{}).naam}>{s.positieCode}</span>}
+                                  </span>
                                   {nietFit && (
                                     <span className="k-status" style={{color:besch.kleur}}>
                                       <i className={besch.icoon}/> {besch.label}
@@ -1359,7 +1415,8 @@ function SpelersLijst({ spelers, onSelecteer, onNieuw }) {
                             <td className="k-getal">{st.assists||<span className="k-leeg">0</span>}</td>
                             <td className="k-extra">
                               {s.positie2
-                                ? <span className={"positie-badge "+positieKlasse(s.positie2)}>{s.positie2}</span>
+                                ? <span className={"positie-badge "+positieKlasse(s.positie2)}
+                                    title={s.positieCode2 ? (positieInfo(s.positieCode2)||{}).naam : ""}>{s.positieCode2 || s.positie2}</span>
                                 : <span className="k-leeg">–</span>}
                             </td>
                           </tr>

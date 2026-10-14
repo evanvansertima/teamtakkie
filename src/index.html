@@ -2474,6 +2474,21 @@
       -webkit-tap-highlight-color:transparent; transition:transform .08s; }
     .status-optie:active { transform:scale(.98); }
 
+    .positie-code { display:inline-block; margin-left:8px; padding:1px 6px; border-radius:6px; background:var(--grijs-licht); color:var(--blauw); font-size:11px; font-weight:800; vertical-align:2px; }
+    /* Profielbeeld: foto, avatar of silhouet */
+    .beeld-keuze { display:flex; gap:6px; justify-content:center; flex-wrap:wrap; margin-bottom:14px; }
+    .beeld-keuze-knop { display:inline-flex; align-items:center; gap:6px; padding:8px 12px; border-radius:10px; border:2px solid var(--grijs); background:var(--wit); color:var(--grijs-donker); font-weight:700; font-size:12px; cursor:pointer; font-family:inherit; }
+    .beeld-keuze-knop.actief { border-color:var(--blauw); background:var(--blauw); color:var(--op-kleur); }
+    .avatar-maker { max-width:420px; margin:0 auto 16px; }
+    .avatar-voorbeeld { width:96px; height:96px; border-radius:50%; background:var(--grijs-licht); overflow:hidden; margin:0 auto 12px; display:flex; align-items:flex-end; justify-content:center; }
+    .avatar-rij { display:flex; align-items:center; gap:10px; margin-bottom:9px; }
+    .avatar-rij-label { width:52px; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.4px; color:var(--grijs-donker); flex-shrink:0; }
+    .avatar-stalen { display:flex; flex-wrap:wrap; gap:6px; flex:1; align-items:center; }
+    .avatar-staal { width:28px; height:28px; border-radius:50%; border:3px solid var(--wit); box-shadow:0 0 0 1.5px var(--grijs); cursor:pointer; padding:0; }
+    .avatar-staal.actief, .avatar-kapsel.actief { box-shadow:0 0 0 2.5px var(--blauw); }
+    .avatar-kapsel { width:40px; height:40px; border-radius:10px; border:none; background:var(--grijs-licht); box-shadow:0 0 0 1.5px var(--grijs); padding:3px 3px 0; cursor:pointer; overflow:hidden; }
+    /* Spelerkiezer: wie al op het veld staat is lichtgrijs */
+    .speler-keuze-rij.al-opgesteld { opacity:.42; filter:grayscale(1); }
     /* Een icoon met zijn tekst blijft bij elkaar, ook op een smal scherm */
     .meta-stuk { display:inline-flex; align-items:center; gap:4px; white-space:nowrap; margin-right:10px; }
     .meta-stuk i { opacity:.8; }
