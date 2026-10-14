@@ -45,6 +45,7 @@ function TeamSheet({ onSluiten, onGewisseld }) {
   const [lijst, setLijst] = useState(function(){ return teams(); });
   const [nu, setNu] = useState(function(){ return teamId(); });
   const [nieuw, setNieuw] = useState("");
+  const [nieuwMomenten, setNieuwMomenten] = useState([]);
   const [hernoemt, setHernoemt] = useState(null);
   const [naam, setNaam] = useState("");
   const [weg, setWeg] = useState(null);
@@ -85,6 +86,9 @@ function TeamSheet({ onSluiten, onGewisseld }) {
     var team = maakTeam(n, inst().clubNaam);
     setNieuw("");
     kiesTeam(team.id);
+    /* Na kiesTeam: dan horen de instellingen al bij het nieuwe team. */
+    if (nieuwMomenten.length) zetInstellingen({trainingsmomenten: trainingsmomentenNetjes(nieuwMomenten)});
+    setNieuwMomenten([]);
     ververs();
     onGewisseld();
     onSluiten();
@@ -214,14 +218,24 @@ function TeamSheet({ onSluiten, onGewisseld }) {
         <div className="kaart" style={{marginTop:12}}>
           <div className="kaart-titel"><i className="fa-solid fa-plus"/> Nieuw team</div>
           {magNieuwTeam() ? (
-            <div style={{display:"flex",gap:8}}>
-              <input value={nieuw} placeholder="Bijvoorbeeld JO13-1" style={{margin:0,flex:1}}
-                onChange={function(e){ setNieuw(e.target.value); }}
-                onKeyDown={function(e){ if(e.key==="Enter") voegToe(); }}/>
-              <button className="knop klein" disabled={!nieuw.trim()} onClick={voegToe}>
-                Aanmaken
-              </button>
-            </div>
+            <React.Fragment>
+              <div style={{display:"flex",gap:8}}>
+                <input value={nieuw} placeholder="Bijvoorbeeld JO13-1" style={{margin:0,flex:1}}
+                  onChange={function(e){ setNieuw(e.target.value); }}
+                  onKeyDown={function(e){ if(e.key==="Enter") voegToe(); }}/>
+                <button className="knop klein" disabled={!nieuw.trim()} onClick={voegToe}>
+                  Aanmaken
+                </button>
+              </div>
+              {/* Zodra er een naam staat ook de vaste trainingsdagen
+                  vragen, net als bij het eerste team (zie TeamScherm). */}
+              {nieuw.trim() && (
+                <div style={{marginTop:10}}>
+                  <label className="formulier-label">Vaste trainingsdagen (mag later)</label>
+                  <TrainingsmomentenKiezer waarde={nieuwMomenten} opWaarde={setNieuwMomenten}/>
+                </div>
+              )}
+            </React.Fragment>
           ) : (
             <p style={{fontSize:12.5,color:"var(--grijs-donker)",fontWeight:400,margin:0,lineHeight:1.6}}>
               Met {p.naam} kun je {ruimte === Infinity ? "onbeperkt" : ruimte}{" "}
@@ -2078,6 +2092,14 @@ function InstellingenSheet({ onSluiten, onGewisseld, onTeams }) {
             <label className="formulier-label">Vaste thuislocatie</label>
             <input className="formulier-input" value={i.locatie}
               onChange={function(e){zetInstellingen({locatie:e.target.value});}} placeholder="Sportpark De Toekomst" />
+          </div>
+          <div className="formulier-groep">
+            <label className="formulier-label">Vaste trainingsdagen</label>
+            <TrainingsmomentenKiezer waarde={i.trainingsmomenten}
+              opWaarde={function(l){ zetInstellingen({trainingsmomenten:l}); }} />
+            <p style={{fontSize:11,color:"var(--grijs-donker)",margin:"4px 0 0",lineHeight:1.5}}>
+              Een nieuwe training krijgt vanzelf de eerstvolgende trainingsdag met deze tijd en duur.
+            </p>
           </div>
         </div>
         </React.Fragment>

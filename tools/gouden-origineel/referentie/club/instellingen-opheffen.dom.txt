@@ -583,6 +583,29 @@
             <label class="formulier-label">
               "Vaste thuislocatie"
             <input class="formulier-input" placeholder="Sportpark De Toekomst" value="Sportpark De Verzonnen Kamp">
+          <div class="formulier-groep">
+            <label class="formulier-label">
+              "Vaste trainingsdagen"
+            <div class="trmom">
+              <div aria-label="Trainingsdagen" class="trmom-dagen" role="group">
+                <button aria-pressed="false" class="trmom-dag" title="maandag" type="button">
+                  "ma"
+                <button aria-pressed="false" class="trmom-dag" title="dinsdag" type="button">
+                  "di"
+                <button aria-pressed="false" class="trmom-dag" title="woensdag" type="button">
+                  "wo"
+                <button aria-pressed="false" class="trmom-dag" title="donderdag" type="button">
+                  "do"
+                <button aria-pressed="false" class="trmom-dag" title="vrijdag" type="button">
+                  "vr"
+                <button aria-pressed="false" class="trmom-dag" title="zaterdag" type="button">
+                  "za"
+                <button aria-pressed="false" class="trmom-dag" title="zondag" type="button">
+                  "zo"
+              <div class="trmom-leeg">
+                "Tik de dagen aan waarop jullie trainen."
+            <p style="font-size: 11px; color: var(--grijs-donker); margin: 4px 0px 0px; line-height: 1.5;">
+              "Een nieuwe training krijgt vanzelf de eerstvolgende trainingsdag met deze tijd en duur."
         <div class="inst-groep">
           "App"
         <div class="kaart">

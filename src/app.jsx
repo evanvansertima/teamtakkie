@@ -514,7 +514,7 @@ function taalVanApparaat() {
 const INSTELLINGEN_KEY = "fch_instellingen_v1";
 const STANDAARD_INSTELLINGEN = {
   clubNaam:"", teamNaam:"", seizoen:"2025/2026",
-  speelduur:90, locatie:"", thema:"systeem", logo:null, accent:"club",
+  speelduur:90, locatie:"", trainingsmomenten:[], thema:"systeem", logo:null, accent:"club",
   taal:"", /* leeg betekent: volg het apparaat */
   /* Hoe groot het opstellingsveld op dit apparaat staat, in procenten.
      Op een groot scherm wil je hem groter dan op een telefoon. */
@@ -540,7 +540,9 @@ function logoExport()  { return inst().logo || LOGO_VOL; }
    samengevoegd terug en zetInstellingen() splitst ze weer, zodat de
    honderd plekken in de app die inst() gebruiken hier niets van
    merken. Er is precies één lijst die de scheiding bepaalt. */
-const TEAM_INSTELLINGEN = ["teamNaam", "seizoen", "speelduur", "locatie"];
+/* trainingsmomenten (14 oktober 2026): de vaste trainingsdagen en
+   -tijden. Per team, want JO11 en JO19 trainen niet op dezelfde avond. */
+const TEAM_INSTELLINGEN = ["teamNaam", "seizoen", "speelduur", "locatie", "trainingsmomenten"];
 function _leesDeel(sleutel) {
   try {
     var r = localStorage.getItem(sleutel);

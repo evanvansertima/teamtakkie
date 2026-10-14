@@ -1129,13 +1129,29 @@ function TrainingFormulier({ training, onOpslaan, onSluiten }) {
   const [form, setForm] = useState(() => {
     const base = {id:null,datum:"",tijd:"",locatie:"",duur:90,doelstellingen:"",voorbereidingen:"",materialen:"",onderdelen:[],notities:""};
     if (!training) {
-      return {...base, aanwezigheid: spelers.map(s=>({spelerId:s.id,naam:s.naam,foto:s.foto,status:"aanwezig"}))};
+      /* Een nieuwe training begint op de eerstvolgende vaste
+         trainingsdag waarop nog niets staat, met de tijd en duur van
+         die dag (verzoek van Evan, 14 oktober 2026). */
+      const voorstel = trainingVoorstel(inst().trainingsmomenten, new Date(),
+        laadTrainingen().map(function(t){ return t.datum; }));
+      const vooraf = voorstel
+        ? {datum: voorstel.datum, tijd: voorstel.tijd, duur: voorstel.duur, locatie: voorstel.locatie || inst().locatie || ""}
+        : {locatie: inst().locatie || ""};
+      return {...base, ...vooraf, aanwezigheid: spelers.map(s=>({spelerId:s.id,naam:s.naam,foto:s.foto,status:"aanwezig"}))};
     }
     return {...base,...training};
   });
   const [onderdeelFormulier, setOnderdeelFormulier] = useState(null);
+  /* Heeft de trainer de tijd zelf veranderd, dan blijft die staan als
+     hij daarna een andere datum kiest. Anders volgt de tijd de dag. */
+  const tijdZelf = useRef(!!training);
+  const vasteTijden = trainingsmomentenNetjes(inst().trainingsmomenten);
 
   const set = (k,v) => setForm(f=>({...f,[k]:v}));
+  function zetDatum(datum) {
+    var m = tijdZelf.current ? null : trainingsmomentOp(vasteTijden, datum);
+    setForm(function(f){ return m ? {...f, datum: datum, tijd: m.tijd, duur: m.duur} : {...f, datum: datum}; });
+  }
 
   function toggleAanwezigheid(spelerId, status) {
     setForm(f=>({...f, aanwezigheid: f.aanwezigheid.map(a=>a.spelerId===spelerId?{...a,status}:a)}));
@@ -1190,13 +1206,18 @@ function TrainingFormulier({ training, onOpslaan, onSluiten }) {
         <div className="formulier-rij">
           <div className="formulier-groep">
             <label className="formulier-label">Datum *</label>
-            <input className="formulier-input" type="date" value={form.datum} onChange={e=>set("datum",e.target.value)} />
+            <input className="formulier-input" type="date" value={form.datum} onChange={e=>zetDatum(e.target.value)} />
           </div>
           <div className="formulier-groep">
             <label className="formulier-label">Aanvangstijd</label>
-            <input className="formulier-input" type="time" value={form.tijd} onChange={e=>set("tijd",e.target.value)} />
+            <input className="formulier-input" type="time" value={form.tijd} onChange={e=>{ tijdZelf.current = true; set("tijd",e.target.value); }} />
           </div>
         </div>
+        <p className="formulier-hint">
+          {vasteTijden.length
+            ? "Vaste trainingen: " + trainingsmomentenTekst(vasteTijden) + ". Aanpassen kan in Instellingen."
+            : "Tip: stel in Instellingen je vaste trainingsdagen in, dan staan datum en tijd hier voortaan al klaar."}
+        </p>
         <div className="formulier-rij">
           <div className="formulier-groep">
             <label className="formulier-label">Locatie</label>

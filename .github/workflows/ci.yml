@@ -127,6 +127,8 @@ jobs:
         run: node tests/dubbele-namen.test.js
       - name: node tests/registratie.test.js
         run: node tests/registratie.test.js
+      - name: node tests/trainingstijden.test.js
+        run: node tests/trainingstijden.test.js
 
       # vulling.test.js controleert de vaste vulling van het gouden
       # origineel tegen wat de app werkelijk schrijft. Dat klinkt als een

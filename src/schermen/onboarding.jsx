@@ -332,6 +332,7 @@ function TeamScherm({ opKlaar, eerste }) {
   });
   const [duur, setDuur] = useState("90");
   const [locatie, setLocatie] = useState("");
+  const [momenten, setMomenten] = useState([]);
   const [bezig, setBezig] = useState(false);
   const [fout, setFout] = useState(null);
 
@@ -346,7 +347,8 @@ function TeamScherm({ opKlaar, eerste }) {
     var team = eerste ? maakEersteTeam(naam) : maakTeam(naam, inst().clubNaam);
     kiesTeam(team.id);
     zetInstellingen({teamNaam: naam.trim(), seizoen: seizoen,
-                     speelduur: Number(duur) || 90, locatie: locatie.trim()});
+                     speelduur: Number(duur) || 90, locatie: locatie.trim(),
+                     trainingsmomenten: trainingsmomentenNetjes(momenten)});
     synchroniseer().then(function (r) {
       setBezig(false);
       if (!r.ok) { setFout(r.fout ? r.fout.tekst : "Het team is aangemaakt, maar het uitwisselen lukte niet."); }
@@ -382,6 +384,10 @@ function TeamScherm({ opKlaar, eerste }) {
           <label className="formulier-label">Vaste thuislocatie</label>
           <input value={locatie} placeholder="Bijvoorbeeld Sportpark De Toekomst"
             onChange={function(e){ setLocatie(e.target.value); }}/>
+          {/* Eén keer vragen, dan hoeft er bij een nieuwe training geen
+              tijd meer ingetypt te worden (zie trainingstijden.js). */}
+          <label className="formulier-label">Vaste trainingsdagen (mag later)</label>
+          <TrainingsmomentenKiezer waarde={momenten} opWaarde={setMomenten}/>
           <button className="knop onboard-knop" disabled={bezig || !naam.trim()} onClick={maak}>
             <i className={bezig ? "fa-solid fa-hourglass-half" : "fa-solid fa-check"}/>
             {bezig ? " Bezig\u2026" : " Aanmaken"}

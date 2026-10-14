@@ -316,6 +316,55 @@ function GetalVeld({ waarde, opWaarde, leeg, min, max, ...rest }) {
 }
 
 /* ═══════════════════════════════════════════════════════════
+   VASTE TRAININGSTIJDEN — dagen aanvinken, per dag tijd en duur
+   ─────────────────────────────────────────────────────────────
+   Op twee plekken: bij het aanmaken van een team en in Instellingen.
+   Daarom één onderdeel, zodat ze er op beide plekken hetzelfde uitzien
+   en zich hetzelfde gedragen. De rekenregels (welke tijd een nieuwe
+   dag krijgt) staan in src/domein/trainingstijden.js. */
+function TrainingsmomentenKiezer({ waarde, opWaarde }) {
+  var momenten = trainingsmomentenNetjes(waarde);
+  function zet(dag, wijziging) {
+    opWaarde(trainingsmomentenNetjes(momenten.map(function (m) {
+      return m.dag === dag ? Object.assign({}, m, wijziging) : m;
+    })));
+  }
+  return (
+    <div className="trmom">
+      <div className="trmom-dagen" role="group" aria-label="Trainingsdagen">
+        {TRAININGSDAGEN.map(function (d) {
+          var aan = momenten.some(function (m) { return m.dag === d.dag; });
+          return (
+            <button key={d.dag} type="button" aria-pressed={aan} title={d.naam}
+              className={"trmom-dag" + (aan ? " aan" : "")}
+              onClick={function () { opWaarde(wisselTrainingsdag(momenten, d.dag)); }}>
+              {d.kort}
+            </button>
+          );
+        })}
+      </div>
+      {momenten.map(function (m) {
+        var d = TRAININGSDAGEN.filter(function (x) { return x.dag === m.dag; })[0];
+        return (
+          <div key={m.dag} className="trmom-rij">
+            <span className="trmom-naam">{d.naam}</span>
+            <input className="formulier-input trmom-tijd" type="time" value={m.tijd} aria-label={"Tijd op " + d.naam}
+              onChange={function (e) { if (e.target.value) zet(m.dag, { tijd: e.target.value }); }} />
+            <span className="trmom-duur">
+              <GetalVeld className="formulier-input" min={15} max={240} leeg={TRAINING_STANDAARD_DUUR} waarde={m.duur}
+                aria-label={"Duur op " + d.naam + " in minuten"}
+                opWaarde={function (n) { zet(m.dag, { duur: n }); }} />
+              <span>min</span>
+            </span>
+          </div>
+        );
+      })}
+      {!momenten.length && <div className="trmom-leeg">Tik de dagen aan waarop jullie trainen.</div>}
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════
    LOGO
 ═══════════════════════════════════════════════════════════ */
 function Logo() {

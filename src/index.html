@@ -204,6 +204,20 @@
     .onboard-klein { font-size:11px; color:var(--grijs-donker); font-weight:400;
       line-height:1.6; margin:14px 0 0; }
     .onboard-twee { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+    /* Vaste trainingstijden (TrainingsmomentenKiezer): zeven dagknoppen
+       op één rij, en per aangevinkte dag een regel met tijd en duur.
+       De velden staan met min-width:0 in hun vak, anders duwt het
+       tijdveld van Safari de regel breder dan het scherm. */
+    .trmom-dagen { display:grid; grid-template-columns:repeat(7,minmax(0,1fr)); gap:5px; margin-bottom:8px; }
+    .trmom-dag { min-height:40px; border:2px solid var(--grijs); border-radius:10px; background:var(--wit); color:var(--grijs-donker);
+      font-weight:700; font-size:13px; font-family:'Helvetica Neue',Arial,sans-serif; cursor:pointer; padding:0; -webkit-tap-highlight-color:transparent; }
+    .trmom-dag.aan { background:var(--blauw); border-color:var(--blauw); color:#fff; }
+    .trmom-rij { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,110px) minmax(0,104px); gap:8px; align-items:center; margin-bottom:6px; }
+    .trmom-rij > * { min-width:0; }
+    .trmom-naam { font-size:14px; font-weight:700; text-transform:capitalize; color:var(--tekst); }
+    .trmom-rij .formulier-input, .onboard-kaart .trmom-rij input:not([type="file"]) { min-width:0; padding:9px 10px; margin:0; }
+    .trmom-duur { display:flex; align-items:center; gap:5px; font-size:12px; color:var(--grijs-donker); }
+    .trmom-leeg { font-size:12px; color:var(--grijs-donker); }
     .onboard-logo { display:flex; align-items:center; gap:12px; margin-bottom:4px; }
     .onboard-logo-vak { width:52px; height:52px; border-radius:13px; flex-shrink:0;
       background:var(--grijs-licht); border:1px solid var(--grijs); display:flex;
@@ -825,6 +839,17 @@
     .formulier-rij > .formulier-groep { min-width:0; }
     .formulier-rij .formulier-input { max-width:100%; }
     @media (max-width:379px) { .formulier-rij { grid-template-columns:1fr; } }
+    /* Ook met minmax(0,1fr) liep op de iPad de datum nog onder de
+       aanvangstijd door (Evan, 14 oktober 2026): Safari geeft een
+       datum- en tijdveld zijn eigen minimumbreedte, wat de kolom ook
+       zegt. appearance:none haalt die weg; het keuzewiel van iOS komt
+       er gewoon nog bij tevoorschijn. Zonder eigen hoogte klapt een
+       leeg datumveld in Safari in, vandaar de min-height. */
+    input.formulier-input[type="date"], input.formulier-input[type="time"] {
+      -webkit-appearance:none; appearance:none; min-width:0; min-height:46px; display:block; }
+    input.formulier-input[type="date"]::-webkit-date-and-time-value,
+    input.formulier-input[type="time"]::-webkit-date-and-time-value { text-align:left; }
+    .formulier-hint { font-size:11px; color:var(--grijs-donker); line-height:1.5; margin:-4px 0 12px; }
     .formulier-sectie-titel { font-size:13px; font-family:'Helvetica Neue',Arial,sans-serif; font-weight:700; color:var(--blauw); margin:20px 0 12px; padding-bottom:6px; border-bottom:2px solid var(--grijs-licht); }
     /* Opstellingsveld: staand 2:3. Zou dit alleen de breedte volgen,
        dan wordt het op een breed scherm zo hoog dat je de helft van de
@@ -1738,7 +1763,13 @@
        auto-fill werd dat ene vak breder en de rij scheef. Nu bepaalt het
        raster de maat en niet het woord. */
     .soort-raster { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:7px; }
-    @media (min-width:520px) { .soort-raster { grid-template-columns:repeat(4,minmax(0,1fr)); } }
+    /* Vier naast elkaar alleen als het vak waar ze in staan breed genoeg
+       is — niet het hele scherm. Op een iPad is het scherm breed, maar
+       het venster ernaast smal, en dan stak "Oefenwedstrijd" buiten
+       zijn knop (Evan, 14 oktober 2026). Een containerquery kijkt naar
+       de ouder; een browser die dat niet kent houdt twee kolommen. */
+    :has(> .soort-raster) { container-type:inline-size; }
+    @container (min-width:560px) { .soort-raster { grid-template-columns:repeat(4,minmax(0,1fr)); } }
     .soort-knop { display:flex; align-items:center; justify-content:flex-start; gap:8px;
       min-width:0; min-height:44px; border:2px solid var(--grijs); background:var(--wit);
       color:var(--tekst); border-radius:10px; padding:9px 10px; cursor:pointer;

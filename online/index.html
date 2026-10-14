@@ -203,6 +203,20 @@
     .onboard-klein { font-size:11px; color:var(--grijs-donker); font-weight:400;
       line-height:1.6; margin:14px 0 0; }
     .onboard-twee { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+    /* Vaste trainingstijden (TrainingsmomentenKiezer): zeven dagknoppen
+       op één rij, en per aangevinkte dag een regel met tijd en duur.
+       De velden staan met min-width:0 in hun vak, anders duwt het
+       tijdveld van Safari de regel breder dan het scherm. */
+    .trmom-dagen { display:grid; grid-template-columns:repeat(7,minmax(0,1fr)); gap:5px; margin-bottom:8px; }
+    .trmom-dag { min-height:40px; border:2px solid var(--grijs); border-radius:10px; background:var(--wit); color:var(--grijs-donker);
+      font-weight:700; font-size:13px; font-family:'Helvetica Neue',Arial,sans-serif; cursor:pointer; padding:0; -webkit-tap-highlight-color:transparent; }
+    .trmom-dag.aan { background:var(--blauw); border-color:var(--blauw); color:#fff; }
+    .trmom-rij { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,110px) minmax(0,104px); gap:8px; align-items:center; margin-bottom:6px; }
+    .trmom-rij > * { min-width:0; }
+    .trmom-naam { font-size:14px; font-weight:700; text-transform:capitalize; color:var(--tekst); }
+    .trmom-rij .formulier-input, .onboard-kaart .trmom-rij input:not([type="file"]) { min-width:0; padding:9px 10px; margin:0; }
+    .trmom-duur { display:flex; align-items:center; gap:5px; font-size:12px; color:var(--grijs-donker); }
+    .trmom-leeg { font-size:12px; color:var(--grijs-donker); }
     .onboard-logo { display:flex; align-items:center; gap:12px; margin-bottom:4px; }
     .onboard-logo-vak { width:52px; height:52px; border-radius:13px; flex-shrink:0;
       background:var(--grijs-licht); border:1px solid var(--grijs); display:flex;
@@ -824,6 +838,17 @@
     .formulier-rij > .formulier-groep { min-width:0; }
     .formulier-rij .formulier-input { max-width:100%; }
     @media (max-width:379px) { .formulier-rij { grid-template-columns:1fr; } }
+    /* Ook met minmax(0,1fr) liep op de iPad de datum nog onder de
+       aanvangstijd door (Evan, 14 oktober 2026): Safari geeft een
+       datum- en tijdveld zijn eigen minimumbreedte, wat de kolom ook
+       zegt. appearance:none haalt die weg; het keuzewiel van iOS komt
+       er gewoon nog bij tevoorschijn. Zonder eigen hoogte klapt een
+       leeg datumveld in Safari in, vandaar de min-height. */
+    input.formulier-input[type="date"], input.formulier-input[type="time"] {
+      -webkit-appearance:none; appearance:none; min-width:0; min-height:46px; display:block; }
+    input.formulier-input[type="date"]::-webkit-date-and-time-value,
+    input.formulier-input[type="time"]::-webkit-date-and-time-value { text-align:left; }
+    .formulier-hint { font-size:11px; color:var(--grijs-donker); line-height:1.5; margin:-4px 0 12px; }
     .formulier-sectie-titel { font-size:13px; font-family:'Helvetica Neue',Arial,sans-serif; font-weight:700; color:var(--blauw); margin:20px 0 12px; padding-bottom:6px; border-bottom:2px solid var(--grijs-licht); }
     /* Opstellingsveld: staand 2:3. Zou dit alleen de breedte volgen,
        dan wordt het op een breed scherm zo hoog dat je de helft van de
@@ -1737,7 +1762,13 @@
        auto-fill werd dat ene vak breder en de rij scheef. Nu bepaalt het
        raster de maat en niet het woord. */
     .soort-raster { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:7px; }
-    @media (min-width:520px) { .soort-raster { grid-template-columns:repeat(4,minmax(0,1fr)); } }
+    /* Vier naast elkaar alleen als het vak waar ze in staan breed genoeg
+       is — niet het hele scherm. Op een iPad is het scherm breed, maar
+       het venster ernaast smal, en dan stak "Oefenwedstrijd" buiten
+       zijn knop (Evan, 14 oktober 2026). Een containerquery kijkt naar
+       de ouder; een browser die dat niet kent houdt twee kolommen. */
+    :has(> .soort-raster) { container-type:inline-size; }
+    @container (min-width:560px) { .soort-raster { grid-template-columns:repeat(4,minmax(0,1fr)); } }
     .soort-knop { display:flex; align-items:center; justify-content:flex-start; gap:8px;
       min-width:0; min-height:44px; border:2px solid var(--grijs); background:var(--wit);
       color:var(--tekst); border-radius:10px; padding:9px 10px; cursor:pointer;
@@ -3006,7 +3037,7 @@ window.addEventListener("error", function(e){
 });
 </script>
 <script>
-const APP_VERSIE = "0b44d67";
+const APP_VERSIE = "d9a5f73";
 const TEAMS_KEY = "tt_teams_v1";
 const ACTIEF_KEY = "tt_actief_v1";
 const VOORKEUR_KEY = "tt_voorkeuren_v1";
@@ -10622,6 +10653,121 @@ function registratieControle(f) {
 function akkoordGegevens(nu) {
   return { akkoord_voorwaarden: (nu || /* @__PURE__ */ new Date()).toISOString(), voorwaarden_versie: VOORWAARDEN_VERSIE };
 }
+const TRAININGSDAGEN = [
+  { dag: 1, kort: "ma", naam: "maandag" },
+  { dag: 2, kort: "di", naam: "dinsdag" },
+  { dag: 3, kort: "wo", naam: "woensdag" },
+  { dag: 4, kort: "do", naam: "donderdag" },
+  { dag: 5, kort: "vr", naam: "vrijdag" },
+  { dag: 6, kort: "za", naam: "zaterdag" },
+  { dag: 0, kort: "zo", naam: "zondag" }
+];
+const TRAINING_STANDAARD_TIJD = "19:00";
+const TRAINING_STANDAARD_WEEKEND = "10:00";
+const TRAINING_STANDAARD_DUUR = 90;
+function _tijdNetjes(t2) {
+  var m = String(t2 == null ? "" : t2).match(/^(\d{1,2}):(\d{2})$/);
+  if (!m) return "";
+  var u = Number(m[1]), min = Number(m[2]);
+  if (u > 23 || min > 59) return "";
+  return (u < 10 ? "0" : "") + u + ":" + m[2];
+}
+function standaardTrainingstijd(dag) {
+  return dag === 0 || dag === 6 ? TRAINING_STANDAARD_WEEKEND : TRAINING_STANDAARD_TIJD;
+}
+function trainingsmomentenNetjes(lijst) {
+  var per = {};
+  (Array.isArray(lijst) ? lijst : []).forEach(function(m) {
+    if (!m || typeof m !== "object") return;
+    var dag = Number(m.dag);
+    if (!(dag >= 0 && dag <= 6 && Math.floor(dag) === dag) || per[dag]) return;
+    var duur = Math.round(Number(m.duur));
+    per[dag] = {
+      dag,
+      tijd: _tijdNetjes(m.tijd) || standaardTrainingstijd(dag),
+      duur: duur >= 15 && duur <= 240 ? duur : TRAINING_STANDAARD_DUUR,
+      locatie: String(m.locatie == null ? "" : m.locatie).trim()
+    };
+  });
+  return TRAININGSDAGEN.filter(function(d) {
+    return per[d.dag];
+  }).map(function(d) {
+    return per[d.dag];
+  });
+}
+function wisselTrainingsdag(lijst, dag) {
+  var nu = trainingsmomentenNetjes(lijst);
+  if (nu.some(function(m) {
+    return m.dag === dag;
+  })) {
+    return nu.filter(function(m) {
+      return m.dag !== dag;
+    });
+  }
+  var voorbeeld = nu.filter(function(m) {
+    return (m.dag === 0 || m.dag === 6) === (dag === 0 || dag === 6);
+  })[0];
+  return trainingsmomentenNetjes(nu.concat([{
+    dag,
+    tijd: voorbeeld ? voorbeeld.tijd : standaardTrainingstijd(dag),
+    duur: voorbeeld ? voorbeeld.duur : nu[0] ? nu[0].duur : TRAINING_STANDAARD_DUUR,
+    locatie: voorbeeld ? voorbeeld.locatie : ""
+  }]));
+}
+function _weekdag(datum) {
+  var m = String(datum || "").match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!m) return -1;
+  return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]), 12).getDay();
+}
+function _datumTekst(d) {
+  var mm = d.getMonth() + 1, dd = d.getDate();
+  return d.getFullYear() + "-" + (mm < 10 ? "0" : "") + mm + "-" + (dd < 10 ? "0" : "") + dd;
+}
+function trainingsmomentOp(lijst, datum) {
+  var dag = _weekdag(datum);
+  return trainingsmomentenNetjes(lijst).filter(function(m) {
+    return m.dag === dag;
+  })[0] || null;
+}
+function trainingVoorstel(lijst, vandaag, bezet) {
+  var momenten = trainingsmomentenNetjes(lijst);
+  if (!momenten.length) return null;
+  var vol = {};
+  (bezet || []).forEach(function(d2) {
+    vol[String(d2).slice(0, 10)] = true;
+  });
+  var d = new Date(vandaag.getFullYear(), vandaag.getMonth(), vandaag.getDate(), 12);
+  for (var i = 0; i < 56; i++) {
+    var tekst = _datumTekst(d);
+    var m = momenten.filter(function(x) {
+      return x.dag === d.getDay();
+    })[0];
+    if (m && !vol[tekst]) return { datum: tekst, tijd: m.tijd, duur: m.duur, locatie: m.locatie };
+    d.setDate(d.getDate() + 1);
+  }
+  return null;
+}
+function trainingsmomentenTekst(lijst) {
+  var momenten = trainingsmomentenNetjes(lijst);
+  if (!momenten.length) return "";
+  var perTijd = [];
+  momenten.forEach(function(m) {
+    var groep = perTijd.filter(function(g) {
+      return g.tijd === m.tijd;
+    })[0];
+    if (groep) groep.dagen.push(m.dag);
+    else perTijd.push({ tijd: m.tijd, dagen: [m.dag] });
+  });
+  return perTijd.map(function(g) {
+    var namen = g.dagen.map(function(dag) {
+      return TRAININGSDAGEN.filter(function(x) {
+        return x.dag === dag;
+      })[0].kort;
+    });
+    var lijstTekst = namen.length > 1 ? namen.slice(0, -1).join(", ") + " en " + namen[namen.length - 1] : namen[0];
+    return lijstTekst + " " + g.tijd;
+  }).join(" \xB7 ");
+}
 function SlotJe({ badge }) {
   return /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-lock " + (badge ? "slot-badge" : "slotje"), "aria-hidden": "true" });
 }
@@ -10859,6 +11005,62 @@ function GetalVeld({ waarde, opWaarde, leeg, min, max, ...rest }) {
       }
     }
   );
+}
+function TrainingsmomentenKiezer({ waarde, opWaarde }) {
+  var momenten = trainingsmomentenNetjes(waarde);
+  function zet(dag, wijziging) {
+    opWaarde(trainingsmomentenNetjes(momenten.map(function(m) {
+      return m.dag === dag ? Object.assign({}, m, wijziging) : m;
+    })));
+  }
+  return /* @__PURE__ */ React.createElement("div", { className: "trmom" }, /* @__PURE__ */ React.createElement("div", { className: "trmom-dagen", role: "group", "aria-label": "Trainingsdagen" }, TRAININGSDAGEN.map(function(d) {
+    var aan = momenten.some(function(m) {
+      return m.dag === d.dag;
+    });
+    return /* @__PURE__ */ React.createElement(
+      "button",
+      {
+        key: d.dag,
+        type: "button",
+        "aria-pressed": aan,
+        title: d.naam,
+        className: "trmom-dag" + (aan ? " aan" : ""),
+        onClick: function() {
+          opWaarde(wisselTrainingsdag(momenten, d.dag));
+        }
+      },
+      d.kort
+    );
+  })), momenten.map(function(m) {
+    var d = TRAININGSDAGEN.filter(function(x) {
+      return x.dag === m.dag;
+    })[0];
+    return /* @__PURE__ */ React.createElement("div", { key: m.dag, className: "trmom-rij" }, /* @__PURE__ */ React.createElement("span", { className: "trmom-naam" }, d.naam), /* @__PURE__ */ React.createElement(
+      "input",
+      {
+        className: "formulier-input trmom-tijd",
+        type: "time",
+        value: m.tijd,
+        "aria-label": "Tijd op " + d.naam,
+        onChange: function(e) {
+          if (e.target.value) zet(m.dag, { tijd: e.target.value });
+        }
+      }
+    ), /* @__PURE__ */ React.createElement("span", { className: "trmom-duur" }, /* @__PURE__ */ React.createElement(
+      GetalVeld,
+      {
+        className: "formulier-input",
+        min: 15,
+        max: 240,
+        leeg: TRAINING_STANDAARD_DUUR,
+        waarde: m.duur,
+        "aria-label": "Duur op " + d.naam + " in minuten",
+        opWaarde: function(n) {
+          zet(m.dag, { duur: n });
+        }
+      }
+    ), /* @__PURE__ */ React.createElement("span", null, "min")));
+  }), !momenten.length && /* @__PURE__ */ React.createElement("div", { className: "trmom-leeg" }, "Tik de dagen aan waarop jullie trainen."));
 }
 function Logo() {
   const [fout, setFout] = useState(false);
@@ -11831,6 +12033,7 @@ function TeamScherm({ opKlaar, eerste }) {
   });
   const [duur, setDuur] = useState("90");
   const [locatie, setLocatie] = useState("");
+  const [momenten, setMomenten] = useState([]);
   const [bezig, setBezig] = useState(false);
   const [fout, setFout] = useState(null);
   function maak() {
@@ -11850,7 +12053,8 @@ function TeamScherm({ opKlaar, eerste }) {
       teamNaam: naam.trim(),
       seizoen,
       speelduur: Number(duur) || 90,
-      locatie: locatie.trim()
+      locatie: locatie.trim(),
+      trainingsmomenten: trainingsmomentenNetjes(momenten)
     });
     synchroniseer().then(function(r) {
       setBezig(false);
@@ -11898,7 +12102,7 @@ function TeamScherm({ opKlaar, eerste }) {
             setLocatie(e.target.value);
           }
         }
-      ), /* @__PURE__ */ React.createElement("button", { className: "knop onboard-knop", disabled: bezig || !naam.trim(), onClick: maak }, /* @__PURE__ */ React.createElement("i", { className: bezig ? "fa-solid fa-hourglass-half" : "fa-solid fa-check" }), bezig ? " Bezig\u2026" : " Aanmaken"))
+      ), /* @__PURE__ */ React.createElement("label", { className: "formulier-label" }, "Vaste trainingsdagen (mag later)"), /* @__PURE__ */ React.createElement(TrainingsmomentenKiezer, { waarde: momenten, opWaarde: setMomenten }), /* @__PURE__ */ React.createElement("button", { className: "knop onboard-knop", disabled: bezig || !naam.trim(), onClick: maak }, /* @__PURE__ */ React.createElement("i", { className: bezig ? "fa-solid fa-hourglass-half" : "fa-solid fa-check" }), bezig ? " Bezig\u2026" : " Aanmaken"))
     }
   );
 }
@@ -11910,6 +12114,7 @@ function TeamSheet({ onSluiten, onGewisseld }) {
     return teamId();
   });
   const [nieuw, setNieuw] = useState("");
+  const [nieuwMomenten, setNieuwMomenten] = useState([]);
   const [hernoemt, setHernoemt] = useState(null);
   const [naam, setNaam] = useState("");
   const [weg, setWeg] = useState(null);
@@ -11957,6 +12162,8 @@ function TeamSheet({ onSluiten, onGewisseld }) {
     var team = maakTeam(n, inst().clubNaam);
     setNieuw("");
     kiesTeam(team.id);
+    if (nieuwMomenten.length) zetInstellingen({ trainingsmomenten: trainingsmomentenNetjes(nieuwMomenten) });
+    setNieuwMomenten([]);
     ververs();
     onGewisseld();
     onSluiten();
@@ -12066,7 +12273,7 @@ function TeamSheet({ onSluiten, onGewisseld }) {
     },
     /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-forward" }),
     " Nieuw seizoen starten"
-  )), magRol("team") && /* @__PURE__ */ React.createElement("div", { className: "kaart", style: { marginTop: 12 } }, /* @__PURE__ */ React.createElement("div", { className: "kaart-titel" }, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-plus" }), " Nieuw team"), magNieuwTeam() ? /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 8 } }, /* @__PURE__ */ React.createElement(
+  )), magRol("team") && /* @__PURE__ */ React.createElement("div", { className: "kaart", style: { marginTop: 12 } }, /* @__PURE__ */ React.createElement("div", { className: "kaart-titel" }, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-plus" }), " Nieuw team"), magNieuwTeam() ? /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 8 } }, /* @__PURE__ */ React.createElement(
     "input",
     {
       value: nieuw,
@@ -12079,7 +12286,7 @@ function TeamSheet({ onSluiten, onGewisseld }) {
         if (e.key === "Enter") voegToe();
       }
     }
-  ), /* @__PURE__ */ React.createElement("button", { className: "knop klein", disabled: !nieuw.trim(), onClick: voegToe }, "Aanmaken")) : /* @__PURE__ */ React.createElement("p", { style: { fontSize: 12.5, color: "var(--grijs-donker)", fontWeight: 400, margin: 0, lineHeight: 1.6 } }, "Met ", p.naam, " kun je ", ruimte === Infinity ? "onbeperkt" : ruimte, " ", ruimte === 1 ? "team" : "teams", " beheren, en die ", ruimte === 1 ? "heb" : "heb", " je al. Met een groter pakket kun je er meer aanmaken."), /* @__PURE__ */ React.createElement("p", { style: { fontSize: 11.5, color: "var(--grijs-donker)", fontWeight: 400, margin: "9px 0 0", lineHeight: 1.6 } }, "Elk team heeft zijn eigen spelers, wedstrijden, trainingen en tenues. Je clublogo, je taal en je oefeningen deel je over al je teams heen.")), nieuwSeizoen && /* @__PURE__ */ React.createElement(
+  ), /* @__PURE__ */ React.createElement("button", { className: "knop klein", disabled: !nieuw.trim(), onClick: voegToe }, "Aanmaken")), nieuw.trim() && /* @__PURE__ */ React.createElement("div", { style: { marginTop: 10 } }, /* @__PURE__ */ React.createElement("label", { className: "formulier-label" }, "Vaste trainingsdagen (mag later)"), /* @__PURE__ */ React.createElement(TrainingsmomentenKiezer, { waarde: nieuwMomenten, opWaarde: setNieuwMomenten }))) : /* @__PURE__ */ React.createElement("p", { style: { fontSize: 12.5, color: "var(--grijs-donker)", fontWeight: 400, margin: 0, lineHeight: 1.6 } }, "Met ", p.naam, " kun je ", ruimte === Infinity ? "onbeperkt" : ruimte, " ", ruimte === 1 ? "team" : "teams", " beheren, en die ", ruimte === 1 ? "heb" : "heb", " je al. Met een groter pakket kun je er meer aanmaken."), /* @__PURE__ */ React.createElement("p", { style: { fontSize: 11.5, color: "var(--grijs-donker)", fontWeight: 400, margin: "9px 0 0", lineHeight: 1.6 } }, "Elk team heeft zijn eigen spelers, wedstrijden, trainingen en tenues. Je clublogo, je taal en je oefeningen deel je over al je teams heen.")), nieuwSeizoen && /* @__PURE__ */ React.createElement(
     NieuwSeizoenKaart,
     {
       van: seizoenNuId,
@@ -13351,7 +13558,15 @@ function InstellingenSheet({ onSluiten, onGewisseld, onTeams }) {
       },
       placeholder: "Sportpark De Toekomst"
     }
-  )))), /* @__PURE__ */ React.createElement("div", { className: "inst-groep" }, "App"), /* @__PURE__ */ React.createElement("div", { className: "kaart" }, /* @__PURE__ */ React.createElement("div", { className: "kaart-titel" }, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-circle-half-stroke" }), " Weergave"), /* @__PURE__ */ React.createElement("div", { className: "thema-rij" }, [
+  )), /* @__PURE__ */ React.createElement("div", { className: "formulier-groep" }, /* @__PURE__ */ React.createElement("label", { className: "formulier-label" }, "Vaste trainingsdagen"), /* @__PURE__ */ React.createElement(
+    TrainingsmomentenKiezer,
+    {
+      waarde: i.trainingsmomenten,
+      opWaarde: function(l) {
+        zetInstellingen({ trainingsmomenten: l });
+      }
+    }
+  ), /* @__PURE__ */ React.createElement("p", { style: { fontSize: 11, color: "var(--grijs-donker)", margin: "4px 0 0", lineHeight: 1.5 } }, "Een nieuwe training krijgt vanzelf de eerstvolgende trainingsdag met deze tijd en duur.")))), /* @__PURE__ */ React.createElement("div", { className: "inst-groep" }, "App"), /* @__PURE__ */ React.createElement("div", { className: "kaart" }, /* @__PURE__ */ React.createElement("div", { className: "kaart-titel" }, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-circle-half-stroke" }), " Weergave"), /* @__PURE__ */ React.createElement("div", { className: "thema-rij" }, [
     { id: "licht", label: "Licht", ic: "fa-solid fa-sun" },
     { id: "donker", label: "Donker", ic: "fa-solid fa-moon" },
     { id: "systeem", label: "Systeem", ic: "fa-solid fa-circle-half-stroke" }
@@ -15507,12 +15722,28 @@ function TrainingFormulier({ training, onOpslaan, onSluiten }) {
   const [form, setForm] = useState(() => {
     const base = { id: null, datum: "", tijd: "", locatie: "", duur: 90, doelstellingen: "", voorbereidingen: "", materialen: "", onderdelen: [], notities: "" };
     if (!training) {
-      return { ...base, aanwezigheid: spelers.map((s) => ({ spelerId: s.id, naam: s.naam, foto: s.foto, status: "aanwezig" })) };
+      const voorstel = trainingVoorstel(
+        inst().trainingsmomenten,
+        /* @__PURE__ */ new Date(),
+        laadTrainingen().map(function(t2) {
+          return t2.datum;
+        })
+      );
+      const vooraf = voorstel ? { datum: voorstel.datum, tijd: voorstel.tijd, duur: voorstel.duur, locatie: voorstel.locatie || inst().locatie || "" } : { locatie: inst().locatie || "" };
+      return { ...base, ...vooraf, aanwezigheid: spelers.map((s) => ({ spelerId: s.id, naam: s.naam, foto: s.foto, status: "aanwezig" })) };
     }
     return { ...base, ...training };
   });
   const [onderdeelFormulier, setOnderdeelFormulier] = useState(null);
+  const tijdZelf = useRef(!!training);
+  const vasteTijden = trainingsmomentenNetjes(inst().trainingsmomenten);
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
+  function zetDatum(datum) {
+    var m = tijdZelf.current ? null : trainingsmomentOp(vasteTijden, datum);
+    setForm(function(f) {
+      return m ? { ...f, datum, tijd: m.tijd, duur: m.duur } : { ...f, datum };
+    });
+  }
   function toggleAanwezigheid(spelerId, status) {
     setForm((f) => ({ ...f, aanwezigheid: f.aanwezigheid.map((a) => a.spelerId === spelerId ? { ...a, status } : a) }));
   }
@@ -15556,7 +15787,10 @@ function TrainingFormulier({ training, onOpslaan, onSluiten }) {
   const typeKleur = { Oefening: "var(--blauw-licht)", "Warming-up": "var(--oranje)", Positiespel: "var(--succes)", Wedstrijdvorm: "var(--blauw)", Conditie: "var(--gevaar)", Afkoelen: "var(--grijs-donker)" };
   return /* @__PURE__ */ React.createElement("div", { className: "modal-overlay", onClick: (e) => {
     if (e.target === e.currentTarget) onSluiten();
-  } }, /* @__PURE__ */ React.createElement("div", { className: "modal-sheet" }, /* @__PURE__ */ React.createElement("div", { className: "modal-greep" }), /* @__PURE__ */ React.createElement("div", { className: "modal-titel" }, form.id ? "Training bewerken" : "Training toevoegen"), /* @__PURE__ */ React.createElement("div", { className: "formulier-rij" }, /* @__PURE__ */ React.createElement("div", { className: "formulier-groep" }, /* @__PURE__ */ React.createElement("label", { className: "formulier-label" }, "Datum *"), /* @__PURE__ */ React.createElement("input", { className: "formulier-input", type: "date", value: form.datum, onChange: (e) => set("datum", e.target.value) })), /* @__PURE__ */ React.createElement("div", { className: "formulier-groep" }, /* @__PURE__ */ React.createElement("label", { className: "formulier-label" }, "Aanvangstijd"), /* @__PURE__ */ React.createElement("input", { className: "formulier-input", type: "time", value: form.tijd, onChange: (e) => set("tijd", e.target.value) }))), /* @__PURE__ */ React.createElement("div", { className: "formulier-rij" }, /* @__PURE__ */ React.createElement("div", { className: "formulier-groep" }, /* @__PURE__ */ React.createElement("label", { className: "formulier-label" }, "Locatie"), /* @__PURE__ */ React.createElement("input", { className: "formulier-input", value: form.locatie, onChange: (e) => set("locatie", e.target.value), placeholder: "Sportpark De Toekomst" })), /* @__PURE__ */ React.createElement("div", { className: "formulier-groep" }, /* @__PURE__ */ React.createElement("label", { className: "formulier-label" }, "Duur (min)"), /* @__PURE__ */ React.createElement(GetalVeld, { className: "formulier-input", min: 30, max: 180, step: "5", leeg: 90, waarde: form.duur, opWaarde: function(n) {
+  } }, /* @__PURE__ */ React.createElement("div", { className: "modal-sheet" }, /* @__PURE__ */ React.createElement("div", { className: "modal-greep" }), /* @__PURE__ */ React.createElement("div", { className: "modal-titel" }, form.id ? "Training bewerken" : "Training toevoegen"), /* @__PURE__ */ React.createElement("div", { className: "formulier-rij" }, /* @__PURE__ */ React.createElement("div", { className: "formulier-groep" }, /* @__PURE__ */ React.createElement("label", { className: "formulier-label" }, "Datum *"), /* @__PURE__ */ React.createElement("input", { className: "formulier-input", type: "date", value: form.datum, onChange: (e) => zetDatum(e.target.value) })), /* @__PURE__ */ React.createElement("div", { className: "formulier-groep" }, /* @__PURE__ */ React.createElement("label", { className: "formulier-label" }, "Aanvangstijd"), /* @__PURE__ */ React.createElement("input", { className: "formulier-input", type: "time", value: form.tijd, onChange: (e) => {
+    tijdZelf.current = true;
+    set("tijd", e.target.value);
+  } }))), /* @__PURE__ */ React.createElement("p", { className: "formulier-hint" }, vasteTijden.length ? "Vaste trainingen: " + trainingsmomentenTekst(vasteTijden) + ". Aanpassen kan in Instellingen." : "Tip: stel in Instellingen je vaste trainingsdagen in, dan staan datum en tijd hier voortaan al klaar."), /* @__PURE__ */ React.createElement("div", { className: "formulier-rij" }, /* @__PURE__ */ React.createElement("div", { className: "formulier-groep" }, /* @__PURE__ */ React.createElement("label", { className: "formulier-label" }, "Locatie"), /* @__PURE__ */ React.createElement("input", { className: "formulier-input", value: form.locatie, onChange: (e) => set("locatie", e.target.value), placeholder: "Sportpark De Toekomst" })), /* @__PURE__ */ React.createElement("div", { className: "formulier-groep" }, /* @__PURE__ */ React.createElement("label", { className: "formulier-label" }, "Duur (min)"), /* @__PURE__ */ React.createElement(GetalVeld, { className: "formulier-input", min: 30, max: 180, step: "5", leeg: 90, waarde: form.duur, opWaarde: function(n) {
     set("duur", n);
   } }))), /* @__PURE__ */ React.createElement("div", { className: "formulier-sectie-titel" }, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-bullseye" }), " Doelstellingen"), /* @__PURE__ */ React.createElement("div", { className: "formulier-groep" }, /* @__PURE__ */ React.createElement("textarea", { className: "formulier-input", rows: "2", value: form.doelstellingen, onChange: (e) => set("doelstellingen", e.target.value), placeholder: "Wat wil je bereiken met deze training?", style: { resize: "vertical" } })), /* @__PURE__ */ React.createElement("div", { className: "formulier-sectie-titel" }, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-clipboard" }), " Voorbereiding & Materialen"), /* @__PURE__ */ React.createElement("div", { className: "formulier-groep" }, /* @__PURE__ */ React.createElement("label", { className: "formulier-label" }, "Voorbereiding"), /* @__PURE__ */ React.createElement("textarea", { className: "formulier-input", rows: "2", value: form.voorbereidingen, onChange: (e) => set("voorbereidingen", e.target.value), placeholder: "Wat moet je voorbereiden? Veldopstelling, hesjes\u2026", style: { resize: "vertical" } })), /* @__PURE__ */ React.createElement("div", { className: "formulier-groep" }, /* @__PURE__ */ React.createElement("label", { className: "formulier-label" }, "Materialen (meenemen)"), /* @__PURE__ */ React.createElement("input", { className: "formulier-input", value: form.materialen, onChange: (e) => set("materialen", e.target.value), placeholder: "ballen, hesjes, pionnen, doeltjes\u2026" })), /* @__PURE__ */ React.createElement("div", { className: "formulier-sectie-titel" }, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-person-running" }), " Onderdelen (", form.onderdelen.length, ")"), form.onderdelen.map((od, i) => /* @__PURE__ */ React.createElement("div", { key: od.id, style: { display: "flex", alignItems: "center", gap: 8, background: "var(--grijs-licht)", borderRadius: 10, padding: "8px 12px", marginBottom: 8, borderLeft: "4px solid " + (typeKleur[od.type] || "var(--blauw-licht)") } }, /* @__PURE__ */ React.createElement("div", { style: { flex: 1 } }, /* @__PURE__ */ React.createElement("div", { style: { fontWeight: 700, fontFamily: "'Helvetica Neue',Arial", fontSize: 13 } }, i + 1, ". ", od.naam), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: "var(--grijs-donker)", marginTop: 2 } }, od.type, " \xB7 ", od.duur, "'", " \xB7 ", od.aantalSpelers, " spelers")), /* @__PURE__ */ React.createElement("button", { className: "knop lijn klein", style: { padding: "4px 8px" }, onClick: () => setOnderdeelFormulier(od) }, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-pen" })), /* @__PURE__ */ React.createElement("button", { className: "knop gevaar klein", style: { padding: "4px 8px" }, onClick: () => verwijderOnderdeel(od.id) }, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-trash" })))), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 8, marginBottom: 8 } }, /* @__PURE__ */ React.createElement("button", { className: "knop lijn klein", style: { flex: 1, justifyContent: "center" }, onClick: () => setOnderdeelFormulier({}) }, "+ Nieuw onderdeel"), /* @__PURE__ */ React.createElement("button", { className: "knop klein", style: { flex: 1, justifyContent: "center" }, onClick: function() {
     setBibliotheekOpen(true);
@@ -41799,6 +42033,7 @@ const STANDAARD_INSTELLINGEN = {
   seizoen: "2025/2026",
   speelduur: 90,
   locatie: "",
+  trainingsmomenten: [],
   thema: "systeem",
   logo: null,
   accent: "club",
@@ -41814,7 +42049,7 @@ function logoKopbalk(opDonker) {
 function logoExport() {
   return inst().logo || LOGO_VOL;
 }
-const TEAM_INSTELLINGEN = ["teamNaam", "seizoen", "speelduur", "locatie"];
+const TEAM_INSTELLINGEN = ["teamNaam", "seizoen", "speelduur", "locatie", "trainingsmomenten"];
 function _leesDeel(sleutel) {
   try {
     var r = localStorage.getItem(sleutel);
