@@ -322,6 +322,47 @@ function GetalVeld({ waarde, opWaarde, leeg, min, max, ...rest }) {
    Daarom één onderdeel, zodat ze er op beide plekken hetzelfde uitzien
    en zich hetzelfde gedragen. De rekenregels (welke tijd een nieuwe
    dag krijgt) staan in src/domein/trainingstijden.js. */
+/* ── Categorie en spelvorm van een team (15 oktober 2026) ──────
+   Kies je een categorie, dan volgen de spelvorm en (waar de KNVB hem
+   noemt) de speelduur. De spelvorm kun je daarna nog los aanpassen,
+   bijvoorbeeld naar 7 tegen 7. Zonder keuze geldt wat de teamnaam zegt. */
+function TeamCategorieKiezer({ categorie, spelvorm, teamNaam, opWijzig }) {
+  const gok = categorieUitTeamnaam(teamNaam);
+  const cat = categorie || "";
+  const sv = teamSpelvorm({categorie:cat, spelvorm:spelvorm, teamNaam:teamNaam});
+  const info = SPELVORM_INFO[sv];
+  return (
+    <div className="cat-kiezer">
+      <div className="cat-chips">
+        {TEAM_CATEGORIEEN.map(function(c){
+          var aan = cat ? cat===c.id : gok===c.id;
+          return (
+            <button key={c.id} type="button" className="filter-chip" style={chipStijl(aan)}
+              onClick={function(){
+                var w = {categorie:c.id, spelvorm:""};
+                if (c.duur) w.speelduur = c.duur;
+                opWijzig(w);
+              }}>{c.id}</button>
+          );
+        })}
+      </div>
+      {!cat && gok && <p className="cat-hint">Uit de teamnaam: {gok}. Tik om te bevestigen.</p>}
+      <div className="cat-spelvorm">
+        <label className="formulier-label" style={{margin:0}}>Spelvorm</label>
+        <select className="formulier-input" value={sv} style={{marginBottom:0}}
+          onChange={function(e){ opWijzig({spelvorm:e.target.value}); }}>
+          {SPELVORM_VOLGORDE.map(function(k){ return <option key={k} value={k}>{SPELVORM_INFO[k].label}</option>; })}
+        </select>
+      </div>
+      {info.kenmerken.length > 0 && (
+        <div className="cat-kenmerken">
+          {info.kenmerken.map(function(k){ return <span key={k}>{k}</span>; })}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function TrainingsmomentenKiezer({ waarde, opWaarde }) {
   var momenten = trainingsmomentenNetjes(waarde);
   function zet(dag, wijziging) {

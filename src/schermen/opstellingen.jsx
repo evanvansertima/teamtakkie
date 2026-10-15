@@ -331,7 +331,7 @@ function OpstellingVeld({ formatie, toewijzing, onKlikPositie, tenue, aanvoerder
    OPSTELLINGEN TAB
 ═══════════════════════════════════════════════════════════ */
 function OpstellingenTab({ spelers }) {
-  const [actief, setActief] = useState("4-3-3A");
+  const [actief, setActief] = useState(function(){ return startFormatie(null, false); });
   const [toewijzing, setToewijzing] = useState({});
   const [kiesPositie, setKiesPositie] = useState(null);
   const [detailPositie, setDetailPositie] = useState(null);
@@ -441,7 +441,7 @@ function OpstellingenTab({ spelers }) {
               <span className="formatie-sheet-titel">Kies formatie</span>
               <button style={{background:"none",border:"none",fontSize:20,cursor:"pointer",color:"var(--grijs-donker)",padding:"0 4px"}} onClick={function(){setFormatieMenuOpen(false);}}>{"✕"}</button>
             </div>
-            {FORMATIE_GROEPEN.map(function(groep){
+            {formatieGroepenNu().map(function(groep){
               return (
                 <div key={groep.label}>
                   <div className="formatie-groep-label">{groep.label}</div>

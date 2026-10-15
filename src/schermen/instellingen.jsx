@@ -2084,9 +2084,17 @@ function InstellingenSheet({ onSluiten, onGewisseld, onTeams }) {
             </div>
             <div className="formulier-groep">
               <label className="formulier-label">Speelduur (min)</label>
-              <GetalVeld className="formulier-input" min={20} max={120} leeg={90} waarde={i.speelduur}
+              <GetalVeld className="formulier-input" min={10} max={120} leeg={90} waarde={i.speelduur}
                 opWaarde={function(n){ zetInstellingen({speelduur:n}); }} />
             </div>
+          </div>
+          <div className="formulier-groep">
+            <label className="formulier-label">Leeftijdscategorie</label>
+            <TeamCategorieKiezer categorie={i.categorie} spelvorm={i.spelvorm} teamNaam={i.teamNaam}
+              opWijzig={function(w){ zetInstellingen(w); }} />
+            <p style={{fontSize:11,color:"var(--grijs-donker)",margin:"4px 0 0",lineHeight:1.5}}>
+              De spelvorm bepaalt welke formaties je bij een wedstrijd kunt kiezen. Bestaande opstellingen blijven staan.
+            </p>
           </div>
           <div className="formulier-groep">
             <label className="formulier-label">Vaste thuislocatie</label>

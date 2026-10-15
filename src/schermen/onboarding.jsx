@@ -333,6 +333,9 @@ function TeamScherm({ opKlaar, eerste }) {
   const [duur, setDuur] = useState("90");
   const [locatie, setLocatie] = useState("");
   const [momenten, setMomenten] = useState([]);
+  const [cat, setCat] = useState({categorie:"", spelvorm:""});
+  /* Speelduur volgt de categorie, tot je hem zelf verandert */
+  const duurZelf = useRef(false);
   const [bezig, setBezig] = useState(false);
   const [fout, setFout] = useState(null);
 
@@ -348,7 +351,8 @@ function TeamScherm({ opKlaar, eerste }) {
     kiesTeam(team.id);
     zetInstellingen({teamNaam: naam.trim(), seizoen: seizoen,
                      speelduur: Number(duur) || 90, locatie: locatie.trim(),
-                     trainingsmomenten: trainingsmomentenNetjes(momenten)});
+                     trainingsmomenten: trainingsmomentenNetjes(momenten),
+                     categorie: cat.categorie || categorieUitTeamnaam(naam) || "", spelvorm: cat.spelvorm});
     synchroniseer().then(function (r) {
       setBezig(false);
       if (!r.ok) { setFout(r.fout ? r.fout.tekst : "Het team is aangemaakt, maar het uitwisselen lukte niet."); }
@@ -370,6 +374,14 @@ function TeamScherm({ opKlaar, eerste }) {
           <input value={naam} autoFocus placeholder="Bijvoorbeeld JO19-2"
             onChange={function(e){ setNaam(e.target.value); }}
             onKeyDown={function(e){ if(e.key==="Enter") maak(); }}/>
+          {/* Leeftijdscategorie: bepaalt de spelvorm (6 tegen 6, 8 tegen 8…)
+              en daarmee de formaties bij een wedstrijd. */}
+          <label className="formulier-label">Leeftijdscategorie</label>
+          <TeamCategorieKiezer categorie={cat.categorie} spelvorm={cat.spelvorm} teamNaam={naam}
+            opWijzig={function(w){
+              setCat(function(c){ return Object.assign({}, c, {categorie: w.categorie!==undefined ? w.categorie : c.categorie, spelvorm: w.spelvorm||""}); });
+              if (w.speelduur && !duurZelf.current) setDuur(String(w.speelduur));
+            }}/>
           <div className="onboard-twee">
             <span>
               <label className="formulier-label">Seizoen</label>
@@ -377,8 +389,8 @@ function TeamScherm({ opKlaar, eerste }) {
             </span>
             <span>
               <label className="formulier-label">Speelduur (min)</label>
-              <GetalVeld min={20} max={120} waarde={Number(duur)||90}
-                opWaarde={function(n){ setDuur(String(n)); }}/>
+              <GetalVeld min={10} max={120} waarde={Number(duur)||90}
+                opWaarde={function(n){ duurZelf.current = true; setDuur(String(n)); }}/>
             </span>
           </div>
           <label className="formulier-label">Vaste thuislocatie</label>

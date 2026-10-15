@@ -514,7 +514,7 @@ function taalVanApparaat() {
 const INSTELLINGEN_KEY = "fch_instellingen_v1";
 const STANDAARD_INSTELLINGEN = {
   clubNaam:"", teamNaam:"", seizoen:"2025/2026",
-  speelduur:90, locatie:"", trainingsmomenten:[], thema:"systeem", logo:null, accent:"club",
+  speelduur:90, locatie:"", trainingsmomenten:[], categorie:"", spelvorm:"", thema:"systeem", logo:null, accent:"club",
   taal:"", /* leeg betekent: volg het apparaat */
   /* Hoe groot het opstellingsveld op dit apparaat staat, in procenten.
      Op een groot scherm wil je hem groter dan op een telefoon. */
@@ -542,7 +542,9 @@ function logoExport()  { return inst().logo || LOGO_VOL; }
    merken. Er is precies één lijst die de scheiding bepaalt. */
 /* trainingsmomenten (14 oktober 2026): de vaste trainingsdagen en
    -tijden. Per team, want JO11 en JO19 trainen niet op dezelfde avond. */
-const TEAM_INSTELLINGEN = ["teamNaam", "seizoen", "speelduur", "locatie", "trainingsmomenten"];
+/* categorie en spelvorm (15 oktober 2026): O10 speelt 6 tegen 6, zie
+   src/domein/spelvorm.js. */
+const TEAM_INSTELLINGEN = ["teamNaam", "seizoen", "speelduur", "locatie", "trainingsmomenten", "categorie", "spelvorm"];
 function _leesDeel(sleutel) {
   try {
     var r = localStorage.getItem(sleutel);
@@ -568,6 +570,12 @@ function _leesInstellingen() {
 var _instellingen = _leesInstellingen();
 var _instLuisteraars = [];
 function inst() { return _instellingen; }
+/* De spelvorm van het actieve team, en de formaties die erbij horen */
+function spelvormNu() { return teamSpelvorm(_instellingen); }
+function formatieGroepenNu() { return formatieGroepenVoor(spelvormNu(), FORMATIE_GROEPEN); }
+function startFormatie(formatie, heeftOpstelling) {
+  return passendeFormatie(formatie, spelvormNu(), FORMATIES_DATA, heeftOpstelling);
+}
 function teamNaamVol() {
   var i = _instellingen;
   return (i.clubNaam+" "+i.teamNaam).trim();
@@ -1164,6 +1172,48 @@ const FORMATIES_KEY = "fch_formaties_v1";
 const TACTIEKEN_KEY = "fch_tactieken_v1";
 
 const FORMATIES_DATA = {
+  /* ── KLEINE SPELVORMEN (15 oktober 2026) ─────────────────
+     Voor de jeugd die niet 11 tegen 11 speelt; welke formaties bij welk
+     team horen staat in src/domein/spelvorm.js. Elk aantal veldspelers
+     komt maar bij één spelvorm voor, zodat spelvormVanFormatie() hem
+     uit het aantal plekken kan halen. */
+  /* 2 tegen 2, zonder keeper (O6) */
+  "1-1": [ {id:"V",l:"CV",x:50,y:68}, {id:"A",l:"SP",x:50,y:32} ],
+  "2":   [ {id:"L",l:"LM",x:30,y:50}, {id:"R",l:"RM",x:70,y:50} ],
+  /* 4 tegen 4, zonder keeper (O7) */
+  "1-2-1": [ {id:"V",l:"CV",x:50,y:76}, {id:"LM",l:"LM",x:18,y:50}, {id:"RM",l:"RM",x:82,y:50}, {id:"A",l:"SP",x:50,y:24} ],
+  "2-2":   [ {id:"LV",l:"LV",x:30,y:70}, {id:"RV",l:"RV",x:70,y:70}, {id:"LA",l:"LVA",x:30,y:30}, {id:"RA",l:"RVA",x:70,y:30} ],
+  /* 6 tegen 6 (O8–O10) */
+  "2-1-2": [ {id:"GK",l:"DM",x:50,y:88}, {id:"LV",l:"LV",x:28,y:70}, {id:"RV",l:"RV",x:72,y:70},
+             {id:"CM",l:"CM",x:50,y:50}, {id:"LA",l:"LVA",x:28,y:26}, {id:"RA",l:"RVA",x:72,y:26} ],
+  "2-2-1": [ {id:"GK",l:"DM",x:50,y:88}, {id:"LV",l:"LV",x:28,y:70}, {id:"RV",l:"RV",x:72,y:70},
+             {id:"LM",l:"LM",x:24,y:46}, {id:"RM",l:"RM",x:76,y:46}, {id:"ST",l:"SP",x:50,y:22} ],
+  "1-3-1": [ {id:"GK",l:"DM",x:50,y:88}, {id:"CV",l:"CV",x:50,y:71},
+             {id:"LM",l:"LM",x:16,y:48}, {id:"CM",l:"CM",x:50,y:50}, {id:"RM",l:"RM",x:84,y:48}, {id:"ST",l:"SP",x:50,y:22} ],
+  "3-1-1": [ {id:"GK",l:"DM",x:50,y:88}, {id:"LV",l:"LV",x:18,y:68}, {id:"CV",l:"CV",x:50,y:72}, {id:"RV",l:"RV",x:82,y:68},
+             {id:"CM",l:"CM",x:50,y:46}, {id:"ST",l:"SP",x:50,y:22} ],
+  /* 7 tegen 7 */
+  "2-3-1": [ {id:"GK",l:"DM",x:50,y:88}, {id:"LV",l:"LV",x:30,y:71}, {id:"RV",l:"RV",x:70,y:71},
+             {id:"LM",l:"LM",x:16,y:48}, {id:"CM",l:"CM",x:50,y:50}, {id:"RM",l:"RM",x:84,y:48}, {id:"ST",l:"SP",x:50,y:22} ],
+  "3-2-1": [ {id:"GK",l:"DM",x:50,y:88}, {id:"LV",l:"LV",x:18,y:69}, {id:"CV",l:"CV",x:50,y:73}, {id:"RV",l:"RV",x:82,y:69},
+             {id:"LM",l:"CM",x:34,y:48}, {id:"RM",l:"CM",x:66,y:48}, {id:"ST",l:"SP",x:50,y:22} ],
+  "3-1-2": [ {id:"GK",l:"DM",x:50,y:88}, {id:"LV",l:"LV",x:18,y:69}, {id:"CV",l:"CV",x:50,y:73}, {id:"RV",l:"RV",x:82,y:69},
+             {id:"CM",l:"CM",x:50,y:50}, {id:"LA",l:"SP",x:34,y:24}, {id:"RA",l:"SP",x:66,y:24} ],
+  "2-2-2": [ {id:"GK",l:"DM",x:50,y:88}, {id:"LV",l:"LV",x:30,y:71}, {id:"RV",l:"RV",x:70,y:71},
+             {id:"LM",l:"LM",x:24,y:48}, {id:"RM",l:"RM",x:76,y:48}, {id:"LA",l:"SP",x:34,y:24}, {id:"RA",l:"SP",x:66,y:24} ],
+  /* 8 tegen 8 (O11–O12) */
+  "3-3-1": [ {id:"GK",l:"DM",x:50,y:88}, {id:"LV",l:"LV",x:18,y:69}, {id:"CV",l:"CV",x:50,y:73}, {id:"RV",l:"RV",x:82,y:69},
+             {id:"LM",l:"LM",x:16,y:47}, {id:"CM",l:"CM",x:50,y:50}, {id:"RM",l:"RM",x:84,y:47}, {id:"ST",l:"SP",x:50,y:21} ],
+  "2-3-2": [ {id:"GK",l:"DM",x:50,y:88}, {id:"LV",l:"CV",x:34,y:72}, {id:"RV",l:"CV",x:66,y:72},
+             {id:"LM",l:"LM",x:16,y:49}, {id:"CM",l:"CM",x:50,y:51}, {id:"RM",l:"RM",x:84,y:49},
+             {id:"LA",l:"SP",x:34,y:23}, {id:"RA",l:"SP",x:66,y:23} ],
+  "3-2-2": [ {id:"GK",l:"DM",x:50,y:88}, {id:"LV",l:"LV",x:18,y:69}, {id:"CV",l:"CV",x:50,y:73}, {id:"RV",l:"RV",x:82,y:69},
+             {id:"LM",l:"CM",x:34,y:49}, {id:"RM",l:"CM",x:66,y:49},
+             {id:"LA",l:"LVA",x:28,y:24}, {id:"RA",l:"RVA",x:72,y:24} ],
+  "2-4-1": [ {id:"GK",l:"DM",x:50,y:88}, {id:"LV",l:"CV",x:34,y:72}, {id:"RV",l:"CV",x:66,y:72},
+             {id:"LM",l:"LM",x:12,y:47}, {id:"LC",l:"CM",x:37,y:52}, {id:"RC",l:"CM",x:63,y:52}, {id:"RM",l:"RM",x:88,y:47},
+             {id:"ST",l:"SP",x:50,y:21} ],
+  /* ── 11 TEGEN 11 ─────────────────────────────────────── */
   /* ── 3 VERDEDIGERS ─────────────────── */
   "3-1-4-2": [
     {id:"GK",l:"DM",x:50,y:88},

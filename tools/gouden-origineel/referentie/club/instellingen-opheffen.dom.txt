@@ -578,7 +578,81 @@
             <div class="formulier-groep">
               <label class="formulier-label">
                 "Speelduur (min)"
-              <input class="formulier-input" max="120" min="20" type="number" value="90">
+              <input class="formulier-input" max="120" min="10" type="number" value="90">
+          <div class="formulier-groep">
+            <label class="formulier-label">
+              "Leeftijdscategorie"
+            <div class="cat-kiezer">
+              <div class="cat-chips">
+                <button class="filter-chip" style="border-color: var(--grijs); background: var(--wit); color: var(--grijs-donker);" type="button">
+                  "O6"
+                <button class="filter-chip" style="border-color: var(--grijs); background: var(--wit); color: var(--grijs-donker);" type="button">
+                  "O7"
+                <button class="filter-chip" style="border-color: var(--grijs); background: var(--wit); color: var(--grijs-donker);" type="button">
+                  "O8"
+                <button class="filter-chip" style="border-color: var(--grijs); background: var(--wit); color: var(--grijs-donker);" type="button">
+                  "O9"
+                <button class="filter-chip" style="border-color: var(--grijs); background: var(--wit); color: var(--grijs-donker);" type="button">
+                  "O10"
+                <button class="filter-chip" style="border-color: var(--grijs); background: var(--wit); color: var(--grijs-donker);" type="button">
+                  "O11"
+                <button class="filter-chip" style="border-color: var(--grijs); background: var(--wit); color: var(--grijs-donker);" type="button">
+                  "O12"
+                <button class="filter-chip" style="border-color: var(--grijs); background: var(--wit); color: var(--grijs-donker);" type="button">
+                  "O13"
+                <button class="filter-chip" style="border-color: var(--grijs); background: var(--wit); color: var(--grijs-donker);" type="button">
+                  "O14"
+                <button class="filter-chip" style="border-color: var(--grijs); background: var(--wit); color: var(--grijs-donker);" type="button">
+                  "O15"
+                <button class="filter-chip" style="border-color: var(--grijs); background: var(--wit); color: var(--grijs-donker);" type="button">
+                  "O16"
+                <button class="filter-chip" style="border-color: var(--grijs); background: var(--wit); color: var(--grijs-donker);" type="button">
+                  "O17"
+                <button class="filter-chip" style="border-color: var(--blauw); background: var(--blauw); color: var(--wit);" type="button">
+                  "O19"
+                <button class="filter-chip" style="border-color: var(--grijs); background: var(--wit); color: var(--grijs-donker);" type="button">
+                  "O21"
+                <button class="filter-chip" style="border-color: var(--grijs); background: var(--wit); color: var(--grijs-donker);" type="button">
+                  "O23"
+                <button class="filter-chip" style="border-color: var(--grijs); background: var(--wit); color: var(--grijs-donker);" type="button">
+                  "Senioren"
+              <p class="cat-hint">
+                "Uit de teamnaam:"
+                "O19"
+                ". Tik om te bevestigen."
+              <div class="cat-spelvorm">
+                <label class="formulier-label" style="margin: 0px;">
+                  "Spelvorm"
+                <select class="formulier-input" style="margin-bottom: 0px;">
+                  <option value="2x2">
+                    "2 tegen 2"
+                  <option value="4x4">
+                    "4 tegen 4"
+                  <option value="6x6">
+                    "6 tegen 6"
+                  <option value="7x7">
+                    "7 tegen 7"
+                  <option value="8x8">
+                    "8 tegen 8"
+                  <option value="11x11">
+                    "11 tegen 11"
+              <div class="cat-kenmerken">
+                <span>
+                  "Volledig veld"
+                <span>
+                  "Groot doel 7,32 × 2,44 m"
+                <span>
+                  "Bal maat 5"
+                <span>
+                  "Strafschop 11 m"
+                <span>
+                  "Buitenspel"
+                <span>
+                  "Ranglijst"
+                <span>
+                  "Max. 7 wissels"
+            <p style="font-size: 11px; color: var(--grijs-donker); margin: 4px 0px 0px; line-height: 1.5;">
+              "De spelvorm bepaalt welke formaties je bij een wedstrijd kunt kiezen. Bestaande opstellingen blijven staan."
           <div class="formulier-groep">
             <label class="formulier-label">
               "Vaste thuislocatie"

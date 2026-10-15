@@ -2120,7 +2120,7 @@ function vlaggenUitAssistent(w, spelers) {
 
 function WedstrijdFormulier({ wedstrijd, spelers, onOpslaan, onSluiten }) {
   const [form,setForm]=useState(function(){
-    const basis = {...LEEG_WEDSTRIJD, speelduur: inst().speelduur||90, locatie: inst().locatie||""};
+    const basis = {...LEEG_WEDSTRIJD, speelduur: inst().speelduur||90, locatie: inst().locatie||"", formatie: startFormatie(null, false)};
     return {...basis, ...wedstrijd};
   });
   const [spelersModal,setSpelersModal]=useState(null);
@@ -2576,7 +2576,10 @@ function ImportSheet({ bestaande, onImporteren, onSluiten }) {
    WEDSTRIJDOPSTELLING (matchday)
 ═══════════════════════════════════════════════════════════ */
 function WedstrijdOpstelling({ wedstrijd, spelers, onOpslaan, onSluiten, inVenster }) {
-  const [formatie, setFormatie] = useState(wedstrijd.formatie || "4-3-3A");
+  /* Een lege opstelling begint met een formatie die bij het team past:
+     een O10 krijgt 2-1-2 en niet het oude 4-3-3A (src/domein/spelvorm.js). */
+  const heeftPlekken = (wedstrijd.opstelling||[]).some(function(r){ return r.positieId && (r.spelStatus||"basis")==="basis"; });
+  const [formatie, setFormatie] = useState(function(){ return startFormatie(wedstrijd.formatie, heeftPlekken); });
   const [formatieOpen, setFormatieOpen] = useState(false);
   const [speelduur, setSpeelduur] = useState(wedstrijd.speelduur || inst().speelduur || 90);
   const [kiesPositie, setKiesPositie] = useState(null);
@@ -2598,7 +2601,7 @@ function WedstrijdOpstelling({ wedstrijd, spelers, onOpslaan, onSluiten, inVenst
                         .map(function(r){ return r.spelerId; });
     if (basisIds.length === 0) return {};
     var basisSpelers = spelers.filter(function(s){ return basisIds.indexOf(s.id) >= 0; });
-    var plekken = FORMATIES_DATA[wedstrijd.formatie || "4-3-3A"] || FORMATIES_DATA["4-3-3A"];
+    var plekken = FORMATIES_DATA[startFormatie(wedstrijd.formatie, false)] || FORMATIES_DATA["4-3-3A"];
     return vulFormatieAutomatisch(plekken, basisSpelers);
   });
   const [wisselIds, setWisselIds] = useState(function(){
@@ -2952,7 +2955,7 @@ function WedstrijdOpstelling({ wedstrijd, spelers, onOpslaan, onSluiten, inVenst
               <button style={{background:"none",border:"none",fontSize:20,cursor:"pointer",color:"var(--grijs-donker)",padding:"0 4px"}}
                 onClick={function(){setFormatieOpen(false);}}>{"✕"}</button>
             </div>
-            {FORMATIE_GROEPEN.map(function(groep){
+            {formatieGroepenNu().map(function(groep){
               return (
                 <div key={groep.label}>
                   <div className="formatie-groep-label">{groep.label}</div>
@@ -4594,7 +4597,9 @@ function GastenSectie({ wedstrijd, onOpslaan }) {
 }
 
 function TegenstanderSectie({ wedstrijd, alleWedstrijden, onOpslaan }) {
-  const analyse = tegenAnalyse(wedstrijd);
+  const ruw = tegenAnalyse(wedstrijd);
+  /* De tegenstander speelt dezelfde spelvorm als wij */
+  const analyse = Object.assign({}, ruw, {formatie: startFormatie(ruw.formatie, Object.keys(ruw.spelers||{}).length>0)});
   const [bewerk, setBewerk] = useState(null);      /* positie die je aanklikt */
   const posities = FORMATIES_DATA[analyse.formatie] || FORMATIES_DATA["4-3-3A"];
   const toewijzing = tegenToewijzing(analyse);
@@ -4638,7 +4643,7 @@ function TegenstanderSectie({ wedstrijd, alleWedstrijden, onOpslaan }) {
           <label className="formulier-label">Hoe spelen ze?</label>
           <select className="formulier-input" value={analyse.formatie}
             onChange={function(e){ schrijf({formatie:e.target.value}); }}>
-            {FORMATIE_GROEPEN.map(function(g){
+            {formatieGroepenNu().map(function(g){
               return (
                 <optgroup key={g.label} label={g.label}>
                   {g.namen.map(function(n){ return <option key={n} value={n}>{n}</option>; })}
@@ -4648,7 +4653,7 @@ function TegenstanderSectie({ wedstrijd, alleWedstrijden, onOpslaan }) {
           </select>
           <p style={{fontSize:11,color:"var(--grijs-donker)",fontWeight:400,margin:"7px 0 0",lineHeight:1.5}}>
             Tik op een plek in het veld om er een rugnummer en naam bij te zetten.
-            {ingevuldeSpelers>0 ? " " + ingevuldeSpelers + " van de 11 ingevuld." : ""}
+            {ingevuldeSpelers>0 ? " " + ingevuldeSpelers + " van de " + posities.length + " ingevuld." : ""}
           </p>
         </div>
       </div>

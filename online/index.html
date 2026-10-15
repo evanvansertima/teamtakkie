@@ -2474,6 +2474,14 @@
     .status-optie:active { transform:scale(.98); }
 
     .positie-code { display:inline-block; margin-left:8px; padding:1px 6px; border-radius:6px; background:var(--grijs-licht); color:var(--blauw); font-size:11px; font-weight:800; vertical-align:2px; }
+    /* Categorie en spelvorm van een team */
+    .cat-kiezer { margin-bottom:12px; }
+    .cat-chips { display:flex; flex-wrap:wrap; gap:6px; }
+    .cat-hint { font-size:11px; color:var(--grijs-donker); margin:6px 0 0; }
+    .cat-spelvorm { display:flex; align-items:center; gap:10px; margin-top:10px; }
+    .cat-spelvorm select { flex:1; }
+    .cat-kenmerken { display:flex; flex-wrap:wrap; gap:5px; margin-top:8px; }
+    .cat-kenmerken span { font-size:11px; padding:3px 8px; border-radius:999px; background:var(--grijs-licht); color:var(--grijs-donker); }
     /* Profielbeeld: foto, avatar of silhouet */
     .beeld-keuze { display:flex; gap:6px; justify-content:center; flex-wrap:wrap; margin-bottom:14px; }
     .beeld-keuze-knop { display:inline-flex; align-items:center; gap:6px; padding:8px 12px; border-radius:10px; border:2px solid var(--grijs); background:var(--wit); color:var(--grijs-donker); font-weight:700; font-size:12px; cursor:pointer; font-family:inherit; }
@@ -3080,7 +3088,7 @@ window.addEventListener("error", function(e){
 });
 </script>
 <script>
-const APP_VERSIE = "e18fe43";
+const APP_VERSIE = "fb3a1bf";
 const TEAMS_KEY = "tt_teams_v1";
 const ACTIEF_KEY = "tt_actief_v1";
 const VOORKEUR_KEY = "tt_voorkeuren_v1";
@@ -11233,6 +11241,121 @@ function avatarWillekeurig(geslacht, kans) {
     baard: r() < 0.25
   }, "");
 }
+const SPELVORM_INFO = {
+  "2x2": {
+    label: "2 tegen 2",
+    spelers: 2,
+    keeper: false,
+    formaties: ["1-1", "2"],
+    standaard: "1-1",
+    kenmerken: ["Geen keeper", "Veel aan de bal, veel scoren"]
+  },
+  "4x4": {
+    label: "4 tegen 4",
+    spelers: 4,
+    keeper: false,
+    formaties: ["1-2-1", "2-2"],
+    standaard: "1-2-1",
+    kenmerken: ["Geen keeper", "Spelenderwijs ontdekken"]
+  },
+  "6x6": {
+    label: "6 tegen 6",
+    spelers: 6,
+    keeper: true,
+    formaties: ["2-1-2", "2-2-1", "1-3-1", "3-1-1"],
+    standaard: "2-1-2",
+    kenmerken: ["Veld 42,5 \xD7 30 m", "Pupillendoel 5 \xD7 2 m", "Bal maat 4", "Strafschop 7 m", "Geen buitenspel", "Geen ranglijst", "Spelbegeleider"]
+  },
+  "7x7": {
+    label: "7 tegen 7",
+    spelers: 7,
+    keeper: true,
+    formaties: ["2-3-1", "3-2-1", "3-1-2", "2-2-2"],
+    standaard: "2-3-1",
+    kenmerken: []
+  },
+  "8x8": {
+    label: "8 tegen 8",
+    spelers: 8,
+    keeper: true,
+    formaties: ["3-3-1", "2-3-2", "3-2-2", "2-4-1"],
+    standaard: "3-3-1",
+    kenmerken: ["Veld 64 \xD7 42,5 m", "Pupillendoel 5 \xD7 2 m", "Bal maat 5", "Strafschop 9 m", "Geen buitenspel", "Wel ranglijst", "Pupillenscheidsrechter"]
+  },
+  "11x11": {
+    label: "11 tegen 11",
+    spelers: 11,
+    keeper: true,
+    formaties: null,
+    standaard: "4-3-3A",
+    kenmerken: ["Volledig veld", "Groot doel 7,32 \xD7 2,44 m", "Bal maat 5", "Strafschop 11 m", "Buitenspel", "Ranglijst", "Max. 7 wissels"]
+  }
+};
+const SPELVORM_VOLGORDE = ["2x2", "4x4", "6x6", "7x7", "8x8", "11x11"];
+const TEAM_CATEGORIEEN = [
+  { id: "O6", spelvorm: "2x2", duur: null, getal: 6 },
+  { id: "O7", spelvorm: "4x4", duur: null, getal: 7 },
+  { id: "O8", spelvorm: "6x6", duur: 40, getal: 8 },
+  { id: "O9", spelvorm: "6x6", duur: 40, getal: 9 },
+  { id: "O10", spelvorm: "6x6", duur: 50, getal: 10 },
+  { id: "O11", spelvorm: "8x8", duur: 60, getal: 11 },
+  { id: "O12", spelvorm: "8x8", duur: 60, getal: 12 },
+  { id: "O13", spelvorm: "11x11", duur: null, getal: 13 },
+  { id: "O14", spelvorm: "11x11", duur: null, getal: 14 },
+  { id: "O15", spelvorm: "11x11", duur: 70, getal: 15 },
+  { id: "O16", spelvorm: "11x11", duur: 80, getal: 16 },
+  { id: "O17", spelvorm: "11x11", duur: 80, getal: 17 },
+  { id: "O19", spelvorm: "11x11", duur: 90, getal: 19 },
+  { id: "O21", spelvorm: "11x11", duur: 90, getal: 21 },
+  { id: "O23", spelvorm: "11x11", duur: 90, getal: 23 },
+  { id: "Senioren", spelvorm: "11x11", duur: 90, getal: 99 }
+];
+function teamCategorie(id) {
+  return TEAM_CATEGORIEEN.filter(function(c) {
+    return c.id === id;
+  })[0] || null;
+}
+function categorieUitTeamnaam(naam) {
+  var s = String(naam || "");
+  var m = s.match(/(?:^|[^A-Za-z0-9])(?:J?M?O|Onder)\s?(\d{1,2})(?!\d)/i);
+  if (m) {
+    var n = Number(m[1]);
+    if (n < 6) return "O6";
+    var c = TEAM_CATEGORIEEN.filter(function(k) {
+      return k.getal >= n && k.getal < 99;
+    })[0];
+    return c ? c.id : null;
+  }
+  if (/senior|heren|dames|vrouwen|mannen|veteranen|35\+|45\+/i.test(s)) return "Senioren";
+  return null;
+}
+function teamSpelvorm(i) {
+  var w = i || {};
+  if (w.spelvorm && SPELVORM_INFO[w.spelvorm]) return w.spelvorm;
+  var c = teamCategorie(w.categorie) || teamCategorie(categorieUitTeamnaam(w.teamNaam));
+  return c ? c.spelvorm : "11x11";
+}
+function formatieGroepenVoor(spelvorm, groepen11) {
+  var info = SPELVORM_INFO[spelvorm];
+  if (!info || !info.formaties) return groepen11;
+  return [{ label: info.label, namen: info.formaties.slice() }];
+}
+function spelvormVanFormatie(formatie, data) {
+  var plekken = data && data[formatie];
+  if (!plekken) return null;
+  var keeper = plekken.some(function(p) {
+    return p.l === "DM";
+  });
+  var sv = SPELVORM_VOLGORDE.filter(function(k) {
+    return SPELVORM_INFO[k].spelers === plekken.length && SPELVORM_INFO[k].keeper === keeper;
+  })[0];
+  return sv || null;
+}
+function passendeFormatie(formatie, spelvorm, data, heeftOpstelling) {
+  var info = SPELVORM_INFO[spelvorm] || SPELVORM_INFO["11x11"];
+  if (formatie && data && data[formatie] && (heeftOpstelling || spelvormVanFormatie(formatie, data) === spelvorm)) return formatie;
+  return info.standaard;
+}
 function SlotJe({ badge }) {
   return /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-lock " + (badge ? "slot-badge" : "slotje"), "aria-hidden": "true" });
 }
@@ -11470,6 +11593,45 @@ function GetalVeld({ waarde, opWaarde, leeg, min, max, ...rest }) {
       }
     }
   );
+}
+function TeamCategorieKiezer({ categorie, spelvorm, teamNaam, opWijzig }) {
+  const gok = categorieUitTeamnaam(teamNaam);
+  const cat = categorie || "";
+  const sv = teamSpelvorm({ categorie: cat, spelvorm, teamNaam });
+  const info = SPELVORM_INFO[sv];
+  return /* @__PURE__ */ React.createElement("div", { className: "cat-kiezer" }, /* @__PURE__ */ React.createElement("div", { className: "cat-chips" }, TEAM_CATEGORIEEN.map(function(c) {
+    var aan = cat ? cat === c.id : gok === c.id;
+    return /* @__PURE__ */ React.createElement(
+      "button",
+      {
+        key: c.id,
+        type: "button",
+        className: "filter-chip",
+        style: chipStijl(aan),
+        onClick: function() {
+          var w = { categorie: c.id, spelvorm: "" };
+          if (c.duur) w.speelduur = c.duur;
+          opWijzig(w);
+        }
+      },
+      c.id
+    );
+  })), !cat && gok && /* @__PURE__ */ React.createElement("p", { className: "cat-hint" }, "Uit de teamnaam: ", gok, ". Tik om te bevestigen."), /* @__PURE__ */ React.createElement("div", { className: "cat-spelvorm" }, /* @__PURE__ */ React.createElement("label", { className: "formulier-label", style: { margin: 0 } }, "Spelvorm"), /* @__PURE__ */ React.createElement(
+    "select",
+    {
+      className: "formulier-input",
+      value: sv,
+      style: { marginBottom: 0 },
+      onChange: function(e) {
+        opWijzig({ spelvorm: e.target.value });
+      }
+    },
+    SPELVORM_VOLGORDE.map(function(k) {
+      return /* @__PURE__ */ React.createElement("option", { key: k, value: k }, SPELVORM_INFO[k].label);
+    })
+  )), info.kenmerken.length > 0 && /* @__PURE__ */ React.createElement("div", { className: "cat-kenmerken" }, info.kenmerken.map(function(k) {
+    return /* @__PURE__ */ React.createElement("span", { key: k }, k);
+  })));
 }
 function TrainingsmomentenKiezer({ waarde, opWaarde }) {
   var momenten = trainingsmomentenNetjes(waarde);
@@ -12708,6 +12870,8 @@ function TeamScherm({ opKlaar, eerste }) {
   const [duur, setDuur] = useState("90");
   const [locatie, setLocatie] = useState("");
   const [momenten, setMomenten] = useState([]);
+  const [cat, setCat] = useState({ categorie: "", spelvorm: "" });
+  const duurZelf = useRef(false);
   const [bezig, setBezig] = useState(false);
   const [fout, setFout] = useState(null);
   function maak() {
@@ -12728,7 +12892,9 @@ function TeamScherm({ opKlaar, eerste }) {
       seizoen,
       speelduur: Number(duur) || 90,
       locatie: locatie.trim(),
-      trainingsmomenten: trainingsmomentenNetjes(momenten)
+      trainingsmomenten: trainingsmomentenNetjes(momenten),
+      categorie: cat.categorie || categorieUitTeamnaam(naam) || "",
+      spelvorm: cat.spelvorm
     });
     synchroniseer().then(function(r) {
       setBezig(false);
@@ -12755,15 +12921,29 @@ function TeamScherm({ opKlaar, eerste }) {
             if (e.key === "Enter") maak();
           }
         }
+      ), /* @__PURE__ */ React.createElement("label", { className: "formulier-label" }, "Leeftijdscategorie"), /* @__PURE__ */ React.createElement(
+        TeamCategorieKiezer,
+        {
+          categorie: cat.categorie,
+          spelvorm: cat.spelvorm,
+          teamNaam: naam,
+          opWijzig: function(w) {
+            setCat(function(c) {
+              return Object.assign({}, c, { categorie: w.categorie !== void 0 ? w.categorie : c.categorie, spelvorm: w.spelvorm || "" });
+            });
+            if (w.speelduur && !duurZelf.current) setDuur(String(w.speelduur));
+          }
+        }
       ), /* @__PURE__ */ React.createElement("div", { className: "onboard-twee" }, /* @__PURE__ */ React.createElement("span", null, /* @__PURE__ */ React.createElement("label", { className: "formulier-label" }, "Seizoen"), /* @__PURE__ */ React.createElement("input", { value: seizoen, onChange: function(e) {
         setSeizoen(e.target.value);
       } })), /* @__PURE__ */ React.createElement("span", null, /* @__PURE__ */ React.createElement("label", { className: "formulier-label" }, "Speelduur (min)"), /* @__PURE__ */ React.createElement(
         GetalVeld,
         {
-          min: 20,
+          min: 10,
           max: 120,
           waarde: Number(duur) || 90,
           opWaarde: function(n) {
+            duurZelf.current = true;
             setDuur(String(n));
           }
         }
@@ -14214,7 +14394,7 @@ function InstellingenSheet({ onSluiten, onGewisseld, onTeams }) {
     GetalVeld,
     {
       className: "formulier-input",
-      min: 20,
+      min: 10,
       max: 120,
       leeg: 90,
       waarde: i.speelduur,
@@ -14222,7 +14402,17 @@ function InstellingenSheet({ onSluiten, onGewisseld, onTeams }) {
         zetInstellingen({ speelduur: n });
       }
     }
-  ))), /* @__PURE__ */ React.createElement("div", { className: "formulier-groep" }, /* @__PURE__ */ React.createElement("label", { className: "formulier-label" }, "Vaste thuislocatie"), /* @__PURE__ */ React.createElement(
+  ))), /* @__PURE__ */ React.createElement("div", { className: "formulier-groep" }, /* @__PURE__ */ React.createElement("label", { className: "formulier-label" }, "Leeftijdscategorie"), /* @__PURE__ */ React.createElement(
+    TeamCategorieKiezer,
+    {
+      categorie: i.categorie,
+      spelvorm: i.spelvorm,
+      teamNaam: i.teamNaam,
+      opWijzig: function(w) {
+        zetInstellingen(w);
+      }
+    }
+  ), /* @__PURE__ */ React.createElement("p", { style: { fontSize: 11, color: "var(--grijs-donker)", margin: "4px 0 0", lineHeight: 1.5 } }, "De spelvorm bepaalt welke formaties je bij een wedstrijd kunt kiezen. Bestaande opstellingen blijven staan.")), /* @__PURE__ */ React.createElement("div", { className: "formulier-groep" }, /* @__PURE__ */ React.createElement("label", { className: "formulier-label" }, "Vaste thuislocatie"), /* @__PURE__ */ React.createElement(
     "input",
     {
       className: "formulier-input",
@@ -28355,7 +28545,9 @@ function OpstellingVeld({ formatie, toewijzing, onKlikPositie, tenue, aanvoerder
   )));
 }
 function OpstellingenTab({ spelers }) {
-  const [actief, setActief] = useState("4-3-3A");
+  const [actief, setActief] = useState(function() {
+    return startFormatie(null, false);
+  });
   const [toewijzing, setToewijzing] = useState({});
   const [kiesPositie, setKiesPositie] = useState(null);
   const [detailPositie, setDetailPositie] = useState(null);
@@ -28465,7 +28657,7 @@ function OpstellingenTab({ spelers }) {
     e.stopPropagation();
   } }, /* @__PURE__ */ React.createElement("div", { className: "formatie-sheet-header" }, /* @__PURE__ */ React.createElement("span", { className: "formatie-sheet-titel" }, "Kies formatie"), /* @__PURE__ */ React.createElement("button", { style: { background: "none", border: "none", fontSize: 20, cursor: "pointer", color: "var(--grijs-donker)", padding: "0 4px" }, onClick: function() {
     setFormatieMenuOpen(false);
-  } }, "\u2715")), FORMATIE_GROEPEN.map(function(groep) {
+  } }, "\u2715")), formatieGroepenNu().map(function(groep) {
     return /* @__PURE__ */ React.createElement("div", { key: groep.label }, /* @__PURE__ */ React.createElement("div", { className: "formatie-groep-label" }, groep.label), /* @__PURE__ */ React.createElement("div", { className: "formatie-groep-grid" }, groep.namen.map(function(naam) {
       return /* @__PURE__ */ React.createElement(
         "button",
@@ -38748,7 +38940,7 @@ function vlaggenUitAssistent(w, spelers) {
 }
 function WedstrijdFormulier({ wedstrijd, spelers, onOpslaan, onSluiten }) {
   const [form, setForm] = useState(function() {
-    const basis = { ...LEEG_WEDSTRIJD, speelduur: inst().speelduur || 90, locatie: inst().locatie || "" };
+    const basis = { ...LEEG_WEDSTRIJD, speelduur: inst().speelduur || 90, locatie: inst().locatie || "", formatie: startFormatie(null, false) };
     return { ...basis, ...wedstrijd };
   });
   const [spelersModal, setSpelersModal] = useState(null);
@@ -39190,7 +39382,12 @@ function ImportSheet({ bestaande, onImporteren, onSluiten }) {
   ), /* @__PURE__ */ React.createElement("button", { className: "knop succes", style: { flex: 2, justifyContent: "center" }, onClick: importeer }, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-check" }), " " + aantalGekozen + " toevoegen")))));
 }
 function WedstrijdOpstelling({ wedstrijd, spelers, onOpslaan, onSluiten, inVenster }) {
-  const [formatie, setFormatie] = useState(wedstrijd.formatie || "4-3-3A");
+  const heeftPlekken = (wedstrijd.opstelling || []).some(function(r) {
+    return r.positieId && (r.spelStatus || "basis") === "basis";
+  });
+  const [formatie, setFormatie] = useState(function() {
+    return startFormatie(wedstrijd.formatie, heeftPlekken);
+  });
   const [formatieOpen, setFormatieOpen] = useState(false);
   const [speelduur, setSpeelduur] = useState(wedstrijd.speelduur || inst().speelduur || 90);
   const [kiesPositie, setKiesPositie] = useState(null);
@@ -39215,7 +39412,7 @@ function WedstrijdOpstelling({ wedstrijd, spelers, onOpslaan, onSluiten, inVenst
     var basisSpelers = spelers.filter(function(s) {
       return basisIds.indexOf(s.id) >= 0;
     });
-    var plekken = FORMATIES_DATA[wedstrijd.formatie || "4-3-3A"] || FORMATIES_DATA["4-3-3A"];
+    var plekken = FORMATIES_DATA[startFormatie(wedstrijd.formatie, false)] || FORMATIES_DATA["4-3-3A"];
     return vulFormatieAutomatisch(plekken, basisSpelers);
   });
   const [wisselIds, setWisselIds] = useState(function() {
@@ -39590,7 +39787,7 @@ function WedstrijdOpstelling({ wedstrijd, spelers, onOpslaan, onSluiten, inVenst
       }
     },
     "\u2715"
-  )), FORMATIE_GROEPEN.map(function(groep) {
+  )), formatieGroepenNu().map(function(groep) {
     return /* @__PURE__ */ React.createElement("div", { key: groep.label }, /* @__PURE__ */ React.createElement("div", { className: "formatie-groep-label" }, groep.label), /* @__PURE__ */ React.createElement("div", { className: "formatie-groep-grid" }, groep.namen.map(function(naam) {
       return /* @__PURE__ */ React.createElement(
         "button",
@@ -41337,7 +41534,8 @@ function GastenSectie({ wedstrijd, onOpslaan }) {
   })));
 }
 function TegenstanderSectie({ wedstrijd, alleWedstrijden, onOpslaan }) {
-  const analyse = tegenAnalyse(wedstrijd);
+  const ruw = tegenAnalyse(wedstrijd);
+  const analyse = Object.assign({}, ruw, { formatie: startFormatie(ruw.formatie, Object.keys(ruw.spelers || {}).length > 0) });
   const [bewerk, setBewerk] = useState(null);
   const posities = FORMATIES_DATA[analyse.formatie] || FORMATIES_DATA["4-3-3A"];
   const toewijzing = tegenToewijzing(analyse);
@@ -41385,12 +41583,12 @@ function TegenstanderSectie({ wedstrijd, alleWedstrijden, onOpslaan }) {
         schrijf({ formatie: e.target.value });
       }
     },
-    FORMATIE_GROEPEN.map(function(g) {
+    formatieGroepenNu().map(function(g) {
       return /* @__PURE__ */ React.createElement("optgroup", { key: g.label, label: g.label }, g.namen.map(function(n) {
         return /* @__PURE__ */ React.createElement("option", { key: n, value: n }, n);
       }));
     })
-  ), /* @__PURE__ */ React.createElement("p", { style: { fontSize: 11, color: "var(--grijs-donker)", fontWeight: 400, margin: "7px 0 0", lineHeight: 1.5 } }, "Tik op een plek in het veld om er een rugnummer en naam bij te zetten.", ingevuldeSpelers > 0 ? " " + ingevuldeSpelers + " van de 11 ingevuld." : ""))), /* @__PURE__ */ React.createElement(
+  ), /* @__PURE__ */ React.createElement("p", { style: { fontSize: 11, color: "var(--grijs-donker)", fontWeight: 400, margin: "7px 0 0", lineHeight: 1.5 } }, "Tik op een plek in het veld om er een rugnummer en naam bij te zetten.", ingevuldeSpelers > 0 ? " " + ingevuldeSpelers + " van de " + posities.length + " ingevuld." : ""))), /* @__PURE__ */ React.createElement(
     OpstellingVeld,
     {
       formatie: analyse.formatie,
@@ -42939,6 +43137,8 @@ const STANDAARD_INSTELLINGEN = {
   speelduur: 90,
   locatie: "",
   trainingsmomenten: [],
+  categorie: "",
+  spelvorm: "",
   thema: "systeem",
   logo: null,
   accent: "club",
@@ -42954,7 +43154,7 @@ function logoKopbalk(opDonker) {
 function logoExport() {
   return inst().logo || LOGO_VOL;
 }
-const TEAM_INSTELLINGEN = ["teamNaam", "seizoen", "speelduur", "locatie", "trainingsmomenten"];
+const TEAM_INSTELLINGEN = ["teamNaam", "seizoen", "speelduur", "locatie", "trainingsmomenten", "categorie", "spelvorm"];
 function _leesDeel(sleutel) {
   try {
     var r = localStorage.getItem(sleutel);
@@ -42981,6 +43181,15 @@ var _instellingen = _leesInstellingen();
 var _instLuisteraars = [];
 function inst() {
   return _instellingen;
+}
+function spelvormNu() {
+  return teamSpelvorm(_instellingen);
+}
+function formatieGroepenNu() {
+  return formatieGroepenVoor(spelvormNu(), FORMATIE_GROEPEN);
+}
+function startFormatie(formatie, heeftOpstelling) {
+  return passendeFormatie(formatie, spelvormNu(), FORMATIES_DATA, heeftOpstelling);
 }
 function teamNaamVol() {
   var i = _instellingen;
@@ -43510,6 +43719,129 @@ function parseerDatum(d) {
 const FORMATIES_KEY = "fch_formaties_v1";
 const TACTIEKEN_KEY = "fch_tactieken_v1";
 const FORMATIES_DATA = {
+  /* ── KLEINE SPELVORMEN (15 oktober 2026) ─────────────────
+     Voor de jeugd die niet 11 tegen 11 speelt; welke formaties bij welk
+     team horen staat in src/domein/spelvorm.js. Elk aantal veldspelers
+     komt maar bij één spelvorm voor, zodat spelvormVanFormatie() hem
+     uit het aantal plekken kan halen. */
+  /* 2 tegen 2, zonder keeper (O6) */
+  "1-1": [{ id: "V", l: "CV", x: 50, y: 68 }, { id: "A", l: "SP", x: 50, y: 32 }],
+  "2": [{ id: "L", l: "LM", x: 30, y: 50 }, { id: "R", l: "RM", x: 70, y: 50 }],
+  /* 4 tegen 4, zonder keeper (O7) */
+  "1-2-1": [{ id: "V", l: "CV", x: 50, y: 76 }, { id: "LM", l: "LM", x: 18, y: 50 }, { id: "RM", l: "RM", x: 82, y: 50 }, { id: "A", l: "SP", x: 50, y: 24 }],
+  "2-2": [{ id: "LV", l: "LV", x: 30, y: 70 }, { id: "RV", l: "RV", x: 70, y: 70 }, { id: "LA", l: "LVA", x: 30, y: 30 }, { id: "RA", l: "RVA", x: 70, y: 30 }],
+  /* 6 tegen 6 (O8–O10) */
+  "2-1-2": [
+    { id: "GK", l: "DM", x: 50, y: 88 },
+    { id: "LV", l: "LV", x: 28, y: 70 },
+    { id: "RV", l: "RV", x: 72, y: 70 },
+    { id: "CM", l: "CM", x: 50, y: 50 },
+    { id: "LA", l: "LVA", x: 28, y: 26 },
+    { id: "RA", l: "RVA", x: 72, y: 26 }
+  ],
+  "2-2-1": [
+    { id: "GK", l: "DM", x: 50, y: 88 },
+    { id: "LV", l: "LV", x: 28, y: 70 },
+    { id: "RV", l: "RV", x: 72, y: 70 },
+    { id: "LM", l: "LM", x: 24, y: 46 },
+    { id: "RM", l: "RM", x: 76, y: 46 },
+    { id: "ST", l: "SP", x: 50, y: 22 }
+  ],
+  "1-3-1": [
+    { id: "GK", l: "DM", x: 50, y: 88 },
+    { id: "CV", l: "CV", x: 50, y: 71 },
+    { id: "LM", l: "LM", x: 16, y: 48 },
+    { id: "CM", l: "CM", x: 50, y: 50 },
+    { id: "RM", l: "RM", x: 84, y: 48 },
+    { id: "ST", l: "SP", x: 50, y: 22 }
+  ],
+  "3-1-1": [
+    { id: "GK", l: "DM", x: 50, y: 88 },
+    { id: "LV", l: "LV", x: 18, y: 68 },
+    { id: "CV", l: "CV", x: 50, y: 72 },
+    { id: "RV", l: "RV", x: 82, y: 68 },
+    { id: "CM", l: "CM", x: 50, y: 46 },
+    { id: "ST", l: "SP", x: 50, y: 22 }
+  ],
+  /* 7 tegen 7 */
+  "2-3-1": [
+    { id: "GK", l: "DM", x: 50, y: 88 },
+    { id: "LV", l: "LV", x: 30, y: 71 },
+    { id: "RV", l: "RV", x: 70, y: 71 },
+    { id: "LM", l: "LM", x: 16, y: 48 },
+    { id: "CM", l: "CM", x: 50, y: 50 },
+    { id: "RM", l: "RM", x: 84, y: 48 },
+    { id: "ST", l: "SP", x: 50, y: 22 }
+  ],
+  "3-2-1": [
+    { id: "GK", l: "DM", x: 50, y: 88 },
+    { id: "LV", l: "LV", x: 18, y: 69 },
+    { id: "CV", l: "CV", x: 50, y: 73 },
+    { id: "RV", l: "RV", x: 82, y: 69 },
+    { id: "LM", l: "CM", x: 34, y: 48 },
+    { id: "RM", l: "CM", x: 66, y: 48 },
+    { id: "ST", l: "SP", x: 50, y: 22 }
+  ],
+  "3-1-2": [
+    { id: "GK", l: "DM", x: 50, y: 88 },
+    { id: "LV", l: "LV", x: 18, y: 69 },
+    { id: "CV", l: "CV", x: 50, y: 73 },
+    { id: "RV", l: "RV", x: 82, y: 69 },
+    { id: "CM", l: "CM", x: 50, y: 50 },
+    { id: "LA", l: "SP", x: 34, y: 24 },
+    { id: "RA", l: "SP", x: 66, y: 24 }
+  ],
+  "2-2-2": [
+    { id: "GK", l: "DM", x: 50, y: 88 },
+    { id: "LV", l: "LV", x: 30, y: 71 },
+    { id: "RV", l: "RV", x: 70, y: 71 },
+    { id: "LM", l: "LM", x: 24, y: 48 },
+    { id: "RM", l: "RM", x: 76, y: 48 },
+    { id: "LA", l: "SP", x: 34, y: 24 },
+    { id: "RA", l: "SP", x: 66, y: 24 }
+  ],
+  /* 8 tegen 8 (O11–O12) */
+  "3-3-1": [
+    { id: "GK", l: "DM", x: 50, y: 88 },
+    { id: "LV", l: "LV", x: 18, y: 69 },
+    { id: "CV", l: "CV", x: 50, y: 73 },
+    { id: "RV", l: "RV", x: 82, y: 69 },
+    { id: "LM", l: "LM", x: 16, y: 47 },
+    { id: "CM", l: "CM", x: 50, y: 50 },
+    { id: "RM", l: "RM", x: 84, y: 47 },
+    { id: "ST", l: "SP", x: 50, y: 21 }
+  ],
+  "2-3-2": [
+    { id: "GK", l: "DM", x: 50, y: 88 },
+    { id: "LV", l: "CV", x: 34, y: 72 },
+    { id: "RV", l: "CV", x: 66, y: 72 },
+    { id: "LM", l: "LM", x: 16, y: 49 },
+    { id: "CM", l: "CM", x: 50, y: 51 },
+    { id: "RM", l: "RM", x: 84, y: 49 },
+    { id: "LA", l: "SP", x: 34, y: 23 },
+    { id: "RA", l: "SP", x: 66, y: 23 }
+  ],
+  "3-2-2": [
+    { id: "GK", l: "DM", x: 50, y: 88 },
+    { id: "LV", l: "LV", x: 18, y: 69 },
+    { id: "CV", l: "CV", x: 50, y: 73 },
+    { id: "RV", l: "RV", x: 82, y: 69 },
+    { id: "LM", l: "CM", x: 34, y: 49 },
+    { id: "RM", l: "CM", x: 66, y: 49 },
+    { id: "LA", l: "LVA", x: 28, y: 24 },
+    { id: "RA", l: "RVA", x: 72, y: 24 }
+  ],
+  "2-4-1": [
+    { id: "GK", l: "DM", x: 50, y: 88 },
+    { id: "LV", l: "CV", x: 34, y: 72 },
+    { id: "RV", l: "CV", x: 66, y: 72 },
+    { id: "LM", l: "LM", x: 12, y: 47 },
+    { id: "LC", l: "CM", x: 37, y: 52 },
+    { id: "RC", l: "CM", x: 63, y: 52 },
+    { id: "RM", l: "RM", x: 88, y: 47 },
+    { id: "ST", l: "SP", x: 50, y: 21 }
+  ],
+  /* ── 11 TEGEN 11 ─────────────────────────────────────── */
   /* ── 3 VERDEDIGERS ─────────────────── */
   "3-1-4-2": [
     { id: "GK", l: "DM", x: 50, y: 88 },
