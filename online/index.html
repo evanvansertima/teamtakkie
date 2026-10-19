@@ -2474,6 +2474,11 @@
     .status-optie:active { transform:scale(.98); }
 
     .positie-code { display:inline-block; margin-left:8px; padding:1px 6px; border-radius:6px; background:var(--grijs-licht); color:var(--blauw); font-size:11px; font-weight:800; vertical-align:2px; }
+    /* Wissels bij Selectie › Opstellingen */
+    .wissel-chips { display:flex; flex-wrap:wrap; gap:7px; align-items:center; }
+    .wissel-chip { display:inline-flex; align-items:center; gap:6px; padding:3px 4px 3px 3px; border-radius:999px; border:1.5px solid var(--grijs); background:var(--wit); font-size:12px; font-weight:700; }
+    .wissel-chip-beeld { width:24px; height:24px; border-radius:50%; overflow:hidden; background:var(--grijs-licht); display:inline-flex; }
+    .wissel-chip button { border:none; background:none; color:var(--grijs-donker); cursor:pointer; padding:2px 6px; }
     /* Categorie en spelvorm van een team */
     .cat-kiezer { margin-bottom:12px; }
     .cat-chips { display:flex; flex-wrap:wrap; gap:6px; }
@@ -3088,7 +3093,7 @@ window.addEventListener("error", function(e){
 });
 </script>
 <script>
-const APP_VERSIE = "fb3a1bf";
+const APP_VERSIE = "6d3902c";
 const TEAMS_KEY = "tt_teams_v1";
 const ACTIEF_KEY = "tt_actief_v1";
 const VOORKEUR_KEY = "tt_voorkeuren_v1";
@@ -5832,6 +5837,7 @@ function bewaarOpstellingSjabloon(lijst, nieuw, nu) {
     wisselIds: (nieuw.wisselIds || []).slice(),
     bewaardOp: (nu || /* @__PURE__ */ new Date()).toISOString()
   };
+  if (nieuw.instructies && Object.keys(nieuw.instructies).length) sj.instructies = nieuw.instructies;
   var i = oud.findIndex(function(o) {
     return String(o.naam).trim().toLowerCase() === naam.toLowerCase();
   });
@@ -5844,6 +5850,45 @@ function bewaarOpstellingSjabloon(lijst, nieuw, nu) {
     return { lijst: oud, fout: "Je kunt " + OPSTELLING_SJABLONEN_MAX + " opstellingen bewaren. Verwijder er eerst \xE9\xE9n, of gebruik dezelfde naam om er een te overschrijven.", vervangen: false };
   }
   return { lijst: oud.concat([sj]), fout: null, vervangen: false };
+}
+function oudeOpstellingAlsSjabloon(f) {
+  var toew = {};
+  var instr = {};
+  Object.keys(f && f.toewijzing || {}).forEach(function(k) {
+    var sp = f.toewijzing[k];
+    if (!sp) return;
+    var id = typeof sp === "object" ? sp.spelerId != null ? sp.spelerId : sp.id : sp;
+    if (id == null) return;
+    toew[k] = id;
+    if (typeof sp === "object" && (sp.aanvalInstructie || sp.verdedigingInstructie)) {
+      instr[k] = { aanval: sp.aanvalInstructie || "", verdediging: sp.verdedigingInstructie || "" };
+    }
+  });
+  var sj = {
+    id: f.id,
+    naam: String(f.naam || f.formatie || "Opstelling"),
+    formatie: f.formatie,
+    toewijzing: toew,
+    wisselIds: (f.wisselIds || []).slice()
+  };
+  if (Object.keys(instr).length) sj.instructies = instr;
+  return sj;
+}
+function alleOpstellingSjablonen(sjablonen, oude) {
+  var lijst = (sjablonen || []).slice();
+  var ids = lijst.map(function(s) {
+    return String(s.id);
+  });
+  (oude || []).forEach(function(f) {
+    if (f && ids.indexOf(String(f.id)) < 0) lijst.push(oudeOpstellingAlsSjabloon(f));
+  });
+  return lijst;
+}
+function verwijderOpstellingSjabloon(sjablonen, oude, id) {
+  var weg = function(x) {
+    return String(x.id) !== String(id);
+  };
+  return { sjablonen: alleOpstellingSjablonen(sjablonen, oude).filter(weg), oude: (oude || []).filter(weg) };
 }
 function laatsteOpstelling(wedstrijden, huidige) {
   var grens = huidige && huidige.datum || "9999-12-31";
@@ -28553,15 +28598,16 @@ function OpstellingenTab({ spelers }) {
   const [detailPositie, setDetailPositie] = useState(null);
   const [instrAanval, setInstrAanval] = useState("");
   const [instrVerdediging, setInstrVerdediging] = useState("");
-  const [opgeslagen, setOpgeslagen] = useState(() => laadJson(FORMATIES_KEY));
+  const [opgeslagen, setOpgeslagen] = useState(function() {
+    return alleOpstellingSjablonen(laadJson(OPSTELLING_SJABLONEN_KEY), laadJson(FORMATIES_KEY));
+  });
+  const [wissels, setWissels] = useState([]);
+  const [kiesWissel, setKiesWissel] = useState(false);
   const [bewaarOpen, setBewaarOpen] = useState(false);
   const [bewaarNaam, setBewaarNaam] = useState("");
   const [formatieMenuOpen, setFormatieMenuOpen] = useState(false);
   const [tenue, setTenue] = useState(laadTenue);
   const [tenueOpen, setTenueOpen] = useState(false);
-  useEffect(() => {
-    slaJson(FORMATIES_KEY, opgeslagen);
-  }, [opgeslagen]);
   useEffect(() => {
     slaTenueOp(tenue);
   }, [tenue]);
@@ -28604,6 +28650,11 @@ function OpstellingenTab({ spelers }) {
       n[kiesPositie.id] = { ...speler, spelerId: speler.id };
       return n;
     });
+    setWissels(function(l) {
+      return l.filter(function(x) {
+        return String(x) !== String(speler.id);
+      });
+    });
     setKiesPositie(null);
   }
   function verwijderVanPositie(positieId) {
@@ -28617,35 +28668,63 @@ function OpstellingenTab({ spelers }) {
   }
   function bewaarFormatie() {
     const nm = bewaarNaam.trim() || actief + " Opstelling";
-    const nieuw = { id: Date.now(), naam: nm, formatie: actief, toewijzing };
-    setOpgeslagen((prev) => {
-      const i = prev.findIndex(function(f) {
-        return String(f.naam || "").trim().toLowerCase() === nm.toLowerCase();
-      });
-      if (i < 0) return [...prev, nieuw];
-      const kopie = prev.slice();
-      kopie[i] = Object.assign({}, nieuw, { id: prev[i].id });
-      return kopie;
+    const ids = {}, instructies = {};
+    Object.keys(toewijzing).forEach(function(k) {
+      var sp = toewijzing[k];
+      if (!sp) return;
+      ids[k] = sp.spelerId != null ? sp.spelerId : sp.id;
+      if (sp.aanvalInstructie || sp.verdedigingInstructie)
+        instructies[k] = { aanval: sp.aanvalInstructie || "", verdediging: sp.verdedigingInstructie || "" };
     });
+    const r = bewaarOpstellingSjabloon(opgeslagen, { naam: nm, formatie: actief, toewijzing: ids, wisselIds: wissels, instructies });
+    if (r.fout) {
+      meldFout(r.fout);
+      return;
+    }
+    slaJson(OPSTELLING_SJABLONEN_KEY, r.lijst);
+    setOpgeslagen(r.lijst);
+    meldGoed(r.vervangen ? "Opstelling overschreven" : "Opstelling bewaard");
     setBewaarOpen(false);
     setBewaarNaam("");
   }
   function laadFormatie(f) {
+    const instr = f.instructies || {};
+    const t2 = {};
+    Object.keys(f.toewijzing || {}).forEach(function(k) {
+      var sp = spelers.find(function(x) {
+        return String(x.id) === String(f.toewijzing[k]);
+      });
+      if (!sp) return;
+      t2[k] = Object.assign({}, sp, {
+        spelerId: sp.id,
+        aanvalInstructie: (instr[k] || {}).aanval || "",
+        verdedigingInstructie: (instr[k] || {}).verdediging || ""
+      });
+    });
     setActief(f.formatie);
-    setToewijzing(f.toewijzing || {});
+    setToewijzing(t2);
+    setWissels((f.wisselIds || []).filter(function(id) {
+      return spelers.some(function(x) {
+        return String(x.id) === String(id);
+      });
+    }));
+    setBewaarNaam(f.naam || "");
   }
   function verwijderFormatie(id) {
     const weg = opgeslagen.find(function(f) {
       return f.id === id;
     });
+    const r = verwijderOpstellingSjabloon(laadJson(OPSTELLING_SJABLONEN_KEY), laadJson(FORMATIES_KEY), id);
+    slaJson(FORMATIES_KEY, r.oude);
+    slaJson(OPSTELLING_SJABLONEN_KEY, r.sjablonen);
+    setOpgeslagen(r.sjablonen);
     if (weg) toon("Opstelling \u201C" + (weg.naam || weg.formatie) + "\u201D verwijderd", {
       actie: function() {
-        setOpgeslagen(function(l) {
-          return l.concat([weg]);
-        });
+        var terug = laadJson(OPSTELLING_SJABLONEN_KEY).concat([weg]);
+        slaJson(OPSTELLING_SJABLONEN_KEY, terug);
+        setOpgeslagen(terug);
       }
     });
-    setOpgeslagen((prev) => prev.filter((f) => f.id !== id));
   }
   const toegewezenIds = Object.values(toewijzing).filter(Boolean).map((s) => s.id || s.spelerId);
   const aantalIngesteld = Object.values(toewijzing).filter(Boolean).length;
@@ -28673,7 +28752,48 @@ function OpstellingenTab({ spelers }) {
         naam
       );
     })));
-  }))), /* @__PURE__ */ React.createElement("div", { style: { marginBottom: 8, fontSize: 13, color: "var(--grijs-donker)", fontWeight: 400, textAlign: "center" } }, "Tik op een positie om een speler toe te wijzen \xB7 ", aantalIngesteld, "/11 ingevuld"), /* @__PURE__ */ React.createElement(VeldZoomKnoppen, null), /* @__PURE__ */ React.createElement(OpstellingVeld, { formatie: actief, toewijzing, onKlikPositie: handlePositieKlik, tenue }), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 8, marginTop: 12, flexWrap: "wrap" } }, /* @__PURE__ */ React.createElement("button", { className: "knop lijn klein", style: { flex: 1, justifyContent: "center" }, onClick: () => setToewijzing({}) }, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-rotate-left" }), " Leegmaken"), /* @__PURE__ */ React.createElement("button", { className: "knop klein", style: { flex: 2, justifyContent: "center" }, onClick: () => setBewaarOpen(true) }, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-floppy-disk" }), " Opslaan"), /* @__PURE__ */ React.createElement(
+  }))), /* @__PURE__ */ React.createElement("div", { style: { marginBottom: 8, fontSize: 13, color: "var(--grijs-donker)", fontWeight: 400, textAlign: "center" } }, "Tik op een positie om een speler toe te wijzen \xB7 ", aantalIngesteld, "/", (FORMATIES_DATA[actief] || []).length, " ingevuld"), /* @__PURE__ */ React.createElement(VeldZoomKnoppen, null), /* @__PURE__ */ React.createElement(OpstellingVeld, { formatie: actief, toewijzing, onKlikPositie: handlePositieKlik, tenue }), /* @__PURE__ */ React.createElement("div", { className: "kaart", style: { marginTop: 12 } }, /* @__PURE__ */ React.createElement("div", { className: "kaart-titel", style: { justifyContent: "space-between" } }, /* @__PURE__ */ React.createElement("span", null, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-chair" }), " Wissels \xB7 ", wissels.length)), /* @__PURE__ */ React.createElement("div", { className: "wissel-chips" }, wissels.map(function(id) {
+    var sp = spelers.find(function(x) {
+      return String(x.id) === String(id);
+    });
+    if (!sp) return null;
+    return /* @__PURE__ */ React.createElement("span", { key: id, className: "wissel-chip" }, /* @__PURE__ */ React.createElement("span", { className: "wissel-chip-beeld" }, /* @__PURE__ */ React.createElement(SpelerBeeld, { speler: sp })), (sp.rugnummer ? sp.rugnummer + " " : "") + sp.naam.split(" ")[0], /* @__PURE__ */ React.createElement(
+      "button",
+      {
+        "aria-label": "Haal " + sp.naam + " van de bank",
+        onClick: function() {
+          setWissels(function(l) {
+            return l.filter(function(x) {
+              return String(x) !== String(id);
+            });
+          });
+        }
+      },
+      /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-xmark" })
+    ));
+  }), /* @__PURE__ */ React.createElement("button", { className: "knop lijn klein", onClick: function() {
+    setKiesWissel(true);
+  } }, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-plus" }), " Wissel toevoegen"))), kiesWissel && /* @__PURE__ */ React.createElement(
+    SpelerKeuzeModal,
+    {
+      titel: "Wie op de bank?",
+      spelers: spelers.filter(function(s) {
+        return toegewezenIds.map(String).indexOf(String(s.id)) < 0 && wissels.map(String).indexOf(String(s.id)) < 0;
+      }),
+      onKies: function(s) {
+        setWissels(function(l) {
+          return l.concat([s.id]);
+        });
+        setKiesWissel(false);
+      },
+      onSluiten: function() {
+        setKiesWissel(false);
+      }
+    }
+  ), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 8, marginTop: 12, flexWrap: "wrap" } }, /* @__PURE__ */ React.createElement("button", { className: "knop lijn klein", style: { flex: 1, justifyContent: "center" }, onClick: () => {
+    setToewijzing({});
+    setWissels([]);
+  } }, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-rotate-left" }), " Leegmaken"), /* @__PURE__ */ React.createElement("button", { className: "knop klein", style: { flex: 2, justifyContent: "center" }, onClick: () => setBewaarOpen(true) }, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-floppy-disk" }), " Opslaan"), /* @__PURE__ */ React.createElement(
     "button",
     {
       className: "knop klein pdf-knop",
@@ -28756,7 +28876,7 @@ function OpstellingenTab({ spelers }) {
     borderTop: "1px solid var(--grijs)"
   } }, /* @__PURE__ */ React.createElement("div", { style: { textAlign: "center" } }, /* @__PURE__ */ React.createElement(TenueBeeld, { set: tenueVoor(tenue, tenue.keuze || "thuis", true), kant: "voor", breed: 62 }), /* @__PURE__ */ React.createElement("div", { className: "tenue-kant" }, "De keeper hierbij")))), /* @__PURE__ */ React.createElement("div", { style: { textAlign: "center", fontSize: 11, color: "var(--grijs-donker)", padding: "4px 12px 12px", lineHeight: 1.6 } }, "De kleuren zelf ontwerp je in het Clubhuis, bij de tenue-ontwerper. Wat je hier kiest zie je op het veld en in de gedeelde afbeelding."))), opgeslagen.length > 0 && /* @__PURE__ */ React.createElement("div", { className: "kaart", style: { marginTop: 14 } }, /* @__PURE__ */ React.createElement("div", { className: "kaart-titel" }, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-floppy-disk" }), " Opgeslagen opstellingen (", opgeslagen.length, ")"), opgeslagen.map((f) => {
     const aantalSpelers = Object.values(f.toewijzing || {}).filter(Boolean).length;
-    return /* @__PURE__ */ React.createElement("div", { key: f.id, className: "opgeslagen-formatie" }, /* @__PURE__ */ React.createElement("div", { style: { width: 38, height: 38, borderRadius: 8, background: "var(--blauw)", color: "var(--op-kleur)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 700, fontFamily: "'Helvetica Neue',Arial", flexShrink: 0 } }, f.formatie), /* @__PURE__ */ React.createElement("div", { style: { flex: 1 }, onClick: () => laadFormatie(f) }, /* @__PURE__ */ React.createElement("div", { style: { fontWeight: 700, fontFamily: "'Helvetica Neue',Arial", fontSize: 14 } }, f.naam), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: "var(--grijs-donker)" } }, f.formatie, " \xB7 ", aantalSpelers, " spelers ingesteld")), /* @__PURE__ */ React.createElement("button", { className: "knop lijn klein", style: { padding: "5px 8px" }, onClick: () => laadFormatie(f) }, "Laden"), /* @__PURE__ */ React.createElement("button", { className: "knop gevaar klein", style: { padding: "5px 8px" }, onClick: () => verwijderFormatie(f.id) }, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-trash" })));
+    return /* @__PURE__ */ React.createElement("div", { key: f.id, className: "opgeslagen-formatie" }, /* @__PURE__ */ React.createElement("div", { style: { width: 38, height: 38, borderRadius: 8, background: "var(--blauw)", color: "var(--op-kleur)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 700, fontFamily: "'Helvetica Neue',Arial", flexShrink: 0 } }, f.formatie), /* @__PURE__ */ React.createElement("div", { style: { flex: 1 }, onClick: () => laadFormatie(f) }, /* @__PURE__ */ React.createElement("div", { style: { fontWeight: 700, fontFamily: "'Helvetica Neue',Arial", fontSize: 14 } }, f.naam), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: "var(--grijs-donker)" } }, f.formatie, " \xB7 ", aantalSpelers, " spelers", (f.wisselIds || []).length ? " \xB7 " + f.wisselIds.length + " wissels" : "")), /* @__PURE__ */ React.createElement("button", { className: "knop lijn klein", style: { padding: "5px 8px" }, onClick: () => laadFormatie(f) }, "Laden"), /* @__PURE__ */ React.createElement("button", { className: "knop gevaar klein", style: { padding: "5px 8px" }, onClick: () => verwijderFormatie(f.id) }, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-trash" })));
   })), kiesPositie && (function() {
     const labels = plekLabels(FORMATIES_DATA[actief] || FORMATIES_DATA["4-3-3A"]);
     const bezet = {};
@@ -39423,7 +39543,7 @@ function WedstrijdOpstelling({ wedstrijd, spelers, onOpslaan, onSluiten, inVenst
     });
   });
   const [sjablonen, setSjablonen] = useState(function() {
-    return laadJson(OPSTELLING_SJABLONEN_KEY);
+    return alleOpstellingSjablonen(laadJson(OPSTELLING_SJABLONEN_KEY), laadJson(FORMATIES_KEY));
   });
   const [sjabloonNaam, setSjabloonNaam] = useState(null);
   const laatste = laatsteOpstelling(laadWedstrijden(), wedstrijd);
@@ -39471,9 +39591,9 @@ function WedstrijdOpstelling({ wedstrijd, spelers, onOpslaan, onSluiten, inVenst
     });
   }
   function sjabloonWeg(sj) {
-    bewaarSjablonen(sjablonen.filter(function(x) {
-      return x.id !== sj.id;
-    }));
+    var r = verwijderOpstellingSjabloon(laadJson(OPSTELLING_SJABLONEN_KEY), laadJson(FORMATIES_KEY), sj.id);
+    slaJson(FORMATIES_KEY, r.oude);
+    bewaarSjablonen(r.sjablonen);
     toon("\u201C" + sj.naam + "\u201D verwijderd", {
       actie: function() {
         bewaarSjablonen(laadJson(OPSTELLING_SJABLONEN_KEY).concat([sj]));

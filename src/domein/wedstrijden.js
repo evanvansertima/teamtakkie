@@ -669,12 +669,13 @@ const OPSTELLING_SJABLONEN_MAX = 5;
  * @property {any[]} wisselIds
  * @property {string} [bewaardOp]
  * @property {{datum:string, tegenstander:string}} [bron]  alleen bij "Laatste opstelling"
+ * @property {Object<string,{aanval:string, verdediging:string}>} [instructies]  per plek, uit Selectie › Opstellingen
  */
 /**
  * Bewaart een opstelling. Dezelfde naam (hoofdletters maken niet uit)
  * overschrijft; anders mag er alleen bij zolang er nog geen vijf zijn.
  * @param {OpstellingSjabloon[]} lijst
- * @param {{naam:string, formatie:string, toewijzing:Object<string,any>, wisselIds?:any[]}} nieuw
+ * @param {{naam:string, formatie:string, toewijzing:Object<string,any>, wisselIds?:any[], instructies?:Object<string,any>}} nieuw
  * @param {Date} [nu]
  * @returns {{lijst:OpstellingSjabloon[], fout:string|null, vervangen:boolean}}
  */
@@ -689,6 +690,7 @@ function bewaarOpstellingSjabloon(lijst, nieuw, nu) {
   /** @type {OpstellingSjabloon} */
   var sj = { id: Date.now(), naam: naam, formatie: nieuw.formatie, toewijzing: toew,
              wisselIds: (nieuw.wisselIds || []).slice(), bewaardOp: (nu || new Date()).toISOString() };
+  if (nieuw.instructies && Object.keys(nieuw.instructies).length) sj.instructies = nieuw.instructies;
   var i = oud.findIndex(function (o) { return String(o.naam).trim().toLowerCase() === naam.toLowerCase(); });
   if (i >= 0) {
     sj.id = oud[i].id;
@@ -700,6 +702,68 @@ function bewaarOpstellingSjabloon(lijst, nieuw, nu) {
   }
   return { lijst: oud.concat([sj]), fout: null, vervangen: false };
 }
+/* ── Eén lijst voor Selectie › Opstellingen én de wedstrijd ──
+   Gemeld door een tester (19 oktober 2026): wat je bij Selectie ›
+   Opstellingen bewaart, zag je bij de wedstrijd niet terug. Die tab
+   schreef naar zijn eigen, oudere lijst (fch_formaties_v1), met hele
+   spelers per plek in plaats van nummers en zonder wissels.
+
+   Voortaan schrijven beide schermen naar OPSTELLING_SJABLONEN_KEY. De
+   oude lijst blijft ongemoeid bestaan (een tweede apparaat met een
+   oudere app kan er nog in schrijven) en wordt bij het lezen
+   meegenomen: wat er nog niet in de nieuwe lijst staat, komt erbij.
+   Verwijderen haalt hem uit allebei, anders kwam hij terug. */
+/**
+ * @param {any} f  een opstelling uit fch_formaties_v1
+ * @returns {OpstellingSjabloon}
+ */
+function oudeOpstellingAlsSjabloon(f) {
+  /** @type {Object<string,any>} */
+  var toew = {};
+  /** @type {Object<string,{aanval:string, verdediging:string}>} */
+  var instr = {};
+  Object.keys((f && f.toewijzing) || {}).forEach(function (k) {
+    var sp = f.toewijzing[k];
+    if (!sp) return;
+    var id = (typeof sp === "object") ? (sp.spelerId != null ? sp.spelerId : sp.id) : sp;
+    if (id == null) return;
+    toew[k] = id;
+    if (typeof sp === "object" && (sp.aanvalInstructie || sp.verdedigingInstructie)) {
+      instr[k] = { aanval: sp.aanvalInstructie || "", verdediging: sp.verdedigingInstructie || "" };
+    }
+  });
+  /** @type {OpstellingSjabloon} */
+  var sj = { id: f.id, naam: String(f.naam || f.formatie || "Opstelling"), formatie: f.formatie, toewijzing: toew,
+             wisselIds: (f.wisselIds || []).slice() };
+  if (Object.keys(instr).length) sj.instructies = instr;
+  return sj;
+}
+/**
+ * Alle bewaarde opstellingen: de nieuwe lijst, aangevuld met wat er
+ * alleen in de oude staat.
+ * @param {OpstellingSjabloon[]} sjablonen
+ * @param {any[]} oude
+ * @returns {OpstellingSjabloon[]}
+ */
+function alleOpstellingSjablonen(sjablonen, oude) {
+  var lijst = (sjablonen || []).slice();
+  var ids = lijst.map(function (s) { return String(s.id); });
+  (oude || []).forEach(function (f) {
+    if (f && ids.indexOf(String(f.id)) < 0) lijst.push(oudeOpstellingAlsSjabloon(f));
+  });
+  return lijst;
+}
+/**
+ * @param {OpstellingSjabloon[]} sjablonen
+ * @param {any[]} oude
+ * @param {any} id
+ * @returns {{sjablonen:OpstellingSjabloon[], oude:any[]}}
+ */
+function verwijderOpstellingSjabloon(sjablonen, oude, id) {
+  var weg = function (/** @type {any} */ x) { return String(x.id) !== String(id); };
+  return { sjablonen: alleOpstellingSjablonen(sjablonen, oude).filter(weg), oude: (oude || []).filter(weg) };
+}
+
 /**
  * De opstelling van de vorige wedstrijd: de laatste ándere wedstrijd
  * op of vóór deze datum met spelers op een plek. Zonder datum telt

@@ -108,7 +108,9 @@
           <div style="margin-bottom: 8px; font-size: 13px; color: var(--grijs-donker); font-weight: 400; text-align: center;">
             "Tik op een positie om een speler toe te wijzen ·"
             "0"
-            "/11 ingevuld"
+            "/"
+            "11"
+            "ingevuld"
           <div class="veld-zoom">
             <button class="veld-zoomknop" title="Kleiner">
               <i class="fa-solid fa-magnifying-glass-minus">
@@ -223,6 +225,16 @@
                     "RVA"
               <div style="font-size: 8px; font-weight: 700; color: white; margin-top: 2px; text-shadow: rgba(0, 0, 0, 0.9) 0px 1px 3px; font-family: "Helvetica Neue", Arial; background: rgba(0, 0, 0, 0.42); border-radius: 3px; padding: 1px 4px; line-height: 1.4; max-width: 64px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
                 "RVA"
+          <div class="kaart" style="margin-top: 12px;">
+            <div class="kaart-titel" style="justify-content: space-between;">
+              <span>
+                <i class="fa-solid fa-chair">
+                "Wissels ·"
+                "0"
+            <div class="wissel-chips">
+              <button class="knop lijn klein">
+                <i class="fa-solid fa-plus">
+                "Wissel toevoegen"
           <div style="display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap;">
             <button class="knop lijn klein" style="flex: 1 1 0%; justify-content: center;">
               <i class="fa-solid fa-rotate-left">

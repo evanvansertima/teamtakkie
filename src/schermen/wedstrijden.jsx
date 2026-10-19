@@ -2610,7 +2610,8 @@ function WedstrijdOpstelling({ wedstrijd, spelers, onOpslaan, onSluiten, inVenst
   });
 
   /* Bewaarde opstellingen (tot vijf) en die van de vorige wedstrijd */
-  const [sjablonen, setSjablonen] = useState(function(){ return laadJson(OPSTELLING_SJABLONEN_KEY); });
+  /* Ook wat bij Selectie › Opstellingen bewaard is (zie alleOpstellingSjablonen) */
+  const [sjablonen, setSjablonen] = useState(function(){ return alleOpstellingSjablonen(laadJson(OPSTELLING_SJABLONEN_KEY), laadJson(FORMATIES_KEY)); });
   const [sjabloonNaam, setSjabloonNaam] = useState(null);   // null = invulveld dicht
   const laatste = laatsteOpstelling(laadWedstrijden(), wedstrijd);
   function bewaarSjablonen(lijst) { setSjablonen(lijst); slaJson(OPSTELLING_SJABLONEN_KEY, lijst); }
@@ -2640,7 +2641,9 @@ function WedstrijdOpstelling({ wedstrijd, spelers, onOpslaan, onSluiten, inVenst
     });
   }
   function sjabloonWeg(sj) {
-    bewaarSjablonen(sjablonen.filter(function(x){ return x.id!==sj.id; }));
+    var r = verwijderOpstellingSjabloon(laadJson(OPSTELLING_SJABLONEN_KEY), laadJson(FORMATIES_KEY), sj.id);
+    slaJson(FORMATIES_KEY, r.oude);
+    bewaarSjablonen(r.sjablonen);
     toon("\u201c"+sj.naam+"\u201d verwijderd", {
       actie: function(){ bewaarSjablonen(laadJson(OPSTELLING_SJABLONEN_KEY).concat([sj])); }
     });

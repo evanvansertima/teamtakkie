@@ -337,14 +337,18 @@ function OpstellingenTab({ spelers }) {
   const [detailPositie, setDetailPositie] = useState(null);
   const [instrAanval, setInstrAanval] = useState("");
   const [instrVerdediging, setInstrVerdediging] = useState("");
-  const [opgeslagen, setOpgeslagen] = useState(() => laadJson(FORMATIES_KEY));
+  /* Dezelfde lijst als bij Wedstrijd › Opstelling (19 oktober 2026),
+     zie alleOpstellingSjablonen in src/domein/wedstrijden.js. */
+  const [opgeslagen, setOpgeslagen] = useState(function(){ return alleOpstellingSjablonen(laadJson(OPSTELLING_SJABLONEN_KEY), laadJson(FORMATIES_KEY)); });
+  /* Wie op de bank zit, als spelerId's — gaat mee naar de wedstrijd */
+  const [wissels, setWissels] = useState([]);
+  const [kiesWissel, setKiesWissel] = useState(false);
   const [bewaarOpen, setBewaarOpen] = useState(false);
   const [bewaarNaam, setBewaarNaam] = useState("");
   const [formatieMenuOpen, setFormatieMenuOpen] = useState(false);
   const [tenue, setTenue] = useState(laadTenue);
   const [tenueOpen, setTenueOpen] = useState(false);
 
-  useEffect(() => { slaJson(FORMATIES_KEY, opgeslagen); }, [opgeslagen]);
   useEffect(() => { slaTenueOp(tenue); }, [tenue]);
 
   /* Alles wat het tenue verandert gaat door tenueVernieuw, zodat de
@@ -389,6 +393,7 @@ function OpstellingenTab({ spelers }) {
       n[kiesPositie.id] = {...speler, spelerId: speler.id};
       return n;
     });
+    setWissels(function(l){ return l.filter(function(x){ return String(x)!==String(speler.id); }); });
     setKiesPositie(null);
   }
 
@@ -400,28 +405,51 @@ function OpstellingenTab({ spelers }) {
 
   function bewaarFormatie() {
     const nm = bewaarNaam.trim() || (actief + " Opstelling");
-    const nieuw = {id:Date.now(), naam:nm, formatie:actief, toewijzing};
-    /* Dezelfde naam overschrijft, in plaats van twee keer "4-3-3 XII". */
-    setOpgeslagen(prev => {
-      const i = prev.findIndex(function(f){ return String(f.naam||"").trim().toLowerCase()===nm.toLowerCase(); });
-      if (i < 0) return [...prev, nieuw];
-      const kopie = prev.slice(); kopie[i] = Object.assign({}, nieuw, {id: prev[i].id}); return kopie;
+    /* Per plek alleen het spelernummer; de instructies apart. */
+    const ids = {}, instructies = {};
+    Object.keys(toewijzing).forEach(function(k){
+      var sp = toewijzing[k];
+      if (!sp) return;
+      ids[k] = sp.spelerId != null ? sp.spelerId : sp.id;
+      if (sp.aanvalInstructie || sp.verdedigingInstructie)
+        instructies[k] = {aanval: sp.aanvalInstructie||"", verdediging: sp.verdedigingInstructie||""};
     });
+    const r = bewaarOpstellingSjabloon(opgeslagen, {naam:nm, formatie:actief, toewijzing:ids, wisselIds:wissels, instructies:instructies});
+    if (r.fout) { meldFout(r.fout); return; }
+    slaJson(OPSTELLING_SJABLONEN_KEY, r.lijst);
+    setOpgeslagen(r.lijst);
+    meldGoed(r.vervangen ? "Opstelling overschreven" : "Opstelling bewaard");
     setBewaarOpen(false);
     setBewaarNaam("");
   }
 
   function laadFormatie(f) {
+    const instr = f.instructies || {};
+    const t = {};
+    Object.keys(f.toewijzing||{}).forEach(function(k){
+      var sp = spelers.find(function(x){ return String(x.id)===String(f.toewijzing[k]); });
+      if (!sp) return;
+      t[k] = Object.assign({}, sp, {spelerId: sp.id,
+        aanvalInstructie: (instr[k]||{}).aanval || "", verdedigingInstructie: (instr[k]||{}).verdediging || ""});
+    });
     setActief(f.formatie);
-    setToewijzing(f.toewijzing||{});
+    setToewijzing(t);
+    setWissels((f.wisselIds||[]).filter(function(id){ return spelers.some(function(x){ return String(x.id)===String(id); }); }));
+    setBewaarNaam(f.naam||"");
   }
 
   function verwijderFormatie(id) {
     const weg = opgeslagen.find(function(f){return f.id===id;});
+    const r = verwijderOpstellingSjabloon(laadJson(OPSTELLING_SJABLONEN_KEY), laadJson(FORMATIES_KEY), id);
+    slaJson(FORMATIES_KEY, r.oude);
+    slaJson(OPSTELLING_SJABLONEN_KEY, r.sjablonen);
+    setOpgeslagen(r.sjablonen);
     if (weg) toon("Opstelling \u201c"+(weg.naam||weg.formatie)+"\u201d verwijderd", {
-      actie: function(){ setOpgeslagen(function(l){ return l.concat([weg]); }); }
+      actie: function(){
+        var terug = laadJson(OPSTELLING_SJABLONEN_KEY).concat([weg]);
+        slaJson(OPSTELLING_SJABLONEN_KEY, terug); setOpgeslagen(terug);
+      }
     });
-    setOpgeslagen(prev => prev.filter(f=>f.id!==id));
   }
 
   const toegewezenIds = Object.values(toewijzing).filter(Boolean).map(s => s.id||s.spelerId);
@@ -463,14 +491,49 @@ function OpstellingenTab({ spelers }) {
       )}
 
       <div style={{marginBottom:8,fontSize:13,color:"var(--grijs-donker)",fontWeight:400,textAlign:"center"}}>
-        Tik op een positie om een speler toe te wijzen · {aantalIngesteld}/11 ingevuld
+        Tik op een positie om een speler toe te wijzen · {aantalIngesteld}/{(FORMATIES_DATA[actief]||[]).length} ingevuld
       </div>
 
       <VeldZoomKnoppen />
       <OpstellingVeld formatie={actief} toewijzing={toewijzing} onKlikPositie={handlePositieKlik} tenue={tenue} />
 
+      {/* Wissels — gaan mee als je deze opstelling bij een wedstrijd kiest */}
+      <div className="kaart" style={{marginTop:12}}>
+        <div className="kaart-titel" style={{justifyContent:"space-between"}}>
+          <span><i className="fa-solid fa-chair"/> Wissels · {wissels.length}</span>
+        </div>
+        <div className="wissel-chips">
+          {wissels.map(function(id){
+            var sp = spelers.find(function(x){ return String(x.id)===String(id); });
+            if (!sp) return null;
+            return (
+              <span key={id} className="wissel-chip">
+                <span className="wissel-chip-beeld"><SpelerBeeld speler={sp}/></span>
+                {(sp.rugnummer ? sp.rugnummer+" " : "")+sp.naam.split(" ")[0]}
+                <button aria-label={"Haal "+sp.naam+" van de bank"}
+                  onClick={function(){ setWissels(function(l){ return l.filter(function(x){ return String(x)!==String(id); }); }); }}>
+                  <i className="fa-solid fa-xmark"/>
+                </button>
+              </span>
+            );
+          })}
+          <button className="knop lijn klein" onClick={function(){ setKiesWissel(true); }}>
+            <i className="fa-solid fa-plus"/> Wissel toevoegen
+          </button>
+        </div>
+      </div>
+
+      {kiesWissel && (
+        <SpelerKeuzeModal titel="Wie op de bank?"
+          spelers={spelers.filter(function(s){
+            return toegewezenIds.map(String).indexOf(String(s.id))<0 && wissels.map(String).indexOf(String(s.id))<0;
+          })}
+          onKies={function(s){ setWissels(function(l){ return l.concat([s.id]); }); setKiesWissel(false); }}
+          onSluiten={function(){ setKiesWissel(false); }} />
+      )}
+
       <div style={{display:"flex",gap:8,marginTop:12,flexWrap:"wrap"}}>
-        <button className="knop lijn klein" style={{flex:1,justifyContent:"center"}} onClick={() => setToewijzing({})}>
+        <button className="knop lijn klein" style={{flex:1,justifyContent:"center"}} onClick={() => { setToewijzing({}); setWissels([]); }}>
           <i className="fa-solid fa-rotate-left"/> Leegmaken
         </button>
         <button className="knop klein" style={{flex:2,justifyContent:"center"}} onClick={() => setBewaarOpen(true)}>
@@ -549,7 +612,7 @@ function OpstellingenTab({ spelers }) {
                 <div style={{flex:1}} onClick={() => laadFormatie(f)}>
                   <div style={{fontWeight:700,fontFamily:"'Helvetica Neue',Arial",fontSize:14}}>{f.naam}</div>
                   <div style={{fontSize:11,color:"var(--grijs-donker)"}}>
-                    {f.formatie} · {aantalSpelers} spelers ingesteld
+                    {f.formatie} · {aantalSpelers} spelers{(f.wisselIds||[]).length ? " · "+f.wisselIds.length+" wissels" : ""}
                   </div>
                 </div>
                 <button className="knop lijn klein" style={{padding:"5px 8px"}} onClick={() => laadFormatie(f)}>Laden</button>

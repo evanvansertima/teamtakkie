@@ -62,5 +62,28 @@ ok("overgeslagen wordt gemeld", t.overgeslagen, [9, 3]);
 ok("formatie gaat mee", t.formatie, "4-4-2");
 ok("tekst- en getal-id zijn dezelfde speler", pasOpstellingToe({ toewijzing: { GK: "1" }, wisselIds: [] }, SPELERS, []).toewijzing, { GK: "1" });
 
+groep("één lijst met Selectie › Opstellingen (19 oktober 2026)");
+const OUD = [
+  { id: 11, naam: "Selectie A", formatie: "4-4-2A", toewijzing: { GK: { id: 1, naam: "Keeper", aanvalInstructie: "Snel uitgooien" }, ST: { spelerId: 9, naam: "Spits" }, LB: null } },
+  { id: 12, naam: "Selectie B", formatie: "4-3-3A", toewijzing: { GK: 1 } }
+];
+const omgezet = oudeOpstellingAlsSjabloon(OUD[0]);
+ok("hele spelers worden nummers, lege plek valt weg", omgezet.toewijzing, { GK: 1, ST: 9 });
+ok("instructies blijven bewaard", omgezet.instructies, { GK: { aanval: "Snel uitgooien", verdediging: "" } });
+ok("geen wissels in de oude lijst: lege bank", omgezet.wisselIds, []);
+const NIEUW = [{ id: 12, naam: "Selectie B (nieuw)", formatie: "4-3-3A", toewijzing: { GK: 2 }, wisselIds: [5] },
+               { id: 20, naam: "Wedstrijd", formatie: "4-4-2A", toewijzing: { GK: 3 }, wisselIds: [] }];
+const samen = alleOpstellingSjablonen(NIEUW, OUD);
+ok("beide lijsten samen, de nieuwe wint bij hetzelfde id", samen.map((x) => x.naam), ["Selectie B (nieuw)", "Wedstrijd", "Selectie A"]);
+ok("id als tekst of getal is hetzelfde", alleOpstellingSjablonen([{ id: "11", naam: "x" }], OUD).length, 2);
+const weg = verwijderOpstellingSjabloon(NIEUW, OUD, 11);
+ok("verwijderen haalt hem uit allebei", [weg.sjablonen.map((x) => x.id), weg.oude.map((x) => x.id)], [[12, 20], [12]]);
+ok("en hij komt niet terug", alleOpstellingSjablonen(weg.sjablonen, weg.oude).map((x) => x.id), [12, 20]);
+r = bewaarOpstellingSjabloon(samen, { naam: "selectie a", formatie: "4-4-2A", toewijzing: { GK: 1 }, wisselIds: [7, 8], instructies: { GK: { aanval: "x", verdediging: "" } } });
+ok("bewaren met wissels en instructies, zelfde naam overschrijft", [r.vervangen, r.lijst[2].wisselIds, r.lijst[2].instructies.GK.aanval, r.lijst[2].id], [true, [7, 8], "x", 11]);
+ok("wissels uit Selectie gaan mee naar de wedstrijd", pasOpstellingToe(r.lijst[2], SPELERS, []).wisselIds, []);
+ok("…tenzij ze niet meer in de selectie staan; wie er wel is komt op de bank",
+   pasOpstellingToe({ toewijzing: { GK: 1 }, wisselIds: [2, 3, 99] }, SPELERS, []).wisselIds, [2, 3]);
+
 console.log(`\n${goed} geslaagd, ${fout} gefaald`);
 process.exit(fout ? 1 : 0);
