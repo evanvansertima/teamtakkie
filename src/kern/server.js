@@ -422,6 +422,8 @@ const SERVER_TAAL = [
    "De tabel $1 bestaat nog niet. Draai 01-schema.sql in de SQL Editor van Supabase."],
   [/could not find the function/i,
    "De server mist een functie. Draai 01-schema.sql (en 03-beheer.sql) opnieuw."],
+  [/should be different from the old password|same_password/i,
+   "Je nieuwe wachtwoord moet anders zijn dan je oude."],
   [/jwt expired/i,
    "Je aanmelding is verlopen. Log opnieuw in."],
   [/invalid api key|no api key found/i,
@@ -521,18 +523,21 @@ function serverBevestigingOpnieuw(email) {
    ingelogd), bij een fout een foutcode (bijv. een verlopen link). De
    adresbalk wordt daarna meteen schoongemaakt: tokens horen daar niet
    te blijven staan, ook niet in de geschiedenis. */
-/** @returns {Promise<{soort:string, tekst?:string}>} soort: "geen" | "ingelogd" | "fout" */
+/** @returns {Promise<{soort:string, tekst?:string}>} soort: "geen" | "ingelogd" | "herstel" | "fout" */
 function serverBevestigingUitLink() {
   var h = "";
   try { h = window.location.hash || ""; } catch(e) {}
   if (h.indexOf("access_token=") < 0 && h.indexOf("error") < 0) return Promise.resolve({soort:"geen"});
   var p = new URLSearchParams(h.replace(/^#/, ""));
+  /* Een herstellink (wachtwoord vergeten) logt ook in, maar daarna moet
+     er eerst een nieuw wachtwoord komen: soort "herstel". */
+  var herstel = p.get("type") === "recovery";
   try { window.history.replaceState(null, "", window.location.pathname + window.location.search); } catch(e) {}
   if (p.get("error") || p.get("error_code")) {
     var code = p.get("error_code") || p.get("error") || "";
     return Promise.resolve({soort:"fout", tekst: /expired|otp/i.test(code)
-      ? "Deze bevestigingslink is verlopen of al gebruikt. Log in; lukt dat niet, vraag dan hieronder een nieuwe link aan."
-      : "De bevestiging lukte niet. Probeer in te loggen, of vraag hieronder een nieuwe link aan."});
+      ? "Deze link is verlopen of al gebruikt. Log in; lukt dat niet, vraag dan hieronder een nieuwe link aan (of kies \u201cWachtwoord vergeten?\u201d)."
+      : "Deze link werkte niet. Probeer in te loggen, of vraag hieronder een nieuwe link aan."});
   }
   var token = p.get("access_token");
   return _haalOp("/auth/v1/user", {token: token || undefined}).then(function (r) {
@@ -541,9 +546,45 @@ function serverBevestigingUitLink() {
     if (!s) return {soort:"fout", tekst:"De bevestiging lukte, maar inloggen niet. Log hieronder in."};
     wisselAccount(s);
     zetSessie(s);
-    return {soort:"ingelogd"};
+    return {soort: herstel ? "herstel" : "ingelogd"};
   }).catch(function () { return {soort:"fout", tekst:"Geen verbinding. Log hieronder in zodra je weer bereik hebt."}; });
 }
+/* ── Wachtwoord vergeten (7 november 2026) ───────────────────
+   Testers meldden dat er geen manier was om een vergeten wachtwoord
+   te herstellen. Supabase stuurt een mail met een herstellink; wie
+   daarop klikt komt terug in de app (zie herstelLinkInAdres en
+   WachtwoordHerstelScherm) en kiest daar een nieuw wachtwoord.
+
+   Net als bij de bevestigingsmail zegt Supabase niet of het adres
+   bestaat — anders kon iedereen nagaan wie er een account heeft. Het
+   scherm zegt daarom ook "als er een account bij hoort". */
+/** @param {string} email @returns {Promise<ServerUitkomst>} */
+function serverWachtwoordVergeten(email) {
+  if (!serverAan()) return Promise.resolve(serverFout("geen-server", "Er is nog geen server ingesteld."));
+  return _haalOp("/auth/v1/recover" + _terugNaBevestiging(), {methode:"POST", lichaam:{email:(email||"").trim()}})
+    .then(function (r) { return r.ok ? {ok:true, gegevens:null} : serverFout("aanmelding", serverBoodschap(r)); })
+    .catch(verbindingsFout);
+}
+/* Staat er een herstellink in de adresbalk? Wordt gelezen vóór het
+   scherm kiest wat het laat zien, ook als je op dit apparaat al was
+   ingelogd. */
+/** @returns {boolean} */
+function herstelLinkInAdres() {
+  try { var h = window.location.hash || ""; return h.indexOf("type=recovery") >= 0 && h.indexOf("access_token=") >= 0; }
+  catch(e) { return false; }
+}
+/* Het nieuwe wachtwoord vastleggen, met de aanmelding uit de herstellink. */
+/** @param {string} wachtwoord @returns {Promise<ServerUitkomst>} */
+function serverNieuwWachtwoord(wachtwoord) {
+  return serverVraag("/auth/v1/user", {methode:"PUT", lichaam:{password: wachtwoord || ""}})
+    .then(function (r) {
+      if (r.ok) return r;
+      /* serverVraag zet de fout al in gewone taal; een fout van Auth
+         komt als serverfout binnen, vandaar hier nog eens vertalen. */
+      return serverFout("aanmelding", vertaalServer((r.fout && r.fout.tekst) || "") || "Opslaan lukte niet.");
+    });
+}
+
 /** @returns {Promise<{ok:boolean}>} */
 function serverAfmelden() {
   var token = _sessie && _sessie.token;

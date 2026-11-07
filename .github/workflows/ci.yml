@@ -139,6 +139,8 @@ jobs:
         run: node tests/avatar.test.js
       - name: node tests/spelvorm.test.js
         run: node tests/spelvorm.test.js
+      - name: node tests/wachtwoord-herstel.test.js
+        run: node tests/wachtwoord-herstel.test.js
 
       # vulling.test.js controleert de vaste vulling van het gouden
       # origineel tegen wat de app werkelijk schrijft. Dat klinkt als een

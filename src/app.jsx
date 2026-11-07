@@ -2027,6 +2027,7 @@ function App() {
   }, []);
 
   function poortVerder() { setPoortStand(function (n) { return n + 1; }); }
+  const [herstel, setHerstel] = useState(herstelLinkInAdres);
 
   if (poort === "bezig") return (
     <div className="onboard"><div className="onboard-kaart onboard-wacht">
@@ -2034,6 +2035,9 @@ function App() {
       <p>Even je gegevens ophalen…</p>
     </div></div>
   );
+  /* Terug van een herstellink (wachtwoord vergeten): eerst een nieuw
+     wachtwoord kiezen, wat de poort verder ook zou laten zien. */
+  if (herstel && poort !== "server") return <WachtwoordHerstelScherm opKlaar={function(){ setHerstel(false); poortVerder(); }} />;
   if (poort === "server")    return <ServerScherm opKlaar={poortVerder} />;
   if (poort === "aanmelden") return <AanmeldScherm opKlaar={poortVerder} />;
   if (poort === "club")      return <ClubScherm opKlaar={poortVerder} />;

@@ -142,6 +142,7 @@ function AanmeldFormulier({ nieuw, setNieuw, opKlaar, beginFout }) {
   const [melding, setMelding] = useState(null);
   const [opnieuwKan, setOpnieuwKan] = useState(false);   // knop "stuur de mail opnieuw" tonen
   const [wacht, setWacht] = useState(0);                  // seconden tot opnieuw sturen weer mag
+  const [vergeten, setVergeten] = useState(false);        // "Wachtwoord vergeten?" staat open
 
   useEffect(function () { if (beginFout) { setFout(beginFout); setOpnieuwKan(true); } }, [beginFout]);
   /* Wie zelf wisselt tussen inloggen en aanmaken, krijgt een schoon
@@ -150,7 +151,7 @@ function AanmeldFormulier({ nieuw, setNieuw, opKlaar, beginFout }) {
   const zelfGewisseld = useRef(false);
   useEffect(function () {
     if (zelfGewisseld.current) { zelfGewisseld.current = false; return; }
-    setFout(null); setMelding(null);
+    setFout(null); setMelding(null); setVergeten(false);
   }, [nieuw]);
   useEffect(function () {
     if (wacht <= 0) return;
@@ -200,7 +201,47 @@ function AanmeldFormulier({ nieuw, setNieuw, opKlaar, beginFout }) {
     });
   }
 
-  var emailFout = nieuw && emailGezien && email && !emailGeldig(email);
+  function stuurHerstel() {
+    setFout(null); setMelding(null);
+    if (!emailGeldig(email)) { setEmailGezien(true); setFout("Vul het e-mailadres van je account in."); return; }
+    setBezig(true);
+    var adres = emailNetjes(email);
+    serverWachtwoordVergeten(adres).then(function (r) {
+      setBezig(false);
+      if (!r.ok) { setFout(r.fout ? r.fout.tekst : "Versturen lukte niet."); return; }
+      setMelding("Als er een account bij " + adres + " hoort, staat er nu een mail klaar met een link om een nieuw wachtwoord te kiezen. "
+        + "Geen mail gezien? Kijk ook in de map ongewenst.");
+      setWacht(60);
+    });
+  }
+
+  var emailFout = (nieuw || vergeten) && emailGezien && email && !emailGeldig(email);
+
+  /* Wachtwoord vergeten: alleen het e-mailadres en één knop. */
+  if (vergeten && !nieuw) return (
+        <React.Fragment>
+          <p className="onboard-uitleg" style={{textAlign:"left"}}>
+            Vul het e-mailadres van je account in. Je krijgt een mail met een link waarmee je een nieuw wachtwoord kiest.
+          </p>
+          {fout && <div className="melding fout"><i className="fa-solid fa-triangle-exclamation"/> {fout}</div>}
+          {melding && <div className="melding"><i className="fa-solid fa-envelope-circle-check"/> {melding}</div>}
+          <label className="formulier-label">E-mailadres</label>
+          <input type="email" autoComplete="email" value={email} inputMode="email" autoFocus
+            aria-invalid={emailFout ? "true" : "false"}
+            style={emailFout ? {borderColor:"var(--gevaar)"} : undefined}
+            onChange={function(e){ setEmail(e.target.value); }}
+            onBlur={function(){ setEmailGezien(true); }}
+            onKeyDown={function(e){ if(e.key==="Enter" && !bezig && wacht<=0) stuurHerstel(); }}/>
+          <button className="knop onboard-knop" disabled={bezig || wacht > 0} onClick={stuurHerstel}>
+            <i className={bezig ? "fa-solid fa-hourglass-half" : "fa-solid fa-paper-plane"}/>
+            {bezig ? " Bezig\u2026" : wacht > 0 ? " Opnieuw sturen kan over " + wacht + " s" : " Stuur herstellink"}
+          </button>
+          <button type="button" className="onboard-wissel" style={{marginTop:12}}
+            onClick={function(){ setVergeten(false); setFout(null); setMelding(null); }}>
+            <i className="fa-solid fa-arrow-left"/> Terug naar inloggen
+          </button>
+        </React.Fragment>
+  );
   var balkKleur = ["var(--grijs)", "var(--gevaar)", "var(--oranje)", "var(--succes)", "var(--succes)"][sterkte];
   var balkTekst = ["", "Zwak", "Kan beter", "Goed", "Sterk"][sterkte];
 
@@ -231,6 +272,12 @@ function AanmeldFormulier({ nieuw, setNieuw, opKlaar, beginFout }) {
               <i className={toon ? "fa-solid fa-eye-slash" : "fa-solid fa-eye"}/>
             </button>
           </div>
+          {!nieuw && (
+            <button type="button" className="wachtwoord-vergeten"
+              onClick={function(){ setVergeten(true); setFout(null); setMelding(null); setOpnieuwKan(false); }}>
+              Wachtwoord vergeten?
+            </button>
+          )}
           {nieuw && (
             <div style={{margin:"8px 0 12px"}}>
               <div style={{display:"flex",gap:4,margin:"0 0 6px"}} aria-hidden="true">
@@ -259,6 +306,80 @@ function AanmeldFormulier({ nieuw, setNieuw, opKlaar, beginFout }) {
           </button>
           {nieuw && !controle.mag && (email || wachtwoord) && <div style={{fontSize:12,color:"var(--grijs-donker)",marginTop:8}}>{controle.reden}</div>}
         </React.Fragment>
+  );
+}
+
+/* ── Nieuw wachtwoord kiezen, na de herstellink (7 november 2026) ──
+   De link uit de mail logt je in (serverBevestigingUitLink geeft dan
+   "herstel"); daarna moet je hier eerst een nieuw wachtwoord kiezen.
+   Dezelfde eisen als bij een nieuw account (src/domein/registratie.js). */
+function WachtwoordHerstelScherm({ opKlaar }) {
+  const [stand, setStand] = useState("laden");    // laden | kiezen | fout
+  const [fout, setFout] = useState(null);
+  const [wachtwoord, setWachtwoord] = useState("");
+  const [nogmaals, setNogmaals] = useState("");
+  const [toon, setToon] = useState(false);
+  const [bezig, setBezig] = useState(false);
+  useEffect(function () {
+    serverBevestigingUitLink().then(function (r) {
+      if (r.soort === "herstel" || r.soort === "ingelogd") setStand("kiezen");
+      else { setStand("fout"); setFout(r.tekst || "Deze link werkte niet. Vraag een nieuwe aan via \u201cWachtwoord vergeten?\u201d."); }
+    });
+  }, []);
+  var eisen = wachtwoordEisen(wachtwoord);
+  var sterk = wachtwoordSterkGenoeg(wachtwoord);
+  var gelijk = wachtwoord && wachtwoord === nogmaals;
+  function bewaar() {
+    setFout(null);
+    if (!sterk) { setFout("Je wachtwoord voldoet nog niet aan alle eisen."); return; }
+    if (!gelijk) { setFout("De twee wachtwoorden zijn niet hetzelfde."); return; }
+    setBezig(true);
+    serverNieuwWachtwoord(wachtwoord).then(function (r) {
+      setBezig(false);
+      if (!r.ok) { setFout(r.fout ? r.fout.tekst : "Opslaan lukte niet."); return; }
+      opKlaar();
+      /* Pas tonen als de app zelf staat: de meldingen horen bij de app,
+         niet bij dit scherm, en zouden anders in het niets verdwijnen. */
+      setTimeout(function(){ meldGoed("Je nieuwe wachtwoord is opgeslagen. Je bent ingelogd."); }, 600);
+    });
+  }
+  return (
+    <OnboardingSchil titel="Nieuw wachtwoord"
+      onder={stand === "fout" ? <button className="onboard-wissel" onClick={function(){ opKlaar(); }}>Naar inloggen</button> : null}
+      kinderen={
+        stand === "laden" ? <p className="onboard-uitleg"><i className="fa-solid fa-circle-notch fa-spin"/> Even je link controleren…</p>
+        : stand === "fout" ? <div className="melding fout"><i className="fa-solid fa-triangle-exclamation"/> {fout}</div>
+        : <React.Fragment>
+            <p className="onboard-uitleg" style={{textAlign:"left"}}>Kies een nieuw wachtwoord voor je account.</p>
+            {fout && <div className="melding fout"><i className="fa-solid fa-triangle-exclamation"/> {fout}</div>}
+            <label className="formulier-label">Nieuw wachtwoord</label>
+            <div style={{position:"relative"}}>
+              <input type={toon ? "text" : "password"} value={wachtwoord} autoFocus autoComplete="new-password" style={{paddingRight:44}}
+                onChange={function(e){ setWachtwoord(e.target.value); }}/>
+              <button type="button" aria-label={toon ? "Wachtwoord verbergen" : "Wachtwoord tonen"} onClick={function(){ setToon(!toon); }}
+                style={{position:"absolute",right:6,top:"50%",transform:"translateY(-50%)",marginTop:-6,background:"none",border:0,padding:8,cursor:"pointer",color:"var(--grijs-donker)"}}>
+                <i className={toon ? "fa-solid fa-eye-slash" : "fa-solid fa-eye"}/>
+              </button>
+            </div>
+            <ul style={{listStyle:"none",padding:0,margin:"6px 0 12px",fontSize:12.5,lineHeight:1.7}}>
+              {eisen.map(function (e) {
+                return <li key={e.id} style={{color:e.ok ? "var(--succes)" : "var(--grijs-donker)"}}>
+                  <i className={e.ok ? "fa-solid fa-circle-check" : "fa-regular fa-circle"} style={{width:18}}/>{" " + e.tekst}</li>;
+              })}
+            </ul>
+            <label className="formulier-label">Nog een keer</label>
+            <input type={toon ? "text" : "password"} value={nogmaals} autoComplete="new-password"
+              style={nogmaals && !gelijk ? {borderColor:"var(--gevaar)"} : undefined}
+              onChange={function(e){ setNogmaals(e.target.value); }}
+              onKeyDown={function(e){ if(e.key==="Enter") bewaar(); }}/>
+            {nogmaals && !gelijk && <div style={{fontSize:12,color:"var(--gevaar)",margin:"6px 0 10px"}}>Nog niet hetzelfde.</div>}
+            <button className="knop onboard-knop" disabled={bezig || !sterk || !gelijk} onClick={bewaar}
+              style={bezig || !sterk || !gelijk ? {opacity:0.45,cursor:"not-allowed"} : undefined}>
+              <i className={bezig ? "fa-solid fa-hourglass-half" : "fa-solid fa-check"}/>
+              {bezig ? " Bezig\u2026" : " Wachtwoord opslaan"}
+            </button>
+          </React.Fragment>
+      }/>
   );
 }
 

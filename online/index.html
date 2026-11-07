@@ -2474,6 +2474,7 @@
     .status-optie:active { transform:scale(.98); }
 
     .positie-code { display:inline-block; margin-left:8px; padding:1px 6px; border-radius:6px; background:var(--grijs-licht); color:var(--blauw); font-size:11px; font-weight:800; vertical-align:2px; }
+    .wachtwoord-vergeten { display:block; margin:-2px 0 12px auto; background:none; border:0; padding:4px 0; color:var(--blauw); font-size:13px; font-weight:700; cursor:pointer; font-family:inherit; }
     /* Wissels bij Selectie › Opstellingen */
     .wissel-chips { display:flex; flex-wrap:wrap; gap:7px; align-items:center; }
     .wissel-chip { display:inline-flex; align-items:center; gap:6px; padding:3px 4px 3px 3px; border-radius:999px; border:1.5px solid var(--grijs); background:var(--wit); font-size:12px; font-weight:700; }
@@ -3093,7 +3094,7 @@ window.addEventListener("error", function(e){
 });
 </script>
 <script>
-const APP_VERSIE = "6d3902c";
+const APP_VERSIE = "c6b7f74";
 const TEAMS_KEY = "tt_teams_v1";
 const ACTIEF_KEY = "tt_actief_v1";
 const VOORKEUR_KEY = "tt_voorkeuren_v1";
@@ -3910,6 +3911,10 @@ const SERVER_TAAL = [
     "De server mist een functie. Draai 01-schema.sql (en 03-beheer.sql) opnieuw."
   ],
   [
+    /should be different from the old password|same_password/i,
+    "Je nieuwe wachtwoord moet anders zijn dan je oude."
+  ],
+  [
     /jwt expired/i,
     "Je aanmelding is verlopen. Log opnieuw in."
   ],
@@ -3995,13 +4000,14 @@ function serverBevestigingUitLink() {
   }
   if (h.indexOf("access_token=") < 0 && h.indexOf("error") < 0) return Promise.resolve({ soort: "geen" });
   var p = new URLSearchParams(h.replace(/^#/, ""));
+  var herstel = p.get("type") === "recovery";
   try {
     window.history.replaceState(null, "", window.location.pathname + window.location.search);
   } catch (e) {
   }
   if (p.get("error") || p.get("error_code")) {
     var code = p.get("error_code") || p.get("error") || "";
-    return Promise.resolve({ soort: "fout", tekst: /expired|otp/i.test(code) ? "Deze bevestigingslink is verlopen of al gebruikt. Log in; lukt dat niet, vraag dan hieronder een nieuwe link aan." : "De bevestiging lukte niet. Probeer in te loggen, of vraag hieronder een nieuwe link aan." });
+    return Promise.resolve({ soort: "fout", tekst: /expired|otp/i.test(code) ? "Deze link is verlopen of al gebruikt. Log in; lukt dat niet, vraag dan hieronder een nieuwe link aan (of kies \u201CWachtwoord vergeten?\u201D)." : "Deze link werkte niet. Probeer in te loggen, of vraag hieronder een nieuwe link aan." });
   }
   var token = p.get("access_token");
   return _haalOp("/auth/v1/user", { token: token || void 0 }).then(function(r) {
@@ -4010,9 +4016,29 @@ function serverBevestigingUitLink() {
     if (!s) return { soort: "fout", tekst: "De bevestiging lukte, maar inloggen niet. Log hieronder in." };
     wisselAccount(s);
     zetSessie(s);
-    return { soort: "ingelogd" };
+    return { soort: herstel ? "herstel" : "ingelogd" };
   }).catch(function() {
     return { soort: "fout", tekst: "Geen verbinding. Log hieronder in zodra je weer bereik hebt." };
+  });
+}
+function serverWachtwoordVergeten(email) {
+  if (!serverAan()) return Promise.resolve(serverFout("geen-server", "Er is nog geen server ingesteld."));
+  return _haalOp("/auth/v1/recover" + _terugNaBevestiging(), { methode: "POST", lichaam: { email: (email || "").trim() } }).then(function(r) {
+    return r.ok ? { ok: true, gegevens: null } : serverFout("aanmelding", serverBoodschap(r));
+  }).catch(verbindingsFout);
+}
+function herstelLinkInAdres() {
+  try {
+    var h = window.location.hash || "";
+    return h.indexOf("type=recovery") >= 0 && h.indexOf("access_token=") >= 0;
+  } catch (e) {
+    return false;
+  }
+}
+function serverNieuwWachtwoord(wachtwoord) {
+  return serverVraag("/auth/v1/user", { methode: "PUT", lichaam: { password: wachtwoord || "" } }).then(function(r) {
+    if (r.ok) return r;
+    return serverFout("aanmelding", vertaalServer(r.fout && r.fout.tekst || "") || "Opslaan lukte niet.");
   });
 }
 function serverAfmelden() {
@@ -12706,6 +12732,7 @@ function AanmeldFormulier({ nieuw, setNieuw, opKlaar, beginFout }) {
   const [melding, setMelding] = useState(null);
   const [opnieuwKan, setOpnieuwKan] = useState(false);
   const [wacht, setWacht] = useState(0);
+  const [vergeten, setVergeten] = useState(false);
   useEffect(function() {
     if (beginFout) {
       setFout(beginFout);
@@ -12720,6 +12747,7 @@ function AanmeldFormulier({ nieuw, setNieuw, opKlaar, beginFout }) {
     }
     setFout(null);
     setMelding(null);
+    setVergeten(false);
   }, [nieuw]);
   useEffect(function() {
     if (wacht <= 0) return;
@@ -12785,7 +12813,62 @@ function AanmeldFormulier({ nieuw, setNieuw, opKlaar, beginFout }) {
       setWacht(60);
     });
   }
-  var emailFout = nieuw && emailGezien && email && !emailGeldig(email);
+  function stuurHerstel() {
+    setFout(null);
+    setMelding(null);
+    if (!emailGeldig(email)) {
+      setEmailGezien(true);
+      setFout("Vul het e-mailadres van je account in.");
+      return;
+    }
+    setBezig(true);
+    var adres = emailNetjes(email);
+    serverWachtwoordVergeten(adres).then(function(r) {
+      setBezig(false);
+      if (!r.ok) {
+        setFout(r.fout ? r.fout.tekst : "Versturen lukte niet.");
+        return;
+      }
+      setMelding("Als er een account bij " + adres + " hoort, staat er nu een mail klaar met een link om een nieuw wachtwoord te kiezen. Geen mail gezien? Kijk ook in de map ongewenst.");
+      setWacht(60);
+    });
+  }
+  var emailFout = (nieuw || vergeten) && emailGezien && email && !emailGeldig(email);
+  if (vergeten && !nieuw) return /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("p", { className: "onboard-uitleg", style: { textAlign: "left" } }, "Vul het e-mailadres van je account in. Je krijgt een mail met een link waarmee je een nieuw wachtwoord kiest."), fout && /* @__PURE__ */ React.createElement("div", { className: "melding fout" }, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-triangle-exclamation" }), " ", fout), melding && /* @__PURE__ */ React.createElement("div", { className: "melding" }, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-envelope-circle-check" }), " ", melding), /* @__PURE__ */ React.createElement("label", { className: "formulier-label" }, "E-mailadres"), /* @__PURE__ */ React.createElement(
+    "input",
+    {
+      type: "email",
+      autoComplete: "email",
+      value: email,
+      inputMode: "email",
+      autoFocus: true,
+      "aria-invalid": emailFout ? "true" : "false",
+      style: emailFout ? { borderColor: "var(--gevaar)" } : void 0,
+      onChange: function(e) {
+        setEmail(e.target.value);
+      },
+      onBlur: function() {
+        setEmailGezien(true);
+      },
+      onKeyDown: function(e) {
+        if (e.key === "Enter" && !bezig && wacht <= 0) stuurHerstel();
+      }
+    }
+  ), /* @__PURE__ */ React.createElement("button", { className: "knop onboard-knop", disabled: bezig || wacht > 0, onClick: stuurHerstel }, /* @__PURE__ */ React.createElement("i", { className: bezig ? "fa-solid fa-hourglass-half" : "fa-solid fa-paper-plane" }), bezig ? " Bezig\u2026" : wacht > 0 ? " Opnieuw sturen kan over " + wacht + " s" : " Stuur herstellink"), /* @__PURE__ */ React.createElement(
+    "button",
+    {
+      type: "button",
+      className: "onboard-wissel",
+      style: { marginTop: 12 },
+      onClick: function() {
+        setVergeten(false);
+        setFout(null);
+        setMelding(null);
+      }
+    },
+    /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-arrow-left" }),
+    " Terug naar inloggen"
+  ));
   var balkKleur = ["var(--grijs)", "var(--gevaar)", "var(--oranje)", "var(--succes)", "var(--succes)"][sterkte];
   var balkTekst = ["", "Zwak", "Kan beter", "Goed", "Sterk"][sterkte];
   return /* @__PURE__ */ React.createElement(React.Fragment, null, fout && /* @__PURE__ */ React.createElement("div", { className: "melding fout" }, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-triangle-exclamation" }), " ", fout), melding && /* @__PURE__ */ React.createElement("div", { className: "melding" }, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-envelope-circle-check" }), " ", melding), opnieuwKan && /* @__PURE__ */ React.createElement("button", { className: "knop lijn klein", style: { marginBottom: 12 }, disabled: bezig || wacht > 0, onClick: opnieuw }, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-paper-plane" }), wacht > 0 ? " Opnieuw sturen kan over " + wacht + " s" : " Stuur de bevestigingsmail opnieuw"), /* @__PURE__ */ React.createElement("label", { className: "formulier-label" }, "E-mailadres"), /* @__PURE__ */ React.createElement(
@@ -12829,7 +12912,20 @@ function AanmeldFormulier({ nieuw, setNieuw, opKlaar, beginFout }) {
       style: { position: "absolute", right: 6, top: "50%", transform: "translateY(-50%)", marginTop: -6, background: "none", border: 0, padding: 8, cursor: "pointer", color: "var(--grijs-donker)" }
     },
     /* @__PURE__ */ React.createElement("i", { className: toon2 ? "fa-solid fa-eye-slash" : "fa-solid fa-eye" })
-  )), nieuw && /* @__PURE__ */ React.createElement("div", { style: { margin: "8px 0 12px" } }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 4, margin: "0 0 6px" }, "aria-hidden": "true" }, [1, 2, 3, 4].map(function(n) {
+  )), !nieuw && /* @__PURE__ */ React.createElement(
+    "button",
+    {
+      type: "button",
+      className: "wachtwoord-vergeten",
+      onClick: function() {
+        setVergeten(true);
+        setFout(null);
+        setMelding(null);
+        setOpnieuwKan(false);
+      }
+    },
+    "Wachtwoord vergeten?"
+  ), nieuw && /* @__PURE__ */ React.createElement("div", { style: { margin: "8px 0 12px" } }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 4, margin: "0 0 6px" }, "aria-hidden": "true" }, [1, 2, 3, 4].map(function(n) {
     return /* @__PURE__ */ React.createElement("span", { key: n, style: { flex: 1, height: 5, borderRadius: 3, background: n <= sterkte ? balkKleur : "var(--grijs)" } });
   })), balkTekst && /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, fontWeight: 700, color: balkKleur, marginBottom: 4 } }, balkTekst), /* @__PURE__ */ React.createElement("ul", { style: { listStyle: "none", padding: 0, margin: 0, fontSize: 12.5, lineHeight: 1.7 } }, eisen.map(function(e) {
     return /* @__PURE__ */ React.createElement("li", { key: e.id, style: { color: e.ok ? "var(--succes)" : "var(--grijs-donker)" } }, /* @__PURE__ */ React.createElement("i", { className: e.ok ? "fa-solid fa-circle-check" : "fa-regular fa-circle", style: { width: 18 } }), " " + e.tekst);
@@ -12846,6 +12942,108 @@ function AanmeldFormulier({ nieuw, setNieuw, opKlaar, beginFout }) {
     /* @__PURE__ */ React.createElement("i", { className: bezig ? "fa-solid fa-hourglass-half" : "fa-solid fa-right-to-bracket" }),
     bezig ? " Bezig\u2026" : nieuw ? " Account aanmaken" : " Inloggen"
   ), nieuw && !controle.mag && (email || wachtwoord) && /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, color: "var(--grijs-donker)", marginTop: 8 } }, controle.reden));
+}
+function WachtwoordHerstelScherm({ opKlaar }) {
+  const [stand, setStand] = useState("laden");
+  const [fout, setFout] = useState(null);
+  const [wachtwoord, setWachtwoord] = useState("");
+  const [nogmaals, setNogmaals] = useState("");
+  const [toon2, setToon] = useState(false);
+  const [bezig, setBezig] = useState(false);
+  useEffect(function() {
+    serverBevestigingUitLink().then(function(r) {
+      if (r.soort === "herstel" || r.soort === "ingelogd") setStand("kiezen");
+      else {
+        setStand("fout");
+        setFout(r.tekst || "Deze link werkte niet. Vraag een nieuwe aan via \u201CWachtwoord vergeten?\u201D.");
+      }
+    });
+  }, []);
+  var eisen = wachtwoordEisen(wachtwoord);
+  var sterk = wachtwoordSterkGenoeg(wachtwoord);
+  var gelijk = wachtwoord && wachtwoord === nogmaals;
+  function bewaar() {
+    setFout(null);
+    if (!sterk) {
+      setFout("Je wachtwoord voldoet nog niet aan alle eisen.");
+      return;
+    }
+    if (!gelijk) {
+      setFout("De twee wachtwoorden zijn niet hetzelfde.");
+      return;
+    }
+    setBezig(true);
+    serverNieuwWachtwoord(wachtwoord).then(function(r) {
+      setBezig(false);
+      if (!r.ok) {
+        setFout(r.fout ? r.fout.tekst : "Opslaan lukte niet.");
+        return;
+      }
+      opKlaar();
+      setTimeout(function() {
+        meldGoed("Je nieuwe wachtwoord is opgeslagen. Je bent ingelogd.");
+      }, 600);
+    });
+  }
+  return /* @__PURE__ */ React.createElement(
+    OnboardingSchil,
+    {
+      titel: "Nieuw wachtwoord",
+      onder: stand === "fout" ? /* @__PURE__ */ React.createElement("button", { className: "onboard-wissel", onClick: function() {
+        opKlaar();
+      } }, "Naar inloggen") : null,
+      kinderen: stand === "laden" ? /* @__PURE__ */ React.createElement("p", { className: "onboard-uitleg" }, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-circle-notch fa-spin" }), " Even je link controleren\u2026") : stand === "fout" ? /* @__PURE__ */ React.createElement("div", { className: "melding fout" }, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-triangle-exclamation" }), " ", fout) : /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("p", { className: "onboard-uitleg", style: { textAlign: "left" } }, "Kies een nieuw wachtwoord voor je account."), fout && /* @__PURE__ */ React.createElement("div", { className: "melding fout" }, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-triangle-exclamation" }), " ", fout), /* @__PURE__ */ React.createElement("label", { className: "formulier-label" }, "Nieuw wachtwoord"), /* @__PURE__ */ React.createElement("div", { style: { position: "relative" } }, /* @__PURE__ */ React.createElement(
+        "input",
+        {
+          type: toon2 ? "text" : "password",
+          value: wachtwoord,
+          autoFocus: true,
+          autoComplete: "new-password",
+          style: { paddingRight: 44 },
+          onChange: function(e) {
+            setWachtwoord(e.target.value);
+          }
+        }
+      ), /* @__PURE__ */ React.createElement(
+        "button",
+        {
+          type: "button",
+          "aria-label": toon2 ? "Wachtwoord verbergen" : "Wachtwoord tonen",
+          onClick: function() {
+            setToon(!toon2);
+          },
+          style: { position: "absolute", right: 6, top: "50%", transform: "translateY(-50%)", marginTop: -6, background: "none", border: 0, padding: 8, cursor: "pointer", color: "var(--grijs-donker)" }
+        },
+        /* @__PURE__ */ React.createElement("i", { className: toon2 ? "fa-solid fa-eye-slash" : "fa-solid fa-eye" })
+      )), /* @__PURE__ */ React.createElement("ul", { style: { listStyle: "none", padding: 0, margin: "6px 0 12px", fontSize: 12.5, lineHeight: 1.7 } }, eisen.map(function(e) {
+        return /* @__PURE__ */ React.createElement("li", { key: e.id, style: { color: e.ok ? "var(--succes)" : "var(--grijs-donker)" } }, /* @__PURE__ */ React.createElement("i", { className: e.ok ? "fa-solid fa-circle-check" : "fa-regular fa-circle", style: { width: 18 } }), " " + e.tekst);
+      })), /* @__PURE__ */ React.createElement("label", { className: "formulier-label" }, "Nog een keer"), /* @__PURE__ */ React.createElement(
+        "input",
+        {
+          type: toon2 ? "text" : "password",
+          value: nogmaals,
+          autoComplete: "new-password",
+          style: nogmaals && !gelijk ? { borderColor: "var(--gevaar)" } : void 0,
+          onChange: function(e) {
+            setNogmaals(e.target.value);
+          },
+          onKeyDown: function(e) {
+            if (e.key === "Enter") bewaar();
+          }
+        }
+      ), nogmaals && !gelijk && /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, color: "var(--gevaar)", margin: "6px 0 10px" } }, "Nog niet hetzelfde."), /* @__PURE__ */ React.createElement(
+        "button",
+        {
+          className: "knop onboard-knop",
+          disabled: bezig || !sterk || !gelijk,
+          onClick: bewaar,
+          style: bezig || !sterk || !gelijk ? { opacity: 0.45, cursor: "not-allowed" } : void 0
+        },
+        /* @__PURE__ */ React.createElement("i", { className: bezig ? "fa-solid fa-hourglass-half" : "fa-solid fa-check" }),
+        bezig ? " Bezig\u2026" : " Wachtwoord opslaan"
+      ))
+    }
+  );
 }
 function ClubScherm({ opKlaar }) {
   const [naam, setNaam] = useState("");
@@ -44797,7 +44995,12 @@ function App() {
       return n + 1;
     });
   }
+  const [herstel, setHerstel] = useState(herstelLinkInAdres);
   if (poort === "bezig") return /* @__PURE__ */ React.createElement("div", { className: "onboard" }, /* @__PURE__ */ React.createElement("div", { className: "onboard-kaart onboard-wacht" }, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-circle-notch fa-spin" }), /* @__PURE__ */ React.createElement("p", null, "Even je gegevens ophalen\u2026")));
+  if (herstel && poort !== "server") return /* @__PURE__ */ React.createElement(WachtwoordHerstelScherm, { opKlaar: function() {
+    setHerstel(false);
+    poortVerder();
+  } });
   if (poort === "server") return /* @__PURE__ */ React.createElement(ServerScherm, { opKlaar: poortVerder });
   if (poort === "aanmelden") return /* @__PURE__ */ React.createElement(AanmeldScherm, { opKlaar: poortVerder });
   if (poort === "club") return /* @__PURE__ */ React.createElement(ClubScherm, { opKlaar: poortVerder });
