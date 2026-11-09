@@ -3094,7 +3094,7 @@ window.addEventListener("error", function(e){
 });
 </script>
 <script>
-const APP_VERSIE = "c6b7f74";
+const APP_VERSIE = "d5edc98";
 const TEAMS_KEY = "tt_teams_v1";
 const ACTIEF_KEY = "tt_actief_v1";
 const VOORKEUR_KEY = "tt_voorkeuren_v1";
@@ -12943,6 +12943,7 @@ function AanmeldFormulier({ nieuw, setNieuw, opKlaar, beginFout }) {
     bezig ? " Bezig\u2026" : nieuw ? " Account aanmaken" : " Inloggen"
   ), nieuw && !controle.mag && (email || wachtwoord) && /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, color: "var(--grijs-donker)", marginTop: 8 } }, controle.reden));
 }
+var _herstelUitkomst = null;
 function WachtwoordHerstelScherm({ opKlaar }) {
   const [stand, setStand] = useState("laden");
   const [fout, setFout] = useState(null);
@@ -12951,7 +12952,8 @@ function WachtwoordHerstelScherm({ opKlaar }) {
   const [toon2, setToon] = useState(false);
   const [bezig, setBezig] = useState(false);
   useEffect(function() {
-    serverBevestigingUitLink().then(function(r) {
+    _herstelUitkomst = _herstelUitkomst || serverBevestigingUitLink();
+    _herstelUitkomst.then(function(r) {
       if (r.soort === "herstel" || r.soort === "ingelogd") setStand("kiezen");
       else {
         setStand("fout");
@@ -44996,11 +44998,11 @@ function App() {
     });
   }
   const [herstel, setHerstel] = useState(herstelLinkInAdres);
-  if (poort === "bezig") return /* @__PURE__ */ React.createElement("div", { className: "onboard" }, /* @__PURE__ */ React.createElement("div", { className: "onboard-kaart onboard-wacht" }, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-circle-notch fa-spin" }), /* @__PURE__ */ React.createElement("p", null, "Even je gegevens ophalen\u2026")));
   if (herstel && poort !== "server") return /* @__PURE__ */ React.createElement(WachtwoordHerstelScherm, { opKlaar: function() {
     setHerstel(false);
     poortVerder();
   } });
+  if (poort === "bezig") return /* @__PURE__ */ React.createElement("div", { className: "onboard" }, /* @__PURE__ */ React.createElement("div", { className: "onboard-kaart onboard-wacht" }, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-circle-notch fa-spin" }), /* @__PURE__ */ React.createElement("p", null, "Even je gegevens ophalen\u2026")));
   if (poort === "server") return /* @__PURE__ */ React.createElement(ServerScherm, { opKlaar: poortVerder });
   if (poort === "aanmelden") return /* @__PURE__ */ React.createElement(AanmeldScherm, { opKlaar: poortVerder });
   if (poort === "club") return /* @__PURE__ */ React.createElement(ClubScherm, { opKlaar: poortVerder });

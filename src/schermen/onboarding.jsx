@@ -313,6 +313,7 @@ function AanmeldFormulier({ nieuw, setNieuw, opKlaar, beginFout }) {
    De link uit de mail logt je in (serverBevestigingUitLink geeft dan
    "herstel"); daarna moet je hier eerst een nieuw wachtwoord kiezen.
    Dezelfde eisen als bij een nieuw account (src/domein/registratie.js). */
+var _herstelUitkomst = null;
 function WachtwoordHerstelScherm({ opKlaar }) {
   const [stand, setStand] = useState("laden");    // laden | kiezen | fout
   const [fout, setFout] = useState(null);
@@ -321,7 +322,11 @@ function WachtwoordHerstelScherm({ opKlaar }) {
   const [toon, setToon] = useState(false);
   const [bezig, setBezig] = useState(false);
   useEffect(function () {
-    serverBevestigingUitLink().then(function (r) {
+    /* De link kan maar één keer gelezen worden (daarna is hij uit de
+       adresbalk). Wordt dit scherm om wat voor reden ook opnieuw
+       geopend, dan geldt de uitkomst van de eerste keer. */
+    _herstelUitkomst = _herstelUitkomst || serverBevestigingUitLink();
+    _herstelUitkomst.then(function (r) {
       if (r.soort === "herstel" || r.soort === "ingelogd") setStand("kiezen");
       else { setStand("fout"); setFout(r.tekst || "Deze link werkte niet. Vraag een nieuwe aan via \u201cWachtwoord vergeten?\u201d."); }
     });

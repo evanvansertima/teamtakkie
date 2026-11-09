@@ -2029,15 +2029,19 @@ function App() {
   function poortVerder() { setPoortStand(function (n) { return n + 1; }); }
   const [herstel, setHerstel] = useState(herstelLinkInAdres);
 
+  /* Terug van een herstellink (wachtwoord vergeten): eerst een nieuw
+     wachtwoord kiezen, wat de poort verder ook zou laten zien. Vóór
+     "bezig": de link logt je in, daarop gaat de poort gegevens ophalen,
+     en stond dit eronder, dan verdween het herstelscherm even en kwam
+     het terug zonder link — "Deze link werkte niet" (Evan, 9 november
+     2026, op een apparaat waar hij nog niet was ingelogd). */
+  if (herstel && poort !== "server") return <WachtwoordHerstelScherm opKlaar={function(){ setHerstel(false); poortVerder(); }} />;
   if (poort === "bezig") return (
     <div className="onboard"><div className="onboard-kaart onboard-wacht">
       <i className="fa-solid fa-circle-notch fa-spin"/>
       <p>Even je gegevens ophalen…</p>
     </div></div>
   );
-  /* Terug van een herstellink (wachtwoord vergeten): eerst een nieuw
-     wachtwoord kiezen, wat de poort verder ook zou laten zien. */
-  if (herstel && poort !== "server") return <WachtwoordHerstelScherm opKlaar={function(){ setHerstel(false); poortVerder(); }} />;
   if (poort === "server")    return <ServerScherm opKlaar={poortVerder} />;
   if (poort === "aanmelden") return <AanmeldScherm opKlaar={poortVerder} />;
   if (poort === "club")      return <ClubScherm opKlaar={poortVerder} />;
